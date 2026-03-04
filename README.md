@@ -37,7 +37,7 @@ ckc-it-club-website/
 │   ├── routes/                    # API routes & Web routes
 │   └── .env                       # Environment config (copy from .env.example)
 │
-└── frontend/admin/                 # Admin Dashboard
+└── frontend/user/                 # Admin Dashboard
     ├── src/
     │   ├── components/            # Reusable React components
     │   ├── config/                # Axios config, constants
@@ -164,7 +164,7 @@ Nếu thấy response:
 
 ```bash
 # Từ root project, cd vào frontend
-cd frontend/admin
+cd frontend/user
 
 # Install dependencies
 npm install
@@ -196,3 +196,4 @@ http://localhost:5173
 ```
 
 → **Frontend đã chạy thành công!** ✅
+

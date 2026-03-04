@@ -1,6 +1,6 @@
 import React from 'react';
 import { Facebook, Instagram, Mail, Github, Globe } from 'lucide-react';
-import type { SocialLink } from '../types/index';
+import type { SocialLink } from '../src/types/index';
 
 const SOCIAL_LINKS: SocialLink[] = [
   { icon: Facebook, href: '#', label: 'Facebook' },

@@ -1,31 +1,35 @@
-import React from 'react';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import Footer from './components/Footer';
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
 
-const App: React.FC = () => {
+function App() {
+  const [count, setCount] = useState(0)
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 selection:text-blue-100 flex flex-col">
-      {/* Fine grid pattern overlay for texture */}
-      <div 
-        className="fixed inset-0 pointer-events-none opacity-[0.03]" 
-        style={{
-          backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`,
-          backgroundSize: '40px 40px'
-        }}
-      ></div>
+    <>
+      <div>
+        <a href="https://vite.dev" target="_blank">
+          <img src={viteLogo} className="logo" alt="Vite logo" />
+        </a>
+        <a href="https://react.dev" target="_blank">
+          <img src={reactLogo} className="logo react" alt="React logo" />
+        </a>
+      </div>
+      <h1>Vite + React</h1>
+      <div className="card">
+        <button onClick={() => setCount((count) => count + 1)}>
+          count is {count}
+        </button>
+        <p>
+          Edit <code>src/App.tsx</code> and save to test HMR
+        </p>
+      </div>
+      <p className="read-the-docs">
+        Click on the Vite and React logos to learn more
+      </p>
+    </>
+  )
+}
 
-      <Navbar />
-      
-      <main className="flex-grow flex flex-col">
-        <Hero />
-        {/* Placeholder sections to demonstrate scrolling effect if needed */}
-        {/* <div className="h-screen"></div> */} 
-      </main>
-
-      <Footer />
-    </div>
-  );
-};
-
-export default App;
+export default App
