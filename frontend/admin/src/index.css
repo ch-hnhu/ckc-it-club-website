@@ -189,3 +189,27 @@ button:focus-visible {
 		@apply bg-background text-foreground;
 	}
 }
+
+/* AdminLTE layout overrides: neutralize Vite starter defaults */
+html,
+body,
+#root {
+	width: 100%;
+	min-height: 100%;
+}
+
+body {
+	display: block !important;
+	place-items: unset !important;
+	margin: 0;
+	min-height: 100vh;
+	background: var(--bs-body-bg, #f4f6f9) !important;
+	color: var(--bs-body-color, #212529) !important;
+}
+
+#root {
+	max-width: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	text-align: initial !important;
+}
