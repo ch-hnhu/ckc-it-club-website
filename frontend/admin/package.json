@@ -10,17 +10,25 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/source-sans-3": "^5.2.9",
+    "@popperjs/core": "^2.11.8",
     "@reduxjs/toolkit": "^2.11.2",
     "@tailwindcss/vite": "^4.1.18",
+    "apexcharts": "^3.37.1",
     "axios": "^1.13.5",
+    "bootstrap": "^5.3.7",
+    "bootstrap-icons": "^1.13.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jsvectormap": "^1.5.3",
     "lucide-react": "^0.563.0",
+    "overlayscrollbars": "^2.11.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-redux": "^9.2.0",
-    "react-router-dom": "^7.13.0",
+    "react-router-dom": "^7.13.1",
+    "sortablejs": "^1.15.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18"
   },
@@ -29,6 +37,7 @@
     "@types/node": "^24.10.13",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/sortablejs": "^1.15.9",
     "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -41,4 +50,3 @@
     "vite": "^7.3.1"
   }
 }
-
