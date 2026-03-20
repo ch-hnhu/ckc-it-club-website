@@ -9,10 +9,12 @@ return [
     'allowed_methods' => ['*'], // GET, POST, PUT, PATCH, DELETE, OPTIONS
 
     'allowed_origins' => [
-        env('FRONTEND_URL', 'http://localhost:5173'),   // Vite dev server
-        // Add production URLs
-        // 'https://yourdomain.com',
-        // 'https://www.yourdomain.com',
+        // Local development URLs
+        env('ADMIN_FRONTEND_URL', 'http://localhost:5173'),
+        env('USER_FRONTEND_URL', 'http://localhost:5174'),
+        // Production URLs
+        'https://ckc-it-club-website-admin.vercel.app/',
+        'https://ckc-it-club-website-user.vercel.app/',
     ],
 
     'allowed_origins_patterns' => [
