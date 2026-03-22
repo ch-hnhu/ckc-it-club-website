@@ -100,7 +100,7 @@ Mở file `.env` và cập nhật thông tin database:
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=ckc-it-club-database
+DB_DATABASE=ckc-it-club-db
 DB_USERNAME=root
 DB_PASSWORD=
 
@@ -117,7 +117,7 @@ USER_FRONTEND_URL=http://localhost:5174
 #### Bước 4: Tạo Database
 
 ```sql
-CREATE DATABASE `ckc-it-club-database` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE `ckc-it-club-db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 EXIT;
 ```
 
@@ -196,4 +196,3 @@ http://localhost:5173
 ```
 
 → **Frontend đã chạy thành công!** ✅
-
