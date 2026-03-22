@@ -46,7 +46,7 @@ ckc-it-club-website/
     │   └── pages/                 # Page components (routes)
     │
     ├── package.json               # Dependencies
-    └── .env                       # Environment config (API_URL...)
+    └── .env                       # Environment config (VITE_API_URL...)
 ```
 
 ---
@@ -175,7 +175,7 @@ npm install
 **Tạo file `.env` và thêm:**
 
 ```env
-API_URL=http://localhost:8000/api/v1
+VITE_API_URL=http://localhost:8000/api/v1
 ```
 
 #### Bước 3: Start Development Server

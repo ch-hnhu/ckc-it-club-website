@@ -3,7 +3,7 @@ import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosRespon
 
 // Create axios instance
 const clientApi: AxiosInstance = axios.create({
-	baseURL: import.meta.env.API_URL || "http://localhost:8000/api/v1",
+	baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
 	timeout: 30000, // 30 seconds
 	withCredentials: true, // Important for Sanctum cookies
 	headers: {
