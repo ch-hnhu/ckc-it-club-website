@@ -1,4 +1,14 @@
+import healthService from "@/services/health.service";
+import { useEffect, useState } from "react";
+
 function Dashboard() {
+	const [health, setHealth] = useState<string>();
+	useEffect(() => {
+		healthService.getHealth().then((response) => {
+			setHealth(response.message);
+		});
+	}, []);
+
 	return (
 		<>
 			{/* begin::App Main */}
@@ -10,7 +20,7 @@ function Dashboard() {
 						{/* begin::Row */}
 						<div className='row'>
 							<div className='col-sm-6'>
-								<h3 className='mb-0'>Dashboard</h3>
+								<h3 className='mb-0'>{health}</h3>
 							</div>
 							<div className='col-sm-6'>
 								<ol className='breadcrumb float-sm-end'>
