@@ -57,3 +57,40 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Docker Deploy (Render)
+
+This backend includes a production Docker setup for Render.
+
+### Files
+
+- Docker image: Dockerfile
+- Startup script: docker/start.sh
+- Build ignore: .dockerignore
+- Render Blueprint: ../render.yaml
+
+### Local Docker test
+
+```bash
+docker build -t ckc-backend .
+docker run --rm -p 10000:10000 --env-file .env ckc-backend
+```
+
+### Render setup
+
+1. Push code to GitHub.
+2. In Render, create Blueprint from render.yaml.
+3. Fill required env vars in Render dashboard:
+   - APP_URL
+   - DB_HOST
+   - DB_DATABASE
+   - DB_USERNAME
+   - DB_PASSWORD
+   - MYSQL_ATTR_SSL_CA (optional, when your MySQL provider requires custom CA path)
+4. Deploy.
+
+The container starts Laravel on the Render assigned port using:
+
+```bash
+php artisan serve --host=0.0.0.0 --port=$PORT
+```
