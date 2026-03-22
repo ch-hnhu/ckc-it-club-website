@@ -15,6 +15,10 @@ services:
             value: false
           - key: APP_URL
             sync: false
+          - key: ADMIN_FRONTEND_URL
+            sync: false
+          - key: USER_FRONTEND_URL
+            sync: false
           - key: APP_KEY
             generateValue: true
           - key: LOG_CHANNEL
