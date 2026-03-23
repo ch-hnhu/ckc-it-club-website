@@ -17,6 +17,7 @@ trait ApiResponse
      * @return JsonResponse
      */
     protected function successResponse(
+        bool $success = true,
         $data = null,
         ApiMessage|string|null $message = null,
         HttpStatus|int|null $code = null
@@ -40,6 +41,7 @@ trait ApiResponse
      * @return JsonResponse
      */
     protected function errorResponse(
+        bool $success = false,
         ApiMessage|string|null $message = null,
         HttpStatus|int|null $code = null,
         $errors = null
@@ -101,7 +103,7 @@ trait ApiResponse
     protected function createdResponse($data = null, ApiMessage|string|null $message = null): JsonResponse
     {
         $messageText = $message instanceof ApiMessage ? $message->translate() : ($message ?? ApiMessage::CREATED->translate());
-        return $this->successResponse($data, $messageText, HttpStatus::CREATED);
+        return $this->successResponse(true, $data, $messageText, HttpStatus::CREATED);
     }
 
     /**
@@ -123,7 +125,7 @@ trait ApiResponse
     protected function notFoundResponse(ApiMessage|string|null $message = null): JsonResponse
     {
         $messageText = $message instanceof ApiMessage ? $message->translate() : ($message ?? ApiMessage::NOT_FOUND->translate());
-        return $this->errorResponse($messageText, HttpStatus::NOT_FOUND);
+        return $this->errorResponse(false, $messageText, HttpStatus::NOT_FOUND);
     }
 
     /**
@@ -136,7 +138,7 @@ trait ApiResponse
     protected function validationErrorResponse($errors, ApiMessage|string|null $message = null): JsonResponse
     {
         $messageText = $message instanceof ApiMessage ? $message->translate() : ($message ?? ApiMessage::VALIDATION_ERROR->translate());
-        return $this->errorResponse($messageText, HttpStatus::UNPROCESSABLE_ENTITY, $errors);
+        return $this->errorResponse(false, $messageText, HttpStatus::UNPROCESSABLE_ENTITY, $errors);
     }
 
     /**
@@ -148,7 +150,7 @@ trait ApiResponse
     protected function unauthorizedResponse(ApiMessage|string|null $message = null): JsonResponse
     {
         $messageText = $message instanceof ApiMessage ? $message->translate() : ($message ?? ApiMessage::UNAUTHORIZED->translate());
-        return $this->errorResponse($messageText, HttpStatus::UNAUTHORIZED);
+        return $this->errorResponse(false, $messageText, HttpStatus::UNAUTHORIZED);
     }
 
     /**
@@ -160,7 +162,7 @@ trait ApiResponse
     protected function forbiddenResponse(ApiMessage|string|null $message = null): JsonResponse
     {
         $messageText = $message instanceof ApiMessage ? $message->translate() : ($message ?? ApiMessage::FORBIDDEN->translate());
-        return $this->errorResponse($messageText, HttpStatus::FORBIDDEN);
+        return $this->errorResponse(false, $messageText, HttpStatus::FORBIDDEN);
     }
 }
 

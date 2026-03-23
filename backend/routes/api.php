@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\UserController;
 
 // API Version 1
 Route::prefix('v1')->group(function () {
@@ -16,6 +17,9 @@ Route::prefix('v1')->group(function () {
             'timestamp' => now()->toIso8601String(),
         ]);
     });
+
+    // User
+    Route::apiResource('users', UserController::class);
 
     // Protected routes (require authentication)
     Route::middleware('auth:sanctum')->group(function () {
