@@ -13,9 +13,12 @@ return new class extends Migration
     {
         Schema::create('application_answers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('application_id')->constrained('club_applications');
-            $table->foreignId('question_id')->constrained('application_questions');
+            $table->unsignedBigInteger('application_id');
+            $table->unsignedBigInteger('question_id');
             $table->string('answer_value')->nullable();
+
+            $table->foreign('application_id')->references('id')->on('club_applications');
+            $table->foreign('question_id')->references('id')->on('application_questions');
         });
     }
 
