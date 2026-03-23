@@ -13,15 +13,11 @@ return new class extends Migration
     {
         Schema::create('roles', function (Blueprint $table) {
             $table->id();
-            $table->string('label');
-            $table->string('slug');
-            $table->string('description')->nullable();
-
+            $table->string('name');
+            $table->string('guard_name');
             $table->timestamps();
-            $table->foreignId('created_by')->nullable()->constrained('users');
-            $table->foreignId('updated_by')->nullable()->constrained('users');
-            $table->softDeletes();
-            $table->foreignId('deleted_by')->nullable()->constrained('users');
+
+            $table->unique(['name', 'guard_name']);
         });
     }
 
