@@ -28,7 +28,7 @@ class ProductController extends BaseApiController
             ['id' => 2, 'name' => 'Product 2', 'price' => 200],
         ];
 
-        return $this->successResponse($products, ApiMessage::PRODUCTS_RETRIEVED);
+        return $this->successResponse($products);
     }
 
     /**
@@ -48,12 +48,12 @@ class ProductController extends BaseApiController
 
         // Example: Create product
         // $product = Product::create($validated);
-        // return $this->createdResponse($product, ApiMessage::PRODUCT_CREATED);
+        // return $this->createdResponse($product);
 
         // For demo purposes
         $product = array_merge(['id' => 1], $validated);
 
-        return $this->createdResponse($product, ApiMessage::PRODUCT_CREATED);
+        return $this->createdResponse($product);
     }
 
     /**
@@ -67,18 +67,18 @@ class ProductController extends BaseApiController
         // Example: Find product
         // $product = Product::find($id);
         // if (!$product) {
-        //     return $this->notFoundResponse(ApiMessage::PRODUCT_NOT_FOUND);
+        //     return $this->notFoundResponse();
         // }
-        // return $this->successResponse($product, ApiMessage::PRODUCT_RETRIEVED);
+        // return $this->successResponse($product);
 
         // For demo purposes
         if ($id > 100) {
-            return $this->notFoundResponse(ApiMessage::PRODUCT_NOT_FOUND);
+            return $this->notFoundResponse();
         }
 
-        $product = ['id' => $id, 'name' => 'Product ' . $id, 'price' => 100];
+        $product = ['id' => $id, 'name' => 'Product '.$id, 'price' => 100];
 
-        return $this->successResponse($product, ApiMessage::PRODUCT_RETRIEVED);
+        return $this->successResponse($product);
     }
 
     /**
@@ -100,19 +100,19 @@ class ProductController extends BaseApiController
         // Example: Update product
         // $product = Product::find($id);
         // if (!$product) {
-        //     return $this->notFoundResponse(ApiMessage::PRODUCT_NOT_FOUND);
+        //     return $this->notFoundResponse();
         // }
         // $product->update($validated);
-        // return $this->successResponse($product, ApiMessage::PRODUCT_UPDATED);
+        // return $this->successResponse($product);
 
         // For demo purposes
         if ($id > 100) {
-            return $this->notFoundResponse(ApiMessage::PRODUCT_NOT_FOUND);
+            return $this->notFoundResponse();
         }
 
         $product = array_merge(['id' => $id], $validated);
 
-        return $this->successResponse($product, ApiMessage::PRODUCT_UPDATED);
+        return $this->successResponse($product);
     }
 
     /**
@@ -126,16 +126,16 @@ class ProductController extends BaseApiController
         // Example: Delete product
         // $product = Product::find($id);
         // if (!$product) {
-        //     return $this->notFoundResponse(ApiMessage::PRODUCT_NOT_FOUND);
+        //     return $this->notFoundResponse();
         // }
         // $product->delete();
-        // return $this->successResponse(null, ApiMessage::PRODUCT_DELETED);
+        // return $this->successResponse(null);
 
         // For demo purposes
         if ($id > 100) {
-            return $this->notFoundResponse(ApiMessage::PRODUCT_NOT_FOUND);
+            return $this->notFoundResponse();
         }
 
-        return $this->successResponse(null, ApiMessage::PRODUCT_DELETED);
+        return $this->successResponse(null);
     }
 }

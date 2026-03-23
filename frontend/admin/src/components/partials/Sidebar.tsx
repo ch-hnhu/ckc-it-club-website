@@ -1,13 +1,9 @@
 function Sidebar() {
 	return (
 		<>
-			{/* begin::Sidebar */}
 			<aside className='app-sidebar bg-body-secondary shadow' data-bs-theme='dark'>
-				{/* begin::Sidebar Brand */}
 				<div className='sidebar-brand'>
-					{/* begin::Brand Link */}
 					<a href='/' className='brand-link'>
-						{/* begin::Brand Image */}
 						<img
 							src='./img/ckc-it-club-logo.jpg'
 							alt='CKC IT CLUB Logo'
@@ -19,18 +15,11 @@ function Sidebar() {
 								border: "1px solid #fff",
 							}}
 						/>
-						{/* end::Brand Image */}
-						{/* begin::Brand Text */}
 						<span className='brand-text fw-light'>CKC IT CLUB</span>
-						{/* end::Brand Text */}
 					</a>
-					{/* end::Brand Link */}
 				</div>
-				{/* end::Sidebar Brand */}
-				{/* begin::Sidebar Wrapper */}
 				<div className='sidebar-wrapper'>
 					<nav className='mt-2'>
-						{/* begin::Sidebar Menu */}
 						<ul
 							className='nav sidebar-menu flex-column'
 							data-lte-toggle='treeview'
@@ -39,7 +28,7 @@ function Sidebar() {
 							data-accordion='false'
 							id='navigation'>
 							<li className='nav-item'>
-								<a href='#' className='nav-link active'>
+								<a href='#' className='nav-link'>
 									<i className='nav-icon bi bi-house-door'></i>
 									<p>
 										Dashboard
@@ -48,7 +37,7 @@ function Sidebar() {
 								</a>
 								<ul className='nav nav-treeview'>
 									<li className='nav-item'>
-										<a href='./index.html' className='nav-link active'>
+										<a href='./index.html' className='nav-link'>
 											<i className='nav-icon bi bi-circle'></i>
 											<p>Thống kê</p>
 										</a>
@@ -62,7 +51,7 @@ function Sidebar() {
 								</ul>
 							</li>
 							<li className='nav-item'>
-								<a href='#' className='nav-link active'>
+								<a href='#' className='nav-link'>
 									<i className='nav-icon bi bi-people'></i>
 									<p>
 										Quản lý người dùng
@@ -91,7 +80,7 @@ function Sidebar() {
 								</ul>
 							</li>
 							<li className='nav-item'>
-								<a href='#' className='nav-link active'>
+								<a href='#' className='nav-link'>
 									<i className='nav-icon bi bi-building'></i>
 									<p>
 										Quản lý đơn vị
@@ -120,7 +109,7 @@ function Sidebar() {
 								</ul>
 							</li>
 							<li className='nav-item'>
-								<a href='#' className='nav-link active'>
+								<a href='#' className='nav-link'>
 									<i className='nav-icon bi bi-trophy'></i>
 									<p>
 										Quản lý CLB
@@ -149,7 +138,7 @@ function Sidebar() {
 								</ul>
 							</li>
 							<li className='nav-item'>
-								<a href='#' className='nav-link active'>
+								<a href='#' className='nav-link'>
 									<i className='nav-icon bi bi-person-plus'></i>
 									<p>
 										Tuyển thành viên
@@ -184,12 +173,9 @@ function Sidebar() {
 								</ul>
 							</li>
 						</ul>
-						{/* end::Sidebar Menu */}
 					</nav>
 				</div>
-				{/* end::Sidebar Wrapper */}
 			</aside>
-			{/* end::Sidebar */}
 		</>
 	);
 }

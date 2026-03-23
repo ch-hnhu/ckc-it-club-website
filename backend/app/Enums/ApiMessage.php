@@ -30,14 +30,6 @@ enum ApiMessage: string
     case RETRIEVED = 'Resource retrieved successfully';
     case NOT_FOUND = 'Resource not found';
 
-    // Product Specific
-    case PRODUCT_CREATED = 'Product created successfully';
-    case PRODUCT_UPDATED = 'Product updated successfully';
-    case PRODUCT_DELETED = 'Product deleted successfully';
-    case PRODUCT_RETRIEVED = 'Product retrieved successfully';
-    case PRODUCTS_RETRIEVED = 'Products retrieved successfully';
-    case PRODUCT_NOT_FOUND = 'Product not found';
-
     // User Specific
     case USER_CREATED = 'User created successfully';
     case USER_UPDATED = 'User updated successfully';
@@ -70,7 +62,7 @@ enum ApiMessage: string
     public function translate(?string $locale = null): string
     {
         // Get translation key from enum name
-        $key = 'api.' . $this->name;
+        $key = 'api.'.$this->name;
 
         // Use Laravel's translation system
         $translated = __($key, [], $locale);
