@@ -6,12 +6,18 @@ function Sidebar() {
 				{/* begin::Sidebar Brand */}
 				<div className='sidebar-brand'>
 					{/* begin::Brand Link */}
-					<a href='./index.html' className='brand-link'>
+					<a href='/' className='brand-link'>
 						{/* begin::Brand Image */}
 						<img
 							src='./img/ckc-it-club-logo.jpg'
 							alt='CKC IT CLUB Logo'
 							className='brand-image opacity-75 shadow'
+							style={{
+								width: "32px",
+								height: "32px",
+								borderRadius: "50%",
+								border: "1px solid #fff",
+							}}
 						/>
 						{/* end::Brand Image */}
 						{/* begin::Brand Text */}
