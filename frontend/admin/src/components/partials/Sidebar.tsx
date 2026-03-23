@@ -1,3 +1,5 @@
+import { Building, House, Trophy, UserRoundPlus, Users } from "lucide-react";
+
 function Sidebar() {
 	return (
 		<>
@@ -29,7 +31,7 @@ function Sidebar() {
 							id='navigation'>
 							<li className='nav-item'>
 								<a href='#' className='nav-link'>
-									<i className='nav-icon bi bi-house-door'></i>
+									<House className='size-4 m-1' />
 									<p>
 										Dashboard
 										<i className='nav-arrow bi bi-chevron-right'></i>
@@ -52,7 +54,7 @@ function Sidebar() {
 							</li>
 							<li className='nav-item'>
 								<a href='#' className='nav-link'>
-									<i className='nav-icon bi bi-people'></i>
+									<Users className='size-4 m-1' />
 									<p>
 										Quản lý người dùng
 										<i className='nav-arrow bi bi-chevron-right'></i>
@@ -60,7 +62,7 @@ function Sidebar() {
 								</a>
 								<ul className='nav nav-treeview'>
 									<li className='nav-item'>
-										<a href='./index.html' className='nav-link'>
+										<a href='/users' className='nav-link'>
 											<i className='nav-icon bi bi-circle'></i>
 											<p>Người dùng</p>
 										</a>
@@ -81,7 +83,7 @@ function Sidebar() {
 							</li>
 							<li className='nav-item'>
 								<a href='#' className='nav-link'>
-									<i className='nav-icon bi bi-building'></i>
+									<Building className='size-4 m-1' />
 									<p>
 										Quản lý đơn vị
 										<i className='nav-arrow bi bi-chevron-right'></i>
@@ -110,7 +112,7 @@ function Sidebar() {
 							</li>
 							<li className='nav-item'>
 								<a href='#' className='nav-link'>
-									<i className='nav-icon bi bi-trophy'></i>
+									<Trophy className='size-4 m-1' />
 									<p>
 										Quản lý CLB
 										<i className='nav-arrow bi bi-chevron-right'></i>
@@ -139,7 +141,7 @@ function Sidebar() {
 							</li>
 							<li className='nav-item'>
 								<a href='#' className='nav-link'>
-									<i className='nav-icon bi bi-person-plus'></i>
+									<UserRoundPlus className='size-4 m-1' />
 									<p>
 										Tuyển thành viên
 										<i className='nav-arrow bi bi-chevron-right'></i>
