@@ -6,32 +6,38 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::create('majors', function (Blueprint $table) {
-            $table->id();
-            $table->string('value');
-            $table->string('label');
-            $table->string('slug');
+	/**
+	 * Run the migrations.
+	 */
+	public function up(): void
+	{
+		Schema::create('majors', function (Blueprint $table) {
+			$table->id();
+			$table->string('value');
+			$table->string('label');
+			$table->string('slug');
 
-            $table->foreignId('faculty_id')->constrained('faculties');
+			$table->unsignedBigInteger('faculty_id');
 
-            $table->timestamps();
-            $table->foreignId('created_by')->nullable()->constrained('users');
-            $table->foreignId('updated_by')->nullable()->constrained('users');
-            $table->softDeletes();
-            $table->foreignId('deleted_by')->nullable()->constrained('users');
-        });
-    }
+			$table->dateTime('created_at')->nullable();
+			$table->unsignedBigInteger('created_by')->nullable();
+			$table->dateTime('updated_at')->nullable();
+			$table->unsignedBigInteger('updated_by')->nullable();
+			$table->dateTime('deleted_at')->nullable();
+			$table->unsignedBigInteger('deleted_by')->nullable();
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('majors');
-    }
+			$table->foreign('faculty_id')->references('id')->on('faculties');
+			$table->foreign('created_by')->references('id')->on('users');
+			$table->foreign('updated_by')->references('id')->on('users');
+			$table->foreign('deleted_by')->references('id')->on('users');
+		});
+	}
+
+	/**
+	 * Reverse the migrations.
+	 */
+	public function down(): void
+	{
+		Schema::dropIfExists('majors');
+	}
 };

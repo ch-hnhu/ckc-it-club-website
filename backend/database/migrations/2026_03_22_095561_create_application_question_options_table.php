@@ -13,16 +13,21 @@ return new class extends Migration
     {
         Schema::create('application_question_options', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('question_id')->constrained('application_questions');
+            $table->unsignedBigInteger('question_id');
             $table->string('value');
             $table->string('label');
 
-            $table->timestamps();
-            $table->foreignId('created_by')->nullable()->constrained('users');
-            $table->foreignId('updated_by')->nullable()->constrained('users');
+            $table->dateTime('created_at')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->dateTime('updated_at')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->dateTime('deleted_at')->nullable();
+            $table->unsignedBigInteger('deleted_by')->nullable();
 
-            $table->softDeletes();
-            $table->foreignId('deleted_by')->nullable()->constrained('users');
+            $table->foreign('question_id')->references('id')->on('application_questions');
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('deleted_by')->references('id')->on('users');
         });
     }
 

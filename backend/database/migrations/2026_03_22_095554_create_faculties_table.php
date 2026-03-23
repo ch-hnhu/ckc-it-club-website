@@ -17,12 +17,16 @@ return new class extends Migration
             $table->string('label');
             $table->string('slug');
 
-            $table->timestamps();
+            $table->dateTime('created_at')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->dateTime('updated_at')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->dateTime('deleted_at')->nullable();
+            $table->unsignedBigInteger('deleted_by')->nullable();
 
-            $table->foreignId('created_by')->nullable()->constrained('users');
-            $table->foreignId('updated_by')->nullable()->constrained('users');
-            $table->softDeletes();
-            $table->foreignId('deleted_by')->nullable()->constrained('users');
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('deleted_by')->references('id')->on('users');
         });
     }
 
