@@ -12,19 +12,23 @@ function MainLayout() {
 	};
 
 	return (
-		<div className='flex flex-col min-h-screen bg-white'>
-			<Header onToggleSidebar={toggleSidebar} />
+		<div className='flex flex-col h-screen bg-white'>
+			<div className='flex-shrink-0'>
+				<Header onToggleSidebar={toggleSidebar} />
+			</div>
 			<div className='flex flex-1 overflow-hidden'>
-				<div
-					className='fixed lg:static left-0 top-0 z-30 h-full'
+				<aside
+					className='fixed lg:relative left-0 top-0 z-30 h-screen lg:h-auto flex-shrink-0 bg-white border-r border-[#e0e0e0]'
 					style={{
 						width: sidebarOpen ? "16rem" : "0",
 						transition: "width 300ms",
 					}}>
 					<Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-				</div>
-				<main className='flex-1 overflow-auto'>
-					<Outlet />
+				</aside>
+				<main className='flex-1 flex flex-col overflow-hidden'>
+					<div className='flex-1 overflow-auto'>
+						<Outlet />
+					</div>
 				</main>
 			</div>
 			<Footer />
