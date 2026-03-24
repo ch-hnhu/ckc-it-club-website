@@ -8,9 +8,7 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "overlayscrollbars/styles/overlayscrollbars.css";
 import "apexcharts/dist/apexcharts.css";
-import "jsvectormap/dist/css/jsvectormap.min.css";
 import App from "./App.tsx";
-import "./index.css";
 
 declare global {
 	interface Window {
