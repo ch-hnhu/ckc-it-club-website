@@ -162,10 +162,14 @@ function App() {
 
 	return (
 		<>
-			<div className='app-wrapper'>
+			<div className='app-wrapper flex flex-col min-h-screen'>
 				<Header />
-				<Sidebar />
-				<Outlet />
+				<div className='flex flex-1'>
+					<Sidebar />
+					<div className='flex-1 overflow-auto'>
+						<Outlet />
+					</div>
+				</div>
 				<Footer />
 			</div>
 		</>

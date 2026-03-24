@@ -2,7 +2,7 @@ function Header() {
 	return (
 		<>
 			{/* begin::Header */}
-			<nav className='app-header navbar navbar-expand bg-body'>
+			<nav className='app-header navbar navbar-expand bg-white border-b border-[#e0e0e0]' style={{boxShadow: "none"}}>
 				{/* begin::Container */}
 				<div className='container-fluid'>
 					{/* begin::Start Navbar Links */}

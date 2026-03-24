@@ -3,9 +3,9 @@ import { Building, House, Trophy, UserRoundPlus, Users } from "lucide-react";
 function Sidebar() {
 	return (
 		<>
-			<aside className='app-sidebar bg-body-secondary shadow' data-bs-theme='dark'>
-				<div className='sidebar-brand'>
-					<a href='/' className='brand-link'>
+			<aside className='app-sidebar bg-white border-r border-[#e0e0e0]' style={{boxShadow: "none"}}>
+				<div className='sidebar-brand border-b border-[#e0e0e0]'>
+					<a href='/' className='brand-link' style={{color: "#2e3820"}}>
 						<img
 							src='./img/ckc-it-club-logo.jpg'
 							alt='CKC IT CLUB Logo'
@@ -15,9 +15,9 @@ function Sidebar() {
 								height: "32px",
 								borderRadius: "50%",
 								border: "1px solid #fff",
-							}}
-						/>
-						<span className='brand-text fw-light'>CKC IT CLUB</span>
+						}}
+					/>
+					<span className='brand-text fw-light' style={{color: "#2e3820"}}>CKC IT CLUB</span>
 					</a>
 				</div>
 				<div className='sidebar-wrapper'>
