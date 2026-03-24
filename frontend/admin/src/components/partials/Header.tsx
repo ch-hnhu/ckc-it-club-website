@@ -1,252 +1,147 @@
-function Header() {
+import { Menu, Bell, MessageSquare, LogOut, User, Settings, Search } from "lucide-react";
+import { useState } from "react";
+
+interface HeaderProps {
+	onToggleSidebar?: () => void;
+}
+
+function Header({ onToggleSidebar }: HeaderProps) {
+	const [showNotifications, setShowNotifications] = useState(false);
+	const [showMessages, setShowMessages] = useState(false);
+	const [showUserMenu, setShowUserMenu] = useState(false);
+
 	return (
-		<>
-			{/* begin::Header */}
-			<nav className='app-header navbar navbar-expand bg-white border-b border-[#e0e0e0]' style={{boxShadow: "none"}}>
-				{/* begin::Container */}
-				<div className='container-fluid'>
-					{/* begin::Start Navbar Links */}
-					<ul className='navbar-nav'>
-						<li className='nav-item'>
-							<a
-								className='nav-link'
-								data-lte-toggle='sidebar'
-								href='#'
-								role='button'>
-								<i className='bi bi-list'></i>
-							</a>
-						</li>
-						<li className='nav-item d-none d-md-block'>
-							<a href='/' className='nav-link'>
-								Home
-							</a>
-						</li>
-						<li className='nav-item d-none d-md-block'>
-							<a href='#' className='nav-link'>
-								Contact
-							</a>
-						</li>
-					</ul>
-					{/* end::Start Navbar Links */}
-
-					{/* begin::End Navbar Links */}
-					<ul className='navbar-nav ms-auto'>
-						{/* begin::Navbar Search */}
-						<li className='nav-item'>
-							<a
-								className='nav-link'
-								data-widget='navbar-search'
-								href='#'
-								role='button'>
-								<i className='bi bi-search'></i>
-							</a>
-						</li>
-						{/* end::Navbar Search */}
-
-						{/* begin::Messages Dropdown Menu */}
-						<li className='nav-item dropdown'>
-							<a className='nav-link' data-bs-toggle='dropdown' href='#'>
-								<i className='bi bi-chat-text'></i>
-								<span className='navbar-badge badge text-bg-danger'>3</span>
-							</a>
-							<div className='dropdown-menu dropdown-menu-lg dropdown-menu-end'>
-								<a href='#' className='dropdown-item'>
-									{/* begin::Message */}
-									<div className='d-flex'>
-										<div className='flex-shrink-0'>
-											<img
-												src='./img/user1-128x128.jpg'
-												alt='User Avatar'
-												className='img-size-50 rounded-circle me-3'
-											/>
-										</div>
-										<div className='flex-grow-1'>
-											<h3 className='dropdown-item-title'>
-												Brad Diesel
-												<span className='float-end fs-7 text-danger'>
-													<i className='bi bi-star-fill'></i>
-												</span>
-											</h3>
-											<p className='fs-7'>Call me whenever you can...</p>
-											<p className='fs-7 text-secondary'>
-												<i className='bi bi-clock-fill me-1'></i> 4 Hours
-												Ago
-											</p>
-										</div>
-									</div>
-									{/* end::Message */}
-								</a>
-								<div className='dropdown-divider'></div>
-								<a href='#' className='dropdown-item'>
-									{/* begin::Message */}
-									<div className='d-flex'>
-										<div className='flex-shrink-0'>
-											<img
-												src='./img/user8-128x128.jpg'
-												alt='User Avatar'
-												className='img-size-50 rounded-circle me-3'
-											/>
-										</div>
-										<div className='flex-grow-1'>
-											<h3 className='dropdown-item-title'>
-												John Pierce
-												<span className='float-end fs-7 text-secondary'>
-													<i className='bi bi-star-fill'></i>
-												</span>
-											</h3>
-											<p className='fs-7'>I got your message bro</p>
-											<p className='fs-7 text-secondary'>
-												<i className='bi bi-clock-fill me-1'></i> 4 Hours
-												Ago
-											</p>
-										</div>
-									</div>
-									{/* end::Message */}
-								</a>
-								<div className='dropdown-divider'></div>
-								<a href='#' className='dropdown-item'>
-									{/* begin::Message */}
-									<div className='d-flex'>
-										<div className='flex-shrink-0'>
-											<img
-												src='./img/user3-128x128.jpg'
-												alt='User Avatar'
-												className='img-size-50 rounded-circle me-3'
-											/>
-										</div>
-										<div className='flex-grow-1'>
-											<h3 className='dropdown-item-title'>
-												Nora Silvester
-												<span className='float-end fs-7 text-warning'>
-													<i className='bi bi-star-fill'></i>
-												</span>
-											</h3>
-											<p className='fs-7'>The subject goes here</p>
-											<p className='fs-7 text-secondary'>
-												<i className='bi bi-clock-fill me-1'></i> 4 Hours
-												Ago
-											</p>
-										</div>
-									</div>
-									{/* end::Message */}
-								</a>
-								<div className='dropdown-divider'></div>
-								<a href='#' className='dropdown-item dropdown-footer'>
-									See All Messages
-								</a>
-							</div>
-						</li>
-						{/* end::Messages Dropdown Menu */}
-
-						{/* begin::Notifications Dropdown Menu */}
-						<li className='nav-item dropdown'>
-							<a className='nav-link' data-bs-toggle='dropdown' href='#'>
-								<i className='bi bi-bell-fill'></i>
-								<span className='navbar-badge badge text-bg-warning'>15</span>
-							</a>
-							<div className='dropdown-menu dropdown-menu-lg dropdown-menu-end'>
-								<span className='dropdown-item dropdown-header'>
-									15 Notifications
-								</span>
-								<div className='dropdown-divider'></div>
-								<a href='#' className='dropdown-item'>
-									<i className='bi bi-envelope me-2'></i> 4 new messages
-									<span className='float-end text-secondary fs-7'>3 mins</span>
-								</a>
-								<div className='dropdown-divider'></div>
-								<a href='#' className='dropdown-item'>
-									<i className='bi bi-people-fill me-2'></i> 8 friend requests
-									<span className='float-end text-secondary fs-7'>12 hours</span>
-								</a>
-								<div className='dropdown-divider'></div>
-								<a href='#' className='dropdown-item'>
-									<i className='bi bi-file-earmark-fill me-2'></i> 3 new reports
-									<span className='float-end text-secondary fs-7'>2 days</span>
-								</a>
-								<div className='dropdown-divider'></div>
-								<a href='#' className='dropdown-item dropdown-footer'>
-									See All Notifications
-								</a>
-							</div>
-						</li>
-						{/* end::Notifications Dropdown Menu */}
-
-						{/* begin::Fullscreen Toggle */}
-						<li className='nav-item'>
-							<a className='nav-link' href='#' data-lte-toggle='fullscreen'>
-								<i data-lte-icon='maximize' className='bi bi-arrows-fullscreen'></i>
-								<i
-									data-lte-icon='minimize'
-									className='bi bi-fullscreen-exit'
-									style={{ display: "none" }}></i>
-							</a>
-						</li>
-						{/* end::Fullscreen Toggle */}
-
-						{/* begin::User Menu Dropdown */}
-						<li className='nav-item dropdown user-menu'>
-							<a
-								href='#'
-								className='nav-link dropdown-toggle'
-								data-bs-toggle='dropdown'>
-								<img
-									src='./img/user2-160x160.jpg'
-									className='user-image rounded-circle shadow'
-									alt='User Image'
-								/>
-								<span className='d-none d-md-inline'>Alexander Pierce</span>
-							</a>
-							<ul className='dropdown-menu dropdown-menu-lg dropdown-menu-end'>
-								{/* begin::User Image */}
-								<li className='user-header text-bg-primary'>
-									<img
-										src='./img/user2-160x160.jpg'
-										className='rounded-circle shadow'
-										alt='User Image'
-									/>
-									<p>
-										Alexander Pierce - Web Developer
-										<small>Member since Nov. 2023</small>
-									</p>
-								</li>
-								{/* end::User Image */}
-								{/* begin::Menu Body */}
-								<li className='user-body'>
-									{/* begin::Row */}
-									<div className='row'>
-										<div className='col-4 text-center'>
-											<a href='#'>Followers</a>
-										</div>
-										<div className='col-4 text-center'>
-											<a href='#'>Sales</a>
-										</div>
-										<div className='col-4 text-center'>
-											<a href='#'>Friends</a>
-										</div>
-									</div>
-									{/* end::Row */}
-								</li>
-								{/* end::Menu Body */}
-								{/* begin::Menu Footer */}
-								<li className='user-footer'>
-									<a href='#' className='btn btn-outline-secondary'>
-										Profile
-									</a>
-									<a href='#' className='btn btn-outline-danger float-end'>
-										Sign out
-									</a>
-								</li>
-								{/* end::Menu Footer */}
-							</ul>
-						</li>
-						{/* end::User Menu Dropdown */}
-					</ul>
-					{/* end::End Navbar Links */}
+		<header className='sticky top-0 z-40 border-b border-[#e0e0e0] bg-white'>
+			<div className='h-16 px-6 flex items-center justify-between'>
+				{/* Left Side */}
+				<div className='flex items-center gap-4'>
+					<button
+						onClick={onToggleSidebar}
+						className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors lg:hidden'
+						aria-label='Toggle sidebar'>
+						<Menu className='w-5 h-5 text-[#1a1a1a]' />
+					</button>
+					<h1 className='text-xl font-semibold text-[#1a1a1a] hidden md:block'>
+						Dashboard
+					</h1>
 				</div>
-				{/* end::Container */}
-			</nav>
-			{/* end::Header */}
-		</>
+
+				{/* Right Side */}
+				<div className='flex items-center gap-2'>
+					{/* Search */}
+					<div className='hidden md:flex items-center px-3 py-2 rounded-lg bg-[#f5f5f5] gap-2'>
+						<Search className='w-4 h-4 text-[#666666]' />
+						<input
+							type='text'
+							placeholder='Search...'
+							className='bg-transparent border-none outline-none text-sm text-[#1a1a1a] placeholder-[#999999] w-32'
+						/>
+					</div>
+
+					{/* Messages */}
+					<div className='relative'>
+						<button
+							onClick={() => setShowMessages(!showMessages)}
+							className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors relative'>
+							<MessageSquare className='w-5 h-5 text-[#1a1a1a]' />
+							<span className='absolute top-1 right-1 w-2 h-2 bg-[#2e3820] rounded-full'></span>
+						</button>
+						{showMessages && (
+							<div className='absolute right-0 mt-2 w-64 bg-white rounded-lg border border-[#e0e0e0] shadow-lg'>
+								<div className='p-3 border-b border-[#e0e0e0]'>
+									<h3 className='font-semibold text-[#1a1a1a]'>Messages</h3>
+								</div>
+								<div className='max-h-80 overflow-y-auto'>
+									<div className='p-3 border-b border-[#e5e5e5] hover:bg-[#f5f5f5] cursor-pointer'>
+										<p className='text-sm font-medium text-[#1a1a1a]'>Sarah Doe</p>
+										<p className='text-xs text-[#666666]'>Hey, are you available?</p>
+									</div>
+									<div className='p-3 border-b border-[#e5e5e5] hover:bg-[#f5f5f5] cursor-pointer'>
+										<p className='text-sm font-medium text-[#1a1a1a]'>John Smith</p>
+										<p className='text-xs text-[#666666]'>Thanks for the update</p>
+									</div>
+								</div>
+								<div className='p-3 border-t border-[#e0e0e0] text-center'>
+									<a href='#' className='text-xs text-[#2e3820] hover:underline'>View all messages</a>
+								</div>
+							</div>
+						)}
+					</div>
+
+					{/* Notifications */}
+					<div className='relative'>
+						<button
+							onClick={() => setShowNotifications(!showNotifications)}
+							className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors relative'>
+							<Bell className='w-5 h-5 text-[#1a1a1a]' />
+							<span className='absolute top-1 right-1 w-2 h-2 bg-[#dc2626] rounded-full'></span>
+						</button>
+						{showNotifications && (
+							<div className='absolute right-0 mt-2 w-80 bg-white rounded-lg border border-[#e0e0e0] shadow-lg'>
+								<div className='p-3 border-b border-[#e0e0e0]'>
+									<h3 className='font-semibold text-[#1a1a1a]'>Notifications (5)</h3>
+								</div>
+								<div className='max-h-80 overflow-y-auto'>
+									<div className='p-3 border-b border-[#e5e5e5] hover:bg-[#f5f5f5] cursor-pointer'>
+										<p className='text-sm font-medium text-[#1a1a1a]'>System Update</p>
+										<p className='text-xs text-[#666666]'>Dashboard updated to v2.1.0</p>
+										<p className='text-xs text-[#999999] mt-1'>2 hours ago</p>
+									</div>
+									<div className='p-3 border-b border-[#e5e5e5] hover:bg-[#f5f5f5] cursor-pointer'>
+										<p className='text-sm font-medium text-[#1a1a1a]'>New User Registration</p>
+										<p className='text-xs text-[#666666]'>5 new users joined today</p>
+										<p className='text-xs text-[#999999] mt-1'>4 hours ago</p>
+									</div>
+									<div className='p-3 border-b border-[#e5e5e5] hover:bg-[#f5f5f5] cursor-pointer'>
+										<p className='text-sm font-medium text-[#1a1a1a]'>New Order</p>
+										<p className='text-xs text-[#666666]'>Order #12345 received</p>
+										<p className='text-xs text-[#999999] mt-1'>6 hours ago</p>
+									</div>
+								</div>
+								<div className='p-3 border-t border-[#e0e0e0] text-center'>
+									<a href='#' className='text-xs text-[#2e3820] hover:underline'>View all notifications</a>
+								</div>
+							</div>
+						)}
+					</div>
+
+					{/* User Menu */}
+					<div className='relative'>
+						<button
+							onClick={() => setShowUserMenu(!showUserMenu)}
+							className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors'>
+							<div className='w-8 h-8 rounded-full bg-[#2e3820] flex items-center justify-center text-white'>
+								<span className='text-xs font-semibold'>AP</span>
+							</div>
+						</button>
+						{showUserMenu && (
+							<div className='absolute right-0 mt-2 w-56 bg-white rounded-lg border border-[#e0e0e0] shadow-lg'>
+								<div className='p-4 border-b border-[#e0e0e0]'>
+									<p className='font-semibold text-[#1a1a1a]'>Alexander Pierce</p>
+									<p className='text-xs text-[#666666]'>admin@example.com</p>
+								</div>
+								<div className='py-2'>
+									<button className='w-full px-4 py-2 text-left text-sm text-[#1a1a1a] hover:bg-[#f5f5f5] flex items-center gap-2 transition-colors'>
+										<User className='w-4 h-4' />
+										Profile
+									</button>
+									<button className='w-full px-4 py-2 text-left text-sm text-[#1a1a1a] hover:bg-[#f5f5f5] flex items-center gap-2 transition-colors'>
+										<Settings className='w-4 h-4' />
+										Settings
+									</button>
+								</div>
+								<div className='border-t border-[#e0e0e0] py-2'>
+									<button className='w-full px-4 py-2 text-left text-sm text-[#dc2626] hover:bg-[#fee2e2] flex items-center gap-2 transition-colors'>
+										<LogOut className='w-4 h-4' />
+										Sign out
+									</button>
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+			</div>
+		</header>
 	);
 }
 
