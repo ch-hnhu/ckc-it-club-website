@@ -1,20 +1,10 @@
-import healthService from "@/services/health.service";
-import { useEffect, useState } from "react";
 import { StatsGrid } from "../components/dashboard/StatsGrid";
 import { ChartCard } from "../components/dashboard/ChartCard";
 import { SimpleChart } from "../components/dashboard/SimpleChart";
 import { RecentActivity } from "../components/dashboard/RecentActivity";
 import { MoreVertical } from "lucide-react";
 
-function Dashboard() {
-	const [health, setHealth] = useState<string>();
-
-	useEffect(() => {
-		healthService.getHealth().then((response) => {
-			setHealth(response.message);
-		});
-	}, []);
-
+export default function Demo() {
 	const chartData = [
 		{ name: "Jan", value: 400 },
 		{ name: "Feb", value: 520 },
@@ -64,7 +54,7 @@ function Dashboard() {
 					<div className='flex items-center justify-between'>
 						<div>
 							<h1 className='text-3xl font-bold text-[#1a1a1a]'>Dashboard</h1>
-							<p className='text-sm text-[#666666] mt-1'>{health || "Loading..."}</p>
+							<p className='text-sm text-[#666666] mt-1'>Welcome to your admin panel</p>
 						</div>
 						<div className='flex items-center gap-4'>
 							<button className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors'>
@@ -137,5 +127,3 @@ function Dashboard() {
 		</main>
 	);
 }
-
-export default Dashboard;
