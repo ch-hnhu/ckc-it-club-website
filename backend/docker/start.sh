@@ -13,9 +13,9 @@ php artisan route:clear
 php artisan view:clear
 
 # 1. Chạy Migration:
-php artisan migrate --force
+php artisan migrate:fresh --force # Lưu ý: khi lên production thì sửa lại thành php artisan migrate --force
 
 # 2. Chạy Seeder
-php artisan migrate --force --seed
+php artisan db:seed --force
 
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"
