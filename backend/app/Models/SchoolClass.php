@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class SchoolClass extends Model
 {
-    /** @use HasFactory<\Database\Factories\SchoolClassFactory> */
-    use HasFactory;
+	/** @use HasFactory<\Database\Factories\SchoolClassFactory> */
+	use HasFactory;
+
+	protected $fillable = [
+		'name',
+		'slug',
+		'major_id',
+	];
 }

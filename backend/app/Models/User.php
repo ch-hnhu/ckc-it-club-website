@@ -13,6 +13,17 @@ class User extends Authenticatable
 
 	protected string $guard_name = 'web';
 
+	protected $fillable = [
+		'full_name',
+		'email',
+		'password',
+		'student_code',
+		'is_active',
+		'faculty',
+		'major',
+		'class',
+	];
+
 	public function faculty()
 	{
 		return $this->belongsTo(Faculty::class, 'faculties');
