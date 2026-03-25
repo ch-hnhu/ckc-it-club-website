@@ -6,6 +6,9 @@ const userService = {
 	async getUsers(): Promise<ApiResponse<User[]>> {
 		return api.get("/users");
 	},
+	async getMe(): Promise<{ success: boolean; data: User }> {
+		return api.get("/user");
+	},
 };
 
 export default userService;

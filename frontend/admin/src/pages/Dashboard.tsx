@@ -1,4 +1,6 @@
 import healthService from "@/services/health.service";
+import userService from "@/services/user.service";
+import type { User } from "@/types/user.type";
 import { useEffect, useState } from "react";
 import { StatsGrid } from "../components/dashboard/StatsGrid";
 import { ChartCard } from "../components/dashboard/ChartCard";
@@ -8,11 +10,20 @@ import { MoreVertical } from "lucide-react";
 
 function Dashboard() {
 	const [health, setHealth] = useState<string>();
+	const [user, setUser] = useState<User | null>(null);
 
 	useEffect(() => {
 		healthService.getHealth().then((response) => {
 			setHealth(response.message);
 		});
+		
+		userService.getMe()
+			.then((response) => {
+				if (response.success) {
+					setUser(response.data);
+				}
+			})
+			.catch((err) => console.error("Failed to fetch user", err));
 	}, []);
 
 	const chartData = [
@@ -63,7 +74,9 @@ function Dashboard() {
 				<div className='px-6 py-4'>
 					<div className='flex items-center justify-between'>
 						<div>
-							<h1 className='text-3xl font-bold text-[#1a1a1a]'>Dashboard</h1>
+							<h1 className='text-3xl font-bold text-[#1a1a1a]'>
+								{user ? `Xin chào, ${user.full_name || user.email}` : "Dashboard"}
+							</h1>
 							<p className='text-sm text-[#666666] mt-1'>{health || "Loading..."}</p>
 						</div>
 						<div className='flex items-center gap-4'>
