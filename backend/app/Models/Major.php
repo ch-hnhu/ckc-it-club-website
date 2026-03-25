@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Major extends Model
 {
-    /** @use HasFactory<\Database\Factories\MajorFactory> */
-    use HasFactory;
+	/** @use HasFactory<\Database\Factories\MajorFactory> */
+	use HasFactory;
+
+	protected $fillable = [
+		'name',
+		'slug',
+		'faculty_id',
+	];
 }

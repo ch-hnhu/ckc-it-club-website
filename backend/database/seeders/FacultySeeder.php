@@ -2,16 +2,30 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Faculty;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class FacultySeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        //
+        $faculties = [
+            'Công nghệ Thông tin',
+            'Kinh tế Thương mại',
+            'Công nghệ Điện tử',
+            'Công nghệ Cơ khí',
+            'Kỹ thuật Ô tô',
+        ];
+
+        foreach ($faculties as $faculty) {
+            Faculty::firstOrCreate(
+                ['value' => $faculty],
+                [
+                    'label' => $faculty,
+                    'slug' => Str::slug($faculty)
+                ]
+            );
+        }
     }
 }
