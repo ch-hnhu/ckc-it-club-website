@@ -17,7 +17,7 @@ function Header({ onToggleSidebar }: HeaderProps) {
 				<div className='flex items-center gap-4'>
 					<button
 						onClick={onToggleSidebar}
-						className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors lg:hidden'
+						className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors'
 						aria-label='Toggle sidebar'>
 						<Menu className='w-5 h-5 text-[#1a1a1a]' />
 					</button>

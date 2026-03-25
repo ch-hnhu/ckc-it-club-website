@@ -16,9 +16,9 @@ function MainLayout() {
 			<div className='flex-shrink-0'>
 				<Header onToggleSidebar={toggleSidebar} />
 			</div>
-			<div className='flex flex-1 overflow-hidden'>
+			<div className='flex flex-1 overflow-hidden relative'>
 				<aside
-					className='fixed lg:relative left-0 top-0 z-30 h-screen lg:h-auto flex-shrink-0 bg-white border-r border-[#e0e0e0]'
+					className='absolute lg:relative left-0 top-0 z-30 h-full lg:h-auto flex-shrink-0 bg-white border-r border-[#e0e0e0]'
 					style={{
 						width: sidebarOpen ? "16rem" : "0",
 						transition: "width 300ms",
