@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 
 export function LoginForm() {
 	const handleGoogleLogin = () => {
-		const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
+		const baseUrl =
+			import.meta.env.VITE_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
 		window.location.href = `${baseUrl}/auth/google`;
 	};
 
@@ -53,6 +54,7 @@ export function LoginForm() {
 								<Input
 									id='password'
 									type='password'
+									placeholder='Pass@123'
 									required
 									className='h-10 border border-gray-300 dark:border-gray-800'
 								/>
