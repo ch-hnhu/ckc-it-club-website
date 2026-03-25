@@ -1,0 +1,45 @@
+services:
+    - type: web
+      name: ckc-it-club-backend
+      runtime: docker
+      repo: https://github.com/ch-hnhu/ckc-it-club-website
+      branch: main
+      dockerfilePath: ./backend/Dockerfile
+      dockerContext: ./backend
+      autoDeploy: true
+      healthCheckPath: /up
+      envVars:
+          - key: APP_ENV
+            value: production
+          - key: APP_DEBUG
+            value: false
+          - key: APP_URL
+            sync: false
+          - key: ADMIN_FRONTEND_URL
+            sync: false
+          - key: USER_FRONTEND_URL
+            sync: false
+          - key: APP_KEY
+            generateValue: true
+          - key: LOG_CHANNEL
+            value: stderr
+          - key: SESSION_DRIVER
+            value: database
+          - key: CACHE_STORE
+            value: database
+          - key: QUEUE_CONNECTION
+            value: database
+          - key: DB_CONNECTION
+            value: mysql
+          - key: DB_HOST
+            sync: false
+          - key: DB_PORT
+            value: 25060
+          - key: DB_DATABASE
+            sync: false
+          - key: DB_USERNAME
+            sync: false
+          - key: DB_PASSWORD
+            sync: false
+          - key: MYSQL_ATTR_SSL_CA
+            sync: false
