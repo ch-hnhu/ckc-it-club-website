@@ -4,7 +4,17 @@ import Dashboard from "../pages/Dashboard";
 import UserList from "@/pages/user/UserList";
 import { LoginForm } from "@/pages/auth/LoginForm";
 
+import LoginSuccess from "@/pages/auth/LoginSuccess";
+
 const router = createBrowserRouter([
+	{
+		path: "/login",
+		element: <LoginForm />,
+	},
+	{
+		path: "/login-success",
+		element: <LoginSuccess />,
+	},
 	{
 		path: "/",
 		element: <MainLayout />,
@@ -18,10 +28,6 @@ const router = createBrowserRouter([
 				element: <UserList />,
 			},
 		],
-	},
-	{
-		path: "/login",
-		element: <LoginForm />,
 	},
 ]);
 

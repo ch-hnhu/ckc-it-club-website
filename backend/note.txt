@@ -1,1 +1,6 @@
+# chạy lại migration và seed dữ liệu
 php artisan migrate:fresh --seed
+
+# setup sanctum
+php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
+php artisan migrate

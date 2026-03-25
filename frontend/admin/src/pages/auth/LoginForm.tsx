@@ -4,6 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function LoginForm() {
+	const handleGoogleLogin = () => {
+		const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
+		window.location.href = `${baseUrl}/auth/google`;
+	};
+
 	return (
 		<div className='flex min-h-screen w-full items-center justify-center p-4'>
 			<Card className='w-full max-w-md max-h-md mx-auto overflow-hidden rounded-2xl shadow-sm py-0'>
@@ -64,6 +69,7 @@ export function LoginForm() {
 						<Button
 							variant='outline'
 							type='button'
+							onClick={handleGoogleLogin}
 							className='w-full shadow-sm hover:bg-[#f5f5f5] dark:hover:bg-zinc-800 hover:text-dark'>
 							Login with Google
 						</Button>
