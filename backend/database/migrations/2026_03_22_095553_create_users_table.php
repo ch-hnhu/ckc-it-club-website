@@ -6,42 +6,48 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-	/**
-	 * Run the migrations.
-	 */
-	public function up(): void
-	{
-		Schema::create('users', function (Blueprint $table) {
-			$table->id();
-			$table->string('email')->unique();
-			$table->dateTime('email_verified_at')->nullable();
-			$table->string('full_name')->nullable();
-			$table->string('gender')->nullable();
-			$table->dateTime('dob')->nullable();
-			$table->char('student_code')->nullable();
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
 
-			$table->unsignedBigInteger('faculty')->nullable();
-			$table->unsignedBigInteger('major')->nullable();
-			$table->unsignedBigInteger('class')->nullable();
+            $table->string('email')->unique();
+            $table->string('password')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
 
-			$table->boolean('is_active')->default(true);
+            $table->string('provider')->nullable();
+            $table->string('provider_id')->nullable();
 
-			$table->dateTime('created_at')->nullable();
-			$table->unsignedBigInteger('created_by')->nullable();
-			$table->dateTime('updated_at')->nullable();
-			$table->unsignedBigInteger('updated_by')->nullable();
+            $table->string('full_name')->nullable();
+            $table->string('gender')->nullable();
+            $table->string('avatar')->nullable();
+            $table->date('dob')->nullable();
 
-			// FK
-			$table->foreign('created_by')->references('id')->on('users');
-			$table->foreign('updated_by')->references('id')->on('users');
-		});
-	}
+            $table->char('student_code')->unique()->nullable();
 
-	/**
-	 * Reverse the migrations.
-	 */
-	public function down(): void
-	{
-		Schema::dropIfExists('users');
-	}
+            $table->foreignId('faculty_id')->nullable();
+            $table->foreignId('major_id')->nullable();
+            $table->foreignId('class_id')->nullable();
+
+            $table->boolean('is_active')->default(true);
+
+            $table->foreignId('created_by')->nullable()->constrained('users');
+            $table->foreignId('updated_by')->nullable()->constrained('users');
+
+            $table->timestamps();
+
+            $table->index(['provider', 'provider_id']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+    }
 };
