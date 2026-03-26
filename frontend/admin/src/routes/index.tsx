@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/Dashboard";
 import UserList from "@/pages/user/UserList";
+import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage";
 
 const router = createBrowserRouter([
 	{
@@ -15,6 +16,10 @@ const router = createBrowserRouter([
 			{
 				path: "users",
 				element: <UserList />,
+			},
+			{
+				path: "requests",
+				element: <ApplicationRequestsPage />,
 			},
 		],
 	},
