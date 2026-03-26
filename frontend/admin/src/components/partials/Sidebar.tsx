@@ -1,5 +1,6 @@
 import { Building, House, Trophy, UserRoundPlus, Users, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 interface SidebarProps {
 	isOpen?: boolean;
@@ -114,11 +115,11 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 									<ul className='mt-1 space-y-1 ml-[22px] pl-[10px] border-l border-[#e0e0e0]'>
 										{item.subItems.map((subItem) => (
 											<li key={subItem.href}>
-												<a
-													href={subItem.href}
+												<Link
+													to={subItem.href}
 													className='block px-3 py-2 text-sm text-[#666666] hover:text-[#2e3820] hover:bg-[#f5f5f5] hover:!no-underline rounded-lg transition-colors'>
 													{subItem.label}
-												</a>
+												</Link>
 											</li>
 										))}
 									</ul>
