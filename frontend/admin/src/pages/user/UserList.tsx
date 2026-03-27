@@ -8,6 +8,7 @@ import {
 	TableCell,
 	TableHead,
 	TableHeader,
+	TableFooter,
 	TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -48,8 +49,8 @@ function UserList() {
 	}, []);
 
 	return (
-		<div className='h-full flex-1 flex-col gap-8 p-8'>
-			<div className='flex items-center'>
+		<div className='h-full flex-1 flex-col'>
+			<div className='flex items-center p-4 md:p-6 lg:p-8'>
 				<div className='flex flex-col gap-1'>
 					<h2 className='text-2xl font-semibold tracking-tight'>User Management</h2>
 					<p className='text-muted-foreground'>
@@ -57,12 +58,12 @@ function UserList() {
 					</p>
 				</div>
 			</div>
-			<div className='flex flex-col gap-4 pt-4'>
+			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
 						<Input
 							placeholder='Filter users...'
-							className='h-8 w-[150px] lg:w-[250px]'
+							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
@@ -144,57 +145,76 @@ function UserList() {
 								</TableRow>
 							)}
 						</TableBody>
+						<TableFooter className='bg-transparent'>
+							<TableRow>
+								<TableCell colSpan={6}>
+									<div className='flex items-center justify-between px-2'>
+										<div className='flex-1 text-sm text-muted-foreground'>
+											0 of {users.length} row(s) selected.
+										</div>
+										<div className='flex items-center space-x-6 lg:space-x-8'>
+											<div className='flex items-center space-x-2'>
+												<p className='text-sm font-medium'>Rows per page</p>
+												<Select defaultValue='25'>
+													<SelectTrigger className='h-8 w-[70px]'>
+														<SelectValue placeholder='25' />
+													</SelectTrigger>
+													<SelectContent side='top'>
+														{[10, 20, 25, 30, 40, 50].map(
+															(pageSize) => (
+																<SelectItem
+																	key={pageSize}
+																	value={`${pageSize}`}>
+																	{pageSize}
+																</SelectItem>
+															),
+														)}
+													</SelectContent>
+												</Select>
+											</div>
+											<div className='flex w-[100px] items-center justify-center text-sm font-medium'>
+												Page 1 of 1
+											</div>
+											<div className='flex items-center space-x-2'>
+												<Button
+													variant='outline'
+													className='hidden h-8 w-8 p-0 lg:flex'
+													disabled>
+													<span className='sr-only'>
+														Go to first page
+													</span>
+													<ChevronsLeft className='h-4 w-4' />
+												</Button>
+												<Button
+													variant='outline'
+													className='h-8 w-8 p-0'
+													disabled>
+													<span className='sr-only'>
+														Go to previous page
+													</span>
+													<ChevronLeft className='h-4 w-4' />
+												</Button>
+												<Button
+													variant='outline'
+													className='h-8 w-8 p-0'
+													disabled>
+													<span className='sr-only'>Go to next page</span>
+													<ChevronRight className='h-4 w-4' />
+												</Button>
+												<Button
+													variant='outline'
+													className='hidden h-8 w-8 p-0 lg:flex'
+													disabled>
+													<span className='sr-only'>Go to last page</span>
+													<ChevronsRight className='h-4 w-4' />
+												</Button>
+											</div>
+										</div>
+									</div>
+								</TableCell>
+							</TableRow>
+						</TableFooter>
 					</Table>
-				</div>
-				{/* Pagination area */}
-				<div className='flex items-center justify-between px-2 pb-4'>
-					<div className='flex-1 text-sm text-muted-foreground'>
-						0 of {users.length} row(s) selected.
-					</div>
-					<div className='flex items-center space-x-6 lg:space-x-8'>
-						<div className='flex items-center space-x-2'>
-							<p className='text-sm font-medium'>Rows per page</p>
-							<Select defaultValue='25'>
-								<SelectTrigger className='h-8 w-[70px]'>
-									<SelectValue placeholder='25' />
-								</SelectTrigger>
-								<SelectContent side='top'>
-									{[10, 20, 25, 30, 40, 50].map((pageSize) => (
-										<SelectItem key={pageSize} value={`${pageSize}`}>
-											{pageSize}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className='flex w-[100px] items-center justify-center text-sm font-medium'>
-							Page 1 of 1
-						</div>
-						<div className='flex items-center space-x-2'>
-							<Button
-								variant='outline'
-								className='hidden h-8 w-8 p-0 lg:flex'
-								disabled>
-								<span className='sr-only'>Go to first page</span>
-								<ChevronsLeft className='h-4 w-4' />
-							</Button>
-							<Button variant='outline' className='h-8 w-8 p-0' disabled>
-								<span className='sr-only'>Go to previous page</span>
-								<ChevronLeft className='h-4 w-4' />
-							</Button>
-							<Button variant='outline' className='h-8 w-8 p-0' disabled>
-								<span className='sr-only'>Go to next page</span>
-								<ChevronRight className='h-4 w-4' />
-							</Button>
-							<Button
-								variant='outline'
-								className='hidden h-8 w-8 p-0 lg:flex'
-								disabled>
-								<span className='sr-only'>Go to last page</span>
-								<ChevronsRight className='h-4 w-4' />
-							</Button>
-						</div>
-					</div>
 				</div>
 			</div>
 		</div>
