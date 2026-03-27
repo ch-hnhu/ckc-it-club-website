@@ -1,5 +1,5 @@
 import { Menu, Bell, MessageSquare, LogOut, User, Settings, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import userService from "@/services/user.service";
 import type { User as UserType } from "@/types/user.type";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +14,30 @@ function Header({ onToggleSidebar }: HeaderProps) {
 	const [showUserMenu, setShowUserMenu] = useState(false);
 	const [user, setUser] = useState<UserType | null>(null);
 	const navigate = useNavigate();
+
+	const messagesRef = useRef<HTMLDivElement>(null);
+	const notificationsRef = useRef<HTMLDivElement>(null);
+	const userMenuRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (messagesRef.current && !messagesRef.current.contains(event.target as Node)) {
+				setShowMessages(false);
+			}
+			if (
+				notificationsRef.current &&
+				!notificationsRef.current.contains(event.target as Node)
+			) {
+				setShowNotifications(false);
+			}
+			if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+				setShowUserMenu(false);
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
 
 	useEffect(() => {
 		userService
@@ -60,7 +84,7 @@ function Header({ onToggleSidebar }: HeaderProps) {
 					</div>
 
 					{/* Messages */}
-					<div className='relative'>
+					<div className='relative' ref={messagesRef}>
 						<button
 							onClick={() => setShowMessages(!showMessages)}
 							className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors relative'>
@@ -100,7 +124,7 @@ function Header({ onToggleSidebar }: HeaderProps) {
 					</div>
 
 					{/* Notifications */}
-					<div className='relative'>
+					<div className='relative' ref={notificationsRef}>
 						<button
 							onClick={() => setShowNotifications(!showNotifications)}
 							className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors relative'>
@@ -153,7 +177,7 @@ function Header({ onToggleSidebar }: HeaderProps) {
 					</div>
 
 					{/* User Menu */}
-					<div className='relative'>
+					<div className='relative' ref={userMenuRef}>
 						<button
 							onClick={() => setShowUserMenu(!showUserMenu)}
 							className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors'>
@@ -169,13 +193,13 @@ function Header({ onToggleSidebar }: HeaderProps) {
 						</button>
 						{showUserMenu && (
 							<div className='absolute right-0 mt-2 w-56 bg-white rounded-lg border border-[#e0e0e0] shadow-lg'>
-								<div className='p-4 border-b border-[#e0e0e0]'>
+								<div className='px-5 py-3 border-b border-[#e0e0e0]'>
 									<p className='font-semibold text-[#1a1a1a]'>
 										{user?.full_name || "N/A"}
 									</p>
 									<p className='text-xs text-[#666666]'>{user?.email || "N/A"}</p>
 								</div>
-								<div className='p-2'>
+								<div className='p-1'>
 									<button className='w-full px-4 py-2 text-left text-sm text-[#1a1a1a] hover:bg-[#f5f5f5] flex items-center gap-2 transition-colors rounded-lg'>
 										<User className='w-4 h-4' />
 										Tài khoản
@@ -185,7 +209,7 @@ function Header({ onToggleSidebar }: HeaderProps) {
 										Cài đặt
 									</button>
 								</div>
-								<div className='border-t border-[#e0e0e0] p-2'>
+								<div className='border-t border-[#e0e0e0] p-1'>
 									<button
 										onClick={handleLogout}
 										className='w-full px-4 py-2 text-left text-sm text-[#dc2626] hover:bg-[#fee2e2] flex items-center gap-2 transition-colors rounded-lg'>
