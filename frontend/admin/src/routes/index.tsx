@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/Dashboard";
 import UserList from "@/pages/user/UserList";
+import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
 
 import LoginSuccess from "@/pages/auth/LoginSuccess";
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
 			{
 				path: "users",
 				element: <UserList />,
+			},
+			{
+				path: "requests",
+				element: <ApplicationRequestsPage />,
 			},
 		],
 	},
