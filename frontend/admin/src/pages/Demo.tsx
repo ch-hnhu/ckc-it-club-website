@@ -47,18 +47,18 @@ export default function Demo() {
 	];
 
 	return (
-		<main className='flex-1 overflow-auto bg-white'>
+		<main className='flex-1 overflow-auto bg-white dark:bg-zinc-950'>
 			{/* Header */}
-			<div className='border-b border-[#e0e0e0] bg-white sticky top-0 z-10'>
+			<div className='border-b border-[#e0e0e0] dark:border-zinc-800 bg-white dark:bg-zinc-950 sticky top-0 z-10'>
 				<div className='px-6 py-4'>
 					<div className='flex items-center justify-between'>
 						<div>
-							<h1 className='text-3xl font-bold text-[#1a1a1a]'>Dashboard</h1>
-							<p className='text-sm text-[#666666] mt-1'>Welcome to your admin panel</p>
+							<h1 className='text-3xl font-bold text-[#1a1a1a] dark:text-zinc-100'>Dashboard</h1>
+							<p className='text-sm text-[#666666] dark:text-zinc-400 mt-1'>Welcome to your admin panel</p>
 						</div>
 						<div className='flex items-center gap-4'>
-							<button className='p-2 hover:bg-[#f5f5f5] rounded-lg transition-colors'>
-								<MoreVertical className='w-5 h-5 text-[#666666]' />
+							<button className='p-2 hover:bg-[#f5f5f5] dark:bg-zinc-900 rounded-lg transition-colors'>
+								<MoreVertical className='w-5 h-5 text-[#666666] dark:text-zinc-400' />
 							</button>
 						</div>
 					</div>
@@ -78,7 +78,7 @@ export default function Demo() {
 							title='Revenue Trend'
 							description='Monthly revenue for the last 7 months'
 							action={
-								<button className='px-3 py-1 text-sm border border-[#e0e0e0] rounded-lg hover:bg-[#f5f5f5] transition-colors text-[#666666]'>
+								<button className='px-3 py-1 text-sm border border-[#e0e0e0] dark:border-zinc-800 rounded-lg hover:bg-[#f5f5f5] dark:bg-zinc-900 transition-colors text-[#666666] dark:text-zinc-400'>
 									Export
 								</button>
 							}>
@@ -90,21 +90,21 @@ export default function Demo() {
 					<div className='space-y-6'>
 						<ChartCard title='Top Metrics' description='Key performance indicators'>
 							<div className='space-y-4'>
-								<div className='flex justify-between items-center pb-3 border-b border-[#e5e5e5]'>
-									<span className='text-sm text-[#666666]'>Conversion Rate</span>
-									<span className='text-lg font-bold text-[#2e3820]'>3.24%</span>
+								<div className='flex justify-between items-center pb-3 border-b border-[#e5e5e5] dark:border-zinc-800'>
+									<span className='text-sm text-[#666666] dark:text-zinc-400'>Conversion Rate</span>
+									<span className='text-lg font-bold text-[#2e3820] dark:text-zinc-200'>3.24%</span>
 								</div>
-								<div className='flex justify-between items-center pb-3 border-b border-[#e5e5e5]'>
-									<span className='text-sm text-[#666666]'>Avg. Order Value</span>
-									<span className='text-lg font-bold text-[#2e3820]'>₫1,250</span>
+								<div className='flex justify-between items-center pb-3 border-b border-[#e5e5e5] dark:border-zinc-800'>
+									<span className='text-sm text-[#666666] dark:text-zinc-400'>Avg. Order Value</span>
+									<span className='text-lg font-bold text-[#2e3820] dark:text-zinc-200'>₫1,250</span>
 								</div>
-								<div className='flex justify-between items-center pb-3 border-b border-[#e5e5e5]'>
-									<span className='text-sm text-[#666666]'>Bounce Rate</span>
-									<span className='text-lg font-bold text-[#2e3820]'>42.5%</span>
+								<div className='flex justify-between items-center pb-3 border-b border-[#e5e5e5] dark:border-zinc-800'>
+									<span className='text-sm text-[#666666] dark:text-zinc-400'>Bounce Rate</span>
+									<span className='text-lg font-bold text-[#2e3820] dark:text-zinc-200'>42.5%</span>
 								</div>
 								<div className='flex justify-between items-center'>
-									<span className='text-sm text-[#666666]'>Customer Lifetime Value</span>
-									<span className='text-lg font-bold text-[#2e3820]'>₫8,500</span>
+									<span className='text-sm text-[#666666] dark:text-zinc-400'>Customer Lifetime Value</span>
+									<span className='text-lg font-bold text-[#2e3820] dark:text-zinc-200'>₫8,500</span>
 								</div>
 							</div>
 						</ChartCard>

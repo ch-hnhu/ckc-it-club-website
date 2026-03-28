@@ -32,29 +32,29 @@ export default function StyleGuide() {
 	];
 
 	return (
-		<main className='flex-1 overflow-auto bg-white p-6'>
+		<main className='flex-1 overflow-auto bg-white dark:bg-zinc-950 p-6'>
 			<div className='max-w-6xl mx-auto space-y-8'>
 				{/* Header */}
-				<div className='border-b border-[#e0e0e0] pb-6'>
-					<h1 className='text-4xl font-bold text-[#1a1a1a] mb-2'>Design System</h1>
-					<p className='text-[#666666]'>
+				<div className='border-b border-[#e0e0e0] dark:border-zinc-800 pb-6'>
+					<h1 className='text-4xl font-bold text-[#1a1a1a] dark:text-zinc-100 mb-2'>Design System</h1>
+					<p className='text-[#666666] dark:text-zinc-400'>
 						Visual guide for the CKC IT CLUB Dashboard
 					</p>
 				</div>
 
 				{/* Colors Section */}
 				<section>
-					<h2 className='text-2xl font-bold text-[#1a1a1a] mb-6'>Color Palette</h2>
+					<h2 className='text-2xl font-bold text-[#1a1a1a] dark:text-zinc-100 mb-6'>Color Palette</h2>
 					<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
 						{colors.map((color) => (
-							<Card key={color.hex} className='border border-[#e0e0e0] p-4'>
+							<Card key={color.hex} className='border border-[#e0e0e0] dark:border-zinc-800 p-4'>
 								<div
-									className='w-full h-24 rounded-lg mb-4 border border-[#e0e0e0]'
+									className='w-full h-24 rounded-lg mb-4 border border-[#e0e0e0] dark:border-zinc-800'
 									style={{ backgroundColor: color.hex }}
 								/>
-								<h3 className='font-bold text-[#1a1a1a]'>{color.name}</h3>
-								<p className='text-sm text-[#666666] font-mono'>{color.hex}</p>
-								<p className='text-xs text-[#999999] mt-2'>{color.description}</p>
+								<h3 className='font-bold text-[#1a1a1a] dark:text-zinc-100'>{color.name}</h3>
+								<p className='text-sm text-[#666666] dark:text-zinc-400 font-mono'>{color.hex}</p>
+								<p className='text-xs text-[#999999] dark:text-zinc-500 mt-2'>{color.description}</p>
 							</Card>
 						))}
 					</div>
@@ -62,19 +62,19 @@ export default function StyleGuide() {
 
 				{/* Typography Section */}
 				<section>
-					<h2 className='text-2xl font-bold text-[#1a1a1a] mb-6'>Typography</h2>
-					<Card className='border border-[#e0e0e0] p-6 space-y-6'>
+					<h2 className='text-2xl font-bold text-[#1a1a1a] dark:text-zinc-100 mb-6'>Typography</h2>
+					<Card className='border border-[#e0e0e0] dark:border-zinc-800 p-6 space-y-6'>
 						{typography.map((type) => (
-							<div key={type.level} className='pb-4 border-b border-[#e5e5e5] last:border-0 last:pb-0'>
+							<div key={type.level} className='pb-4 border-b border-[#e5e5e5] dark:border-zinc-800 last:border-0 last:pb-0'>
 								<div className='flex items-baseline justify-between mb-2'>
-									<code className='text-sm font-mono text-[#2e3820]'>
+									<code className='text-sm font-mono text-[#2e3820] dark:text-zinc-200'>
 										{type.level}
 									</code>
-									<span className='text-xs text-[#999999]'>
+									<span className='text-xs text-[#999999] dark:text-zinc-500'>
 										{type.size} • {type.weight}
 									</span>
 								</div>
-								<div className={`${type.size} ${type.weight} text-[#1a1a1a]`}>
+								<div className={`${type.size} ${type.weight} text-[#1a1a1a] dark:text-zinc-100`}>
 									{type.example}
 								</div>
 							</div>
@@ -84,25 +84,25 @@ export default function StyleGuide() {
 
 				{/* Spacing Section */}
 				<section>
-					<h2 className='text-2xl font-bold text-[#1a1a1a] mb-6'>Spacing Scale</h2>
-					<Card className='border border-[#e0e0e0] p-6'>
+					<h2 className='text-2xl font-bold text-[#1a1a1a] dark:text-zinc-100 mb-6'>Spacing Scale</h2>
+					<Card className='border border-[#e0e0e0] dark:border-zinc-800 p-6'>
 						<div className='space-y-4'>
 							{spacing.map((space) => (
 								<div key={space.name} className='flex items-center gap-4'>
 									<div className='w-24'>
-										<code className='text-sm font-mono text-[#2e3820]'>
+										<code className='text-sm font-mono text-[#2e3820] dark:text-zinc-200'>
 											{space.name}
 										</code>
 									</div>
 									<div
-										className='bg-[#2e3820] rounded'
+										className='bg-[#2e3820] dark:bg-zinc-800 rounded'
 										style={{
 											width: `${parseInt(space.value.split("px")[0]) * 2}px`,
 											height: "24px",
 										}}
 									/>
-									<span className='text-sm text-[#666666]'>{space.value}</span>
-									<span className='text-xs text-[#999999]'>{space.class}</span>
+									<span className='text-sm text-[#666666] dark:text-zinc-400'>{space.value}</span>
+									<span className='text-xs text-[#999999] dark:text-zinc-500'>{space.class}</span>
 								</div>
 							))}
 						</div>
@@ -111,19 +111,19 @@ export default function StyleGuide() {
 
 				{/* Components Section */}
 				<section>
-					<h2 className='text-2xl font-bold text-[#1a1a1a] mb-6'>Component States</h2>
+					<h2 className='text-2xl font-bold text-[#1a1a1a] dark:text-zinc-100 mb-6'>Component States</h2>
 					<div className='space-y-4'>
 						{/* Button States */}
 						<div>
-							<h3 className='text-lg font-bold text-[#1a1a1a] mb-3'>Buttons</h3>
+							<h3 className='text-lg font-bold text-[#1a1a1a] dark:text-zinc-100 mb-3'>Buttons</h3>
 							<div className='flex gap-3 flex-wrap'>
-								<button className='px-4 py-2 bg-[#2e3820] text-white rounded-lg hover:bg-[#1f2817] transition-colors'>
+								<button className='px-4 py-2 bg-[#2e3820] dark:bg-zinc-800 text-white rounded-lg hover:bg-[#1f2817] transition-colors'>
 									Primary
 								</button>
-								<button className='px-4 py-2 border border-[#e0e0e0] text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors'>
+								<button className='px-4 py-2 border border-[#e0e0e0] dark:border-zinc-800 text-[#1a1a1a] dark:text-zinc-100 rounded-lg hover:bg-[#f5f5f5] dark:bg-zinc-900 transition-colors'>
 									Secondary
 								</button>
-								<button className='px-4 py-2 bg-[#e5e5e5] text-[#1a1a1a] rounded-lg hover:bg-[#e0e0e0] transition-colors disabled:opacity-50'>
+								<button className='px-4 py-2 bg-[#e5e5e5] dark:bg-zinc-800 text-[#1a1a1a] dark:text-zinc-100 rounded-lg hover:bg-[#e0e0e0] transition-colors disabled:opacity-50'>
 									Disabled
 								</button>
 							</div>
@@ -131,27 +131,27 @@ export default function StyleGuide() {
 
 						{/* Card States */}
 						<div>
-							<h3 className='text-lg font-bold text-[#1a1a1a] mb-3'>Cards</h3>
+							<h3 className='text-lg font-bold text-[#1a1a1a] dark:text-zinc-100 mb-3'>Cards</h3>
 							<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-								<Card className='border border-[#e0e0e0] p-4 hover:shadow-md transition-shadow'>
-									<p className='font-bold text-[#1a1a1a]'>Default Card</p>
-									<p className='text-sm text-[#666666]'>With subtle shadow on hover</p>
+								<Card className='border border-[#e0e0e0] dark:border-zinc-800 p-4 hover:shadow-md transition-shadow'>
+									<p className='font-bold text-[#1a1a1a] dark:text-zinc-100'>Default Card</p>
+									<p className='text-sm text-[#666666] dark:text-zinc-400'>With subtle shadow on hover</p>
 								</Card>
 								<Card className='border-2 border-[#2e3820] p-4'>
-									<p className='font-bold text-[#2e3820]'>Active Card</p>
-									<p className='text-sm text-[#666666]'>With primary color border</p>
+									<p className='font-bold text-[#2e3820] dark:text-zinc-200'>Active Card</p>
+									<p className='text-sm text-[#666666] dark:text-zinc-400'>With primary color border</p>
 								</Card>
 							</div>
 						</div>
 
 						{/* Input States */}
 						<div>
-							<h3 className='text-lg font-bold text-[#1a1a1a] mb-3'>Form Inputs</h3>
+							<h3 className='text-lg font-bold text-[#1a1a1a] dark:text-zinc-100 mb-3'>Form Inputs</h3>
 							<div className='space-y-3'>
 								<input
 									type='text'
 									placeholder='Default input'
-									className='w-full px-3 py-2 border border-[#e0e0e0] rounded-lg focus:outline-none focus:border-[#2e3820] transition-colors'
+									className='w-full px-3 py-2 border border-[#e0e0e0] dark:border-zinc-800 rounded-lg focus:outline-none focus:border-[#2e3820] transition-colors'
 								/>
 								<input
 									type='text'
@@ -163,7 +163,7 @@ export default function StyleGuide() {
 									type='text'
 									placeholder='Disabled input'
 									disabled
-									className='w-full px-3 py-2 border border-[#e0e0e0] rounded-lg bg-[#f5f5f5] opacity-50 cursor-not-allowed'
+									className='w-full px-3 py-2 border border-[#e0e0e0] dark:border-zinc-800 rounded-lg bg-[#f5f5f5] dark:bg-zinc-900 opacity-50 cursor-not-allowed'
 								/>
 							</div>
 						</div>
@@ -172,9 +172,9 @@ export default function StyleGuide() {
 
 				{/* Design Tokens */}
 				<section>
-					<h2 className='text-2xl font-bold text-[#1a1a1a] mb-6'>CSS Variables</h2>
-					<Card className='border border-[#e0e0e0] p-6'>
-						<div className='font-mono text-sm space-y-2 text-[#1a1a1a]'>
+					<h2 className='text-2xl font-bold text-[#1a1a1a] dark:text-zinc-100 mb-6'>CSS Variables</h2>
+					<Card className='border border-[#e0e0e0] dark:border-zinc-800 p-6'>
+						<div className='font-mono text-sm space-y-2 text-[#1a1a1a] dark:text-zinc-100'>
 							<p>--primary: #2e3820</p>
 							<p>--foreground: #1a1a1a</p>
 							<p>--background: #ffffff</p>
@@ -187,14 +187,14 @@ export default function StyleGuide() {
 
 				{/* Grid Sizes */}
 				<section>
-					<h2 className='text-2xl font-bold text-[#1a1a1a] mb-6'>Responsive Grid</h2>
-					<Card className='border border-[#e0e0e0] p-6'>
-						<p className='text-[#666666] mb-4'>Breakpoints (Tailwind):</p>
+					<h2 className='text-2xl font-bold text-[#1a1a1a] dark:text-zinc-100 mb-6'>Responsive Grid</h2>
+					<Card className='border border-[#e0e0e0] dark:border-zinc-800 p-6'>
+						<p className='text-[#666666] dark:text-zinc-400 mb-4'>Breakpoints (Tailwind):</p>
 						<div className='space-y-2 font-mono text-sm'>
-							<p><code className='text-[#2e3820]'>sm:</code> 640px</p>
-							<p><code className='text-[#2e3820]'>md:</code> 768px</p>
-							<p><code className='text-[#2e3820]'>lg:</code> 1024px</p>
-							<p><code className='text-[#2e3820]'>xl:</code> 1280px</p>
+							<p><code className='text-[#2e3820] dark:text-zinc-200'>sm:</code> 640px</p>
+							<p><code className='text-[#2e3820] dark:text-zinc-200'>md:</code> 768px</p>
+							<p><code className='text-[#2e3820] dark:text-zinc-200'>lg:</code> 1024px</p>
+							<p><code className='text-[#2e3820] dark:text-zinc-200'>xl:</code> 1280px</p>
 						</div>
 					</Card>
 				</section>

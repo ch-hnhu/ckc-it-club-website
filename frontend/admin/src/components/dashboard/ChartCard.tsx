@@ -18,13 +18,13 @@ export const ChartCard: React.FC<ChartCardProps> = ({
 }) => {
 	return (
 		<Card
-			className={`border border-[#e0e0e0] bg-white p-6 ${
+			className={`border border-border bg-card p-6 ${
 				fullWidth ? "col-span-full" : ""
 			}`}>
 			<div className='flex items-center justify-between mb-6'>
 				<div className='flex-1'>
-					<h3 className='text-lg font-bold text-[#1a1a1a]'>{title}</h3>
-					{description && <p className='text-sm text-[#666666] mt-1'>{description}</p>}
+					<h3 className='text-lg font-bold text-foreground'>{title}</h3>
+					{description && <p className='text-sm text-muted-foreground mt-1'>{description}</p>}
 				</div>
 				{action && <div>{action}</div>}
 			</div>

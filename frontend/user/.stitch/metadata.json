@@ -1,0 +1,28 @@
+{
+  "name": "projects/15957216014659642195",
+  "projectId": "15957216014659642195",
+  "title": "CKC IT Club Landing Page",
+  "visibility": "PRIVATE",
+  "projectType": "PROJECT_DESIGN",
+  "origin": "STITCH",
+  "deviceType": "DESKTOP",
+  "designSystem": {
+    "name": "assets/f5e2dd616e9144d9b8a832f18b636c7d",
+    "displayName": "Kinetico Neo",
+    "colorMode": "LIGHT",
+    "font": "PLUS_JAKARTA_SANS",
+    "customColor": "#A3E635",
+    "overridePrimaryColor": "#A3E635",
+    "overrideSecondaryColor": "#BFD9FE",
+    "overrideTertiaryColor": "#FFDEDE"
+  },
+  "screens": {
+    "landing": {
+      "id": "928bfe3c74334605bb444ba9541a9e2f",
+      "sourceScreen": "projects/15957216014659642195/screens/928bfe3c74334605bb444ba9541a9e2f",
+      "width": 2560,
+      "height": 12988,
+      "title": "CKC IT CLUB Landing Page"
+    }
+  }
+}
