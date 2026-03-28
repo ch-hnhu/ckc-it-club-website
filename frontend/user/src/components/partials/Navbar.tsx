@@ -16,15 +16,8 @@ const NAV_ITEMS = [
 ];
 
 const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
-	const [isScrolled, setIsScrolled] = useState(false);
 	const [isMobileOpen, setIsMobileOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
-
-	useEffect(() => {
-		const handleScroll = () => setIsScrolled(window.scrollY > 20);
-		window.addEventListener("scroll", handleScroll);
-		return () => window.removeEventListener("scroll", handleScroll);
-	}, []);
 
 	useEffect(() => {
 		const onMessage = async (event: MessageEvent) => {

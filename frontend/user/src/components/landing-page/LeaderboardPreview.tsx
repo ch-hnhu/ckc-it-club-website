@@ -89,13 +89,12 @@ const LeaderboardPreview: React.FC = () => {
 					<div
 						className='fade-in-up rounded-2xl overflow-hidden border-2 border-black'
 						style={{ boxShadow: "var(--neo-shadow)" }}>
-						{TOP_USERS.map((user, i) => (
+						{TOP_USERS.map((user) => (
 							<div
 								key={user.name}
-								className='flex items-center gap-4 px-6 py-4 border-b-2 border-black last:border-b-0 transition-all hover:scale-[1.01] cursor-pointer'
+								className='flex items-center gap-4 px-6 py-4 border-b-2 border-black last:border-b-0 transition-all cursor-pointer'
 								style={{
 									background: user.bg,
-									transitionDelay: `${i * 0.07}s`,
 								}}>
 								{/* Rank */}
 								<div className='w-10 text-center'>

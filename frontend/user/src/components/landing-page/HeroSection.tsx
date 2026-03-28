@@ -65,7 +65,7 @@ const HeroSection: React.FC = () => {
 
 							{/* Subheadline */}
 							<p
-								className='fade-in-up text-lg text-gray-600 max-w-lg leading-relaxed'
+								className='fade-in-up text-lg text-gray-600 max-w-lg leading-relaxed text-center'
 								style={{ fontFamily: "var(--font-body)", transitionDelay: "0.2s" }}>
 								Khám phá tài nguyên, tham gia sự kiện và phát triển kỹ năng cùng hơn{" "}
 								<strong className='text-black'>1000+ sinh viên IT</strong> tại Cao
@@ -123,7 +123,9 @@ const HeroSection: React.FC = () => {
 				<div className='hero_bg'></div>
 
 				{/* Decorative Floating SVGs */}
-				<div className='absolute inset-0 pointer-events-none overflow-hidden' style={{ zIndex: 1 }}>
+				<div
+					className='absolute inset-0 pointer-events-none overflow-hidden'
+					style={{ zIndex: 1 }}>
 					{/* Left cluster */}
 					<img
 						src='/assets/svg/20.svg'

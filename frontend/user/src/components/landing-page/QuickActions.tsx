@@ -97,15 +97,14 @@ const QuickActions: React.FC = () => {
 				</div>
 
 				{/* Cards grid */}
-				<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-					{ACTIONS.map((action, i) => (
+				<div className='fade-in-up grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
+					{ACTIONS.map((action) => (
 						<a
 							key={action.title}
 							href={action.href}
-							className='fade-in-up neo-card flex flex-col p-6 no-underline group'
+							className='neo-card flex flex-col p-6 no-underline group'
 							style={{
 								background: action.bg,
-								transitionDelay: `${i * 0.05}s`,
 								textDecoration: "none",
 							}}>
 							{/* Icon + emoji */}

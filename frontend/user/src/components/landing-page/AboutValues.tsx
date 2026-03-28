@@ -180,12 +180,12 @@ const AboutValues: React.FC = () => {
 					</div>
 
 					{/* Right: Value cards 2x2 grid */}
-					<div className='grid grid-cols-2 gap-5'>
-						{VALUES.map((val, i) => (
+					<div className='fade-in-up grid grid-cols-2 gap-5'>
+						{VALUES.map((val) => (
 							<div
 								key={val.title}
-								className='fade-in-up neo-card p-5 flex flex-col gap-3'
-								style={{ background: val.bg, transitionDelay: `${i * 0.1}s` }}>
+								className='neo-card p-5 flex flex-col gap-3'
+								style={{ background: val.bg }}>
 								<div className='text-3xl'>{val.emoji}</div>
 								<div>
 									<h3
