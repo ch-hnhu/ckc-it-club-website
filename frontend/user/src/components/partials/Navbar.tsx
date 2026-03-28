@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Menu, X, Code2, LogIn, UserPlus } from "lucide-react";
-import { getGoogleAuthUrl, logout, type AuthUser } from "../src/services/auth.service";
+import { getGoogleAuthUrl, logout, type AuthUser } from "../../services/auth.service";
 
 type NavbarProps = {
 	user: AuthUser | null;
