@@ -65,7 +65,7 @@ export function LoginForm() {
 					<div className='bg-muted/20 p-6 md:p-6 py-5 border-t space-y-3'>
 						<Button
 							type='submit'
-							className='w-full bg-zinc-950 hover:bg-zinc-800 text-white shadow-sm'>
+							className='w-full bg-zinc-950 hover:bg-zinc-800 text-white shadow-sm dark:bg-primary dark:hover:bg-primary/90 dark:text-black'>
 							Login
 						</Button>
 						<Button
