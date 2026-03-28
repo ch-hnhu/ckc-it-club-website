@@ -1,51 +1,134 @@
-import React from 'react';
-import { Facebook, Instagram, Mail, Github, Globe } from 'lucide-react';
-import type { SocialLink } from '../src/types/index';
+import React from "react";
+import { Facebook, Github, Youtube, Instagram, Mail, MapPin, Code2 } from "lucide-react";
 
-const SOCIAL_LINKS: SocialLink[] = [
-  { icon: Facebook, href: '#', label: 'Facebook' },
-  { icon: Instagram, href: '#', label: 'Instagram' },
-  { icon: Mail, href: '#', label: 'Email' },
-  { icon: Github, href: '#', label: 'Github' },
-  { icon: Globe, href: '#', label: 'Website' },
+const FOOTER_NAV = {
+	"Khám phá": [
+		{ label: "Tài nguyên", href: "#resources" },
+		{ label: "Blog", href: "#blog" },
+		{ label: "Khóa học", href: "#courses" },
+		{ label: "Sự kiện", href: "#events" },
+	],
+	"Cộng đồng": [
+		{ label: "Leaderboard", href: "#leaderboard" },
+		{ label: "Mentor", href: "#mentors" },
+		{ label: "Ban Chủ Nhiệm", href: "#board" },
+		{ label: "Đóng góp", href: "#contribute" },
+	],
+	CLB: [
+		{ label: "Về chúng tôi", href: "#about" },
+		{ label: "Tham gia CLB", href: "#join" },
+		{ label: "Liên hệ", href: "mailto:contact@ckcitclub.edu.vn" },
+		{ label: "Chính sách", href: "#" },
+	],
+};
+
+const SOCIALS = [
+	{ icon: Facebook, href: "#", label: "Facebook" },
+	{ icon: Github, href: "#", label: "GitHub" },
+	{ icon: Youtube, href: "#", label: "YouTube" },
+	{ icon: Instagram, href: "#", label: "Instagram" },
+	{ icon: Mail, href: "mailto:contact@ckcitclub.edu.vn", label: "Email" },
 ];
 
 const Footer: React.FC = () => {
-  return (
-    <footer className="relative bg-slate-950 py-12 border-t border-white/5 overflow-hidden">
-      {/* Subtle bottom glow */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[400px] h-[100px] bg-blue-900/20 blur-[80px] pointer-events-none"></div>
+	return (
+		<footer className='bg-black text-white border-t-2 border-black'>
+			<div className='neo-container'>
+				{/* Main footer content */}
+				<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 py-16 px-6'>
+					{/* Brand column */}
+					<div className='space-y-5'>
+						{/* Logo */}
+						<div className='flex items-center gap-2.5'>
+							<div
+								className='w-9 h-9 rounded-lg flex items-center justify-center'
+								style={{
+									background: "var(--color-primary)",
+									border: "2px solid rgba(255,255,255,0.2)",
+								}}>
+								<Code2 className='w-5 h-5 text-black' />
+							</div>
+							<span
+								className='text-xl font-extrabold tracking-tight'
+								style={{ fontFamily: "var(--font-heading)" }}>
+								CKC IT CLUB
+							</span>
+						</div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="flex flex-col items-center justify-center space-y-6">
-          
-          {/* Social Links */}
-          <div className="flex space-x-8">
-            {SOCIAL_LINKS.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="text-slate-500 hover:text-blue-400 transform hover:scale-110 transition-all duration-300"
-                aria-label={item.label}
-              >
-                <item.icon className="h-6 w-6" />
-              </a>
-            ))}
-          </div>
+						<p className='text-gray-400 text-sm leading-relaxed'>
+							Cộng đồng sinh viên IT năng động tại Trường Cao đẳng Kỹ thuật Cao Thắng.
+							Học, chia sẻ và phát triển cùng nhau.
+						</p>
 
-          {/* Copyright */}
-          <div className="text-center space-y-2">
-            <p className="text-sm text-slate-500">
-              © {new Date().getFullYear()} HCMUTE RTIC. All rights reserved.
-            </p>
-            <p className="text-xs text-slate-600">
-              Made with passion for Technology & Innovation.
-            </p>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
+						{/* Contact info */}
+						<div className='space-y-2.5 text-sm text-gray-400'>
+							<div className='flex items-start gap-2'>
+								<MapPin className='w-4 h-4 mt-0.5 shrink-0 text-[#A3E635]' />
+								<span>65 Huỳnh Thúc Kháng, Phường Bến Nghé, Quận 1, TP.HCM</span>
+							</div>
+							<div className='flex items-center gap-2'>
+								<Mail className='w-4 h-4 text-[#A3E635]' />
+								<a
+									href='mailto:contact@ckcitclub.edu.vn'
+									className='hover:text-white transition-colors'>
+									contact@ckcitclub.edu.vn
+								</a>
+							</div>
+						</div>
+
+						{/* Social icons */}
+						<div className='flex gap-3 pt-1'>
+							{SOCIALS.map((s) => (
+								<a
+									key={s.label}
+									href={s.href}
+									aria-label={s.label}
+									className='w-9 h-9 flex items-center justify-center rounded-lg border border-white/20 text-gray-400 hover:text-white hover:border-white/60 hover:scale-110 transition-all duration-200'>
+									<s.icon className='w-4 h-4' />
+								</a>
+							))}
+						</div>
+					</div>
+
+					{/* Nav links */}
+					{Object.entries(FOOTER_NAV).map(([section, links]) => (
+						<div key={section}>
+							<h4
+								className='font-bold text-white mb-5 text-sm uppercase tracking-wider'
+								style={{ fontFamily: "var(--font-heading)" }}>
+								{section}
+							</h4>
+							<ul className='space-y-3'>
+								{links.map((link) => (
+									<li key={link.label}>
+										<a
+											href={link.href}
+											className='text-gray-400 hover:text-[#A3E635] text-sm transition-colors duration-200'>
+											{link.label}
+										</a>
+									</li>
+								))}
+							</ul>
+						</div>
+					))}
+				</div>
+
+				{/* Bottom bar */}
+				<div className='border-t border-white/10 py-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-4'>
+					<p className='text-sm text-gray-500'>
+						© {new Date().getFullYear()} CKC IT Club — Trường Cao đẳng Kỹ thuật Cao
+						Thắng. All rights reserved.
+					</p>
+					<div
+						className='flex items-center gap-1.5 text-sm font-medium'
+						style={{ color: "var(--color-primary)" }}>
+						<Code2 className='w-4 h-4' />
+						Made with ❤️ by CKC IT Club
+					</div>
+				</div>
+			</div>
+		</footer>
+	);
 };
 
 export default Footer;

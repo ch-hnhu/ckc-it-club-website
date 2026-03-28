@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Flame, LogIn, LogOut, User } from "lucide-react";
-import type { NavItem } from "../src/types/index";
+import { Menu, X, Code2, LogIn, UserPlus } from "lucide-react";
 import { getGoogleAuthUrl, logout, type AuthUser } from "../src/services/auth.service";
 
 type NavbarProps = {
@@ -8,25 +7,21 @@ type NavbarProps = {
 	onAuthSuccess: () => Promise<void>;
 };
 
-const NAV_ITEMS: NavItem[] = [
-	{ label: "Hành Trình", href: "#journey" },
-	{ label: "Dự Án", href: "#projects" },
-	{ label: "Điểm Đến ủa Bạn", href: "#destination" },
-	{ label: "Sự Kiện", href: "#events" },
-	{ label: "Bài Viết", href: "#articles" },
-	{ label: "Định Hướng Phát Triển", href: "#orientation" },
-	{ label: "Minigame", href: "#minigame" },
+const NAV_ITEMS = [
+	{ label: "Blog", href: "#blog" },
+	{ label: "Tài nguyên", href: "#resources" },
+	{ label: "Leaderboard", href: "#leaderboard" },
+	{ label: "Event", href: "#events" },
+	{ label: "Course", href: "#courses" },
 ];
 
 const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const [isScrolled, setIsScrolled] = useState(false);
+	const [isMobileOpen, setIsMobileOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		const handleScroll = () => {
-			setIsScrolled(window.scrollY > 20);
-		};
-
+		const handleScroll = () => setIsScrolled(window.scrollY > 20);
 		window.addEventListener("scroll", handleScroll);
 		return () => window.removeEventListener("scroll", handleScroll);
 	}, []);
@@ -37,7 +32,6 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 				await onAuthSuccess();
 			}
 		};
-
 		window.addEventListener("message", onMessage);
 		return () => window.removeEventListener("message", onMessage);
 	}, [onAuthSuccess]);
@@ -46,19 +40,17 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 		try {
 			setLoading(true);
 			const url = await getGoogleAuthUrl();
-			const width = 520;
-			const height = 640;
+			const width = 520,
+				height = 640;
 			const left = window.screenX + (window.outerWidth - width) / 2;
 			const top = window.screenY + (window.outerHeight - height) / 2;
-
 			window.open(
 				url,
 				"google_oauth",
 				`width=${width},height=${height},left=${left},top=${top},noopener,noreferrer`,
 			);
-		} catch (error) {
-			console.error("Google login error:", error);
-			alert("Không thể đăng nhập Google.");
+		} catch (err) {
+			console.error("Login error:", err);
 		} finally {
 			setLoading(false);
 		}
@@ -69,108 +61,139 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 			setLoading(true);
 			await logout();
 			await onAuthSuccess();
-		} catch (error) {
-			console.error("Logout error:", error);
-			alert("Đăng xuất thất bại.");
+		} catch (err) {
+			console.error("Logout error:", err);
 		} finally {
 			setLoading(false);
 		}
 	};
 
 	return (
-		<nav
+		<header
 			className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
 				isScrolled
-					? "bg-slate-950/90 backdrop-blur-md border-b border-white/5 py-2"
-					: "bg-gradient-to-b from-slate-950 via-slate-950/80 to-transparent py-4"
+					? "bg-white/95 backdrop-blur-sm border-b-2 border-black shadow-[0_2px_0_0_#111]"
+					: "bg-white"
 			}`}>
-			<div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-				<div className='flex flex-col lg:flex-row lg:items-center lg:justify-between h-auto lg:h-16'>
-					<div className='flex items-center justify-between w-full lg:w-1/4'>
-						<div className='flex items-center cursor-pointer group'>
-							<div className='relative'>
-								<div className='absolute inset-0 bg-blue-500 blur-lg opacity-50 group-hover:opacity-75 transition-opacity duration-300 rounded-full' />
-								<Flame className='h-8 w-8 text-blue-400 relative z-10' />
-							</div>
-							<span className='ml-2 text-xl font-bold tracking-wider text-white'>
-								CKC IT CLUB
-							</span>
+			<div className='neo-container'>
+				<div className='flex items-center gap-4 lg:gap-8 h-16 px-6'>
+					{/* Logo */}
+					<a href='/' className='flex items-center gap-2.5 group no-underline'>
+						<div
+							className='w-9 h-9 rounded-lg flex items-center justify-center transition-transform duration-200 group-hover:scale-105'
+							style={{
+								background: "var(--color-primary)",
+								border: "2px solid #111",
+								boxShadow: "2px 2px 0px #111",
+							}}>
+							<Code2 className='w-5 h-5 text-black' />
 						</div>
+						<span
+							className='text-xl font-extrabold tracking-tight text-black'
+							style={{ fontFamily: "var(--font-heading)" }}>
+							CKC IT CLUB
+						</span>
+					</a>
 
-						<button
-							onClick={user ? handleLogout : handleLogin}
-							disabled={loading}
-							className='lg:hidden flex items-center px-4 py-1.5 rounded-full bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 text-blue-100 text-xs font-medium transition-all disabled:opacity-50'>
-							{user ? (
-								<LogOut className='w-4 h-4 mr-1.5' />
-							) : (
-								<LogIn className='w-4 h-4 mr-1.5' />
-							)}
-							{loading ? "Đang xử lý..." : user ? "Đăng xuất" : "Đăng nhập"}
-						</button>
-					</div>
+					{/* Desktop Nav */}
+					<nav className='hidden lg:flex items-center gap-1'>
+						{NAV_ITEMS.map((item) => (
+							<a
+								key={item.label}
+								href={item.href}
+								className='relative px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:text-black hover:bg-gray-100 transition-all duration-200 group'
+								style={{ fontFamily: "var(--font-body)" }}>
+								{item.label}
+								<span
+									className='absolute bottom-0.5 left-4 right-4 h-0.5 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-200'
+									style={{ background: "var(--color-primary)" }}
+								/>
+							</a>
+						))}
+					</nav>
 
-					<div className='mt-4 lg:mt-0 w-full lg:w-2/4 flex justify-center overflow-x-auto no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0'>
-						<div className='flex items-center space-x-1 lg:space-x-4 min-w-max'>
-							{NAV_ITEMS.map((item) => (
-								<a
-									key={item.label}
-									href={item.href}
-									className='
-                    relative px-3 py-2 rounded-full lg:rounded-md
-                    text-sm font-medium
-                    text-slate-300 hover:text-white
-                    hover:bg-white/10 lg:hover:bg-transparent
-                    transition-all duration-300 group whitespace-nowrap
-                  '>
-									{item.label}
-									<span className='hidden lg:block absolute bottom-0 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full opacity-0 group-hover:opacity-100 shadow-[0_0_8px_rgba(59,130,246,0.8)]' />
-								</a>
-							))}
-						</div>
-					</div>
-
-					<div className='hidden lg:flex lg:w-1/4 justify-end'>
+					{/* Desktop CTA */}
+					<div className='hidden lg:flex items-center gap-3 ml-auto'>
 						{user ? (
 							<div className='flex items-center gap-3'>
-								<div className='flex items-center gap-2 px-3 py-2 rounded-full bg-white/10 border border-white/10 text-sm'>
-									{user.picture ? (
+								<div className='flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 border-black text-sm font-medium'>
+									{user.picture && (
 										<img
 											src={user.picture}
 											alt={user.name || "user"}
-											className='h-6 w-6 rounded-full'
+											className='w-6 h-6 rounded-full'
 										/>
-									) : (
-										<User className='h-4 w-4' />
 									)}
-									<span className='max-w-[140px] truncate'>
-										{user.name || user.email || "User"}
+									<span className='max-w-[120px] truncate'>
+										{user.name || user.email}
 									</span>
 								</div>
 								<button
 									onClick={handleLogout}
 									disabled={loading}
-									className='group relative flex items-center px-4 py-2 rounded-full bg-red-600 text-white text-sm font-semibold hover:bg-red-500 transition-all duration-300 disabled:opacity-50'>
-									<LogOut className='w-4 h-4 mr-2' />
-									{loading ? "Đang xử lý..." : "Đăng xuất"}
+									className='neo-btn neo-btn-secondary text-sm px-4 py-2 disabled:opacity-50'>
+									Đăng xuất
 								</button>
 							</div>
 						) : (
-							<button
-								onClick={handleLogin}
-								disabled={loading}
-								className='group relative flex items-center px-6 py-2 rounded-full bg-blue-600 text-white text-sm font-semibold shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] hover:bg-blue-500 transition-all duration-300 overflow-hidden disabled:opacity-50'>
-								<span className='relative z-10 flex items-center'>
-									<LogIn className='w-4 h-4 mr-2' />
-									{loading ? "Đang xử lý..." : "Đăng nhập Google"}
-								</span>
-								<div className='absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 ease-in-out' />
-							</button>
+							<>
+								<button
+									onClick={handleLogin}
+									disabled={loading}
+									className='neo-btn neo-btn-secondary text-sm px-4 py-2 disabled:opacity-50'>
+									<LogIn className='w-4 h-4' />
+									Đăng nhập
+								</button>
+								<button
+									onClick={handleLogin}
+									disabled={loading}
+									className='neo-btn neo-btn-primary text-sm px-4 py-2 disabled:opacity-50'>
+									<UserPlus className='w-4 h-4' />
+									{loading ? "Đang xử lý..." : "Tham gia ngay"}
+								</button>
+							</>
 						)}
 					</div>
+
+					{/* Mobile menu toggle */}
+					<button
+						className='lg:hidden p-2 rounded-lg border-2 border-black ml-auto'
+						onClick={() => setIsMobileOpen(!isMobileOpen)}
+						aria-label='Toggle menu'>
+						{isMobileOpen ? <X className='w-5 h-5' /> : <Menu className='w-5 h-5' />}
+					</button>
 				</div>
+
+				{/* Mobile Menu */}
+				{isMobileOpen && (
+					<div className='lg:hidden border-t-2 border-black bg-white px-6 pb-6'>
+						<nav className='flex flex-col gap-1 pt-4'>
+							{NAV_ITEMS.map((item) => (
+								<a
+									key={item.label}
+									href={item.href}
+									onClick={() => setIsMobileOpen(false)}
+									className='px-4 py-3 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors'>
+									{item.label}
+								</a>
+							))}
+						</nav>
+						<div className='flex flex-col gap-3 pt-4 border-t border-gray-100 mt-4'>
+							<button
+								onClick={handleLogin}
+								className='neo-btn neo-btn-secondary w-full justify-center'>
+								<LogIn className='w-4 h-4' /> Đăng nhập
+							</button>
+							<button
+								onClick={handleLogin}
+								className='neo-btn neo-btn-primary w-full justify-center'>
+								<UserPlus className='w-4 h-4' /> Tham gia ngay
+							</button>
+						</div>
+					</div>
+				)}
 			</div>
-		</nav>
+		</header>
 	);
 };
 
