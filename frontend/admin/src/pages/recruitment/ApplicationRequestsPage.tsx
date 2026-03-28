@@ -106,9 +106,9 @@ function SummaryCard({
 	children?: React.ReactNode;
 }) {
 	return (
-		<div className='rounded-2xl border border-[#dde4d5] bg-white p-5 shadow-sm'>
+		<div className='rounded-2xl border border-[#dde4d5] dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-sm'>
 			<div className='flex items-start gap-3'>
-				<div className='mt-1 shrink-0 text-[#2e3820]'>{icon}</div>
+				<div className='mt-1 shrink-0 text-[#2e3820] dark:text-zinc-200'>{icon}</div>
 				<div className='min-w-0'>
 					<p className='text-sm text-muted-foreground'>{label}</p>
 					{children ? (
@@ -179,12 +179,12 @@ function ApplicationRequestsPage() {
 	const passedCount = applications.filter((item) => item.status === "passed").length;
 
 	return (
-		<main className='min-h-full bg-[#f6f8f4]'>
-			<div className='border-b border-border bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75'>
+		<main className='min-h-full bg-[#f6f8f4] dark:bg-zinc-950'>
+			<div className='border-b border-border bg-white dark:bg-zinc-950/90 backdrop-blur supports-[backdrop-filter]:bg-white dark:bg-zinc-950/75'>
 				<div className='px-6 py-5'>
 					<div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
 						<div className='space-y-1'>
-							<p className='text-sm font-semibold uppercase tracking-[0.22em] text-[#6e7c57]'>
+							<p className='text-sm font-semibold uppercase tracking-[0.22em] text-[#6e7c57] dark:text-zinc-400'>
 								Tuyển thành viên
 							</p>
 							<h1 className='text-3xl font-bold tracking-tight text-foreground'>
@@ -197,12 +197,12 @@ function ApplicationRequestsPage() {
 						</div>
 
 						<div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
-							<Card className='gap-3 border-[#dde4d5] bg-[#fbfcf9] py-4 shadow-none'>
+							<Card className='gap-3 border-[#dde4d5] dark:border-zinc-800 bg-[#fbfcf9] dark:bg-zinc-900 py-4 shadow-none'>
 								<CardContent className='px-4'>
 									<p className='text-xs uppercase tracking-[0.18em] text-muted-foreground'>
 										Tổng hồ sơ
 									</p>
-									<p className='mt-2 text-2xl font-bold text-[#2e3820]'>{applications.length}</p>
+									<p className='mt-2 text-2xl font-bold text-[#2e3820] dark:text-zinc-200'>{applications.length}</p>
 								</CardContent>
 							</Card>
 							<Card className='gap-3 border-amber-100 bg-amber-50/80 py-4 shadow-none'>
@@ -227,12 +227,12 @@ function ApplicationRequestsPage() {
 			</div>
 
 			<div className='space-y-6 p-6'>
-				<Card className='overflow-hidden border-[#dde4d5] shadow-sm'>
-					<CardHeader className='border-b border-border bg-white'>
+				<Card className='overflow-hidden border-[#dde4d5] dark:border-zinc-800 shadow-sm'>
+					<CardHeader className='border-b border-border bg-white dark:bg-zinc-950'>
 						<div className='flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between'>
 							<div className='space-y-1'>
 								<CardTitle className='flex items-center gap-2 text-xl'>
-									<div className='rounded-xl bg-[#eef3e8] p-2 text-[#2e3820]'>
+									<div className='rounded-xl bg-[#eef3e8] dark:bg-zinc-800 p-2 text-[#2e3820] dark:text-zinc-200'>
 										<ClipboardList className='size-5' />
 									</div>
 									Danh sách ứng tuyển
@@ -275,21 +275,21 @@ function ApplicationRequestsPage() {
 						</div>
 					</CardHeader>
 
-					<CardContent className='space-y-4 bg-white px-0 pb-0'>
+					<CardContent className='space-y-4 bg-white dark:bg-zinc-950 px-0 pb-0'>
 						<div className='grid gap-4 px-6 pt-6 md:grid-cols-3'>
-							<div className='rounded-2xl border border-[#e7ece1] bg-[#fafcf8] p-4'>
+							<div className='rounded-2xl border border-[#e7ece1] dark:border-zinc-800 bg-[#fafcf8] dark:bg-zinc-900 p-4'>
 								<p className='text-sm text-muted-foreground'>Đang phỏng vấn</p>
-								<p className='mt-2 text-2xl font-semibold text-[#2e3820]'>{interviewCount}</p>
+								<p className='mt-2 text-2xl font-semibold text-[#2e3820] dark:text-zinc-200'>{interviewCount}</p>
 							</div>
-							<div className='rounded-2xl border border-[#e7ece1] bg-[#fafcf8] p-4'>
+							<div className='rounded-2xl border border-[#e7ece1] dark:border-zinc-800 bg-[#fafcf8] dark:bg-zinc-900 p-4'>
 								<p className='text-sm text-muted-foreground'>Đang hiển thị</p>
-								<p className='mt-2 text-2xl font-semibold text-[#2e3820]'>
+								<p className='mt-2 text-2xl font-semibold text-[#2e3820] dark:text-zinc-200'>
 									{filteredApplications.length}
 								</p>
 							</div>
-							<div className='rounded-2xl border border-[#e7ece1] bg-[#fafcf8] p-4'>
+							<div className='rounded-2xl border border-[#e7ece1] dark:border-zinc-800 bg-[#fafcf8] dark:bg-zinc-900 p-4'>
 								<p className='text-sm text-muted-foreground'>Tổng câu trả lời</p>
-								<p className='mt-2 text-2xl font-semibold text-[#2e3820]'>
+								<p className='mt-2 text-2xl font-semibold text-[#2e3820] dark:text-zinc-200'>
 									{filteredApplications.reduce((sum, item) => sum + item.answers.length, 0)}
 								</p>
 							</div>
@@ -303,7 +303,7 @@ function ApplicationRequestsPage() {
 							</div>
 						) : filteredApplications.length === 0 ? (
 							<div className='px-6 pb-6'>
-								<Empty className='border-[#dde4d5] bg-[#fafcf8]'>
+								<Empty className='border-[#dde4d5] dark:border-zinc-800 bg-[#fafcf8] dark:bg-zinc-900'>
 									<EmptyHeader>
 										<EmptyMedia variant='icon'>
 											<ClipboardList />
@@ -318,8 +318,8 @@ function ApplicationRequestsPage() {
 						) : (
 							<div className='border-t border-border'>
 								<Table>
-									<TableHeader className='bg-[#f8faf6]'>
-										<TableRow className='hover:bg-[#f8faf6]'>
+									<TableHeader className='bg-[#f8faf6] dark:bg-zinc-900'>
+										<TableRow className='hover:bg-[#f8faf6] dark:bg-zinc-900'>
 											<TableHead className='px-6'>ID</TableHead>
 											<TableHead>Ứng viên</TableHead>
 											<TableHead>Liên hệ</TableHead>
@@ -331,8 +331,8 @@ function ApplicationRequestsPage() {
 									</TableHeader>
 									<TableBody>
 										{filteredApplications.map((application) => (
-											<TableRow key={application.id} className='bg-white'>
-												<TableCell className='px-6 font-semibold text-[#2e3820]'>
+											<TableRow key={application.id} className='bg-white dark:bg-zinc-950'>
+												<TableCell className='px-6 font-semibold text-[#2e3820] dark:text-zinc-200'>
 													#{application.id}
 												</TableCell>
 												<TableCell>
@@ -385,11 +385,11 @@ function ApplicationRequestsPage() {
 				}}>
 				<DialogContent className='max-h-[92vh] w-[min(1120px,calc(100vw-2rem))] overflow-hidden p-0'>
 					{selectedApplication ? (
-						<div className='overflow-hidden rounded-lg bg-white'>
-							<div className='bg-[#2e3820] px-6 py-6 text-white md:px-8 md:py-7'>
+						<div className='overflow-hidden rounded-lg bg-white dark:bg-zinc-950'>
+							<div className='bg-[#2e3820] dark:bg-zinc-800 px-6 py-6 text-white md:px-8 md:py-7'>
 								<DialogHeader>
 									<div className='mb-3 flex flex-wrap items-center gap-2'>
-										<Badge className='border border-white/15 bg-white/10 text-white hover:bg-white/10'>
+										<Badge className='border border-white/15 bg-white dark:bg-zinc-950/10 text-white hover:bg-white dark:bg-zinc-950/10'>
 											Hồ sơ #{selectedApplication.id}
 										</Badge>
 										{getStatusBadge(selectedApplication.status)}
@@ -403,7 +403,7 @@ function ApplicationRequestsPage() {
 								</DialogHeader>
 							</div>
 
-							<div className='max-h-[calc(92vh-180px)] space-y-6 overflow-y-auto bg-[#fcfdfb] p-6 md:px-8 md:py-7'>
+							<div className='max-h-[calc(92vh-180px)] space-y-6 overflow-y-auto bg-[#fcfdfb] dark:bg-zinc-900 p-6 md:px-8 md:py-7'>
 								<div className='grid gap-4 sm:grid-cols-2 2xl:grid-cols-4'>
 									<SummaryCard
 										icon={<UserRound className='size-5' />}
@@ -426,7 +426,7 @@ function ApplicationRequestsPage() {
 								</div>
 
 								<div className='space-y-6'>
-									<Card className='gap-4 border-[#dde4d5] bg-white py-5 shadow-sm'>
+									<Card className='gap-4 border-[#dde4d5] dark:border-zinc-800 bg-white dark:bg-zinc-950 py-5 shadow-sm'>
 										<CardHeader className='px-6'>
 											<CardTitle>Thông tin hồ sơ</CardTitle>
 											<CardDescription>
@@ -435,7 +435,7 @@ function ApplicationRequestsPage() {
 										</CardHeader>
 										<CardContent className='space-y-5 px-6'>
 											<div className='grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]'>
-												<div className='overflow-hidden rounded-2xl border border-[#e3e9dc] bg-[#fbfcf9]'>
+												<div className='overflow-hidden rounded-2xl border border-[#e3e9dc] dark:border-zinc-800 bg-[#fbfcf9] dark:bg-zinc-900'>
 													<div className='grid divide-y divide-[#e3e9dc]'>
 														<div className='grid gap-2 px-5 py-4 sm:grid-cols-[128px_minmax(0,1fr)] sm:items-center'>
 															<p className='text-sm font-medium text-muted-foreground'>Mã sinh viên</p>
@@ -464,7 +464,7 @@ function ApplicationRequestsPage() {
 													</div>
 												</div>
 
-												<div className='rounded-2xl border border-[#e3e9dc] bg-[#fbfcf9] p-5'>
+												<div className='rounded-2xl border border-[#e3e9dc] dark:border-zinc-800 bg-[#fbfcf9] dark:bg-zinc-900 p-5'>
 													<p className='text-sm font-medium text-muted-foreground'>Ghi chép xem xét</p>
 													<p className='mt-3 break-words text-base leading-8 text-foreground'>
 														{selectedApplication.note || "Chưa có ghi chép xem xét."}
@@ -474,7 +474,7 @@ function ApplicationRequestsPage() {
 										</CardContent>
 									</Card>
 
-									<Card className='gap-4 border-[#dde4d5] bg-white py-5 shadow-sm'>
+									<Card className='gap-4 border-[#dde4d5] dark:border-zinc-800 bg-white dark:bg-zinc-950 py-5 shadow-sm'>
 										<CardHeader className='px-6'>
 											<CardTitle>Câu trả lời biểu mẫu</CardTitle>
 											<CardDescription>
@@ -483,11 +483,11 @@ function ApplicationRequestsPage() {
 										</CardHeader>
 										<CardContent className='space-y-4 px-6'>
 											{selectedApplication.answers.map((answer, index) => (
-												<div key={answer.id} className='rounded-2xl border border-[#e3e9dc] bg-[#fbfcf9] p-5'>
+												<div key={answer.id} className='rounded-2xl border border-[#e3e9dc] dark:border-zinc-800 bg-[#fbfcf9] dark:bg-zinc-900 p-5'>
 													<div className='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
 														<div className='min-w-0 space-y-2'>
 															<div className='flex flex-wrap items-center gap-3'>
-																<p className='text-xs font-semibold uppercase tracking-[0.16em] text-[#6e7c57]'>
+																<p className='text-xs font-semibold uppercase tracking-[0.16em] text-[#6e7c57] dark:text-zinc-400'>
 																	Câu {index + 1}
 																</p>
 																<Badge variant='secondary'>{answer.question_type}</Badge>
@@ -498,7 +498,7 @@ function ApplicationRequestsPage() {
 														</div>
 													</div>
 
-													<div className='mt-4 rounded-xl bg-white px-4 py-4'>
+													<div className='mt-4 rounded-xl bg-white dark:bg-zinc-950 px-4 py-4'>
 														<p className='text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground'>
 															Trả lời
 														</p>
