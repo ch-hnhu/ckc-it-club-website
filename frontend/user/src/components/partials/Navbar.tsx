@@ -16,15 +16,8 @@ const NAV_ITEMS = [
 ];
 
 const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
-	const [isScrolled, setIsScrolled] = useState(false);
 	const [isMobileOpen, setIsMobileOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
-
-	useEffect(() => {
-		const handleScroll = () => setIsScrolled(window.scrollY > 20);
-		window.addEventListener("scroll", handleScroll);
-		return () => window.removeEventListener("scroll", handleScroll);
-	}, []);
 
 	useEffect(() => {
 		const onMessage = async (event: MessageEvent) => {
@@ -70,11 +63,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 
 	return (
 		<header
-			className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-				isScrolled
-					? "bg-white/95 backdrop-blur-sm border-b-2 border-black shadow-[0_2px_0_0_#111]"
-					: "bg-white"
-			}`}>
+			className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-white/95 backdrop-blur-sm border-b-2 border-black shadow-[0_2px_0_0_#111]`}>
 			<div className='neo-container'>
 				<div className='flex items-center gap-4 lg:gap-8 h-16 px-6'>
 					{/* Logo */}
