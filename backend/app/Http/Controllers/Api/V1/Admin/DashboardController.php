@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1;
+namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
 use App\Enums\HttpStatus;
@@ -9,15 +9,28 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\User;
 
-class UserController extends BaseApiController
+class DashboardController extends BaseApiController
 {
+    public function __construct()
+    {
+        $this->middleware('auth:sanctum');
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request): JsonResponse
     {
-        $data = User::all();
-        return $this->successResponse(true, $data, ApiMessage::USERS_RETRIEVED, HttpStatus::OK);
+        // Additional check to ensure user is authenticated
+        if (! auth()->check()) {
+            return $this->errorResponse(
+                false,
+                ApiMessage::UNAUTHORIZED->value,
+                HttpStatus::UNAUTHORIZED
+            );
+        }
+
+        return $this->successResponse(true, null, ApiMessage::SUCCESS);
     }
 
     /**
