@@ -3,7 +3,9 @@ import { api } from "@/services/api.service";
 export const authService = {
 	// Redirect to Google OAuth
 	redirectAdmin() {
-		const baseUrl = "http://localhost:8000"; // Tạm hardcode
+		// Derive backend base URL from VITE_API_URL (strip "/api/v1" suffix)
+		const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+		const baseUrl = apiUrl.replace(/\/api\/v1\/?$/, "");
 		const redirectUrl = `${baseUrl}/admin/auth/google`;
 		console.log("Redirecting to:", redirectUrl);
 		window.location.href = redirectUrl;
