@@ -6,19 +6,35 @@ use Illuminate\Http\Request;
 
 class GoogleAuthController extends AuthBaseController
 {
-    /**
-     * Redirect to Google OAuth
-     */
-    public function redirect(?string $provider = null)
-    {
-        return parent::redirect('google');
-    }
+	/**
+	 * Redirect to Google OAuth
+	 */
+	public function redirectAdmin(?string $provider = null)
+	{
+		return parent::redirectAdmin('google');
+	}
 
-    /**
-     * Handle Google OAuth callback
-     */
-    public function callback(?string $provider = null, ?Request $request = null)
-    {
-        return parent::callback('google', request());
-    }
+	/**
+	 * Handle Google OAuth callback
+	 */
+	public function callbackAdmin(?string $provider = null, ?Request $request = null)
+	{
+		return parent::callbackAdmin('google', request());
+	}
+
+	/**
+	 * Redirect to Google OAuth
+	 */
+	public function redirectUser(?string $provider = null)
+	{
+		return parent::redirectUser('google');
+	}
+
+	/**
+	 * Handle Google OAuth callback
+	 */
+	public function callbackUser(?string $provider = null, ?Request $request = null)
+	{
+		return parent::callbackUser('google', request());
+	}
 }

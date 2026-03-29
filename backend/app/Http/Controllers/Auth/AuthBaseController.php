@@ -38,7 +38,58 @@ abstract class AuthBaseController extends Controller
     /**
      * Redirect to OAuth provider
      */
-    public function redirect(?string $provider = null)
+    public function redirectAdmin(?string $provider = null)
+    {
+        $provider = $provider ?: 'google';
+
+        try {
+            return $this->getDriver($provider)->stateless()->redirect();
+        } catch (\Exception $e) {
+            \Log::error("OAuth Redirect Error [{$provider}]: ".$e->getMessage());
+            return redirect(env('ADMIN_FRONTEND_URL', 'http://localhost:5173').'/login')->with('error', 'Authentication service unavailable');
+        }
+    }
+
+    /**
+     * Handle OAuth callback
+     */
+    public function callbackAdmin(?string $provider = null, ?Request $request = null)
+    {
+        $provider = $provider ?: 'google';
+        $request = $request ?: request();
+
+        try {
+            $oauthUser = $this->getDriver($provider)->stateless()->user();
+
+            // Find or create user
+            $user = $this->findOrCreateUser($oauthUser, $provider);
+
+            // Create Sanctum token
+            $token = $user->createToken('access_token')->plainTextToken;
+
+            // Redirect to frontend with token and user data
+            $frontendUrl = env('ADMIN_FRONTEND_URL', 'http://localhost:5173');
+            $userData = [
+                'id' => $user->id,
+                'full_name' => $user->full_name,
+                'email' => $user->email,
+                'avatar' => $user->avatar,
+                'provider' => $user->provider,
+                'email_verified_at' => $user->email_verified_at,
+            ];
+
+            // Encode user data for URL
+            $userJson = base64_encode(json_encode($userData));
+            return redirect("{$frontendUrl}/login-success?token={$token}&user={$userJson}");
+
+        } catch (\Exception $e) {
+            \Log::error("OAuth Callback Error [{$provider}]: ".$e->getMessage());
+            $frontendUrl = env('ADMIN_FRONTEND_URL', 'http://localhost:5173');
+            return redirect("{$frontendUrl}/login")->with('error', 'Authentication failed. Please try again.');
+        }
+    }
+
+    public function redirectUser(?string $provider = null)
     {
         $provider = $provider ?: 'google';
 
@@ -53,7 +104,7 @@ abstract class AuthBaseController extends Controller
     /**
      * Handle OAuth callback
      */
-    public function callback(?string $provider = null, ?Request $request = null)
+    public function callbackUser(?string $provider = null, ?Request $request = null)
     {
         $provider = $provider ?: 'google';
         $request = $request ?: request();

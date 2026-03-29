@@ -22,9 +22,6 @@ clientApi.interceptors.request.use(
 			config.headers.Authorization = `Bearer ${token}`;
 		}
 
-		// You can add loading state here
-		console.log("Request:", config.method?.toUpperCase(), config.url);
-
 		return config;
 	},
 	(error: AxiosError) => {
@@ -37,7 +34,6 @@ clientApi.interceptors.request.use(
 clientApi.interceptors.response.use(
 	(response: AxiosResponse) => {
 		// Success response - just return data
-		console.log("Response:", response.status, response.config.url);
 		return response;
 	},
 	(error: AxiosError) => {

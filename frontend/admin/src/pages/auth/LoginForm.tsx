@@ -2,12 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authService } from "@/services/auth.service";
 
 export function LoginForm() {
-	const handleGoogleLogin = () => {
-		const baseUrl =
-			import.meta.env.VITE_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
-		window.location.href = `${baseUrl}/auth/google`;
+	const handleGoogleLogin = (e: React.FormEvent) => {
+		e.preventDefault(); // Prevent form submission
+		try {
+			authService.redirectAdmin();
+		} catch (error) {
+			console.error("Error redirecting to Google:", error);
+		}
 	};
 
 	return (
@@ -29,7 +33,7 @@ export function LoginForm() {
 							</p>
 						</div>
 
-						<form className='space-y-4'>
+						<form className='space-y-4' onSubmit={(e) => e.preventDefault()}>
 							<div className='space-y-2'>
 								<Label htmlFor='email' className='font-medium text-base'>
 									Email
