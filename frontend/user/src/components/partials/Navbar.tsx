@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Menu, X, Code2, LogIn, UserPlus } from "lucide-react";
-import { getGoogleAuthUrl, logout, type AuthUser } from "../../services/auth.service";
+import {
+	getGoogleAuthUrl,
+	logout,
+	setAccessToken,
+	clearAccessToken,
+	type AuthUser,
+} from "../../services/auth.service";
 
 type NavbarProps = {
 	user: AuthUser | null;
@@ -21,8 +27,20 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 
 	useEffect(() => {
 		const onMessage = async (event: MessageEvent) => {
+			if (event.origin !== window.location.origin) {
+				return;
+			}
+
 			if (event?.data?.type === "OAUTH_AUTH_SUCCESS") {
+				if (event.data.token) {
+					setAccessToken(event.data.token);
+				}
+
 				await onAuthSuccess();
+			}
+
+			if (event?.data?.type === "OAUTH_AUTH_ERROR") {
+				console.error("Login error:", event.data.message);
 			}
 		};
 		window.addEventListener("message", onMessage);
@@ -32,6 +50,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const handleLogin = async () => {
 		try {
 			setLoading(true);
+			clearAccessToken();
 			const url = await getGoogleAuthUrl();
 			const width = 520,
 				height = 640;
@@ -40,7 +59,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 			window.open(
 				url,
 				"google_oauth",
-				`width=${width},height=${height},left=${left},top=${top},noopener,noreferrer`,
+				`width=${width},height=${height},left=${left},top=${top}`,
 			);
 		} catch (err) {
 			console.error("Login error:", err);

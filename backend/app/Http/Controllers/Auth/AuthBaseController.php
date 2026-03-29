@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use GuzzleHttp\Client;
 use Laravel\Socialite\Facades\Socialite;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -32,7 +33,17 @@ abstract class AuthBaseController extends Controller
             throw new \InvalidArgumentException("Provider {$provider} is not supported");
         }
 
-        return Socialite::driver($this->supportedProviders[$provider]);
+        $driver = Socialite::driver($this->supportedProviders[$provider]);
+
+        // Local Windows setups often miss a CA bundle; allow opting out for dev only.
+        $shouldVerifySsl = filter_var(env('OAUTH_HTTP_VERIFY', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+        if (! $shouldVerifySsl) {
+            $driver->setHttpClient(new Client([
+                'verify' => false,
+            ]));
+        }
+
+        return $driver;
     }
 
     /**
@@ -49,7 +60,10 @@ abstract class AuthBaseController extends Controller
             $redirectUri = url('/auth/google/callback');
             \Log::info("OAuth Redirect URI: ".$redirectUri);
             \Log::info("Full URL: ".request()->fullUrl());
-            return $this->getDriver($provider)->redirectUrl($redirectUri)->redirect();
+            return $this->getDriver($provider)
+                ->redirectUrl($redirectUri)
+                ->with(['prompt' => 'select_account'])
+                ->redirect();
         } catch (\Exception $e) {
             \Log::error("OAuth Redirect Error [{$provider}]: ".$e->getMessage());
             // Debug: Return error message instead of redirect
@@ -69,10 +83,17 @@ abstract class AuthBaseController extends Controller
         $provider = $provider ?: 'google';
 
         try {
-            return $this->getDriver($provider)->redirect();
+            $redirectUri = url('/auth/google/callback');
+            \Log::info("OAuth Redirect URI: ".$redirectUri);
+            \Log::info("Full URL: ".request()->fullUrl());
+
+            return $this->getDriver($provider)
+                ->redirectUrl($redirectUri)
+                ->with(['prompt' => 'select_account'])
+                ->redirect();
         } catch (\Exception $e) {
             \Log::error("OAuth Redirect Error [{$provider}]: ".$e->getMessage());
-            return redirect(env('ADMIN_FRONTEND_URL', 'http://localhost:5173').'/login')->with('error', 'Authentication service unavailable');
+            return redirect(env('USER_FRONTEND_URL', 'http://localhost:5173'))->with('error', 'Authentication service unavailable');
         }
     }
 
@@ -93,8 +114,10 @@ abstract class AuthBaseController extends Controller
             // Create Sanctum token
             $token = $user->createToken('access_token')->plainTextToken;
 
-            // Redirect to frontend with token and user data
-            $frontendUrl = env('ADMIN_FRONTEND_URL', 'http://localhost:5173');
+            $loginType = session('login_type', 'admin');
+            $frontendUrl = $loginType === 'user'
+                ? env('USER_FRONTEND_URL', 'http://localhost:5173')
+                : env('ADMIN_FRONTEND_URL', 'http://localhost:5173');
             $userData = [
                 'id' => $user->id,
                 'full_name' => $user->full_name,
@@ -106,6 +129,46 @@ abstract class AuthBaseController extends Controller
 
             // Encode user data for URL
             $userJson = base64_encode(json_encode($userData));
+
+            if ($loginType === 'user') {
+                $targetOrigin = rtrim($frontendUrl, '/');
+                $payload = json_encode([
+                    'type' => 'OAUTH_AUTH_SUCCESS',
+                    'token' => $token,
+                    'user' => $userData,
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+                return response(
+                    <<<HTML
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Google Login Success</title>
+</head>
+<body>
+    <script>
+        (function () {
+            var payload = {$payload};
+            var targetOrigin = "{$targetOrigin}";
+
+            if (window.opener) {
+                window.opener.postMessage(payload, targetOrigin);
+                window.close();
+                return;
+            }
+
+            window.location.href = targetOrigin;
+        })();
+    </script>
+</body>
+</html>
+HTML,
+                    200,
+                    ['Content-Type' => 'text/html; charset=UTF-8']
+                );
+            }
+
             return redirect("{$frontendUrl}/login-success?token={$token}&user={$userJson}");
 
         } catch (\Exception $e) {

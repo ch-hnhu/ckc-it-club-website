@@ -17,7 +17,7 @@ const clientApi: AxiosInstance = axios.create({
 clientApi.interceptors.request.use(
 	(config: InternalAxiosRequestConfig) => {
 		// Add Authorization token if exists
-		const token = localStorage.getItem("access_token");
+		const token = sessionStorage.getItem("access_token");
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
 		}
@@ -45,6 +45,7 @@ clientApi.interceptors.response.use(
 				case 401:
 					// Unauthorized - redirect to login
 					console.error("Unauthorized! Redirecting to login...");
+					sessionStorage.removeItem("access_token");
 					localStorage.removeItem("access_token");
 					window.location.href = "/login";
 					break;
