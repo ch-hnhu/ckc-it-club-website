@@ -1,6 +1,14 @@
 import { api } from "@/services/api.service";
 
 export const authService = {
+	// Redirect to Google OAuth
+	redirectAdmin() {
+		const baseUrl = "http://localhost:8000"; // Tạm hardcode
+		const redirectUrl = `${baseUrl}/admin/auth/google`;
+		console.log("Redirecting to:", redirectUrl);
+		window.location.href = redirectUrl;
+	},
+
 	// Verify token from OAuth callback
 	async verifyToken(token: string): Promise<{
 		success: boolean;

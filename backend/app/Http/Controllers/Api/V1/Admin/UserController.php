@@ -18,14 +18,14 @@ class UserController extends BaseApiController
 	{
 		$sort = $request->query('sort', 'created_at');
 		$order = $request->query('order', 'desc');
-		$perPage = $request->query('per_page', 15);
+		$perPage = $request->query('per_page', 10);
 		$search = $request->query('search');
 
 		$data = User::query()
 			->when($search, function ($query, $search) {
-				$query->where('full_name', 'like', "%{$search}%")
-					->orWhere('email', 'like', "%{$search}%");
-			})
+			$query->where('full_name', 'like', "%{$search}%")
+				->orWhere('email', 'like', "%{$search}%");
+		})
 			->orderBy($sort, $order)
 			->paginate($perPage);
 		return $this->paginatedResponse($data, ApiMessage::USERS_RETRIEVED);
@@ -36,7 +36,7 @@ class UserController extends BaseApiController
 	 */
 	public function store(Request $request)
 	{
-		//
+	//
 	}
 
 	/**
@@ -44,7 +44,7 @@ class UserController extends BaseApiController
 	 */
 	public function show(string $id)
 	{
-		//
+	//
 	}
 
 	/**
@@ -52,7 +52,7 @@ class UserController extends BaseApiController
 	 */
 	public function update(Request $request, string $id)
 	{
-		//
+	//
 	}
 
 	/**
@@ -60,6 +60,6 @@ class UserController extends BaseApiController
 	 */
 	public function destroy(string $id)
 	{
-		//
+	//
 	}
 }
