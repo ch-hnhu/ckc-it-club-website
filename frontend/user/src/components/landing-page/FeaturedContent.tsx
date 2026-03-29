@@ -78,7 +78,13 @@ const FeaturedContent: React.FC = () => {
 		<section ref={sectionRef} id='blog' className='neo-section bg-white'>
 			<div className='neo-container'>
 				{/* Header */}
-				<div className='text-center mb-14 fade-in-up'>
+				<div className='relative text-center mb-14 fade-in-up'>
+					{/* Decorative images */}
+					<img
+						src='/assets/img/4.png'
+						alt=''
+						className='absolute -left-40 top-90 w-50 h-50 opacity-20 animate-float hidden lg:block rotate-[-15deg]'
+					/>
 					<div className='section-divider' />
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
