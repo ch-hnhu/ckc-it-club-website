@@ -64,7 +64,19 @@ const BoardSection: React.FC = () => {
 			style={{ background: "var(--color-surface)" }}>
 			<div className='neo-container'>
 				{/* Header */}
-				<div className='text-center mb-14 fade-in-up'>
+				<div className='relative text-center mb-14 fade-in-up'>
+					{/* Decorative images */}
+					<img
+						src='/assets/img/11.png'
+						alt=''
+						className='absolute -left-10 -top-5 w-20 h-20 opacity-30 animate-float hidden lg:block rotate-[-12deg]'
+					/>
+					<img
+						src='/assets/img/12.png'
+						alt=''
+						className='absolute -right-8 bottom-0 w-18 h-18 opacity-30 animate-float-delayed hidden lg:block rotate-[15deg]'
+					/>
+
 					<div className='section-divider' />
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'

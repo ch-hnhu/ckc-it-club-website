@@ -84,7 +84,19 @@ const QuickActions: React.FC = () => {
 			id='resources'>
 			<div className='neo-container'>
 				{/* Section header */}
-				<div className='text-center mb-14 fade-in-up'>
+				<div className='relative text-center mb-14 fade-in-up'>
+					{/* Decorative images */}
+					<img
+						src='/assets/img/9.png'
+						alt=''
+						className='absolute -left-12 top-0 w-24 h-24 opacity-30 animate-float-delayed hidden xl:block rotate-[15deg]'
+					/>
+					<img
+						src='/assets/img/10.png'
+						alt=''
+						className='absolute -right-12 top-5 w-20 h-20 opacity-30 animate-float hidden xl:block rotate-[-10deg]'
+					/>
+
 					<div className='section-divider' />
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
