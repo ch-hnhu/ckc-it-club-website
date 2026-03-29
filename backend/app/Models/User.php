@@ -7,6 +7,17 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Spatie\Permission\Traits\HasRoles;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property int $id
+ * @property string $full_name
+ * @property string $email
+ * @property string|null $avatar
+ * @property string|null $provider
+ * @property string|null $provider_id
+ * @property \Carbon\Carbon|null $email_verified_at
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon $updated_at
+ */
 class User extends Authenticatable
 {
 	/** @use HasFactory<\Database\Factories\UserFactory> */

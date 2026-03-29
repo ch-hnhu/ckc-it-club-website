@@ -45,10 +45,20 @@ abstract class AuthBaseController extends Controller
         $provider = $provider ?: 'google';
 
         try {
-            return $this->getDriver($provider)->stateless()->redirect();
+            // Dynamic redirect URI based on current request
+            $redirectUri = url('/auth/google/callback');
+            \Log::info("OAuth Redirect URI: ".$redirectUri);
+            \Log::info("Full URL: ".request()->fullUrl());
+            return $this->getDriver($provider)->redirectUrl($redirectUri)->redirect();
         } catch (\Exception $e) {
             \Log::error("OAuth Redirect Error [{$provider}]: ".$e->getMessage());
-            return redirect(env('ADMIN_FRONTEND_URL', 'http://localhost:5173').'/login')->with('error', 'Authentication service unavailable');
+            // Debug: Return error message instead of redirect
+            return response()->json([
+                'error' => 'OAuth Redirect Error',
+                'message' => $e->getMessage(),
+                'provider' => $provider,
+                'redirect_uri' => url('/auth/google/callback')
+            ], 500);
         }
     }
 
