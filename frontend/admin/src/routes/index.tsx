@@ -4,8 +4,8 @@ import Dashboard from "../pages/Dashboard";
 import UserList from "@/pages/user/UserList";
 import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
-
 import LoginSuccess from "@/pages/auth/LoginSuccess";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 const router = createBrowserRouter([
 	{
@@ -18,7 +18,11 @@ const router = createBrowserRouter([
 	},
 	{
 		path: "/",
-		element: <MainLayout />,
+		element: (
+			<ProtectedRoute>
+				<MainLayout />
+			</ProtectedRoute>
+		),
 		children: [
 			{
 				index: true,

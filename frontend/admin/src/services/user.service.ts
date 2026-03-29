@@ -13,7 +13,13 @@ const userService = {
 		return api.get("/users", params);
 	},
 	async getMe(): Promise<{ success: boolean; data: User }> {
-		return api.get("/user");
+		return api.get("/auth/me");
+	},
+	async logout(): Promise<{ success: boolean; message: string }> {
+		return api.post("/auth/logout");
+	},
+	async logoutAll(): Promise<{ success: boolean; message: string }> {
+		return api.post("/auth/logout-all");
 	},
 };
 

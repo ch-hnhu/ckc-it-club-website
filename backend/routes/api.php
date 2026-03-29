@@ -1,9 +1,10 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\ProductController;
-use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\Admin\UserController;
+use App\Http\Controllers\Api\V1\Admin\DashboardController;
+use App\Http\Controllers\Auth\AuthBaseController;
+use App\Http\Controllers\Auth\AuthController;
 
 // API Version 1
 Route::prefix('v1')->group(function () {
@@ -18,21 +19,22 @@ Route::prefix('v1')->group(function () {
         ]);
     });
 
-    // User
-    Route::apiResource('users', UserController::class);
+    // Token verification (public for OAuth callback)
+    Route::get('/auth/verify-token', [AuthController::class, 'verifyToken']);
+
+    // Authentication routes (require authentication)
+    Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
+        Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::post('/logout-all', [AuthController::class, 'logoutAll']);
+    });
 
     // Protected routes (require authentication)
     Route::middleware('auth:sanctum')->group(function () {
-        // User routes
-        Route::get('/user', function (Request $request) {
-            return response()->json([
-                'success' => true,
-                'data' => $request->user(),
-            ]);
-        });
 
-        // Products CRUD
-        Route::apiResource('products', ProductController::class);
+        Route::get('/', [DashboardController::class, 'index']);
+
+        Route::apiResource('users', UserController::class);
 
         // Example: Custom routes
         // Route::get('/products/{id}/related', [ProductController::class, 'related']);

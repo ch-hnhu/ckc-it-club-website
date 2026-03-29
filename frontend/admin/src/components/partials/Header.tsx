@@ -51,9 +51,15 @@ function Header({ onToggleSidebar }: HeaderProps) {
 			.catch((err) => console.error("Failed to fetch user", err));
 	}, []);
 
-	const handleLogout = () => {
-		localStorage.clear();
-		navigate("/login");
+	const handleLogout = async () => {
+		try {
+			await userService.logout();
+		} catch (error) {
+			console.error("Logout API failed:", error);
+		} finally {
+			localStorage.clear();
+			navigate("/login");
+		}
 	};
 
 	return (
