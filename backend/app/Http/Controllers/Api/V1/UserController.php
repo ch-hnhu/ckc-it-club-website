@@ -16,8 +16,19 @@ class UserController extends BaseApiController
      */
     public function index(Request $request): JsonResponse
     {
-        $data = User::all();
-        return $this->successResponse(true, $data, ApiMessage::USERS_RETRIEVED, HttpStatus::OK);
+        $sort = $request->query('sort', 'created_at');
+        $order = $request->query('order', 'desc');
+        $perPage = $request->query('per_page', 15);
+        $search = $request->query('search');
+
+        $data = User::query()
+            ->when($search, function ($query, $search) {
+                $query->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->orderBy($sort, $order)
+            ->paginate($perPage);
+        return $this->paginatedResponse($data, ApiMessage::USERS_RETRIEVED);
     }
 
     /**
