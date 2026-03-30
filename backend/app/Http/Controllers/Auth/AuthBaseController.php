@@ -111,32 +111,26 @@ abstract class AuthBaseController extends Controller
             // Find or create user
             $user = $this->findOrCreateUser($oauthUser, $provider);
 
+            $user->tokens()->delete();
+
             // Create Sanctum token
-            $token = $user->createToken('access_token')->plainTextToken;
+            $token = $user->createToken('access_token');
+
+            $token->accessToken->forceFill([
+                'expires_at' => now()->addHours(2),
+            ])->save();
+
+            $token = $token->plainTextToken;
 
             $loginType = session('login_type', 'admin');
             $frontendUrl = $loginType === 'user'
                 ? env('USER_FRONTEND_URL', 'http://localhost:5173')
                 : env('ADMIN_FRONTEND_URL', 'http://localhost:5173');
 
-            $userData = [
-                'id' => $user->id,
-                'full_name' => $user->full_name,
-                'email' => $user->email,
-                'avatar' => $user->avatar,
-                'provider' => $user->provider,
-                'email_verified_at' => $user->email_verified_at,
-            ];
-
-            // Encode user data for URL
-            $userJson = base64_encode(json_encode($userData));
-
-            // if ($loginType === 'user') {
             $targetOrigin = rtrim($frontendUrl, '/');
             $payload = json_encode([
                 'type' => 'OAUTH_AUTH_SUCCESS',
                 'token' => $token,
-                'user' => $userData,
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
             return response(
@@ -168,9 +162,6 @@ abstract class AuthBaseController extends Controller
                 200,
                 ['Content-Type' => 'text/html; charset=UTF-8']
             );
-            // }
-
-            // return redirect("{$frontendUrl}/login-success?token={$token}&user={$userJson}");
 
         } catch (\Exception $e) {
             \Log::error("OAuth Callback Error [{$provider}]: ".$e->getMessage());

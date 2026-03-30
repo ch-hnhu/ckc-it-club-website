@@ -15,9 +15,6 @@ export function LoginForm() {
 				if (payload.token) {
 					localStorage.setItem("access_token", payload.token);
 				}
-				if (payload.user) {
-					localStorage.setItem("user", JSON.stringify(payload.user));
-				}
 
 				const redirectPath = sessionStorage.getItem("redirectPath") || "/";
 				sessionStorage.removeItem("redirectPath");
