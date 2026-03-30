@@ -9,7 +9,6 @@ export default function LoginSuccess() {
 
 	useEffect(() => {
 		const token = searchParams.get("token");
-		const userEncoded = searchParams.get("user");
 
 		if (token) {
 			// Verify token with backend
@@ -19,21 +18,6 @@ export default function LoginSuccess() {
 					if (response.success) {
 						// Store token
 						localStorage.setItem("access_token", token);
-
-						// Store user data if available
-						if (userEncoded) {
-							try {
-								const userData = JSON.parse(atob(userEncoded));
-								localStorage.setItem("user", JSON.stringify(userData));
-							} catch (error) {
-								console.error("Failed to decode user data:", error);
-							}
-						}
-
-						// Store verified user data from API
-						if (response.data) {
-							localStorage.setItem("user", JSON.stringify(response.data));
-						}
 
 						toast.success("Đăng nhập thành công", {
 							description: "Chào mừng quay trở lại trang quản trị",

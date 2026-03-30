@@ -5,20 +5,31 @@ export interface AuthUser {
 	picture?: string;
 }
 
+export type OAuthAuthSuccessPayload = {
+	type: "OAUTH_AUTH_SUCCESS";
+	token?: string;
+	user?: unknown;
+};
+
+export type OAuthAuthErrorPayload = {
+	type: "OAUTH_AUTH_ERROR";
+	message?: string;
+};
+
+export type OAuthAuthPayload = OAuthAuthSuccessPayload | OAuthAuthErrorPayload;
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-const AUTH_SERVER_URL = API_URL.replace(/\/api\/v1\/?$/, "");
+const AUTH_SERVER_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 function getAccessToken(): string | null {
-	return sessionStorage.getItem("access_token");
+	return localStorage.getItem("access_token");
 }
 
 export function setAccessToken(token: string) {
-	sessionStorage.setItem("access_token", token);
-	localStorage.removeItem("access_token");
+	localStorage.setItem("access_token", token);
 }
 
 export function clearAccessToken() {
-	sessionStorage.removeItem("access_token");
 	localStorage.removeItem("access_token");
 }
 
@@ -32,6 +43,43 @@ async function parseJsonSafe(response: Response) {
 
 export async function getGoogleAuthUrl(): Promise<string> {
 	return `${AUTH_SERVER_URL}/user/auth/google`;
+}
+
+export function getAuthServerOrigin(): string | null {
+	try {
+		return new URL(AUTH_SERVER_URL).origin;
+	} catch {
+		return null;
+	}
+}
+
+export function listenOAuthAuthMessage(options: {
+	onSuccess?: (payload: OAuthAuthSuccessPayload) => void | Promise<void>;
+	onError?: (payload: OAuthAuthErrorPayload) => void | Promise<void>;
+}) {
+	const authServerOrigin = getAuthServerOrigin();
+
+	const handler = async (event: MessageEvent) => {
+		const allowedOrigins = new Set(
+			[window.location.origin, authServerOrigin].filter(Boolean) as string[],
+		);
+		if (!allowedOrigins.has(event.origin)) return;
+
+		const data = event?.data as OAuthAuthPayload | undefined;
+		if (!data || typeof data !== "object") return;
+
+		if (data.type === "OAUTH_AUTH_SUCCESS") {
+			await options.onSuccess?.(data);
+			return;
+		}
+
+		if (data.type === "OAUTH_AUTH_ERROR") {
+			await options.onError?.(data);
+		}
+	};
+
+	window.addEventListener("message", handler);
+	return () => window.removeEventListener("message", handler);
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {

@@ -6,6 +6,7 @@ import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage
 import { LoginForm } from "@/pages/auth/LoginForm";
 import LoginSuccess from "@/pages/auth/LoginSuccess";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import NotFound from "@/pages/NotFound";
 
 const router = createBrowserRouter([
 	{
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
 				<MainLayout />
 			</ProtectedRoute>
 		),
+		errorElement: <NotFound />,
 		children: [
 			{
 				index: true,
