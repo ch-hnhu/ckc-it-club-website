@@ -22,16 +22,14 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 const AUTH_SERVER_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 function getAccessToken(): string | null {
-	return sessionStorage.getItem("access_token");
+	return localStorage.getItem("access_token");
 }
 
 export function setAccessToken(token: string) {
-	sessionStorage.setItem("access_token", token);
-	localStorage.removeItem("access_token");
+	localStorage.setItem("access_token", token);
 }
 
 export function clearAccessToken() {
-	sessionStorage.removeItem("access_token");
 	localStorage.removeItem("access_token");
 }
 
