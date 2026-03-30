@@ -5,6 +5,7 @@ import {
 	logout,
 	setAccessToken,
 	clearAccessToken,
+	listenOAuthAuthMessage,
 	type AuthUser,
 } from "../../services/auth.service";
 
@@ -26,25 +27,18 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		const onMessage = async (event: MessageEvent) => {
-			if (event.origin !== window.location.origin) {
-				return;
-			}
-
-			if (event?.data?.type === "OAUTH_AUTH_SUCCESS") {
-				if (event.data.token) {
-					setAccessToken(event.data.token);
+		return listenOAuthAuthMessage({
+			onSuccess: async (payload) => {
+				if (payload.token) {
+					setAccessToken(payload.token);
 				}
 
 				await onAuthSuccess();
-			}
-
-			if (event?.data?.type === "OAUTH_AUTH_ERROR") {
-				console.error("Login error:", event.data.message);
-			}
-		};
-		window.addEventListener("message", onMessage);
-		return () => window.removeEventListener("message", onMessage);
+			},
+			onError: (payload) => {
+				console.error("Login error:", payload.message);
+			},
+		});
 	}, [onAuthSuccess]);
 
 	const handleLogin = async () => {
@@ -187,16 +181,41 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 							))}
 						</nav>
 						<div className='flex flex-col gap-3 pt-4 border-t border-gray-100 mt-4'>
-							<button
-								onClick={handleLogin}
-								className='neo-btn neo-btn-secondary w-full justify-center'>
-								<LogIn className='w-4 h-4' /> Đăng nhập
-							</button>
-							<button
-								onClick={handleLogin}
-								className='neo-btn neo-btn-primary w-full justify-center'>
-								<UserPlus className='w-4 h-4' /> Tham gia ngay
-							</button>
+							{user ? (
+								<div className='flex flex-col gap-3'>
+									<div className='flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-black text-sm font-medium justify-center'>
+										{user.picture && (
+											<img
+												src={user.picture}
+												alt={user.name || "user"}
+												className='w-6 h-6 rounded-full'
+											/>
+										)}
+										<span className='truncate'>{user.name || user.email}</span>
+									</div>
+									<button
+										onClick={handleLogout}
+										disabled={loading}
+										className='neo-btn neo-btn-secondary w-full justify-center disabled:opacity-50'>
+										Đăng xuất
+									</button>
+								</div>
+							) : (
+								<>
+									<button
+										onClick={handleLogin}
+										disabled={loading}
+										className='neo-btn neo-btn-secondary w-full justify-center disabled:opacity-50'>
+										<LogIn className='w-4 h-4' /> Đăng nhập
+									</button>
+									<button
+										onClick={handleLogin}
+										disabled={loading}
+										className='neo-btn neo-btn-primary w-full justify-center disabled:opacity-50'>
+										<UserPlus className='w-4 h-4' /> Tham gia ngay
+									</button>
+								</>
+							)}
 						</div>
 					</div>
 				)}

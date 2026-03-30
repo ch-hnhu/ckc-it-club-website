@@ -44,7 +44,9 @@ clientApi.interceptors.response.use(
 				case 401:
 					// Unauthorized - redirect to login
 					console.error("Unauthorized! Redirecting to login...");
-					localStorage.removeItem("access_token");
+					// localStorage.removeItem("access_token");
+					localStorage.clear();
+
 					window.location.href = "/login";
 					break;
 
