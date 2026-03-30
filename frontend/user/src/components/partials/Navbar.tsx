@@ -5,6 +5,7 @@ import {
 	logout,
 	setAccessToken,
 	clearAccessToken,
+	listenOAuthAuthMessage,
 	type AuthUser,
 } from "../../services/auth.service";
 
@@ -26,25 +27,18 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		const onMessage = async (event: MessageEvent) => {
-			if (event.origin !== window.location.origin) {
-				return;
-			}
-
-			if (event?.data?.type === "OAUTH_AUTH_SUCCESS") {
-				if (event.data.token) {
-					setAccessToken(event.data.token);
+		return listenOAuthAuthMessage({
+			onSuccess: async (payload) => {
+				if (payload.token) {
+					setAccessToken(payload.token);
 				}
 
 				await onAuthSuccess();
-			}
-
-			if (event?.data?.type === "OAUTH_AUTH_ERROR") {
-				console.error("Login error:", event.data.message);
-			}
-		};
-		window.addEventListener("message", onMessage);
-		return () => window.removeEventListener("message", onMessage);
+			},
+			onError: (payload) => {
+				console.error("Login error:", payload.message);
+			},
+		});
 	}, [onAuthSuccess]);
 
 	const handleLogin = async () => {

@@ -2,13 +2,44 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authService } from "@/services/auth.service";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { listenOAuthAuthMessage } from "@/services/auth.service";
 
 export function LoginForm() {
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		return listenOAuthAuthMessage({
+			onSuccess: (payload) => {
+				if (payload.token) {
+					localStorage.setItem("access_token", payload.token);
+				}
+				if (payload.user) {
+					localStorage.setItem("user", JSON.stringify(payload.user));
+				}
+
+				const redirectPath = sessionStorage.getItem("redirectPath") || "/";
+				sessionStorage.removeItem("redirectPath");
+				navigate(redirectPath, { replace: true });
+			},
+		});
+	}, [navigate]);
+
 	const handleGoogleLogin = (e: React.FormEvent) => {
 		e.preventDefault(); // Prevent form submission
 		try {
-			authService.redirectAdmin();
+			const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+			const url = `${baseUrl}/admin/auth/google`;
+			const width = 520,
+				height = 640;
+			const left = window.screenX + (window.outerWidth - width) / 2;
+			const top = window.screenY + (window.outerHeight - height) / 2;
+			window.open(
+				url,
+				"google_oauth_admin",
+				`width=${width},height=${height},left=${left},top=${top}`,
+			);
 		} catch (error) {
 			console.error("Error redirecting to Google:", error);
 		}

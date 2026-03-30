@@ -118,6 +118,7 @@ abstract class AuthBaseController extends Controller
             $frontendUrl = $loginType === 'user'
                 ? env('USER_FRONTEND_URL', 'http://localhost:5173')
                 : env('ADMIN_FRONTEND_URL', 'http://localhost:5173');
+
             $userData = [
                 'id' => $user->id,
                 'full_name' => $user->full_name,
@@ -130,46 +131,46 @@ abstract class AuthBaseController extends Controller
             // Encode user data for URL
             $userJson = base64_encode(json_encode($userData));
 
-            if ($loginType === 'user') {
-                $targetOrigin = rtrim($frontendUrl, '/');
-                $payload = json_encode([
-                    'type' => 'OAUTH_AUTH_SUCCESS',
-                    'token' => $token,
-                    'user' => $userData,
-                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            // if ($loginType === 'user') {
+            $targetOrigin = rtrim($frontendUrl, '/');
+            $payload = json_encode([
+                'type' => 'OAUTH_AUTH_SUCCESS',
+                'token' => $token,
+                'user' => $userData,
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-                return response(
-                    <<<HTML
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Google Login Success</title>
-</head>
-<body>
-    <script>
-        (function () {
-            var payload = {$payload};
-            var targetOrigin = "{$targetOrigin}";
+            return response(
+                <<<HTML
+                        <!doctype html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="utf-8">
+                            <title>Google Login Success</title>
+                        </head>
+                        <body>
+                            <script>
+                                (function () {
+                                    var payload = {$payload};
+                                    var targetOrigin = "{$targetOrigin}";
 
-            if (window.opener) {
-                window.opener.postMessage(payload, targetOrigin);
-                window.close();
-                return;
-            }
+                                    if (window.opener) {
+                                        window.opener.postMessage(payload, targetOrigin);
+                                        window.close();
+                                        return;
+                                    }
 
-            window.location.href = targetOrigin;
-        })();
-    </script>
-</body>
-</html>
-HTML,
-                    200,
-                    ['Content-Type' => 'text/html; charset=UTF-8']
-                );
-            }
+                                    window.location.href = targetOrigin;
+                                })();
+                            </script>
+                        </body>
+                        </html>
+                        HTML,
+                200,
+                ['Content-Type' => 'text/html; charset=UTF-8']
+            );
+            // }
 
-            return redirect("{$frontendUrl}/login-success?token={$token}&user={$userJson}");
+            // return redirect("{$frontendUrl}/login-success?token={$token}&user={$userJson}");
 
         } catch (\Exception $e) {
             \Log::error("OAuth Callback Error [{$provider}]: ".$e->getMessage());
