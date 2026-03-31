@@ -1,4 +1,4 @@
-FROM php:8.4-cli-alpine
+FROM php:8.4-fpm-alpine
 
 WORKDIR /var/www/html
 
@@ -6,6 +6,7 @@ RUN apk add --no-cache \
     bash \
     curl \
     git \
+    nginx \
     unzip \
     libzip-dev \
     oniguruma-dev \

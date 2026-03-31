@@ -17,13 +17,10 @@ const clientApi: AxiosInstance = axios.create({
 clientApi.interceptors.request.use(
 	(config: InternalAxiosRequestConfig) => {
 		// Add Authorization token if exists
-		const token = localStorage.getItem("access_token");
+		const token = sessionStorage.getItem("access_token");
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
 		}
-
-		// You can add loading state here
-		console.log("Request:", config.method?.toUpperCase(), config.url);
 
 		return config;
 	},
@@ -37,7 +34,6 @@ clientApi.interceptors.request.use(
 clientApi.interceptors.response.use(
 	(response: AxiosResponse) => {
 		// Success response - just return data
-		console.log("Response:", response.status, response.config.url);
 		return response;
 	},
 	(error: AxiosError) => {
@@ -49,7 +45,9 @@ clientApi.interceptors.response.use(
 				case 401:
 					// Unauthorized - redirect to login
 					console.error("Unauthorized! Redirecting to login...");
-					localStorage.removeItem("access_token");
+					// localStorage.removeItem("access_token");
+					localStorage.clear();
+
 					window.location.href = "/login";
 					break;
 

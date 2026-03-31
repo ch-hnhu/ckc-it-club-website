@@ -1,5 +1,6 @@
 import { Building, House, Trophy, UserRoundPlus, Users, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 interface SidebarProps {
 	isOpen?: boolean;
@@ -68,21 +69,23 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 
 	return (
 		<aside
-			className={`absolute lg:static left-0 top-0 h-full w-64 bg-white border-r border-[#e0e0e0] transition-transform duration-300 flex flex-col z-20 ${
+			className={`absolute lg:static left-0 top-0 h-full w-64 bg-white dark:bg-zinc-950 border-r border-[#e0e0e0] dark:border-zinc-800 transition-transform duration-300 flex flex-col z-20 ${
 				isOpen ? "translate-x-0" : "-translate-x-full"
 			}`}>
 			{/* Brand */}
-			<div className='h-16 px-6 flex items-center border-b border-[#e0e0e0] gap-3 flex-shrink-0'>
-				<div className='w-8 h-8 rounded-lg bg-[#2e3820] flex items-center justify-center text-white font-bold'>
+			<div className='h-16 px-6 flex items-center border-b border-[#e0e0e0] dark:border-zinc-800 gap-3 flex-shrink-0'>
+				<div className='w-8 h-8 rounded-full bg-[#2e3820] dark:bg-zinc-800 flex items-center justify-center text-white font-bold overflow-hidden'>
 					<img
 						src='../../../public/img/ckc-it-club-logo.jpg'
 						alt='Logo'
-						className='w-full h-full object-contain'
+						className='w-full h-full object-cover rounded-full'
 					/>
 				</div>
 				<div className='flex-1 min-w-0'>
-					<h2 className='text-sm font-semibold text-[#2e3820] truncate'>CKC IT CLUB</h2>
-					<p className='text-xs text-[#999999]'>Dashboard</p>
+					<h2 className='text-sm font-semibold text-[#2e3820] dark:text-zinc-200 truncate'>
+						CKC IT CLUB
+					</h2>
+					<p className='text-xs text-[#999999] dark:text-zinc-500'>Dashboard</p>
 				</div>
 			</div>
 
@@ -97,13 +100,15 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 							<li key={item.id}>
 								<button
 									onClick={() => toggleMenu(item.id)}
-									className='w-full px-3 py-2 rounded-lg text-[#1a1a1a] hover:bg-[#f5f5f5] transition-colors flex items-center justify-between group'>
+									className='w-full px-3 py-2 rounded-lg text-[#1a1a1a] dark:text-zinc-100 hover:bg-[#f5f5f5] dark:hover:bg-zinc-900 transition-colors flex items-center justify-between group'>
 									<div className='flex items-center gap-3 flex-1'>
-										<Icon className='w-5 h-5 text-[#666666] group-hover:text-[#2e3820]' />
-										<span className='text-sm font-medium'>{item.label}</span>
+										<Icon className='w-4 h-4 text-[#666666] dark:text-zinc-400 group-hover:text-[#2e3820] dark:text-zinc-200' />
+										<span className='text-sm lg:text-md text-xs font-medium'>
+											{item.label}
+										</span>
 									</div>
 									<ChevronRight
-										className={`w-4 h-4 text-[#999999] transition-transform ${
+										className={`w-4 h-4 text-[#999999] dark:text-zinc-500 transition-transform ${
 											isExpanded ? "rotate-90" : ""
 										}`}
 									/>
@@ -111,14 +116,14 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 
 								{/* Submenu */}
 								{isExpanded && (
-									<ul className='mt-1 space-y-1 ml-[22px] pl-[10px] border-l border-[#e0e0e0]'>
+									<ul className='mt-1 space-y-1 ml-[22px] pl-[10px] border-l border-[#e0e0e0] dark:border-zinc-800'>
 										{item.subItems.map((subItem) => (
 											<li key={subItem.href}>
-												<a
-													href={subItem.href}
-													className='block px-3 py-2 text-sm text-[#666666] hover:text-[#2e3820] hover:bg-[#f5f5f5] hover:!no-underline rounded-lg transition-colors'>
+												<Link
+													to={subItem.href}
+													className='block px-3 py-2 text-sm lg:text-md text-xs font-small text-[#666666] dark:text-zinc-400 hover:text-[#2e3820] dark:hover:text-[#2e3820] hover:bg-[#f5f5f5] dark:hover:bg-zinc-900 hover:!no-underline rounded-lg transition-colors'>
 													{subItem.label}
-												</a>
+												</Link>
 											</li>
 										))}
 									</ul>
@@ -128,14 +133,6 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 					})}
 				</ul>
 			</nav>
-
-			{/* Footer */}
-			<div className='p-4 border-t border-[#e0e0e0] bg-[#f9fafb] flex-shrink-0'>
-				<div className='p-3 rounded-lg bg-[#f0f4ec] border border-[#e0e0e0]'>
-					<p className='text-xs font-semibold text-[#2e3820]'>v2.1.0</p>
-					<p className='text-xs text-[#666666]'>Latest version</p>
-				</div>
-			</div>
 		</aside>
 	);
 }

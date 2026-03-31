@@ -12,9 +12,9 @@ return new class extends Migration
 	public function up(): void
 	{
 		Schema::table('users', function (Blueprint $table) {
-			$table->foreign('faculty')->references('id')->on('faculties');
-			$table->foreign('major')->references('id')->on('majors');
-			$table->foreign('class')->references('id')->on('school_classes');
+			$table->foreign('faculty_id')->references('id')->on('faculties');
+			$table->foreign('major_id')->references('id')->on('majors');
+			$table->foreign('class_id')->references('id')->on('school_classes');
 		});
 	}
 
@@ -24,9 +24,9 @@ return new class extends Migration
 	public function down(): void
 	{
 		Schema::table('users', function (Blueprint $table) {
-			$table->dropForeign(['faculty']);
-			$table->dropForeign(['major']);
-			$table->dropForeign(['class']);
+			$table->dropForeign(['faculty_id']);
+			$table->dropForeign(['major_id']);
+			$table->dropForeign(['class_id']);
 		});
 	}
 };

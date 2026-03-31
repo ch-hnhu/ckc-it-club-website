@@ -22,9 +22,6 @@ clientApi.interceptors.request.use(
 			config.headers.Authorization = `Bearer ${token}`;
 		}
 
-		// You can add loading state here
-		console.log("Request:", config.method?.toUpperCase(), config.url);
-
 		return config;
 	},
 	(error: AxiosError) => {
@@ -36,8 +33,6 @@ clientApi.interceptors.request.use(
 // Response interceptor - runs after every response
 clientApi.interceptors.response.use(
 	(response: AxiosResponse) => {
-		// Success response - just return data
-		console.log("Response:", response.status, response.config.url);
 		return response;
 	},
 	(error: AxiosError) => {
@@ -49,7 +44,9 @@ clientApi.interceptors.response.use(
 				case 401:
 					// Unauthorized - redirect to login
 					console.error("Unauthorized! Redirecting to login...");
-					localStorage.removeItem("access_token");
+					// localStorage.removeItem("access_token");
+					localStorage.clear();
+
 					window.location.href = "/login";
 					break;
 
