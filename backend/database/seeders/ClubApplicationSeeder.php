@@ -8,15 +8,12 @@ use Illuminate\Database\Seeder;
 
 class ClubApplicationSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $admin = User::firstOrCreate(
             ['email' => 'admin@gmail.com'],
             [
-                'full_name' => 'Administrator',
+                'full_name' => 'Quản trị viên',
                 'is_active' => true,
             ]
         );
@@ -26,40 +23,32 @@ class ClubApplicationSeeder extends Seeder
             ->pluck('id')
             ->all();
 
-        if (empty($studentIds)) {
-            for ($i = 1; $i <= 4; $i++) {
-                $studentIds[] = User::firstOrCreate(
-                    ['email' => "student{$i}@gmail.com"],
-                    [
-                        'full_name' => "Student {$i}",
-                        'student_code' => "CD22000{$i}",
-                        'is_active' => true,
-                    ]
-                )->id;
-            }
+        if (count($studentIds) < 10) {
+            return;
         }
 
         $applications = [
-            ['status' => 'pending', 'note' => 'Ung tuyen vao ban truyen thong dot 1'],
-            ['status' => 'processing', 'note' => 'Ho so dang duoc xem xet'],
-            ['status' => 'interview', 'note' => 'Hen phong van vao thu 2'],
-            ['status' => 'passed', 'note' => 'Da vuot qua vong phong van'],
-            ['status' => 'failed', 'note' => 'Can bo sung ky nang thuc hanh'],
-            ['status' => 'pending', 'note' => 'Ung tuyen vao ban ky thuat'],
-            ['status' => 'processing', 'note' => 'Dang doi xac nhan thong tin'],
-            ['status' => 'interview', 'note' => 'Phong van online luc 19h'],
-            ['status' => 'passed', 'note' => 'Du dieu kien tham gia CLB'],
-            ['status' => 'failed', 'note' => 'Chua phu hop voi dot tuyen nay'],
+            ['status' => 'pending', 'note' => 'Ứng tuyển vào Ban Truyền thông đợt tháng 3.'],
+            ['status' => 'processing', 'note' => 'Hồ sơ đang được ban chuyên môn xem xét.'],
+            ['status' => 'interview', 'note' => 'Hẹn phỏng vấn trực tiếp vào chiều thứ Hai.'],
+            ['status' => 'passed', 'note' => 'Đã vượt qua vòng phỏng vấn và chờ nhận nhiệm vụ.'],
+            ['status' => 'failed', 'note' => 'Chưa phù hợp với tiêu chí tuyển chọn của đợt này.'],
+            ['status' => 'pending', 'note' => 'Ứng tuyển vào Ban Kỹ thuật với mong muốn học thực chiến.'],
+            ['status' => 'processing', 'note' => 'Đang chờ xác minh thông tin cá nhân và lịch học.'],
+            ['status' => 'interview', 'note' => 'Phỏng vấn online lúc 19h00 qua Google Meet.'],
+            ['status' => 'passed', 'note' => 'Đủ điều kiện tham gia và được đề xuất vào nhóm dự án.'],
+            ['status' => 'failed', 'note' => 'Cần bổ sung thêm kỹ năng giao tiếp và làm việc nhóm.'],
         ];
 
         foreach ($applications as $index => $application) {
-            $createdBy = $studentIds[$index % count($studentIds)];
+            $createdBy = $studentIds[$index];
             $createdAt = now()->subDays(10 - $index);
 
             ClubApplication::updateOrCreate(
-                ['note' => $application['note']],
+                ['created_by' => $createdBy],
                 [
                     'status' => $application['status'],
+                    'note' => $application['note'],
                     'created_by' => $createdBy,
                     'updated_by' => $admin->id,
                     'created_at' => $createdAt,

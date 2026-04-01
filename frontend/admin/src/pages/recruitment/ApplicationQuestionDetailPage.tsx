@@ -1,5 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CircleHelp, ListChecks, ShieldCheck, ToggleLeft } from "lucide-react";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import {
+	ArrowLeft,
+	CircleHelp,
+	ListChecks,
+	MessageSquareText,
+	ShieldCheck,
+	ToggleLeft,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import applicationService from "@/services/application.service";
 import type { ApplicationQuestionRecord } from "@/types/application.type";
@@ -17,6 +25,21 @@ function formatDate(dateString: string | null) {
 		month: "2-digit",
 		year: "numeric",
 	}).format(new Date(dateString));
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+	if (axios.isAxiosError(error)) {
+		const responseMessage = (error.response?.data as { message?: string } | undefined)?.message;
+		if (responseMessage) {
+			return responseMessage;
+		}
+	}
+
+	if (error instanceof Error && error.message) {
+		return error.message;
+	}
+
+	return fallback;
 }
 
 function SummaryCard({
@@ -45,29 +68,40 @@ function SummaryCard({
 
 function ApplicationQuestionDetailPage() {
 	const { questionId } = useParams();
-	const [questions, setQuestions] = useState<ApplicationQuestionRecord[]>([]);
+	const [question, setQuestion] = useState<ApplicationQuestionRecord | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		let mounted = true;
-		applicationService
-			.getQuestions()
-			.then((data) => {
-				if (mounted) setQuestions(data);
-			})
-			.finally(() => {
+
+		const fetchQuestion = async () => {
+			if (!questionId) {
+				setLoading(false);
+				setError("Thiếu mã câu hỏi.");
+				return;
+			}
+
+			try {
+				const data = await applicationService.getQuestion(Number(questionId));
+				if (!mounted) return;
+				setQuestion(data);
+				setError(null);
+			} catch (fetchError) {
+				if (!mounted) return;
+				setQuestion(null);
+				setError(getErrorMessage(fetchError, "Không thể tải chi tiết câu hỏi."));
+			} finally {
 				if (mounted) setLoading(false);
-			});
+			}
+		};
+
+		void fetchQuestion();
 
 		return () => {
 			mounted = false;
 		};
-	}, []);
-
-	const question = useMemo(
-		() => questions.find((item) => item.id === Number(questionId)) || null,
-		[questionId, questions],
-	);
+	}, [questionId]);
 
 	if (loading) {
 		return (
@@ -90,8 +124,8 @@ function ApplicationQuestionDetailPage() {
 				</Button>
 				<Card>
 					<CardHeader>
-						<CardTitle>Không tìm thấy câu hỏi</CardTitle>
-						<CardDescription>Câu hỏi này không tồn tại hoặc đã bị xóa.</CardDescription>
+						<CardTitle>Không tải được câu hỏi</CardTitle>
+						<CardDescription>{error || "Câu hỏi này không tồn tại hoặc đã bị xóa."}</CardDescription>
 					</CardHeader>
 				</Card>
 			</div>
@@ -124,7 +158,7 @@ function ApplicationQuestionDetailPage() {
 				</div>
 
 				<div className='space-y-6 bg-background/40 p-6 md:px-8 md:py-7'>
-					<div className='grid gap-4 sm:grid-cols-2 2xl:grid-cols-4'>
+					<div className='grid gap-4 sm:grid-cols-2 2xl:grid-cols-5'>
 						<SummaryCard icon={<CircleHelp className='size-5' />} label='Loại câu hỏi' value={question.type} />
 						<SummaryCard icon={<ListChecks className='size-5' />} label='Số lựa chọn' value={question.options.length} />
 						<SummaryCard
@@ -136,6 +170,11 @@ function ApplicationQuestionDetailPage() {
 							icon={<ToggleLeft className='size-5' />}
 							label='Trạng thái'
 							value={question.is_active ? "Đang hoạt động" : "Tạm ẩn"}
+						/>
+						<SummaryCard
+							icon={<MessageSquareText className='size-5' />}
+							label='Câu trả lời đã có'
+							value={question.answers_count}
 						/>
 					</div>
 

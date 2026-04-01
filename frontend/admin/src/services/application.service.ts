@@ -1,5 +1,6 @@
 import { api } from "@/services/api.service";
 import type {
+	ApplicationQuestionPayload,
 	ApplicationQuestionRecord,
 	ClubApplicationRecord,
 	UpdateApplicationStatusPayload,
@@ -13,7 +14,7 @@ const mockApplications: ClubApplicationRecord[] = [
 		note: "Chờ ban nhân sự duyệt hồ sơ vòng đầu.",
 		created_at: "2026-03-24T09:15:00",
 		updated_at: "2026-03-24T10:00:00",
-		created_by: 12,	
+		created_by: 12,
 		updated_by: 12,
 		applicant: {
 			id: 12,
@@ -78,14 +79,16 @@ const mockApplications: ClubApplicationRecord[] = [
 				question_id: 4,
 				question_label: "Bạn đã từng tham gia hoạt động tập thể nào chưa?",
 				question_type: "textarea",
-				answer_value: "Từng tham gia tổ chức workshop khoa và điều phối chương trình chào tân sinh viên.",
+				answer_value:
+					"Từng tham gia tổ chức workshop khoa và điều phối chương trình chào tân sinh viên.",
 			},
 			{
 				id: 6,
 				question_id: 5,
 				question_label: "Bạn mong muốn học được gì từ CLB?",
 				question_type: "textarea",
-				answer_value: "Rèn kỹ năng tổ chức, giao tiếp và làm việc nhóm trong môi trường thực tế.",
+				answer_value:
+					"Rèn kỹ năng tổ chức, giao tiếp và làm việc nhóm trong môi trường thực tế.",
 			},
 		],
 	},
@@ -129,52 +132,6 @@ const mockApplications: ClubApplicationRecord[] = [
 				answer_value: "github.com/hoangphuc-dev",
 			},
 		],
-	},
-];
-
-const mockQuestions: ApplicationQuestionRecord[] = [
-	{
-		id: 1,
-		label: "Bạn muốn ứng tuyển vào ban nào?",
-		type: "select",
-		is_required: true,
-		order_index: 1,
-		is_active: true,
-		created_at: "2026-03-20T08:00:00",
-		created_by: 1,
-		updated_at: "2026-03-24T09:00:00",
-		updated_by: 1,
-		options: [
-			{ id: 1, question_id: 1, value: "tech", label: "Ban Kỹ thuật" },
-			{ id: 2, question_id: 1, value: "media", label: "Ban Truyền thông" },
-			{ id: 3, question_id: 1, value: "event", label: "Ban Sự kiện" },
-		],
-	},
-	{
-		id: 2,
-		label: "Kỹ năng nổi bật của bạn là gì?",
-		type: "textarea",
-		is_required: true,
-		order_index: 2,
-		is_active: true,
-		created_at: "2026-03-20T08:10:00",
-		created_by: 1,
-		updated_at: "2026-03-24T09:10:00",
-		updated_by: 1,
-		options: [],
-	},
-	{
-		id: 3,
-		label: "Link portfolio hoặc sản phẩm cá nhân",
-		type: "text",
-		is_required: false,
-		order_index: 3,
-		is_active: true,
-		created_at: "2026-03-20T08:20:00",
-		created_by: 1,
-		updated_at: "2026-03-24T09:20:00",
-		updated_by: 2,
-		options: [],
 	},
 ];
 
@@ -222,6 +179,16 @@ function normalizeQuestions(
 	return [];
 }
 
+function normalizeQuestion(
+	payload: ApiResponse<ApplicationQuestionRecord> | ApplicationQuestionRecord,
+): ApplicationQuestionRecord {
+	if ("data" in payload) {
+		return payload.data;
+	}
+
+	return payload;
+}
+
 const applicationService = {
 	async getApplications() {
 		try {
@@ -247,14 +214,52 @@ const applicationService = {
 	},
 
 	async getQuestions() {
-		try {
-			const response = await api.get<
-				PaginatedResponse<ApplicationQuestionRecord> | ApiResponse<ApplicationQuestionRecord[]>
-			>("/application-questions");
-			return normalizeQuestions(response);
-		} catch {
-			return mockQuestions;
-		}
+		const response = await api.get<
+			PaginatedResponse<ApplicationQuestionRecord> | ApiResponse<ApplicationQuestionRecord[]>
+		>("/application-questions");
+
+		return normalizeQuestions(response);
+	},
+
+	async getQuestion(questionId: number) {
+		const response = await api.get<ApiResponse<ApplicationQuestionRecord>>(
+			`/application-questions/${questionId}`,
+		);
+
+		return normalizeQuestion(response);
+	},
+
+	async createQuestion(payload: ApplicationQuestionPayload) {
+		const response = await api.post<ApiResponse<ApplicationQuestionRecord>, ApplicationQuestionPayload>(
+			"/application-questions",
+			payload,
+		);
+
+		return normalizeQuestion(response);
+	},
+
+	async updateQuestion(questionId: number, payload: ApplicationQuestionPayload) {
+		const response = await api.put<ApiResponse<ApplicationQuestionRecord>, ApplicationQuestionPayload>(
+			`/application-questions/${questionId}`,
+			payload,
+		);
+
+		return normalizeQuestion(response);
+	},
+
+	async reorderQuestions(questionIds: number[]) {
+		const response = await api.patch<
+			ApiResponse<ApplicationQuestionRecord[]>,
+			{ question_ids: number[] }
+		>("/application-questions/reorder", {
+			question_ids: questionIds,
+		});
+
+		return normalizeQuestions(response);
+	},
+
+	async deleteQuestion(questionId: number) {
+		return api.delete<ApiResponse<{ id: number }>>(`/application-questions/${questionId}`);
 	},
 };
 

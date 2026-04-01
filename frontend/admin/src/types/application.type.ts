@@ -30,10 +30,12 @@ export interface ApplicationQuestionOption {
 	label: string;
 }
 
+export type ApplicationQuestionType = "text" | "textarea" | "radio" | "select";
+
 export interface ApplicationQuestionRecord {
 	id: number;
 	label: string;
-	type: string;
+	type: ApplicationQuestionType;
 	is_required: boolean;
 	order_index: number;
 	is_active: boolean;
@@ -41,7 +43,22 @@ export interface ApplicationQuestionRecord {
 	created_by: number | null;
 	updated_at: string | null;
 	updated_by: number | null;
+	answers_count: number;
 	options: ApplicationQuestionOption[];
+}
+
+export interface ApplicationQuestionOptionPayload {
+	id?: number;
+	value: string;
+	label: string;
+}
+
+export interface ApplicationQuestionPayload {
+	label: string;
+	type: ApplicationQuestionType;
+	is_required: boolean;
+	is_active: boolean;
+	options: ApplicationQuestionOptionPayload[];
 }
 
 export interface ClubApplicationRecord {
