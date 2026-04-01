@@ -20,7 +20,7 @@ const ACTIONS = [
 	},
 	{
 		icon: FileText,
-		title: "Blog",
+		title: "Bài viết",
 		desc: "Bài viết kỹ thuật, kinh nghiệm học tập và chia sẻ từ các thành viên",
 		href: "#blog",
 		bg: "var(--color-pastel-blue)",
@@ -28,7 +28,7 @@ const ACTIONS = [
 	},
 	{
 		icon: Trophy,
-		title: "Leaderboard",
+		title: "Bảng xếp hạng",
 		desc: "Xem bảng xếp hạng, tích lũy điểm XP qua các hoạt động của CLB",
 		href: "#leaderboard",
 		bg: "var(--color-pastel-yellow)",
@@ -36,7 +36,7 @@ const ACTIONS = [
 	},
 	{
 		icon: Calendar,
-		title: "Event",
+		title: "Sự kiện",
 		desc: "Sự kiện workshop, hackathon, seminar hấp dẫn sắp diễn ra",
 		href: "#events",
 		bg: "var(--color-pastel-pink)",
@@ -44,7 +44,7 @@ const ACTIONS = [
 	},
 	{
 		icon: GraduationCap,
-		title: "Course",
+		title: "Khóa học",
 		desc: "Các khóa học chất lượng về Web, AI, Mobile, DevOps và hơn thế nữa",
 		href: "#courses",
 		bg: "var(--color-pastel-purple)",

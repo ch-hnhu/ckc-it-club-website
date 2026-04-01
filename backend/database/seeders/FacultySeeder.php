@@ -16,6 +16,11 @@ class FacultySeeder extends Seeder
             'Công nghệ Điện tử',
             'Công nghệ Cơ khí',
             'Kỹ thuật Ô tô',
+            'Quản trị Kinh doanh',
+            'Thiết kế Đồ họa',
+            'Ngôn ngữ Anh',
+            'Du lịch - Nhà hàng - Khách sạn',
+            'Tài chính - Kế toán',
         ];
 
         foreach ($faculties as $faculty) {
@@ -23,7 +28,7 @@ class FacultySeeder extends Seeder
                 ['value' => $faculty],
                 [
                     'label' => $faculty,
-                    'slug' => Str::slug($faculty)
+                    'slug' => Str::slug($faculty),
                 ]
             );
         }

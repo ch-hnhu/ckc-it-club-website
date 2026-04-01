@@ -122,9 +122,9 @@ function UserList() {
 		<div className='h-full flex-1 flex-col'>
 			<div className='flex items-center p-4 md:p-6 lg:p-8'>
 				<div className='flex flex-col gap-1'>
-					<h2 className='text-2xl font-semibold tracking-tight'>User Management</h2>
+					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý người dùng</h2>
 					<p className='text-muted-foreground'>
-						Here's a list of all users in the system.
+						Đây là danh sách tất cả người dùng trong hệ thống.
 					</p>
 				</div>
 			</div>
@@ -132,7 +132,7 @@ function UserList() {
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
 						<Input
-							placeholder='Filter users...'
+							placeholder='Lọc người dùng...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'
@@ -145,7 +145,7 @@ function UserList() {
 						</Button>
 						<Button size='sm' className='h-8'>
 							<Plus className='h-4 w-4' />
-							Add User
+							Thêm người dùng mới
 						</Button>
 					</div>
 				</div>
@@ -170,7 +170,7 @@ function UserList() {
 										variant='ghost'
 										onClick={() => handleSort("full_name")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										User
+										Tên người dùng
 										{getSortIcon("full_name")}
 									</Button>
 								</TableHead>
@@ -188,7 +188,7 @@ function UserList() {
 										variant='ghost'
 										onClick={() => handleSort("created_at")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Joined
+										Ngày tham gia
 										{getSortIcon("created_at")}
 									</Button>
 								</TableHead>
@@ -231,10 +231,10 @@ function UserList() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
-												<DropdownMenuItem>Edit</DropdownMenuItem>
+												<DropdownMenuItem>Sửa</DropdownMenuItem>
 												<DropdownMenuSeparator />
 												<DropdownMenuItem className='text-destructive focus:text-destructive focus:bg-destructive/10'>
-													Delete
+													Xóa
 												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>
@@ -244,7 +244,7 @@ function UserList() {
 							{users.length === 0 && (
 								<TableRow>
 									<TableCell colSpan={6} className='h-24 text-center'>
-										No users found.
+										Không tìm thấy người dùng nào.
 									</TableCell>
 								</TableRow>
 							)}
@@ -314,7 +314,7 @@ function UserList() {
 													}
 													disabled={meta.current_page === 1}>
 													<span className='sr-only'>
-														Go to previous page
+														Quay lại trang trước
 													</span>
 													<ChevronLeft className='h-4 w-4' />
 												</Button>
@@ -328,7 +328,9 @@ function UserList() {
 														}))
 													}
 													disabled={meta.current_page === meta.last_page}>
-													<span className='sr-only'>Go to next page</span>
+													<span className='sr-only'>
+														Đi đến trang tiếp theo
+													</span>
 													<ChevronRight className='h-4 w-4' />
 												</Button>
 												<Button
@@ -341,7 +343,7 @@ function UserList() {
 														}))
 													}
 													disabled={meta.current_page === meta.last_page}>
-													<span className='sr-only'>Go to last page</span>
+													<span className='sr-only'>Đi đến trang cuối</span>
 													<ChevronsRight className='h-4 w-4' />
 												</Button>
 											</div>

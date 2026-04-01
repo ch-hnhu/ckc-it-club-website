@@ -11,23 +11,31 @@ class MajorSeeder extends Seeder
 {
     public function run(): void
     {
-        $faculty = Faculty::where('value', 'Công nghệ Thông tin')->first();
-        if (!$faculty) return;
-
         $majors = [
-            'Kỹ thuật Phần mềm',
-            'Khoa học Máy tính',
-            'Mạng máy tính và TT',
-            'Hệ thống thông tin',
-            'Trí tuệ Nhân tạo',
+            ['faculty' => 'Công nghệ Thông tin', 'value' => 'Kỹ thuật Phần mềm'],
+            ['faculty' => 'Công nghệ Thông tin', 'value' => 'Khoa học Máy tính'],
+            ['faculty' => 'Công nghệ Thông tin', 'value' => 'Mạng máy tính và Truyền thông dữ liệu'],
+            ['faculty' => 'Công nghệ Thông tin', 'value' => 'Hệ thống thông tin'],
+            ['faculty' => 'Công nghệ Thông tin', 'value' => 'Trí tuệ Nhân tạo'],
+            ['faculty' => 'Kinh tế Thương mại', 'value' => 'Thương mại điện tử'],
+            ['faculty' => 'Quản trị Kinh doanh', 'value' => 'Marketing'],
+            ['faculty' => 'Thiết kế Đồ họa', 'value' => 'Thiết kế Đa phương tiện'],
+            ['faculty' => 'Ngôn ngữ Anh', 'value' => 'Tiếng Anh thương mại'],
+            ['faculty' => 'Tài chính - Kế toán', 'value' => 'Kế toán doanh nghiệp'],
         ];
 
         foreach ($majors as $major) {
+            $faculty = Faculty::where('value', $major['faculty'])->first();
+
+            if (!$faculty) {
+                continue;
+            }
+
             Major::firstOrCreate(
-                ['value' => $major],
+                ['value' => $major['value']],
                 [
-                    'label' => $major,
-                    'slug' => Str::slug($major),
+                    'label' => $major['value'],
+                    'slug' => Str::slug($major['value']),
                     'faculty_id' => $faculty->id,
                 ]
             );
