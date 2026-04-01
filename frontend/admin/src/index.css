@@ -38,14 +38,14 @@
 	--sidebar-ring: oklch(0.708 0 0);
 }
 
-a {
+a:not([data-slot="button"]) {
 	font-weight: 500;
 	color: var(--primary);
 	text-decoration: inherit;
 	transition: color 0.2s;
 }
 
-a:hover {
+a:not([data-slot="button"]):hover {
 	color: var(--primary);
 	text-decoration: underline;
 	opacity: 0.8;

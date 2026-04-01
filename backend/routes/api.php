@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\Admin\ClubApplicationController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Auth\AuthBaseController;
@@ -35,6 +36,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/', [DashboardController::class, 'index']);
 
         Route::apiResource('users', UserController::class);
+        Route::get('club-applications', [ClubApplicationController::class, 'index']);
+        Route::patch('club-applications/{clubApplication}/status', [ClubApplicationController::class, 'updateStatus']);
 
         // Example: Custom routes
         // Route::get('/products/{id}/related', [ProductController::class, 'related']);

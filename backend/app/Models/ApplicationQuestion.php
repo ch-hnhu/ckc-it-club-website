@@ -10,6 +10,8 @@ class ApplicationQuestion extends Model
     /** @use HasFactory<\Database\Factories\ApplicationQuestionFactory> */
     use HasFactory;
 
+    public $timestamps = false;
+
     public function options()
     {
         return $this->hasMany(ApplicationQuestionOption::class, 'question_id');

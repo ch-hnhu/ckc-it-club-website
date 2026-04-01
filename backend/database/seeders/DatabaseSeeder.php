@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             MajorSeeder::class,
             SchoolClassSeeder::class,
             ContactSeeder::class,
+            ClubApplicationSeeder::class,
         ]);
     }
 }

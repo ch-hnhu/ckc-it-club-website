@@ -23,6 +23,27 @@ export interface ApplicationAnswerItem {
 	answer_value: string | null;
 }
 
+export interface ApplicationQuestionOption {
+	id: number;
+	question_id: number;
+	value: string;
+	label: string;
+}
+
+export interface ApplicationQuestionRecord {
+	id: number;
+	label: string;
+	type: string;
+	is_required: boolean;
+	order_index: number;
+	is_active: boolean;
+	created_at: string | null;
+	created_by: number | null;
+	updated_at: string | null;
+	updated_by: number | null;
+	options: ApplicationQuestionOption[];
+}
+
 export interface ClubApplicationRecord {
 	id: number;
 	status: ApplicationStatus;
@@ -33,4 +54,9 @@ export interface ClubApplicationRecord {
 	updated_by: number | null;
 	applicant: ApplicationApplicant | null;
 	answers: ApplicationAnswerItem[];
+}
+
+export interface UpdateApplicationStatusPayload {
+	status: Exclude<ApplicationStatus, "pending">;
+	note: string | null;
 }

@@ -1,4 +1,4 @@
-import { Building, House, Trophy, UserRoundPlus, Users, ChevronRight } from "lucide-react";
+import { Building, ChevronRight, House, Trophy, UserRoundPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -60,7 +60,6 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 			icon: UserRoundPlus,
 			subItems: [
 				{ label: "Câu hỏi ứng tuyển", href: "/questions" },
-				{ label: "Lựa chọn câu hỏi", href: "/selected-questions" },
 				{ label: "Câu trả lời", href: "/answers" },
 				{ label: "Yêu cầu tham gia", href: "/requests" },
 			],
@@ -69,28 +68,24 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 
 	return (
 		<aside
-			className={`absolute lg:static left-0 top-0 h-full w-64 bg-white dark:bg-zinc-950 border-r border-[#e0e0e0] dark:border-zinc-800 transition-transform duration-300 flex flex-col z-20 ${
+			className={`bg-card border-border absolute left-0 top-0 z-20 flex h-full w-64 flex-col border-r transition-transform duration-300 lg:static ${
 				isOpen ? "translate-x-0" : "-translate-x-full"
 			}`}>
-			{/* Brand */}
-			<div className='h-16 px-6 flex items-center border-b border-[#e0e0e0] dark:border-zinc-800 gap-3 flex-shrink-0'>
-				<div className='w-8 h-8 rounded-full bg-[#2e3820] dark:bg-zinc-800 flex items-center justify-center text-white font-bold overflow-hidden'>
+			<div className='border-border flex h-16 flex-shrink-0 items-center gap-3 border-b px-6'>
+				<div className='bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center overflow-hidden rounded-full font-bold'>
 					<img
 						src='../../../public/img/ckc-it-club-logo.jpg'
 						alt='Logo'
-						className='w-full h-full object-cover rounded-full'
+						className='h-full w-full rounded-full object-cover'
 					/>
 				</div>
-				<div className='flex-1 min-w-0'>
-					<h2 className='text-sm font-semibold text-[#2e3820] dark:text-zinc-200 truncate'>
-						CKC IT CLUB
-					</h2>
-					<p className='text-xs text-[#999999] dark:text-zinc-500'>Dashboard</p>
+				<div className='min-w-0 flex-1'>
+					<h2 className='text-primary truncate text-sm font-semibold'>CKC IT CLUB</h2>
+					<p className='text-muted-foreground text-xs'>Dashboard</p>
 				</div>
 			</div>
 
-			{/* Navigation */}
-			<nav className='py-4 flex-1 overflow-y-auto'>
+			<nav className='flex-1 overflow-y-auto py-4'>
 				<ul className='space-y-1 px-3'>
 					{menuItems.map((item) => {
 						const Icon = item.icon;
@@ -100,28 +95,25 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 							<li key={item.id}>
 								<button
 									onClick={() => toggleMenu(item.id)}
-									className='w-full px-3 py-2 rounded-lg text-[#1a1a1a] dark:text-zinc-100 hover:bg-[#f5f5f5] dark:hover:bg-zinc-900 transition-colors flex items-center justify-between group'>
-									<div className='flex items-center gap-3 flex-1'>
-										<Icon className='w-4 h-4 text-[#666666] dark:text-zinc-400 group-hover:text-[#2e3820] dark:text-zinc-200' />
-										<span className='text-sm lg:text-md text-xs font-medium'>
-											{item.label}
-										</span>
+									className='text-foreground hover:bg-muted flex w-full items-center justify-between rounded-lg px-3 py-2 transition-colors group'>
+									<div className='flex flex-1 items-center gap-3'>
+										<Icon className='text-muted-foreground group-hover:text-primary h-4 w-4' />
+										<span className='text-xs font-medium lg:text-sm'>{item.label}</span>
 									</div>
 									<ChevronRight
-										className={`w-4 h-4 text-[#999999] dark:text-zinc-500 transition-transform ${
+										className={`text-muted-foreground h-4 w-4 transition-transform ${
 											isExpanded ? "rotate-90" : ""
 										}`}
 									/>
 								</button>
 
-								{/* Submenu */}
 								{isExpanded && (
-									<ul className='mt-1 space-y-1 ml-[22px] pl-[10px] border-l border-[#e0e0e0] dark:border-zinc-800'>
+									<ul className='border-border mt-1 ml-[22px] space-y-1 border-l pl-[10px]'>
 										{item.subItems.map((subItem) => (
 											<li key={subItem.href}>
 												<Link
 													to={subItem.href}
-													className='block px-3 py-2 text-sm lg:text-md text-xs font-small text-[#666666] dark:text-zinc-400 hover:text-[#2e3820] dark:hover:text-[#2e3820] hover:bg-[#f5f5f5] dark:hover:bg-zinc-900 hover:!no-underline rounded-lg transition-colors'>
+													className='text-muted-foreground hover:text-primary hover:bg-muted block rounded-lg px-3 py-2 text-xs transition-colors hover:!no-underline lg:text-sm'>
 													{subItem.label}
 												</Link>
 											</li>

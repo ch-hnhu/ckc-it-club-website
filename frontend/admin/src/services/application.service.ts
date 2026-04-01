@@ -1,5 +1,9 @@
 import { api } from "@/services/api.service";
-import type { ClubApplicationRecord } from "@/types/application.type";
+import type {
+	ApplicationQuestionRecord,
+	ClubApplicationRecord,
+	UpdateApplicationStatusPayload,
+} from "@/types/application.type";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 
 const mockApplications: ClubApplicationRecord[] = [
@@ -9,7 +13,7 @@ const mockApplications: ClubApplicationRecord[] = [
 		note: "Chờ ban nhân sự duyệt hồ sơ vòng đầu.",
 		created_at: "2026-03-24T09:15:00",
 		updated_at: "2026-03-24T10:00:00",
-		created_by: 12,
+		created_by: 12,	
 		updated_by: 12,
 		applicant: {
 			id: 12,
@@ -128,12 +132,85 @@ const mockApplications: ClubApplicationRecord[] = [
 	},
 ];
 
+const mockQuestions: ApplicationQuestionRecord[] = [
+	{
+		id: 1,
+		label: "Bạn muốn ứng tuyển vào ban nào?",
+		type: "select",
+		is_required: true,
+		order_index: 1,
+		is_active: true,
+		created_at: "2026-03-20T08:00:00",
+		created_by: 1,
+		updated_at: "2026-03-24T09:00:00",
+		updated_by: 1,
+		options: [
+			{ id: 1, question_id: 1, value: "tech", label: "Ban Kỹ thuật" },
+			{ id: 2, question_id: 1, value: "media", label: "Ban Truyền thông" },
+			{ id: 3, question_id: 1, value: "event", label: "Ban Sự kiện" },
+		],
+	},
+	{
+		id: 2,
+		label: "Kỹ năng nổi bật của bạn là gì?",
+		type: "textarea",
+		is_required: true,
+		order_index: 2,
+		is_active: true,
+		created_at: "2026-03-20T08:10:00",
+		created_by: 1,
+		updated_at: "2026-03-24T09:10:00",
+		updated_by: 1,
+		options: [],
+	},
+	{
+		id: 3,
+		label: "Link portfolio hoặc sản phẩm cá nhân",
+		type: "text",
+		is_required: false,
+		order_index: 3,
+		is_active: true,
+		created_at: "2026-03-20T08:20:00",
+		created_by: 1,
+		updated_at: "2026-03-24T09:20:00",
+		updated_by: 2,
+		options: [],
+	},
+];
+
 function normalizeApplications(
 	payload:
 		| PaginatedResponse<ClubApplicationRecord>
 		| ApiResponse<ClubApplicationRecord[]>
 		| ClubApplicationRecord[],
 ): ClubApplicationRecord[] {
+	if (Array.isArray(payload)) {
+		return payload;
+	}
+
+	if (Array.isArray(payload.data)) {
+		return payload.data;
+	}
+
+	return [];
+}
+
+function normalizeApplication(
+	payload: ApiResponse<ClubApplicationRecord> | ClubApplicationRecord,
+): ClubApplicationRecord {
+	if ("data" in payload) {
+		return payload.data;
+	}
+
+	return payload;
+}
+
+function normalizeQuestions(
+	payload:
+		| PaginatedResponse<ApplicationQuestionRecord>
+		| ApiResponse<ApplicationQuestionRecord[]>
+		| ApplicationQuestionRecord[],
+): ApplicationQuestionRecord[] {
 	if (Array.isArray(payload)) {
 		return payload;
 	}
@@ -154,6 +231,29 @@ const applicationService = {
 			return normalizeApplications(response);
 		} catch {
 			return mockApplications;
+		}
+	},
+
+	async updateApplicationStatus(
+		applicationId: number,
+		payload: UpdateApplicationStatusPayload,
+	) {
+		const response = await api.patch<ApiResponse<ClubApplicationRecord>, UpdateApplicationStatusPayload>(
+			`/club-applications/${applicationId}/status`,
+			payload,
+		);
+
+		return normalizeApplication(response);
+	},
+
+	async getQuestions() {
+		try {
+			const response = await api.get<
+				PaginatedResponse<ApplicationQuestionRecord> | ApiResponse<ApplicationQuestionRecord[]>
+			>("/application-questions");
+			return normalizeQuestions(response);
+		} catch {
+			return mockQuestions;
 		}
 	},
 };
