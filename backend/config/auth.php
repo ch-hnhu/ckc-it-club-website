@@ -14,6 +14,7 @@ return [
     */
 
     'defaults' => [
+        // Spatie roles/permissions & most app logic expect the session/web guard
         'guard' => env('AUTH_GUARD', 'web'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],

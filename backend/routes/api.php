@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\RolesEnum;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Admin\ApplicationQuestionController;
 use App\Http\Controllers\Api\V1\Admin\ClubApplicationController;

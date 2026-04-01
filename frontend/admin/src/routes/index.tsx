@@ -8,7 +8,6 @@ import ApplicationQuestionsPage from "@/pages/recruitment/ApplicationQuestionsPa
 import ApplicationQuestionDetailPage from "@/pages/recruitment/ApplicationQuestionDetailPage";
 import ApplicationAnswersPage from "@/pages/recruitment/ApplicationAnswersPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
-import LoginSuccess from "@/pages/auth/LoginSuccess";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NotFound from "@/pages/NotFound";
 
@@ -16,10 +15,6 @@ const router = createBrowserRouter([
 	{
 		path: "/login",
 		element: <LoginForm />,
-	},
-	{
-		path: "/login-success",
-		element: <LoginSuccess />,
 	},
 	{
 		path: "/",

@@ -7,16 +7,16 @@ namespace App\Enums;
  *
  * Định nghĩa các loại vai trò trong hệ thống
  */
-enum RoleType: int
+enum RolesEnum: string
 {
-    case ADMIN = 1;
-    case PRESIDENT = 2;
-    case VICE_PRESIDENT = 3;
-    case ACADEMIC_HEAD = 4;
-    case COMMUNICATIONS_HEAD = 5;
-    case VOLUNTEER_HEAD = 6;
-    case CLUB_MEMBER = 7;
-    case USER = 8;
+    case ADMIN = 'admin';
+    case PRESIDENT = 'president';
+    case VICE_PRESIDENT = 'vice-president';
+    case ACADEMIC_HEAD = 'academic-head';
+    case COMMUNICATIONS_HEAD = 'communications-head';
+    case VOLUNTEER_HEAD = 'volunteer-head';
+    case CLUB_MEMBER = 'club-member';
+    case USER = 'user';
 
     public function label(): string
     {
