@@ -5,7 +5,7 @@ const VALUES = [
 	{
 		icon: BookOpen,
 		emoji: "📚",
-		title: "Learn",
+		title: "Học hỏi",
 		subtitle: "Học không ngừng",
 		desc: "Tiếp cận tài nguyên, khóa học và kiến thức từ mentor chuyên nghiệp.",
 		bg: "var(--color-pastel-green)",
@@ -13,7 +13,7 @@ const VALUES = [
 	{
 		icon: Heart,
 		emoji: "🤝",
-		title: "Share",
+		title: "Chia sẻ",
 		subtitle: "Chia sẻ cùng nhau",
 		desc: "Văn hóa open-source: chia sẻ code, tài liệu, kinh nghiệm với cả cộng đồng.",
 		bg: "var(--color-pastel-blue)",
@@ -21,7 +21,7 @@ const VALUES = [
 	{
 		icon: Trophy,
 		emoji: "🏆",
-		title: "Compete",
+		title: "Bứt phá",
 		subtitle: "Cạnh tranh lành mạnh",
 		desc: "Tham gia hackathon, leaderboard và thử thách bản thân qua các sự kiện.",
 		bg: "var(--color-pastel-yellow)",
@@ -29,7 +29,7 @@ const VALUES = [
 	{
 		icon: Sprout,
 		emoji: "🌱",
-		title: "Grow",
+		title: "Trưởng thành",
 		subtitle: "Phát triển bản thân",
 		desc: "Xây dựng portfolio, kỹ năng mềm và mạng lưới chuyên nghiệp từ trường.",
 		bg: "var(--color-pastel-purple)",

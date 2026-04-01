@@ -130,7 +130,7 @@ const ContributionSection: React.FC = () => {
                   >
                     <option value="">Chọn loại...</option>
                     <option>Slide / Tài liệu</option>
-                    <option>Source code</option>
+                    <option>Mã nguồn</option>
                     <option>Video</option>
                     <option>Khác</option>
                   </select>

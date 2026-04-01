@@ -1,38 +1,66 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-	CalendarDays,
-	ClipboardList,
-	Filter,
-	Mail,
-	MessageSquareText,
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
+	ChevronLeft,
+	ChevronRight,
+	ChevronsLeft,
+	ChevronsRight,
 	MoreHorizontal,
-	Search,
-	UserRound,
+	Settings2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import applicationService from "@/services/application.service";
-import type { ApplicationStatus, ClubApplicationRecord } from "@/types/application.type";
-import { Badge } from "@/components/ui/badge";
+import type {
+	ApplicationStatus,
+	ClubApplicationRecord,
+	UpdateApplicationStatusPayload,
+} from "@/types/application.type";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardAction,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableFooter,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import {
+	formatDate,
+	getApplicantName,
+	getNextStatuses,
+	getStatusBadge,
+	getStatusConfig,
+} from "./application-detail-shared";
 
 const statusOptions: Array<{ value: ApplicationStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -43,483 +71,550 @@ const statusOptions: Array<{ value: ApplicationStatus | "all"; label: string }> 
 	{ value: "failed", label: "Không đạt" },
 ];
 
-const statusMap: Record<ApplicationStatus, { label: string; className: string }> = {
-	pending: {
-		label: "Chờ duyệt",
-		className: "border-amber-200 bg-amber-50 text-amber-700",
-	},
-	processing: {
-		label: "Đang xử lý",
-		className: "border-sky-200 bg-sky-50 text-sky-700",
-	},
-	interview: {
-		label: "Phỏng vấn",
-		className: "border-violet-200 bg-violet-50 text-violet-700",
-	},
-	passed: {
-		label: "Đạt",
-		className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-	},
-	failed: {
-		label: "Không đạt",
-		className: "border-rose-200 bg-rose-50 text-rose-700",
-	},
-};
+type SortKey =
+	| "id"
+	| "full_name"
+	| "email"
+	| "student_code"
+	| "status"
+	| "created_at"
+	| "updated_at";
 
-function formatDate(dateString: string | null) {
-	if (!dateString) {
-		return "--";
+function getSortValue(application: ClubApplicationRecord, key: SortKey) {
+	switch (key) {
+		case "id":
+			return application.id;
+		case "full_name":
+			return getApplicantName(application);
+		case "email":
+			return application.applicant?.email || "";
+		case "student_code":
+			return application.applicant?.student_code || "";
+		case "status":
+			return getStatusConfig(application.status).label;
+		case "created_at":
+			return application.created_at || "";
+		case "updated_at":
+			return application.updated_at || "";
 	}
-
-	return new Intl.DateTimeFormat("vi-VN", {
-		hour: "2-digit",
-		minute: "2-digit",
-		day: "2-digit",
-		month: "2-digit",
-		year: "numeric",
-	}).format(new Date(dateString));
-}
-
-function getApplicantName(application: ClubApplicationRecord) {
-	return application.applicant?.full_name || `Người dùng #${application.created_by}`;
-}
-
-function getStatusBadge(status: ApplicationStatus) {
-	const statusConfig = statusMap[status];
-
-	return (
-		<Badge variant='outline' className={statusConfig.className}>
-			{statusConfig.label}
-		</Badge>
-	);
-}
-
-function SummaryCard({
-	icon,
-	label,
-	value,
-	children,
-}: {
-	icon: React.ReactNode;
-	label: string;
-	value?: string;
-	children?: React.ReactNode;
-}) {
-	return (
-		<div className='rounded-2xl border border-[#dde4d5] dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-sm'>
-			<div className='flex items-start gap-3'>
-				<div className='mt-1 shrink-0 text-[#2e3820] dark:text-zinc-200'>{icon}</div>
-				<div className='min-w-0'>
-					<p className='text-sm text-muted-foreground'>{label}</p>
-					{children ? (
-						<div className='pt-2'>{children}</div>
-					) : (
-						<p className='mt-1 text-lg font-semibold leading-7 text-foreground break-words'>
-							{value}
-						</p>
-					)}
-				</div>
-			</div>
-		</div>
-	);
 }
 
 function ApplicationRequestsPage() {
+	const navigate = useNavigate();
 	const [applications, setApplications] = useState<ClubApplicationRecord[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">("all");
-	const [selectedApplication, setSelectedApplication] = useState<ClubApplicationRecord | null>(null);
+	const [statusDialogApplication, setStatusDialogApplication] =
+		useState<ClubApplicationRecord | null>(null);
+	const [statusNote, setStatusNote] = useState("");
+	const [nextStatus, setNextStatus] =
+		useState<UpdateApplicationStatusPayload["status"]>("processing");
+	const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
+	const [pagination, setPagination] = useState({ currentPage: 1, perPage: 10 });
+	const [sortConfig, setSortConfig] = useState<{
+		key: SortKey | null;
+		order: "asc" | "desc" | null;
+	}>({ key: "updated_at", order: "desc" });
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearch(search.trim().toLowerCase());
+			setPagination((prev) => ({ ...prev, currentPage: 1 }));
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [search]);
 
 	useEffect(() => {
 		let mounted = true;
-
-		applicationService.getApplications().then((data) => {
-			if (!mounted) {
-				return;
-			}
-
-			setApplications(data);
-			setLoading(false);
-		});
-
+		applicationService
+			.getApplications()
+			.then((data) => mounted && setApplications(data))
+			.finally(() => mounted && setLoading(false));
 		return () => {
 			mounted = false;
 		};
 	}, []);
 
-	const normalizedSearch = search.trim().toLowerCase();
-	const filteredApplications = applications.filter((application) => {
-		const matchesStatus = statusFilter === "all" || application.status === statusFilter;
-		if (!matchesStatus) {
-			return false;
+	const filteredApplications = useMemo(
+		() =>
+			applications.filter((application) => {
+				if (statusFilter !== "all" && application.status !== statusFilter) return false;
+				if (!debouncedSearch) return true;
+
+				const haystack = [
+					application.id,
+					application.status,
+					application.note,
+					application.created_by,
+					application.updated_by,
+					application.applicant?.full_name,
+					application.applicant?.email,
+					application.applicant?.student_code,
+					application.applicant?.faculty,
+					application.applicant?.major,
+					application.applicant?.class_name,
+					...application.answers.map((answer) => answer.question_label),
+					...application.answers.map((answer) => answer.answer_value),
+				]
+					.filter(Boolean)
+					.join(" ")
+					.toLowerCase();
+
+				return haystack.includes(debouncedSearch);
+			}),
+		[applications, debouncedSearch, statusFilter],
+	);
+
+	const sortedApplications = useMemo(() => {
+		if (!sortConfig.key || !sortConfig.order) return filteredApplications;
+		const sortKey = sortConfig.key;
+		const sorted = [...filteredApplications].sort((left, right) => {
+			const leftValue = getSortValue(left, sortKey);
+			const rightValue = getSortValue(right, sortKey);
+
+			if (typeof leftValue === "number" && typeof rightValue === "number") {
+				return leftValue - rightValue;
+			}
+
+			return String(leftValue).localeCompare(String(rightValue), "vi", {
+				numeric: true,
+				sensitivity: "base",
+			});
+		});
+
+		return sortConfig.order === "asc" ? sorted : sorted.reverse();
+	}, [filteredApplications, sortConfig]);
+
+	const totalPages = Math.max(1, Math.ceil(sortedApplications.length / pagination.perPage));
+	const currentPage = Math.min(pagination.currentPage, totalPages);
+	const paginatedApplications = sortedApplications.slice(
+		(currentPage - 1) * pagination.perPage,
+		currentPage * pagination.perPage,
+	);
+
+	const handleSort = (key: SortKey) => {
+		let order: "asc" | "desc" | null = "asc";
+		if (sortConfig.key === key) {
+			order =
+				sortConfig.order === "asc"
+					? "desc"
+					: sortConfig.order === "desc"
+						? null
+						: "asc";
 		}
+		setSortConfig({ key: order ? key : null, order });
+		setPagination((prev) => ({ ...prev, currentPage: 1 }));
+	};
 
-		if (!normalizedSearch) {
-			return true;
+	const getSortIcon = (key: SortKey) =>
+		sortConfig.key !== key ? (
+			<ArrowUpDown className='ml-2 h-4 w-4' />
+		) : sortConfig.order === "asc" ? (
+			<ArrowUp className='ml-2 h-4 w-4' />
+		) : sortConfig.order === "desc" ? (
+			<ArrowDown className='ml-2 h-4 w-4' />
+		) : (
+			<ArrowUpDown className='ml-2 h-4 w-4' />
+		);
+
+	const openStatusDialog = (application: ClubApplicationRecord) => {
+		const availableStatuses = getNextStatuses(application.status);
+		if (!availableStatuses.length) return;
+		setStatusDialogApplication(application);
+		setNextStatus(availableStatuses[0] as UpdateApplicationStatusPayload["status"]);
+		setStatusNote(application.note || "");
+	};
+
+	const applyUpdatedApplication = (updatedApplication: ClubApplicationRecord) => {
+		setApplications((prev) =>
+			prev.map((application) =>
+				application.id === updatedApplication.id ? updatedApplication : application,
+			),
+		);
+	};
+
+	const handleSubmitStatusUpdate = async () => {
+		if (!statusDialogApplication) return;
+		setIsSubmittingStatus(true);
+		try {
+			const updatedApplication = await applicationService.updateApplicationStatus(
+				statusDialogApplication.id,
+				{
+					status: nextStatus,
+					note: statusNote.trim() ? statusNote.trim() : null,
+				},
+			);
+			applyUpdatedApplication(updatedApplication);
+			setStatusDialogApplication(null);
+			setStatusNote("");
+			toast.success("Đã cập nhật trạng thái đơn ứng tuyển.");
+		} catch (error) {
+			console.error(error);
+			toast.error("Không thể cập nhật trạng thái. Vui lòng thử lại.");
+		} finally {
+			setIsSubmittingStatus(false);
 		}
-
-		const haystack = [
-			application.id,
-			application.applicant?.full_name,
-			application.applicant?.email,
-			application.applicant?.student_code,
-			application.note,
-			...application.answers.map((answer) => answer.answer_value),
-		]
-			.filter(Boolean)
-			.join(" ")
-			.toLowerCase();
-
-		return haystack.includes(normalizedSearch);
-	});
-
-	const pendingCount = applications.filter((item) => item.status === "pending").length;
-	const interviewCount = applications.filter((item) => item.status === "interview").length;
-	const passedCount = applications.filter((item) => item.status === "passed").length;
+	};
 
 	return (
-		<main className='min-h-full bg-[#f6f8f4] dark:bg-zinc-950'>
-			<div className='border-b border-border bg-white dark:bg-zinc-950/90 backdrop-blur supports-[backdrop-filter]:bg-white dark:bg-zinc-950/75'>
-				<div className='px-6 py-5'>
-					<div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
-						<div className='space-y-1'>
-							<p className='text-sm font-semibold uppercase tracking-[0.22em] text-[#6e7c57] dark:text-zinc-400'>
-								Tuyển thành viên
-							</p>
-							<h1 className='text-3xl font-bold tracking-tight text-foreground'>
-								Quản lý đơn ứng tuyển
-							</h1>
-							<p className='max-w-3xl text-sm text-muted-foreground'>
-								Theo dõi hồ sơ ứng tuyển, câu trả lời biểu mẫu và trạng thái xử lý theo dữ
-								liệu sẵn có trong hệ thống.
-							</p>
-						</div>
-
-						<div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
-							<Card className='gap-3 border-[#dde4d5] dark:border-zinc-800 bg-[#fbfcf9] dark:bg-zinc-900 py-4 shadow-none'>
-								<CardContent className='px-4'>
-									<p className='text-xs uppercase tracking-[0.18em] text-muted-foreground'>
-										Tổng hồ sơ
-									</p>
-									<p className='mt-2 text-2xl font-bold text-[#2e3820] dark:text-zinc-200'>{applications.length}</p>
-								</CardContent>
-							</Card>
-							<Card className='gap-3 border-amber-100 bg-amber-50/80 py-4 shadow-none'>
-								<CardContent className='px-4'>
-									<p className='text-xs uppercase tracking-[0.18em] text-amber-700/80'>
-										Chờ duyệt
-									</p>
-									<p className='mt-2 text-2xl font-bold text-amber-700'>{pendingCount}</p>
-								</CardContent>
-							</Card>
-							<Card className='gap-3 border-emerald-100 bg-emerald-50/80 py-4 shadow-none'>
-								<CardContent className='px-4'>
-									<p className='text-xs uppercase tracking-[0.18em] text-emerald-700/80'>
-										Đã đạt
-									</p>
-									<p className='mt-2 text-2xl font-bold text-emerald-700'>{passedCount}</p>
-								</CardContent>
-							</Card>
-						</div>
+		<div className='h-full flex-1 flex-col'>
+			<div className='flex items-center p-4 md:p-6 lg:p-8'>
+				<div className='flex flex-col gap-1'>
+					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý đơn ứng tuyển</h2>
+					<p className='text-muted-foreground'>
+						Đây là danh sách tất cả đơn ứng tuyển trong hệ thống.
+					</p>
+				</div>
+			</div>
+			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
+				<div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
+					<div className='flex flex-1 items-center gap-2'>
+						<Input
+							placeholder='Lọc theo ứng viên, email, MSSV, ghi chú...'
+							value={search}
+							onChange={(event) => setSearch(event.target.value)}
+							className='h-8 w-full sm:w-64 md:w-72 lg:w-80'
+						/>
 					</div>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant='outline' size='sm' className='h-8'>
+								<Settings2 className='h-4 w-4' />
+								View
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align='end' className='w-[220px]'>
+							<DropdownMenuLabel>Trạng thái hồ sơ</DropdownMenuLabel>
+							<DropdownMenuSeparator />
+							{statusOptions.map((option) => (
+								<DropdownMenuItem
+									key={option.value}
+									onClick={() => {
+										setStatusFilter(option.value);
+										setPagination((prev) => ({ ...prev, currentPage: 1 }));
+									}}
+									className={statusFilter === option.value ? "bg-muted font-medium" : ""}>
+									{option.label}
+								</DropdownMenuItem>
+							))}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+
+				<div className='overflow-hidden rounded-md border'>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead className='w-[50px]'>
+									<Checkbox aria-label='Select all applications' />
+								</TableHead>
+								<TableHead className='w-[120px]'>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("id")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										ID
+										{getSortIcon("id")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("full_name")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Ứng viên
+										{getSortIcon("full_name")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("email")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Email
+										{getSortIcon("email")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("student_code")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										MSSV
+										{getSortIcon("student_code")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("status")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Trạng thái
+										{getSortIcon("status")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("created_at")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Ngày nộp
+										{getSortIcon("created_at")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("updated_at")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Cập nhật
+										{getSortIcon("updated_at")}
+									</Button>
+								</TableHead>
+								<TableHead className='w-[80px] text-right'>Hành động</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{loading ? (
+								Array.from({ length: pagination.perPage }).map((_, index) => (
+									<TableRow key={`skeleton-${index}`}>
+										<TableCell>
+											<Skeleton className='h-4 w-4' />
+										</TableCell>
+										<TableCell colSpan={8}>
+											<Skeleton className='h-4 w-full' />
+										</TableCell>
+									</TableRow>
+								))
+							) : paginatedApplications.length > 0 ? (
+								paginatedApplications.map((application) => {
+									const availableStatuses = getNextStatuses(application.status);
+									return (
+										<TableRow key={application.id}>
+											<TableCell>
+												<Checkbox aria-label={`Select application ${application.id}`} />
+											</TableCell>
+											<TableCell className='font-medium'>APP-{application.id}</TableCell>
+											<TableCell>
+												<div className='space-y-1'>
+													<p className='font-medium'>{getApplicantName(application)}</p>
+													<p className='text-sm text-muted-foreground'>
+														{application.applicant?.class_name || "Chưa có lớp"}
+													</p>
+												</div>
+											</TableCell>
+											<TableCell>{application.applicant?.email || "--"}</TableCell>
+											<TableCell>{application.applicant?.student_code || "--"}</TableCell>
+											<TableCell>{getStatusBadge(application.status)}</TableCell>
+											<TableCell>{formatDate(application.created_at)}</TableCell>
+											<TableCell>{formatDate(application.updated_at)}</TableCell>
+											<TableCell className='text-right'>
+												<DropdownMenu>
+													<DropdownMenuTrigger asChild>
+														<Button
+															variant='ghost'
+															className='ml-auto flex h-8 w-8 p-0 data-[state=open]:bg-muted'
+															aria-label={`Mở hành động hồ sơ ${application.id}`}>
+															<MoreHorizontal className='h-4 w-4' />
+														</Button>
+													</DropdownMenuTrigger>
+													<DropdownMenuContent align='end' className='w-[190px]'>
+														<DropdownMenuItem
+															onClick={() => navigate(`/requests/${application.id}`)}>
+															Xem chi tiết
+														</DropdownMenuItem>
+														<DropdownMenuItem
+															onClick={() => openStatusDialog(application)}
+															disabled={availableStatuses.length === 0}>
+															Cập nhật trạng thái
+														</DropdownMenuItem>
+													</DropdownMenuContent>
+												</DropdownMenu>
+											</TableCell>
+										</TableRow>
+									);
+								})
+							) : (
+								<TableRow>
+									<TableCell colSpan={9} className='h-24 text-center'>
+										Không tìm thấy đơn ứng tuyển nào.
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+						<TableFooter className='bg-transparent'>
+							<TableRow>
+								<TableCell colSpan={9}>
+									<div className='flex items-center justify-between px-2'>
+										<div className='flex-1 text-sm text-muted-foreground'>
+											{paginatedApplications.length} of {sortedApplications.length} row(s)
+											displayed.
+										</div>
+										<div className='flex items-center space-x-6 lg:space-x-8'>
+											<div className='flex items-center space-x-2'>
+												<p className='text-sm font-medium'>Rows per page</p>
+												<Select
+													value={`${pagination.perPage}`}
+													onValueChange={(value) =>
+														setPagination({ currentPage: 1, perPage: Number(value) })
+													}>
+													<SelectTrigger className='h-8 w-[70px]'>
+														<SelectValue placeholder={pagination.perPage} />
+													</SelectTrigger>
+													<SelectContent side='top'>
+														{[10, 20, 25, 30, 40, 50].map((pageSize) => (
+															<SelectItem key={pageSize} value={`${pageSize}`}>
+																{pageSize}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</div>
+											<div className='flex w-[110px] items-center justify-center text-sm font-medium'>
+												Page {currentPage} of {totalPages}
+											</div>
+											<div className='flex items-center space-x-2'>
+												<Button
+													variant='outline'
+													className='hidden h-8 w-8 p-0 lg:flex'
+													onClick={() =>
+														setPagination((prev) => ({ ...prev, currentPage: 1 }))
+													}
+													disabled={currentPage === 1}>
+													<span className='sr-only'>Go to first page</span>
+													<ChevronsLeft className='h-4 w-4' />
+												</Button>
+												<Button
+													variant='outline'
+													className='h-8 w-8 p-0'
+													onClick={() =>
+														setPagination((prev) => ({
+															...prev,
+															currentPage: Math.max(1, prev.currentPage - 1),
+														}))
+													}
+													disabled={currentPage === 1}>
+													<span className='sr-only'>Quay lại trang trước</span>
+													<ChevronLeft className='h-4 w-4' />
+												</Button>
+												<Button
+													variant='outline'
+													className='h-8 w-8 p-0'
+													onClick={() =>
+														setPagination((prev) => ({
+															...prev,
+															currentPage: Math.min(totalPages, prev.currentPage + 1),
+														}))
+													}
+													disabled={currentPage === totalPages}>
+													<span className='sr-only'>Đi đến trang tiếp theo</span>
+													<ChevronRight className='h-4 w-4' />
+												</Button>
+												<Button
+													variant='outline'
+													className='hidden h-8 w-8 p-0 lg:flex'
+													onClick={() =>
+														setPagination((prev) => ({
+															...prev,
+															currentPage: totalPages,
+														}))
+													}
+													disabled={currentPage === totalPages}>
+													<span className='sr-only'>Đi đến trang cuối</span>
+													<ChevronsRight className='h-4 w-4' />
+												</Button>
+											</div>
+										</div>
+									</div>
+								</TableCell>
+							</TableRow>
+						</TableFooter>
+					</Table>
 				</div>
 			</div>
 
-			<div className='space-y-6 p-6'>
-				<Card className='overflow-hidden border-[#dde4d5] dark:border-zinc-800 shadow-sm'>
-					<CardHeader className='border-b border-border bg-white dark:bg-zinc-950'>
-						<div className='flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between'>
-							<div className='space-y-1'>
-								<CardTitle className='flex items-center gap-2 text-xl'>
-									<div className='rounded-xl bg-[#eef3e8] dark:bg-zinc-800 p-2 text-[#2e3820] dark:text-zinc-200'>
-										<ClipboardList className='size-5' />
-									</div>
-									Danh sách ứng tuyển
-								</CardTitle>
-								<CardDescription>
-									Lọc theo trạng thái, tìm theo thông tin sinh viên hoặc nội dung trả lời.
-								</CardDescription>
-							</div>
-
-							<CardAction className='w-full xl:w-auto'>
-								<div className='flex w-full flex-col gap-3 md:flex-row'>
-									<div className='relative min-w-[280px] flex-1'>
-										<Search className='pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground' />
-										<Input
-											value={search}
-											onChange={(event) => setSearch(event.target.value)}
-											placeholder='Tìm theo tên, email, MSSV, ghi chú...'
-											className='pl-9'
-										/>
-									</div>
-									<Select
-										value={statusFilter}
-										onValueChange={(value: ApplicationStatus | "all") => setStatusFilter(value)}>
-										<SelectTrigger className='w-full md:w-[220px]'>
-											<div className='flex items-center gap-2'>
-												<Filter className='size-4 text-muted-foreground' />
-												<SelectValue placeholder='Lọc trạng thái' />
-											</div>
-										</SelectTrigger>
-										<SelectContent>
-											{statusOptions.map((option) => (
-												<SelectItem key={option.value} value={option.value}>
-													{option.label}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-							</CardAction>
-						</div>
-					</CardHeader>
-
-					<CardContent className='space-y-4 bg-white dark:bg-zinc-950 px-0 pb-0'>
-						<div className='grid gap-4 px-6 pt-6 md:grid-cols-3'>
-							<div className='rounded-2xl border border-[#e7ece1] dark:border-zinc-800 bg-[#fafcf8] dark:bg-zinc-900 p-4'>
-								<p className='text-sm text-muted-foreground'>Đang phỏng vấn</p>
-								<p className='mt-2 text-2xl font-semibold text-[#2e3820] dark:text-zinc-200'>{interviewCount}</p>
-							</div>
-							<div className='rounded-2xl border border-[#e7ece1] dark:border-zinc-800 bg-[#fafcf8] dark:bg-zinc-900 p-4'>
-								<p className='text-sm text-muted-foreground'>Đang hiển thị</p>
-								<p className='mt-2 text-2xl font-semibold text-[#2e3820] dark:text-zinc-200'>
-									{filteredApplications.length}
-								</p>
-							</div>
-							<div className='rounded-2xl border border-[#e7ece1] dark:border-zinc-800 bg-[#fafcf8] dark:bg-zinc-900 p-4'>
-								<p className='text-sm text-muted-foreground'>Tổng câu trả lời</p>
-								<p className='mt-2 text-2xl font-semibold text-[#2e3820] dark:text-zinc-200'>
-									{filteredApplications.reduce((sum, item) => sum + item.answers.length, 0)}
-								</p>
-							</div>
-						</div>
-
-						{loading ? (
-							<div className='space-y-3 px-6 pb-6'>
-								<Skeleton className='h-12 w-full' />
-								<Skeleton className='h-12 w-full' />
-								<Skeleton className='h-12 w-full' />
-							</div>
-						) : filteredApplications.length === 0 ? (
-							<div className='px-6 pb-6'>
-								<Empty className='border-[#dde4d5] dark:border-zinc-800 bg-[#fafcf8] dark:bg-zinc-900'>
-									<EmptyHeader>
-										<EmptyMedia variant='icon'>
-											<ClipboardList />
-										</EmptyMedia>
-										<EmptyTitle>Chưa có đơn phù hợp</EmptyTitle>
-										<EmptyDescription>
-											Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái để xem thêm kết quả.
-										</EmptyDescription>
-									</EmptyHeader>
-								</Empty>
-							</div>
-						) : (
-							<div className='border-t border-border'>
-								<Table>
-									<TableHeader className='bg-[#f8faf6] dark:bg-zinc-900'>
-										<TableRow className='hover:bg-[#f8faf6] dark:bg-zinc-900'>
-											<TableHead className='px-6'>ID</TableHead>
-											<TableHead>Ứng viên</TableHead>
-											<TableHead>Liên hệ</TableHead>
-											<TableHead>Trạng thái</TableHead>
-											<TableHead>Số câu trả lời</TableHead>
-											<TableHead>Cập nhật</TableHead>
-											<TableHead className='px-6 text-right'>Thao tác</TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{filteredApplications.map((application) => (
-											<TableRow key={application.id} className='bg-white dark:bg-zinc-950'>
-												<TableCell className='px-6 font-semibold text-[#2e3820] dark:text-zinc-200'>
-													#{application.id}
-												</TableCell>
-												<TableCell>
-													<div className='space-y-1'>
-														<p className='font-semibold text-foreground'>
-															{getApplicantName(application)}
-														</p>
-														<p className='text-sm text-muted-foreground'>
-															{application.applicant?.student_code || "Chưa có MSSV"}
-														</p>
-													</div>
-												</TableCell>
-												<TableCell>
-													<div className='space-y-1'>
-														<p>{application.applicant?.email || "--"}</p>
-														<p className='text-sm text-muted-foreground'>
-															{application.applicant?.class_name || "Chưa phân lớp"}
-														</p>
-													</div>
-												</TableCell>
-												<TableCell>{getStatusBadge(application.status)}</TableCell>
-												<TableCell>{application.answers.length}</TableCell>
-												<TableCell>{formatDate(application.updated_at)}</TableCell>
-												<TableCell className='px-6 text-right'>
-													<Button
-													variant='ghost'
-													size='icon-sm'
-													className='text-muted-foreground hover:text-foreground'
-													aria-label='Xem chi ti?t h? s?'
-													onClick={() => setSelectedApplication(application)}>
-													<MoreHorizontal className='size-4' />
-												</Button>
-												</TableCell>
-											</TableRow>
-										))}
-									</TableBody>
-								</Table>
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			</div>
-
 			<Dialog
-				open={Boolean(selectedApplication)}
-				onOpenChange={(open: boolean) => {
+				open={Boolean(statusDialogApplication)}
+				onOpenChange={(open) => {
 					if (!open) {
-						setSelectedApplication(null);
+						setStatusDialogApplication(null);
+						setStatusNote("");
 					}
 				}}>
-				<DialogContent className='max-h-[92vh] w-[min(1120px,calc(100vw-2rem))] overflow-hidden p-0'>
-					{selectedApplication ? (
-						<div className='overflow-hidden rounded-lg bg-white dark:bg-zinc-950'>
-							<div className='bg-[#2e3820] dark:bg-zinc-800 px-6 py-6 text-white md:px-8 md:py-7'>
-								<DialogHeader>
-									<div className='mb-3 flex flex-wrap items-center gap-2'>
-										<Badge className='border border-white/15 bg-white dark:bg-zinc-950/10 text-white hover:bg-white dark:bg-zinc-950/10'>
-											Hồ sơ #{selectedApplication.id}
-										</Badge>
-										{getStatusBadge(selectedApplication.status)}
+				<DialogContent className='sm:max-w-[560px]'>
+					{statusDialogApplication ? (
+						<>
+							<DialogHeader>
+								<DialogTitle>Cập nhật trạng thái đơn ứng tuyển</DialogTitle>
+							</DialogHeader>
+							<div className='space-y-4'>
+								<div className='grid gap-2'>
+									<p className='text-sm font-medium'>Ứng viên</p>
+									<p className='text-sm text-muted-foreground'>
+										{getApplicantName(statusDialogApplication)}
+									</p>
+								</div>
+								<div className='grid gap-2'>
+									<p className='text-sm font-medium'>Trạng thái hiện tại</p>
+									<div>{getStatusBadge(statusDialogApplication.status)}</div>
+								</div>
+								<div className='grid gap-2'>
+									<label className='text-sm font-medium' htmlFor='next-status'>
+										Trạng thái tiếp theo
+									</label>
+									<div className='flex flex-wrap gap-2' id='next-status'>
+										{getNextStatuses(statusDialogApplication.status).map((status) => {
+											const isActive = nextStatus === status;
+											const config = getStatusConfig(status);
+											return (
+												<Button
+													key={status}
+													type='button'
+													variant='outline'
+													onClick={() =>
+														setNextStatus(
+															status as UpdateApplicationStatusPayload["status"],
+														)
+													}
+													className={isActive ? `${config.className} border-current` : ""}>
+													{config.label}
+												</Button>
+											);
+										})}
 									</div>
-									<DialogTitle className='text-2xl leading-tight md:text-4xl'>
-										Hồ sơ #{selectedApplication.id} - {getApplicantName(selectedApplication)}
-									</DialogTitle>
-									<DialogDescription className='max-w-3xl text-base leading-7 text-white/75 md:text-lg'>
-										Xem nhanh thông tin người nộp đơn, trạng thái xử lý và toàn bộ câu trả lời.
-									</DialogDescription>
-								</DialogHeader>
-							</div>
-
-							<div className='max-h-[calc(92vh-180px)] space-y-6 overflow-y-auto bg-[#fcfdfb] dark:bg-zinc-900 p-6 md:px-8 md:py-7'>
-								<div className='grid gap-4 sm:grid-cols-2 2xl:grid-cols-4'>
-									<SummaryCard
-										icon={<UserRound className='size-5' />}
-										label='Ứng viên'
-										value={getApplicantName(selectedApplication)}
-									/>
-									<SummaryCard
-										icon={<Mail className='size-5' />}
-										label='Email'
-										value={selectedApplication.applicant?.email || "--"}
-									/>
-									<SummaryCard
-										icon={<CalendarDays className='size-5' />}
-										label='Ngày nộp'
-										value={formatDate(selectedApplication.created_at)}
-									/>
-									<SummaryCard icon={<MessageSquareText className='size-5' />} label='Trạng thái'>
-										{getStatusBadge(selectedApplication.status)}
-									</SummaryCard>
 								</div>
-
-								<div className='space-y-6'>
-									<Card className='gap-4 border-[#dde4d5] dark:border-zinc-800 bg-white dark:bg-zinc-950 py-5 shadow-sm'>
-										<CardHeader className='px-6'>
-											<CardTitle>Thông tin hồ sơ</CardTitle>
-											<CardDescription>
-												Thông tin định danh và dữ liệu hồ sơ của ứng viên.
-											</CardDescription>
-										</CardHeader>
-										<CardContent className='space-y-5 px-6'>
-											<div className='grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]'>
-												<div className='overflow-hidden rounded-2xl border border-[#e3e9dc] dark:border-zinc-800 bg-[#fbfcf9] dark:bg-zinc-900'>
-													<div className='grid divide-y divide-[#e3e9dc]'>
-														<div className='grid gap-2 px-5 py-4 sm:grid-cols-[128px_minmax(0,1fr)] sm:items-center'>
-															<p className='text-sm font-medium text-muted-foreground'>Mã sinh viên</p>
-															<p className='break-words text-base font-semibold text-foreground'>
-																{selectedApplication.applicant?.student_code || "--"}
-															</p>
-														</div>
-														<div className='grid gap-2 px-5 py-4 sm:grid-cols-[128px_minmax(0,1fr)] sm:items-center'>
-															<p className='text-sm font-medium text-muted-foreground'>Khoa</p>
-															<p className='break-words text-base font-semibold text-foreground'>
-																{selectedApplication.applicant?.faculty || "--"}
-															</p>
-														</div>
-														<div className='grid gap-2 px-5 py-4 sm:grid-cols-[128px_minmax(0,1fr)] sm:items-center'>
-															<p className='text-sm font-medium text-muted-foreground'>Ngành</p>
-															<p className='break-words text-base font-semibold text-foreground'>
-																{selectedApplication.applicant?.major || "--"}
-															</p>
-														</div>
-														<div className='grid gap-2 px-5 py-4 sm:grid-cols-[128px_minmax(0,1fr)] sm:items-center'>
-															<p className='text-sm font-medium text-muted-foreground'>Lớp</p>
-															<p className='break-words text-base font-semibold text-foreground'>
-																{selectedApplication.applicant?.class_name || "--"}
-															</p>
-														</div>
-													</div>
-												</div>
-
-												<div className='rounded-2xl border border-[#e3e9dc] dark:border-zinc-800 bg-[#fbfcf9] dark:bg-zinc-900 p-5'>
-													<p className='text-sm font-medium text-muted-foreground'>Ghi chép xem xét</p>
-													<p className='mt-3 break-words text-base leading-8 text-foreground'>
-														{selectedApplication.note || "Chưa có ghi chép xem xét."}
-													</p>
-												</div>
-											</div>
-										</CardContent>
-									</Card>
-
-									<Card className='gap-4 border-[#dde4d5] dark:border-zinc-800 bg-white dark:bg-zinc-950 py-5 shadow-sm'>
-										<CardHeader className='px-6'>
-											<CardTitle>Câu trả lời biểu mẫu</CardTitle>
-											<CardDescription>
-												Danh sách câu trả lời theo từng câu hỏi để đánh giá.
-											</CardDescription>
-										</CardHeader>
-										<CardContent className='space-y-4 px-6'>
-											{selectedApplication.answers.map((answer, index) => (
-												<div key={answer.id} className='rounded-2xl border border-[#e3e9dc] dark:border-zinc-800 bg-[#fbfcf9] dark:bg-zinc-900 p-5'>
-													<div className='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
-														<div className='min-w-0 space-y-2'>
-															<div className='flex flex-wrap items-center gap-3'>
-																<p className='text-xs font-semibold uppercase tracking-[0.16em] text-[#6e7c57] dark:text-zinc-400'>
-																	Câu {index + 1}
-																</p>
-																<Badge variant='secondary'>{answer.question_type}</Badge>
-															</div>
-															<p className='break-words text-xl font-semibold leading-8 text-foreground'>
-																{answer.question_label}
-															</p>
-														</div>
-													</div>
-
-													<div className='mt-4 rounded-xl bg-white dark:bg-zinc-950 px-4 py-4'>
-														<p className='text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground'>
-															Trả lời
-														</p>
-														<p className='mt-2 break-words text-base leading-8 text-foreground'>
-															{answer.answer_value || "Ứng viên chưa trả lời câu hỏi này."}
-														</p>
-													</div>
-												</div>
-											))}
-										</CardContent>
-									</Card>
+								<div className='grid gap-2'>
+									<label className='text-sm font-medium' htmlFor='application-note'>
+										Ghi chú
+									</label>
+									<Textarea
+										id='application-note'
+										value={statusNote}
+										onChange={(event) => setStatusNote(event.target.value)}
+										placeholder='Thêm ghi chú xét duyệt để lưu vào hệ thống'
+										maxLength={255}
+									/>
 								</div>
 							</div>
-						</div>
+							<DialogFooter>
+								<Button
+									variant='outline'
+									onClick={() => setStatusDialogApplication(null)}
+									disabled={isSubmittingStatus}>
+									Hủy
+								</Button>
+								<Button onClick={handleSubmitStatusUpdate} disabled={isSubmittingStatus}>
+									{isSubmittingStatus ? "Đang cập nhật..." : "Lưu thay đổi"}
+								</Button>
+							</DialogFooter>
+						</>
 					) : null}
 				</DialogContent>
 			</Dialog>
-		</main>
+		</div>
 	);
 }
 
 export default ApplicationRequestsPage;
-
-
