@@ -106,7 +106,6 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 										}`}
 									/>
 								</button>
-
 								{isExpanded && (
 									<ul className='border-border mt-1 ml-[22px] space-y-1 border-l pl-[10px]'>
 										{item.subItems.map((subItem) => (
