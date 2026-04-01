@@ -263,6 +263,14 @@ abstract class AuthBaseController extends Controller
                 );
             }
 
+            // Update existing user's OAuth info
+            $user->update([
+                'full_name' => $oauthUser->getName(),
+                'avatar' => $oauthUser->getAvatar(),
+                'provider' => $provider,
+                'provider_id' => $oauthUser->getId(),
+            ]);
+
             $user->tokens()->delete();
 
             // Create Sanctum token

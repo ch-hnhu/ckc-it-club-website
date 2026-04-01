@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\RolesEnum;
 use App\Models\Major;
 use App\Models\SchoolClass;
 use App\Models\User;
@@ -12,12 +13,33 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         User::firstOrCreate(
-            ['email' => 'admin@gmail.com'],
             [
+                'email' => 'hnhu07012004@gmail.com',
                 'full_name' => 'Quản trị viên',
                 'is_active' => true,
-            ]
-        );
+            ],
+        )->assignRole(RolesEnum::ADMIN->value);
+        User::firstOrCreate(
+            [
+                'email' => '0306231334@caothang.edu.vn',
+                'full_name' => 'Quản trị viên',
+                'is_active' => true,
+            ],
+        )->assignRole(RolesEnum::ADMIN->value);
+        User::firstOrCreate(
+            [
+                'email' => '0306231295@caothang.edu.vn',
+                'full_name' => 'Quản trị viên',
+                'is_active' => true,
+            ],
+        )->assignRole(RolesEnum::ADMIN->value);
+        User::firstOrCreate(
+            [
+                'email' => '0306231289@caothang.edu.vn',
+                'full_name' => 'Quản trị viên',
+                'is_active' => true,
+            ],
+        )->assignRole(RolesEnum::ADMIN->value);
 
         $students = [
             ['full_name' => 'Nguyễn Minh Anh', 'email' => 'student1@gmail.com', 'student_code' => 'CD220001', 'class' => 'CD22PM1'],
