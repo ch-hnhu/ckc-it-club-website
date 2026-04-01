@@ -4,7 +4,6 @@ import Dashboard from "../pages/Dashboard";
 import UserList from "@/pages/user/UserList";
 import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
-import LoginSuccess from "@/pages/auth/LoginSuccess";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NotFound from "@/pages/NotFound";
 
@@ -12,10 +11,6 @@ const router = createBrowserRouter([
 	{
 		path: "/login",
 		element: <LoginForm />,
-	},
-	{
-		path: "/login-success",
-		element: <LoginSuccess />,
 	},
 	{
 		path: "/",

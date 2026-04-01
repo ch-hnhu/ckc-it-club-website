@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { listenOAuthAuthMessage } from "@/services/auth.service";
+import { toast } from "sonner";
 
 export function LoginForm() {
 	const navigate = useNavigate();
@@ -18,7 +19,15 @@ export function LoginForm() {
 
 				const redirectPath = sessionStorage.getItem("redirectPath") || "/";
 				sessionStorage.removeItem("redirectPath");
+
+				toast.success(payload.message || "Đăng nhập thành công!", {
+					position: "top-right",
+				});
 				navigate(redirectPath, { replace: true });
+			},
+
+			onError: (payload) => {
+				toast.error(payload.message || "Đăng nhập thất bại!", { position: "top-right" });
 			},
 		});
 	}, [navigate]);
