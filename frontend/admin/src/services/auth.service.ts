@@ -41,6 +41,7 @@ export type OAuthAuthSuccessPayload = {
 	type: "OAUTH_AUTH_SUCCESS";
 	token?: string;
 	user?: unknown;
+	message?: string;
 };
 
 export type OAuthAuthErrorPayload = {

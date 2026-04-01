@@ -1,5 +1,10 @@
 import { api } from "@/services/api.service";
-import type { ClubApplicationRecord } from "@/types/application.type";
+import type {
+	ApplicationQuestionPayload,
+	ApplicationQuestionRecord,
+	ClubApplicationRecord,
+	UpdateApplicationStatusPayload,
+} from "@/types/application.type";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 
 const mockApplications: ClubApplicationRecord[] = [
@@ -74,14 +79,16 @@ const mockApplications: ClubApplicationRecord[] = [
 				question_id: 4,
 				question_label: "Bạn đã từng tham gia hoạt động tập thể nào chưa?",
 				question_type: "textarea",
-				answer_value: "Từng tham gia tổ chức workshop khoa và điều phối chương trình chào tân sinh viên.",
+				answer_value:
+					"Từng tham gia tổ chức workshop khoa và điều phối chương trình chào tân sinh viên.",
 			},
 			{
 				id: 6,
 				question_id: 5,
 				question_label: "Bạn mong muốn học được gì từ CLB?",
 				question_type: "textarea",
-				answer_value: "Rèn kỹ năng tổ chức, giao tiếp và làm việc nhóm trong môi trường thực tế.",
+				answer_value:
+					"Rèn kỹ năng tổ chức, giao tiếp và làm việc nhóm trong môi trường thực tế.",
 			},
 		],
 	},
@@ -145,6 +152,43 @@ function normalizeApplications(
 	return [];
 }
 
+function normalizeApplication(
+	payload: ApiResponse<ClubApplicationRecord> | ClubApplicationRecord,
+): ClubApplicationRecord {
+	if ("data" in payload) {
+		return payload.data;
+	}
+
+	return payload;
+}
+
+function normalizeQuestions(
+	payload:
+		| PaginatedResponse<ApplicationQuestionRecord>
+		| ApiResponse<ApplicationQuestionRecord[]>
+		| ApplicationQuestionRecord[],
+): ApplicationQuestionRecord[] {
+	if (Array.isArray(payload)) {
+		return payload;
+	}
+
+	if (Array.isArray(payload.data)) {
+		return payload.data;
+	}
+
+	return [];
+}
+
+function normalizeQuestion(
+	payload: ApiResponse<ApplicationQuestionRecord> | ApplicationQuestionRecord,
+): ApplicationQuestionRecord {
+	if ("data" in payload) {
+		return payload.data;
+	}
+
+	return payload;
+}
+
 const applicationService = {
 	async getApplications() {
 		try {
@@ -155,6 +199,67 @@ const applicationService = {
 		} catch {
 			return mockApplications;
 		}
+	},
+
+	async updateApplicationStatus(
+		applicationId: number,
+		payload: UpdateApplicationStatusPayload,
+	) {
+		const response = await api.patch<ApiResponse<ClubApplicationRecord>, UpdateApplicationStatusPayload>(
+			`/club-applications/${applicationId}/status`,
+			payload,
+		);
+
+		return normalizeApplication(response);
+	},
+
+	async getQuestions() {
+		const response = await api.get<
+			PaginatedResponse<ApplicationQuestionRecord> | ApiResponse<ApplicationQuestionRecord[]>
+		>("/application-questions");
+
+		return normalizeQuestions(response);
+	},
+
+	async getQuestion(questionId: number) {
+		const response = await api.get<ApiResponse<ApplicationQuestionRecord>>(
+			`/application-questions/${questionId}`,
+		);
+
+		return normalizeQuestion(response);
+	},
+
+	async createQuestion(payload: ApplicationQuestionPayload) {
+		const response = await api.post<ApiResponse<ApplicationQuestionRecord>, ApplicationQuestionPayload>(
+			"/application-questions",
+			payload,
+		);
+
+		return normalizeQuestion(response);
+	},
+
+	async updateQuestion(questionId: number, payload: ApplicationQuestionPayload) {
+		const response = await api.put<ApiResponse<ApplicationQuestionRecord>, ApplicationQuestionPayload>(
+			`/application-questions/${questionId}`,
+			payload,
+		);
+
+		return normalizeQuestion(response);
+	},
+
+	async reorderQuestions(questionIds: number[]) {
+		const response = await api.patch<
+			ApiResponse<ApplicationQuestionRecord[]>,
+			{ question_ids: number[] }
+		>("/application-questions/reorder", {
+			question_ids: questionIds,
+		});
+
+		return normalizeQuestions(response);
+	},
+
+	async deleteQuestion(questionId: number) {
+		return api.delete<ApiResponse<{ id: number }>>(`/application-questions/${questionId}`);
 	},
 };
 

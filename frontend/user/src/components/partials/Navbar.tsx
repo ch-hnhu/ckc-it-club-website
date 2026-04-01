@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Menu, X, Code2, LogIn, UserPlus } from "lucide-react";
+import { Code2, LogIn, Menu, UserPlus, X } from "lucide-react";
 import {
+	clearAccessToken,
 	getGoogleAuthUrl,
+	listenOAuthAuthMessage,
 	logout,
 	setAccessToken,
-	clearAccessToken,
-	listenOAuthAuthMessage,
 	type AuthUser,
 } from "../../services/auth.service";
 
@@ -15,11 +15,11 @@ type NavbarProps = {
 };
 
 const NAV_ITEMS = [
-	{ label: "Blog", href: "#blog" },
+	{ label: "Bài viết", href: "#blog" },
 	{ label: "Tài nguyên", href: "#resources" },
-	{ label: "Leaderboard", href: "#leaderboard" },
-	{ label: "Event", href: "#events" },
-	{ label: "Course", href: "#courses" },
+	{ label: "Bảng xếp hạng", href: "#leaderboard" },
+	{ label: "Sự kiện", href: "#events" },
+	{ label: "Khóa học", href: "#courses" },
 ];
 
 const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
@@ -46,8 +46,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 			setLoading(true);
 			clearAccessToken();
 			const url = await getGoogleAuthUrl();
-			const width = 520,
-				height = 640;
+			const width = 520;
+			const height = 640;
 			const left = window.screenX + (window.outerWidth - width) / 2;
 			const top = window.screenY + (window.outerHeight - height) / 2;
 			window.open(
@@ -75,20 +75,18 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	};
 
 	return (
-		<header
-			className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-white/95 backdrop-blur-sm border-b-2 border-black shadow-[0_2px_0_0_#111]`}>
+		<header className='fixed top-0 left-0 z-50 w-full border-b-2 border-black bg-white/95 shadow-[0_2px_0_0_#111] backdrop-blur-sm transition-all duration-300'>
 			<div className='neo-container'>
-				<div className='flex items-center gap-4 lg:gap-8 h-16 px-6'>
-					{/* Logo */}
-					<a href='/' className='flex items-center gap-2.5 group no-underline'>
+				<div className='flex h-16 items-center gap-4 px-6 lg:gap-8'>
+					<a href='/' className='group flex items-center gap-2.5 no-underline'>
 						<div
-							className='w-9 h-9 rounded-lg flex items-center justify-center transition-transform duration-200 group-hover:scale-105'
+							className='flex h-9 w-9 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-105'
 							style={{
 								background: "var(--color-primary)",
 								border: "2px solid #111",
 								boxShadow: "2px 2px 0px #111",
 							}}>
-							<Code2 className='w-5 h-5 text-black' />
+							<Code2 className='h-5 w-5 text-black' />
 						</div>
 						<span
 							className='text-xl font-extrabold tracking-tight text-black'
@@ -97,43 +95,39 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 						</span>
 					</a>
 
-					{/* Desktop Nav */}
-					<nav className='hidden lg:flex items-center gap-1'>
+					<nav className='hidden items-center gap-1 lg:flex'>
 						{NAV_ITEMS.map((item) => (
 							<a
 								key={item.label}
 								href={item.href}
-								className='relative px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:text-black hover:bg-gray-100 transition-all duration-200 group'
+								className='group relative rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-100 hover:text-black'
 								style={{ fontFamily: "var(--font-body)" }}>
 								{item.label}
 								<span
-									className='absolute bottom-0.5 left-4 right-4 h-0.5 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-200'
+									className='absolute right-4 bottom-0.5 left-4 h-0.5 scale-x-0 rounded-full transition-transform duration-200 group-hover:scale-x-100'
 									style={{ background: "var(--color-primary)" }}
 								/>
 							</a>
 						))}
 					</nav>
 
-					{/* Desktop CTA */}
-					<div className='hidden lg:flex items-center gap-3 ml-auto'>
+					<div className='ml-auto hidden items-center gap-3 lg:flex'>
 						{user ? (
 							<div className='flex items-center gap-3'>
-								<div className='flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 border-black text-sm font-medium'>
+								<div className='flex items-center gap-2 rounded-lg border-2 border-black px-3 py-1.5 text-sm font-medium'>
 									{user.picture && (
 										<img
 											src={user.picture}
 											alt={user.name || "user"}
-											className='w-6 h-6 rounded-full'
+											className='h-6 w-6 rounded-full'
 										/>
 									)}
-									<span className='max-w-[120px] truncate'>
-										{user.name || user.email}
-									</span>
+									<span className='max-w-[120px] truncate'>{user.name || user.email}</span>
 								</div>
 								<button
 									onClick={handleLogout}
 									disabled={loading}
-									className='neo-btn neo-btn-secondary text-sm px-4 py-2 disabled:opacity-50'>
+									className='neo-btn neo-btn-secondary px-4 py-2 text-sm disabled:opacity-50'>
 									Đăng xuất
 								</button>
 							</div>
@@ -142,53 +136,51 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 								<button
 									onClick={handleLogin}
 									disabled={loading}
-									className='neo-btn neo-btn-secondary text-sm px-4 py-2 disabled:opacity-50'>
-									<LogIn className='w-4 h-4' />
+									className='neo-btn neo-btn-secondary px-4 py-2 text-sm disabled:opacity-50'>
+									<LogIn className='h-4 w-4' />
 									Đăng nhập
 								</button>
 								<button
 									onClick={handleLogin}
 									disabled={loading}
-									className='neo-btn neo-btn-primary text-sm px-4 py-2 disabled:opacity-50'>
-									<UserPlus className='w-4 h-4' />
+									className='neo-btn neo-btn-primary px-4 py-2 text-sm disabled:opacity-50'>
+									<UserPlus className='h-4 w-4' />
 									{loading ? "Đang xử lý..." : "Tham gia ngay"}
 								</button>
 							</>
 						)}
 					</div>
 
-					{/* Mobile menu toggle */}
 					<button
-						className='lg:hidden p-2 rounded-lg border-2 border-black ml-auto'
+						className='ml-auto rounded-lg border-2 border-black p-2 lg:hidden'
 						onClick={() => setIsMobileOpen(!isMobileOpen)}
-						aria-label='Toggle menu'>
-						{isMobileOpen ? <X className='w-5 h-5' /> : <Menu className='w-5 h-5' />}
+						aria-label='Mở menu điều hướng'>
+						{isMobileOpen ? <X className='h-5 w-5' /> : <Menu className='h-5 w-5' />}
 					</button>
 				</div>
 
-				{/* Mobile Menu */}
 				{isMobileOpen && (
-					<div className='lg:hidden border-t-2 border-black bg-white px-6 pb-6'>
+					<div className='border-t-2 border-black bg-white px-6 pb-6 lg:hidden'>
 						<nav className='flex flex-col gap-1 pt-4'>
 							{NAV_ITEMS.map((item) => (
 								<a
 									key={item.label}
 									href={item.href}
 									onClick={() => setIsMobileOpen(false)}
-									className='px-4 py-3 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors'>
+									className='rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100'>
 									{item.label}
 								</a>
 							))}
 						</nav>
-						<div className='flex flex-col gap-3 pt-4 border-t border-gray-100 mt-4'>
+						<div className='mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4'>
 							{user ? (
 								<div className='flex flex-col gap-3'>
-									<div className='flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-black text-sm font-medium justify-center'>
+									<div className='flex items-center justify-center gap-2 rounded-lg border-2 border-black px-3 py-2 text-sm font-medium'>
 										{user.picture && (
 											<img
 												src={user.picture}
 												alt={user.name || "user"}
-												className='w-6 h-6 rounded-full'
+												className='h-6 w-6 rounded-full'
 											/>
 										)}
 										<span className='truncate'>{user.name || user.email}</span>
@@ -206,13 +198,13 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 										onClick={handleLogin}
 										disabled={loading}
 										className='neo-btn neo-btn-secondary w-full justify-center disabled:opacity-50'>
-										<LogIn className='w-4 h-4' /> Đăng nhập
+										<LogIn className='h-4 w-4' /> Đăng nhập
 									</button>
 									<button
 										onClick={handleLogin}
 										disabled={loading}
 										className='neo-btn neo-btn-primary w-full justify-center disabled:opacity-50'>
-										<UserPlus className='w-4 h-4' /> Tham gia ngay
+										<UserPlus className='h-4 w-4' /> {loading ? "Đang xử lý..." : "Tham gia ngay"}
 									</button>
 								</>
 							)}

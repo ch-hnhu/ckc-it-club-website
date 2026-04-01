@@ -4,7 +4,7 @@ import { ExternalLink, Github, Linkedin } from "lucide-react";
 const MENTORS = [
 	{
 		name: "Nguyễn Văn An",
-		role: "AI/ML Expert",
+		role: "Chuyên gia AI/ML",
 		bio: "Chuyên gia về Machine Learning & Computer Vision, 5+ năm kinh nghiệm nghiên cứu.",
 		tag: "AI & Machine Learning",
 		tagBg: "var(--color-pastel-green)",
@@ -14,7 +14,7 @@ const MENTORS = [
 		name: "Trần Thị Bình",
 		role: "Web Dev Lead",
 		bio: "Full-stack developer, maintainer các dự án open-source và speaker tại các sự kiện tech.",
-		tag: "Web Development",
+		tag: "Web Developer",
 		tagBg: "var(--color-pastel-blue)",
 		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=mentor2&backgroundColor=BFD9FE",
 	},
@@ -118,7 +118,7 @@ const MentorSection: React.FC = () => {
 									</a>
 								</div>
 								<a href='#' className='neo-btn neo-btn-primary text-sm px-4 py-2'>
-									Xem profile <ExternalLink className='w-3.5 h-3.5' />
+									Xem hồ sơ <ExternalLink className='w-3.5 h-3.5' />
 								</a>
 							</div>
 						</div>

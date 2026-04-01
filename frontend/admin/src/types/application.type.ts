@@ -23,6 +23,44 @@ export interface ApplicationAnswerItem {
 	answer_value: string | null;
 }
 
+export interface ApplicationQuestionOption {
+	id: number;
+	question_id: number;
+	value: string;
+	label: string;
+}
+
+export type ApplicationQuestionType = "text" | "textarea" | "radio" | "select";
+
+export interface ApplicationQuestionRecord {
+	id: number;
+	label: string;
+	type: ApplicationQuestionType;
+	is_required: boolean;
+	order_index: number;
+	is_active: boolean;
+	created_at: string | null;
+	created_by: number | null;
+	updated_at: string | null;
+	updated_by: number | null;
+	answers_count: number;
+	options: ApplicationQuestionOption[];
+}
+
+export interface ApplicationQuestionOptionPayload {
+	id?: number;
+	value: string;
+	label: string;
+}
+
+export interface ApplicationQuestionPayload {
+	label: string;
+	type: ApplicationQuestionType;
+	is_required: boolean;
+	is_active: boolean;
+	options: ApplicationQuestionOptionPayload[];
+}
+
 export interface ClubApplicationRecord {
 	id: number;
 	status: ApplicationStatus;
@@ -33,4 +71,9 @@ export interface ClubApplicationRecord {
 	updated_by: number | null;
 	applicant: ApplicationApplicant | null;
 	answers: ApplicationAnswerItem[];
+}
+
+export interface UpdateApplicationStatusPayload {
+	status: Exclude<ApplicationStatus, "pending">;
+	note: string | null;
 }

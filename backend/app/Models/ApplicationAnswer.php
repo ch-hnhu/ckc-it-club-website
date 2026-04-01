@@ -10,13 +10,15 @@ class ApplicationAnswer extends Model
     /** @use HasFactory<\Database\Factories\ApplicationAnswerFactory> */
     use HasFactory;
 
+    public $timestamps = false;
+
     public function question()
     {
-        return $this->belongsTo(ApplicationQuestion::class);
+        return $this->belongsTo(ApplicationQuestion::class, 'question_id');
     }
 
     public function application()
     {
-        return $this->belongsTo(ClubApplication::class);
+        return $this->belongsTo(ClubApplication::class, 'application_id');
     }
 }
