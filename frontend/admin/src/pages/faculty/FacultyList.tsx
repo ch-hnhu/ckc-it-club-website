@@ -147,7 +147,7 @@ function FacultyList() {
 						</Button>
 						<Button size='sm' className='h-8'>
 							<Plus className='h-4 w-4' />
-							Add Faculty
+							Thêm Khoa mới
 						</Button>
 					</div>
 				</div>
@@ -172,18 +172,28 @@ function FacultyList() {
 										variant='ghost'
 										onClick={() => handleSort("label")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Faculty
+										Tên khoa
 										{getSortIcon("label")}
 									</Button>
 								</TableHead>
-								<TableHead>Slug</TableHead>
+								
 								<TableHead>
 									<Button
 										variant='ghost'
 										onClick={() => handleSort("created_at")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Created
+										Ngày tạo
 										{getSortIcon("created_at")}
+									</Button>
+								</TableHead>
+								
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("updated_at")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Ngày cập nhật
+										{getSortIcon("updated_at")}
 									</Button>
 								</TableHead>
 								<TableHead>Số ngành</TableHead>
@@ -208,8 +218,8 @@ function FacultyList() {
 											</div>
 										</div>
 									</TableCell>
-									<TableCell>{faculty.slug}</TableCell>
 									<TableCell>{formatDate(faculty.created_at)}</TableCell>
+									<TableCell>{formatDate(faculty.updated_at)}</TableCell>
 									<TableCell>{faculty.majors_count}</TableCell>
 									<TableCell>
 										<DropdownMenu>
@@ -235,7 +245,7 @@ function FacultyList() {
 							{faculties.length === 0 && (
 								<TableRow>
 									<TableCell colSpan={7} className='h-24 text-center'>
-										No faculties found.
+										Không tìm thấy khoa!
 									</TableCell>
 								</TableRow>
 							)}

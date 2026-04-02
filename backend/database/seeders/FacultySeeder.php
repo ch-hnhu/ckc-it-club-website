@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace Database\Seeders;
 
@@ -11,14 +11,13 @@ class FacultySeeder extends Seeder
     public function run(): void
     {
         $faculties = [
-            'Cong nghe thong tin',
-            'Dien - Dien tu',
-            'Co khi',
-            'O to',
-            'Nhiet lanh',
-            'Tu dong hoa',
-            'Bo mon Kinh te',
-            'Cong nghiep',
+            'Công nghệ thông tin',
+            'Cơ khí',
+            'Cơ khí động lực',
+            'Điện - Điện tử',
+            'Công nghệ nhiệt - lạnh',
+            'Giáo dục đại cương',
+            'Bộ môn Kinh tế',
         ];
 
         foreach ($faculties as $faculty) {

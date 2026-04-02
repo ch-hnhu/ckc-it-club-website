@@ -116,7 +116,7 @@ function MajorList() {
 					</div>
 					<div className='flex items-center gap-2'>
 						<Button variant='outline' size='sm' className='h-8 lg:flex'><Settings2 className='h-4 w-4' />View</Button>
-						<Button size='sm' className='h-8'><Plus className='h-4 w-4' />Add Major</Button>
+						<Button size='sm' className='h-8'><Plus className='h-4 w-4' />Thêm ngành</Button>
 					</div>
 				</div>
 				<div className='overflow-hidden rounded-md border'>
@@ -125,11 +125,12 @@ function MajorList() {
 							<TableRow>
 								<TableHead className='w-[50px]'><Checkbox aria-label='Select all' /></TableHead>
 								<TableHead className='w-[100px]'><Button variant='ghost' onClick={() => handleSort("id")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>ID{getSortIcon("id")}</Button></TableHead>
-								<TableHead><Button variant='ghost' onClick={() => handleSort("label")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Major{getSortIcon("label")}</Button></TableHead>
-								<TableHead>Faculty</TableHead>
-								<TableHead>Slug</TableHead>
-								<TableHead>Classes</TableHead>
-								<TableHead><Button variant='ghost' onClick={() => handleSort("created_at")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Created{getSortIcon("created_at")}</Button></TableHead>
+								<TableHead><Button variant='ghost' onClick={() => handleSort("label")} className='-ml-4 h-8 hover:bg-muted-foreground/10'> Tên ngành{getSortIcon("label")}</Button></TableHead>
+								<TableHead>Tên khoa</TableHead>
+								
+								<TableHead>Số lớp</TableHead>
+								<TableHead><Button variant='ghost' onClick={() => handleSort("created_at")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Ngày tạo{getSortIcon("created_at")}</Button></TableHead>
+								<TableHead><Button variant='ghost' onClick={() => handleSort("updated_at")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Ngày cập nhật{getSortIcon("updated_at")}</Button></TableHead>
 								<TableHead className='w-[50px]'></TableHead>
 							</TableRow>
 						</TableHeader>
@@ -140,9 +141,9 @@ function MajorList() {
 									<TableCell className='font-medium'>MAJ-{major.id}</TableCell>
 									<TableCell><div className='flex items-center gap-3'><div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'><FolderTree className='h-4 w-4' /></div><div className='flex flex-col'><span className='font-medium'>{major.label}</span><span className='text-xs text-muted-foreground'>{major.value}</span></div></div></TableCell>
 									<TableCell>{major.faculty?.label || "N/A"}</TableCell>
-									<TableCell>{major.slug}</TableCell>
 									<TableCell>{major.school_classes_count}</TableCell>
 									<TableCell>{formatDate(major.created_at)}</TableCell>
+									<TableCell>{formatDate(major.updated_at)}</TableCell>
 									<TableCell><DropdownMenu><DropdownMenuTrigger asChild><Button variant='ghost' className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'><MoreHorizontal className='h-4 w-4' /><span className='sr-only'>Open menu</span></Button></DropdownMenuTrigger><DropdownMenuContent align='end' className='w-[160px]'><DropdownMenuItem>Edit</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem className='text-destructive focus:text-destructive focus:bg-destructive/10'>Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell>
 								</TableRow>
 							))}
