@@ -61,6 +61,7 @@ import {
 	getStatusBadge,
 	getStatusConfig,
 } from "./application-detail-shared";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 
 const statusOptions: Array<{ value: ApplicationStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -100,6 +101,13 @@ function getSortValue(application: ClubApplicationRecord, key: SortKey) {
 }
 
 function ApplicationRequestsPage() {
+	const breadcrumb = [
+		{ title: "Dashboard", link: "/" },
+		{ title: "Quản lý đơn ứng tuyển", link: "/requests" },
+	];
+
+	useBreadcrumb(breadcrumb);
+
 	const navigate = useNavigate();
 	const [applications, setApplications] = useState<ClubApplicationRecord[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -198,11 +206,7 @@ function ApplicationRequestsPage() {
 		let order: "asc" | "desc" | null = "asc";
 		if (sortConfig.key === key) {
 			order =
-				sortConfig.order === "asc"
-					? "desc"
-					: sortConfig.order === "desc"
-						? null
-						: "asc";
+				sortConfig.order === "asc" ? "desc" : sortConfig.order === "desc" ? null : "asc";
 		}
 		setSortConfig({ key: order ? key : null, order });
 		setPagination((prev) => ({ ...prev, currentPage: 1 }));
@@ -295,7 +299,9 @@ function ApplicationRequestsPage() {
 										setStatusFilter(option.value);
 										setPagination((prev) => ({ ...prev, currentPage: 1 }));
 									}}
-									className={statusFilter === option.value ? "bg-muted font-medium" : ""}>
+									className={
+										statusFilter === option.value ? "bg-muted font-medium" : ""
+									}>
 									{option.label}
 								</DropdownMenuItem>
 							))}
@@ -394,22 +400,39 @@ function ApplicationRequestsPage() {
 									return (
 										<TableRow key={application.id}>
 											<TableCell>
-												<Checkbox aria-label={`Select application ${application.id}`} />
+												<Checkbox
+													aria-label={`Select application ${application.id}`}
+												/>
 											</TableCell>
-											<TableCell className='font-medium'>APP-{application.id}</TableCell>
+											<TableCell className='font-medium'>
+												APP-{application.id}
+											</TableCell>
 											<TableCell>
 												<div className='space-y-1'>
-													<p className='font-medium'>{getApplicantName(application)}</p>
+													<p className='font-medium'>
+														{getApplicantName(application)}
+													</p>
 													<p className='text-sm text-muted-foreground'>
-														{application.applicant?.class_name || "Chưa có lớp"}
+														{application.applicant?.class_name ||
+															"Chưa có lớp"}
 													</p>
 												</div>
 											</TableCell>
-											<TableCell>{application.applicant?.email || "--"}</TableCell>
-											<TableCell>{application.applicant?.student_code || "--"}</TableCell>
-											<TableCell>{getStatusBadge(application.status)}</TableCell>
-											<TableCell>{formatDate(application.created_at)}</TableCell>
-											<TableCell>{formatDate(application.updated_at)}</TableCell>
+											<TableCell>
+												{application.applicant?.email || "--"}
+											</TableCell>
+											<TableCell>
+												{application.applicant?.student_code || "--"}
+											</TableCell>
+											<TableCell>
+												{getStatusBadge(application.status)}
+											</TableCell>
+											<TableCell>
+												{formatDate(application.created_at)}
+											</TableCell>
+											<TableCell>
+												{formatDate(application.updated_at)}
+											</TableCell>
 											<TableCell className='text-right'>
 												<DropdownMenu>
 													<DropdownMenuTrigger asChild>
@@ -420,14 +443,24 @@ function ApplicationRequestsPage() {
 															<MoreHorizontal className='h-4 w-4' />
 														</Button>
 													</DropdownMenuTrigger>
-													<DropdownMenuContent align='end' className='w-[190px]'>
+													<DropdownMenuContent
+														align='end'
+														className='w-[190px]'>
 														<DropdownMenuItem
-															onClick={() => navigate(`/requests/${application.id}`)}>
+															onClick={() =>
+																navigate(
+																	`/requests/${application.id}`,
+																)
+															}>
 															Xem chi tiết
 														</DropdownMenuItem>
 														<DropdownMenuItem
-															onClick={() => openStatusDialog(application)}
-															disabled={availableStatuses.length === 0}>
+															onClick={() =>
+																openStatusDialog(application)
+															}
+															disabled={
+																availableStatuses.length === 0
+															}>
 															Cập nhật trạng thái
 														</DropdownMenuItem>
 													</DropdownMenuContent>
@@ -449,8 +482,8 @@ function ApplicationRequestsPage() {
 								<TableCell colSpan={9}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex-1 text-sm text-muted-foreground'>
-											{paginatedApplications.length} of {sortedApplications.length} row(s)
-											displayed.
+											{paginatedApplications.length} of{" "}
+											{sortedApplications.length} row(s) displayed.
 										</div>
 										<div className='flex items-center space-x-6 lg:space-x-8'>
 											<div className='flex items-center space-x-2'>
@@ -458,17 +491,26 @@ function ApplicationRequestsPage() {
 												<Select
 													value={`${pagination.perPage}`}
 													onValueChange={(value) =>
-														setPagination({ currentPage: 1, perPage: Number(value) })
+														setPagination({
+															currentPage: 1,
+															perPage: Number(value),
+														})
 													}>
 													<SelectTrigger className='h-8 w-[70px]'>
-														<SelectValue placeholder={pagination.perPage} />
+														<SelectValue
+															placeholder={pagination.perPage}
+														/>
 													</SelectTrigger>
 													<SelectContent side='top'>
-														{[10, 20, 25, 30, 40, 50].map((pageSize) => (
-															<SelectItem key={pageSize} value={`${pageSize}`}>
-																{pageSize}
-															</SelectItem>
-														))}
+														{[10, 20, 25, 30, 40, 50].map(
+															(pageSize) => (
+																<SelectItem
+																	key={pageSize}
+																	value={`${pageSize}`}>
+																	{pageSize}
+																</SelectItem>
+															),
+														)}
 													</SelectContent>
 												</Select>
 											</div>
@@ -480,10 +522,15 @@ function ApplicationRequestsPage() {
 													variant='outline'
 													className='hidden h-8 w-8 p-0 lg:flex'
 													onClick={() =>
-														setPagination((prev) => ({ ...prev, currentPage: 1 }))
+														setPagination((prev) => ({
+															...prev,
+															currentPage: 1,
+														}))
 													}
 													disabled={currentPage === 1}>
-													<span className='sr-only'>Go to first page</span>
+													<span className='sr-only'>
+														Go to first page
+													</span>
 													<ChevronsLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -492,11 +539,16 @@ function ApplicationRequestsPage() {
 													onClick={() =>
 														setPagination((prev) => ({
 															...prev,
-															currentPage: Math.max(1, prev.currentPage - 1),
+															currentPage: Math.max(
+																1,
+																prev.currentPage - 1,
+															),
 														}))
 													}
 													disabled={currentPage === 1}>
-													<span className='sr-only'>Quay lại trang trước</span>
+													<span className='sr-only'>
+														Quay lại trang trước
+													</span>
 													<ChevronLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -505,11 +557,16 @@ function ApplicationRequestsPage() {
 													onClick={() =>
 														setPagination((prev) => ({
 															...prev,
-															currentPage: Math.min(totalPages, prev.currentPage + 1),
+															currentPage: Math.min(
+																totalPages,
+																prev.currentPage + 1,
+															),
 														}))
 													}
 													disabled={currentPage === totalPages}>
-													<span className='sr-only'>Đi đến trang tiếp theo</span>
+													<span className='sr-only'>
+														Đi đến trang tiếp theo
+													</span>
 													<ChevronRight className='h-4 w-4' />
 												</Button>
 												<Button
@@ -522,7 +579,9 @@ function ApplicationRequestsPage() {
 														}))
 													}
 													disabled={currentPage === totalPages}>
-													<span className='sr-only'>Đi đến trang cuối</span>
+													<span className='sr-only'>
+														Đi đến trang cuối
+													</span>
 													<ChevronsRight className='h-4 w-4' />
 												</Button>
 											</div>
@@ -565,28 +624,36 @@ function ApplicationRequestsPage() {
 										Trạng thái tiếp theo
 									</label>
 									<div className='flex flex-wrap gap-2' id='next-status'>
-										{getNextStatuses(statusDialogApplication.status).map((status) => {
-											const isActive = nextStatus === status;
-											const config = getStatusConfig(status);
-											return (
-												<Button
-													key={status}
-													type='button'
-													variant='outline'
-													onClick={() =>
-														setNextStatus(
-															status as UpdateApplicationStatusPayload["status"],
-														)
-													}
-													className={isActive ? `${config.className} border-current` : ""}>
-													{config.label}
-												</Button>
-											);
-										})}
+										{getNextStatuses(statusDialogApplication.status).map(
+											(status) => {
+												const isActive = nextStatus === status;
+												const config = getStatusConfig(status);
+												return (
+													<Button
+														key={status}
+														type='button'
+														variant='outline'
+														onClick={() =>
+															setNextStatus(
+																status as UpdateApplicationStatusPayload["status"],
+															)
+														}
+														className={
+															isActive
+																? `${config.className} border-current`
+																: ""
+														}>
+														{config.label}
+													</Button>
+												);
+											},
+										)}
 									</div>
 								</div>
 								<div className='grid gap-2'>
-									<label className='text-sm font-medium' htmlFor='application-note'>
+									<label
+										className='text-sm font-medium'
+										htmlFor='application-note'>
 										Ghi chú
 									</label>
 									<Textarea
@@ -605,7 +672,9 @@ function ApplicationRequestsPage() {
 									disabled={isSubmittingStatus}>
 									Hủy
 								</Button>
-								<Button onClick={handleSubmitStatusUpdate} disabled={isSubmittingStatus}>
+								<Button
+									onClick={handleSubmitStatusUpdate}
+									disabled={isSubmittingStatus}>
 									{isSubmittingStatus ? "Đang cập nhật..." : "Lưu thay đổi"}
 								</Button>
 							</DialogFooter>
