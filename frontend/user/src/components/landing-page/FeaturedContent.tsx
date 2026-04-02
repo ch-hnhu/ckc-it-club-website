@@ -1,41 +1,40 @@
 import React, { useEffect, useRef } from "react";
-import { Calendar, Clock, MapPin, BookOpen, User, Tag, ArrowRight } from "lucide-react";
+import { ArrowRight, BookOpen, Calendar, Clock, MapPin, Tag, User } from "lucide-react";
 
 const BLOG_POSTS = [
 	{
 		title: "Xây dựng REST API với Node.js và Express từ A đến Z",
 		date: "24 tháng 3, 2025",
-		tag: "Web Dev",
+		tag: "Web Developer",
 		tagBg: "var(--color-pastel-blue)",
 		excerpt: "Hướng dẫn chi tiết từng bước xây dựng API backend cho dự án thực tế...",
 		readTime: "8 phút đọc",
 	},
 	{
-		title: "Giới thiệu Machine Learning cho người mới bắt đầu",
+		title: "Giới thiệu Học máy cho người mới bắt đầu",
 		date: "20 tháng 3, 2025",
-		tag: "AI/ML",
+		tag: "AI/Học máy",
 		tagBg: "var(--color-pastel-green)",
-		excerpt:
-			"Bắt đầu hành trình AI không khó như bạn nghĩ. Cùng khám phá các khái niệm cơ bản...",
+		excerpt: "Bắt đầu hành trình AI không khó như bạn nghĩ. Cùng khám phá các khái niệm cơ bản...",
 		readTime: "12 phút đọc",
 	},
 	{
-		title: "Docker & Kubernetes: Containerize ứng dụng đơn giản",
+		title: "Docker & Kubernetes: Đóng gói ứng dụng đơn giản",
 		date: "16 tháng 3, 2025",
 		tag: "DevOps",
 		tagBg: "var(--color-pastel-yellow)",
-		excerpt: "Container hóa ứng dụng giúp deploy nhanh hơn, ổn định hơn. Tìm hiểu ngay...",
+		excerpt: "Đóng gói ứng dụng giúp triển khai nhanh hơn, ổn định hơn. Tìm hiểu ngay...",
 		readTime: "10 phút đọc",
 	},
 ];
 
 const UPCOMING_EVENT = {
-	title: "Hackathon CKC 2025 — Build for Impact",
+	title: "Cuộc thi lập trình CKC 2025 — Xây dựng sản phẩm tạo tác động",
 	date: "15 tháng 4, 2025",
 	time: "08:00 – 20:00",
 	location: "Hội trường A — Cao Thắng",
 	desc: "48 giờ để xây dựng sản phẩm giải quyết vấn đề thực tế. Giải thưởng 10 triệu đồng!",
-	tag: "Hackathon",
+	tag: "Cuộc thi lập trình",
 	daysLeft: 18,
 };
 
@@ -43,15 +42,15 @@ const COURSES = [
 	{
 		title: "React & TypeScript từ cơ bản đến nâng cao",
 		instructor: "Nguyễn Văn An",
-		level: "Intermediate",
+		level: "Trung cấp",
 		levelBg: "var(--color-pastel-blue)",
 		students: 234,
 		lessons: 32,
 	},
 	{
-		title: "Python Data Science & Machine Learning",
+		title: "Python Khoa học dữ liệu & Học máy",
 		instructor: "Phạm Minh Châu",
-		level: "Beginner",
+		level: "Cơ bản",
 		levelBg: "var(--color-pastel-green)",
 		students: 189,
 		lessons: 24,
@@ -77,95 +76,82 @@ const FeaturedContent: React.FC = () => {
 	return (
 		<section ref={sectionRef} id='blog' className='neo-section bg-white'>
 			<div className='neo-container'>
-				{/* Header */}
-				<div className='relative text-center mb-14 fade-in-up'>
-					{/* Decorative images */}
+				<div className='relative mb-14 text-center fade-in-up'>
 					<img
 						src='/assets/img/4.png'
 						alt=''
-						className='absolute -left-40 top-90 w-50 h-50 opacity-20 animate-float hidden lg:block rotate-[-15deg]'
+						className='absolute top-90 -left-40 hidden h-50 w-50 rotate-[-15deg] animate-float opacity-20 lg:block'
 					/>
 					<div className='section-divider' />
 					<h2
-						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
+						className='mt-4 text-3xl font-extrabold text-black sm:text-4xl'
 						style={{ fontFamily: "var(--font-heading)" }}>
 						Nội dung nổi bật
 					</h2>
-					<p className='text-gray-500 mt-3'>
-						Blog, sự kiện và khóa học được cộng đồng yêu thích nhất
+					<p className='mt-3 text-gray-500'>
+						Bài viết, sự kiện và khóa học được cộng đồng yêu thích nhất
 					</p>
 				</div>
 
-				<div className='flex flex-col lg:flex-row gap-8'>
-					{/* Col 1: Blog posts */}
-					<div className='fade-in-up space-y-5'>
+				<div className='flex flex-col gap-8 lg:flex-row'>
+					<div className='space-y-5 fade-in-up'>
 						<h3
-							className='font-bold text-xl text-black pb-3 border-b-2 border-black'
+							className='border-b-2 border-black pb-3 text-xl font-bold text-black'
 							style={{ fontFamily: "var(--font-heading)" }}>
-							✍️ Blog nổi bật
+							✍️ Bài viết nổi bật
 						</h3>
 						{BLOG_POSTS.map((post, i) => (
 							<a
 								key={i}
 								href='#blog'
-								className='block neo-card bg-white p-5 no-underline'
+								className='neo-card block bg-white p-5 no-underline'
 								style={{ transitionDelay: `${i * 0.1}s` }}>
 								<span
-									className='neo-tag text-[10px] mb-3 inline-block'
+									className='neo-tag mb-3 inline-block text-[10px]'
 									style={{ background: post.tagBg }}>
 									{post.tag}
 								</span>
 								<h4
-									className='font-bold text-sm text-black mb-2 line-clamp-2'
+									className='mb-2 line-clamp-2 text-sm font-bold text-black'
 									style={{ fontFamily: "var(--font-heading)" }}>
 									{post.title}
 								</h4>
-								<p className='text-xs text-gray-500 mb-3 line-clamp-2'>
-									{post.excerpt}
-								</p>
+								<p className='mb-3 line-clamp-2 text-xs text-gray-500'>{post.excerpt}</p>
 								<div className='flex items-center justify-between text-xs text-gray-400'>
 									<span className='flex items-center gap-1'>
-										<Clock className='w-3 h-3' />
+										<Clock className='h-3 w-3' />
 										{post.readTime}
 									</span>
 									<span>{post.date}</span>
 								</div>
 							</a>
 						))}
-						<a
-							href='#blog'
-							className='neo-btn neo-btn-secondary w-full justify-center text-sm'>
-							Xem tất cả bài viết <ArrowRight className='w-4 h-4' />
+						<a href='#blog' className='neo-btn neo-btn-secondary w-full justify-center text-sm'>
+							Xem tất cả bài viết <ArrowRight className='h-4 w-4' />
 						</a>
 					</div>
 
-					{/* Col 2: Event */}
-					<div className='fade-in-up space-y-5' style={{ transitionDelay: "0.1s" }}>
+					<div className='space-y-5 fade-in-up' style={{ transitionDelay: "0.1s" }}>
 						<h3
-							className='font-bold text-xl text-black pb-3 border-b-2 border-black mb-5'
+							className='mb-5 border-b-2 border-black pb-3 text-xl font-bold text-black'
 							style={{ fontFamily: "var(--font-heading)" }}>
-							🎉 Event sắp diễn ra
+							🎉 Sự kiện sắp diễn ra
 						</h3>
 						<div
-							className='neo-card p-6 flex flex-col gap-4 h-full'
+							className='neo-card flex h-full flex-col gap-4 p-6'
 							style={{ background: "var(--color-pastel-pink)" }}>
-							{/* Date badge */}
 							<div className='flex items-start justify-between'>
 								<div
-									className='px-3 py-2 rounded-xl text-center border-2 border-black bg-white'
+									className='rounded-xl border-2 border-black bg-white px-3 py-2 text-center'
 									style={{ boxShadow: "2px 2px 0px #111" }}>
 									<div
 										className='text-2xl font-extrabold text-black'
 										style={{ fontFamily: "var(--font-heading)" }}>
 										15
 									</div>
-									<div className='text-xs font-bold uppercase text-gray-500'>
-										Tháng 4
-									</div>
+									<div className='text-xs font-bold uppercase text-gray-500'>Tháng 4</div>
 								</div>
-								<span
-									className='neo-tag'
-									style={{ background: "var(--color-primary)" }}>
+								<span className='neo-tag' style={{ background: "var(--color-primary)" }}>
 									{UPCOMING_EVENT.tag}
 								</span>
 							</div>
@@ -179,18 +165,17 @@ const FeaturedContent: React.FC = () => {
 
 							<div className='space-y-2'>
 								<div className='flex items-center gap-2 text-xs text-gray-600'>
-									<Clock className='w-3.5 h-3.5' /> {UPCOMING_EVENT.time}
+									<Clock className='h-3.5 w-3.5' /> {UPCOMING_EVENT.time}
 								</div>
 								<div className='flex items-center gap-2 text-xs text-gray-600'>
-									<MapPin className='w-3.5 h-3.5' /> {UPCOMING_EVENT.location}
+									<MapPin className='h-3.5 w-3.5' /> {UPCOMING_EVENT.location}
 								</div>
 							</div>
 
-							{/* Countdown */}
 							<div
-								className='mt-auto rounded-xl p-3 text-center border-2 border-black bg-white'
+								className='mt-auto rounded-xl border-2 border-black bg-white p-3 text-center'
 								style={{ boxShadow: "2px 2px 0px #111" }}>
-								<span className='text-xs font-semibold text-gray-500 uppercase tracking-wide'>
+								<span className='text-xs font-semibold uppercase tracking-wide text-gray-500'>
 									Còn lại
 								</span>
 								<div
@@ -207,57 +192,50 @@ const FeaturedContent: React.FC = () => {
 							<a
 								href='#events'
 								className='neo-btn neo-btn-primary w-full justify-center text-sm'>
-								<Calendar className='w-4 h-4' /> Đăng ký tham gia
+								<Calendar className='h-4 w-4' /> Đăng ký tham gia
 							</a>
 						</div>
 					</div>
 
-					{/* Col 3: Courses */}
-					<div className='fade-in-up space-y-5' style={{ transitionDelay: "0.2s" }}>
+					<div className='space-y-5 fade-in-up' style={{ transitionDelay: "0.2s" }}>
 						<h3
-							className='font-bold text-xl text-black pb-3 border-b-2 border-black'
+							className='border-b-2 border-black pb-3 text-xl font-bold text-black'
 							style={{ fontFamily: "var(--font-heading)" }}>
-							🎓 Course nổi bật
+							🎓 Khóa học nổi bật
 						</h3>
 						{COURSES.map((course, i) => (
-							<a
-								key={i}
-								href='#courses'
-								className='block neo-card bg-white p-5 no-underline'>
-								{/* Course thumbnail placeholder */}
+							<a key={i} href='#courses' className='neo-card block bg-white p-5 no-underline'>
 								<div
-									className='w-full h-28 rounded-xl mb-4 flex items-center justify-center border-2 border-black'
+									className='mb-4 flex h-28 w-full items-center justify-center rounded-xl border-2 border-black'
 									style={{
 										background: `var(--color-pastel-${i === 0 ? "blue" : "green"})`,
 									}}>
-									<BookOpen className='w-10 h-10 text-black/40' />
+									<BookOpen className='h-10 w-10 text-black/40' />
 								</div>
 								<span
-									className='neo-tag text-[10px] mb-2 inline-block'
+									className='neo-tag mb-2 inline-block text-[10px]'
 									style={{ background: course.levelBg }}>
 									{course.level}
 								</span>
 								<h4
-									className='font-bold text-sm text-black mb-2 line-clamp-2'
+									className='mb-2 line-clamp-2 text-sm font-bold text-black'
 									style={{ fontFamily: "var(--font-heading)" }}>
 									{course.title}
 								</h4>
 								<div className='flex items-center justify-between text-xs text-gray-400'>
 									<span className='flex items-center gap-1'>
-										<User className='w-3 h-3' />
+										<User className='h-3 w-3' />
 										{course.instructor}
 									</span>
 									<span className='flex items-center gap-1'>
-										<Tag className='w-3 h-3' />
+										<Tag className='h-3 w-3' />
 										{course.lessons} bài
 									</span>
 								</div>
 							</a>
 						))}
-						<a
-							href='#courses'
-							className='neo-btn neo-btn-secondary w-full justify-center text-sm'>
-							Xem tất cả khóa học <ArrowRight className='w-4 h-4' />
+						<a href='#courses' className='neo-btn neo-btn-secondary w-full justify-center text-sm'>
+							Xem tất cả khóa học <ArrowRight className='h-4 w-4' />
 						</a>
 					</div>
 				</div>

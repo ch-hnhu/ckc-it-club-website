@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace Database\Seeders;
 
@@ -11,19 +11,22 @@ class FacultySeeder extends Seeder
     public function run(): void
     {
         $faculties = [
-            'Công nghệ Thông tin',
-            'Kinh tế Thương mại',
-            'Công nghệ Điện tử',
-            'Công nghệ Cơ khí',
-            'Kỹ thuật Ô tô',
+            'Cong nghe thong tin',
+            'Dien - Dien tu',
+            'Co khi',
+            'O to',
+            'Nhiet lanh',
+            'Tu dong hoa',
+            'Bo mon Kinh te',
+            'Cong nghiep',
         ];
 
         foreach ($faculties as $faculty) {
-            Faculty::firstOrCreate(
-                ['value' => $faculty],
+            Faculty::updateOrCreate(
+                ['slug' => Str::slug($faculty)],
                 [
+                    'value' => $faculty,
                     'label' => $faculty,
-                    'slug' => Str::slug($faculty)
                 ]
             );
         }

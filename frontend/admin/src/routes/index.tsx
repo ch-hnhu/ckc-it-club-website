@@ -1,10 +1,16 @@
 import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/Dashboard";
+import FacultyList from "@/pages/faculty/FacultyList";
+import MajorList from "@/pages/major/MajorList";
+import SchoolClassList from "@/pages/school-class/SchoolClassList";
 import UserList from "@/pages/user/UserList";
 import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage";
+import ApplicationDetailPage from "@/pages/recruitment/ApplicationDetailPage";
+import ApplicationQuestionsPage from "@/pages/recruitment/ApplicationQuestionsPage";
+import ApplicationQuestionDetailPage from "@/pages/recruitment/ApplicationQuestionDetailPage";
+import ApplicationAnswersPage from "@/pages/recruitment/ApplicationAnswersPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
-import LoginSuccess from "@/pages/auth/LoginSuccess";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NotFound from "@/pages/NotFound";
 
@@ -12,10 +18,6 @@ const router = createBrowserRouter([
 	{
 		path: "/login",
 		element: <LoginForm />,
-	},
-	{
-		path: "/login-success",
-		element: <LoginSuccess />,
 	},
 	{
 		path: "/",
@@ -35,8 +37,36 @@ const router = createBrowserRouter([
 				element: <UserList />,
 			},
 			{
+				path: "departments",
+				element: <FacultyList />,
+			},
+			{
+				path: "majors",
+				element: <MajorList />,
+			},
+			{
+				path: "classes",
+				element: <SchoolClassList />,
+			},
+			{
 				path: "requests",
 				element: <ApplicationRequestsPage />,
+			},
+			{
+				path: "requests/:applicationId",
+				element: <ApplicationDetailPage />,
+			},
+			{
+				path: "questions",
+				element: <ApplicationQuestionsPage />,
+			},
+			{
+				path: "questions/:questionId",
+				element: <ApplicationQuestionDetailPage />,
+			},
+			{
+				path: "answers",
+				element: <ApplicationAnswersPage />,
 			},
 		],
 	},
