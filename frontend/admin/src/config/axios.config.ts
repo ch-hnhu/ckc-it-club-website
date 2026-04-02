@@ -4,19 +4,18 @@ import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosRespon
 // Create axios instance
 const clientApi: AxiosInstance = axios.create({
 	baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
-	timeout: 30000, // 30 seconds
-	withCredentials: true, // Important for Sanctum cookies
+	timeout: 30000,
+	withCredentials: true,
 	headers: {
 		"Content-Type": "application/json",
 		Accept: "application/json",
-		"Accept-Language": "vi", // or "en" - for multi-language API
+		"Accept-Language": "vi",
 	},
 });
 
 // Request interceptor - runs before every request
 clientApi.interceptors.request.use(
 	(config: InternalAxiosRequestConfig) => {
-		// Add Authorization token if exists
 		const token = localStorage.getItem("access_token");
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
@@ -36,37 +35,35 @@ clientApi.interceptors.response.use(
 		return response;
 	},
 	(error: AxiosError) => {
-		// Error handling
 		if (error.response) {
 			const status = error.response.status;
 
 			switch (status) {
-				case 401:
-					// Unauthorized - redirect to login
+				case 401: {
 					console.error("Unauthorized! Redirecting to login...");
-					// localStorage.removeItem("access_token");
-					localStorage.clear();
+					localStorage.removeItem("access_token");
+					localStorage.removeItem("user");
 
-					window.location.href = "/login";
+					if (window.location.pathname !== "/login") {
+						sessionStorage.setItem("redirectPath", window.location.pathname + window.location.search);
+						window.location.href = "/login";
+					}
 					break;
+				}
 
 				case 403:
-					// Forbidden
 					console.error("Forbidden! You don't have permission");
 					break;
 
 				case 404:
-					// Not found
 					console.error("Resource not found!");
 					break;
 
 				case 422:
-					// Validation error
 					console.error("Validation error:", error.response.data);
 					break;
 
 				case 500:
-					// Server error
 					console.error("Server error!");
 					break;
 
@@ -74,10 +71,8 @@ clientApi.interceptors.response.use(
 					console.error("Error:", status, error.message);
 			}
 		} else if (error.request) {
-			// Request made but no response
 			console.error("No response from server!");
 		} else {
-			// Something else happened
 			console.error("Error:", error.message);
 		}
 
