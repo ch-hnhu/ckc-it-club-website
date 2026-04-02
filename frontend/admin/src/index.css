@@ -39,16 +39,9 @@
 }
 
 a:not([data-slot="button"]) {
-	font-weight: 500;
 	color: var(--primary);
 	text-decoration: inherit;
 	transition: color 0.2s;
-}
-
-a:not([data-slot="button"]):hover {
-	color: var(--primary);
-	text-decoration: underline;
-	opacity: 0.8;
 }
 
 @theme inline {
