@@ -7,6 +7,7 @@ import { ChartCard } from "../components/dashboard/ChartCard";
 import { SimpleChart } from "../components/dashboard/SimpleChart";
 import { RecentActivity } from "../components/dashboard/RecentActivity";
 import { MoreVertical } from "lucide-react";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 
 function Dashboard() {
 	const [health, setHealth] = useState<string>();
@@ -16,8 +17,9 @@ function Dashboard() {
 		healthService.getHealth().then((response) => {
 			setHealth(response.message);
 		});
-		
-		userService.getMe()
+
+		userService
+			.getMe()
 			.then((response) => {
 				if (response.success) {
 					setUser(response.data);
@@ -25,6 +27,9 @@ function Dashboard() {
 			})
 			.catch((err) => console.error("Failed to fetch user", err));
 	}, []);
+
+	const breadcrumb = [{ title: "Dashboard", link: "/dashboard" }];
+	useBreadcrumb(breadcrumb);
 
 	const chartData = [
 		{ name: "Jan", value: 400 },
@@ -77,7 +82,9 @@ function Dashboard() {
 							<h1 className='text-3xl font-bold text-foreground'>
 								{user ? `Xin chào, ${user.full_name || user.email}` : "Dashboard"}
 							</h1>
-							<p className='text-sm text-muted-foreground mt-1'>{health || "Loading..."}</p>
+							<p className='text-sm text-muted-foreground mt-1'>
+								{health || "Loading..."}
+							</p>
 						</div>
 						<div className='flex items-center gap-4'>
 							<button className='p-2 hover:bg-muted rounded-lg transition-colors'>
@@ -114,20 +121,32 @@ function Dashboard() {
 						<ChartCard title='Top Metrics' description='Key performance indicators'>
 							<div className='space-y-4'>
 								<div className='flex justify-between items-center pb-3 border-b border-border'>
-									<span className='text-sm text-muted-foreground'>Conversion Rate</span>
+									<span className='text-sm text-muted-foreground'>
+										Conversion Rate
+									</span>
 									<span className='text-lg font-bold text-foreground'>3.24%</span>
 								</div>
 								<div className='flex justify-between items-center pb-3 border-b border-border'>
-									<span className='text-sm text-muted-foreground'>Avg. Order Value</span>
-									<span className='text-lg font-bold text-foreground'>₫1,250</span>
+									<span className='text-sm text-muted-foreground'>
+										Avg. Order Value
+									</span>
+									<span className='text-lg font-bold text-foreground'>
+										₫1,250
+									</span>
 								</div>
 								<div className='flex justify-between items-center pb-3 border-b border-border'>
-									<span className='text-sm text-muted-foreground'>Bounce Rate</span>
+									<span className='text-sm text-muted-foreground'>
+										Bounce Rate
+									</span>
 									<span className='text-lg font-bold text-foreground'>42.5%</span>
 								</div>
 								<div className='flex justify-between items-center'>
-									<span className='text-sm text-muted-foreground'>Customer Lifetime Value</span>
-									<span className='text-lg font-bold text-foreground'>₫8,500</span>
+									<span className='text-sm text-muted-foreground'>
+										Customer Lifetime Value
+									</span>
+									<span className='text-lg font-bold text-foreground'>
+										₫8,500
+									</span>
 								</div>
 							</div>
 						</ChartCard>
