@@ -30,6 +30,9 @@ export function TeamSwitcher({
 }) {
 	const { isMobile } = useSidebar();
 	const [activeTeam, setActiveTeam] = React.useState(teams[0]);
+	const logo =
+		`${import.meta.env.VITE_BACKEND_URL}/storage/ckc-it-club-logo.jpg` ||
+		"http://localhost:8000/storage/ckc-it-club-logo.jpg";
 
 	if (!activeTeam) {
 		return null;
@@ -44,7 +47,7 @@ export function TeamSwitcher({
 							size='lg'
 							className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'>
 							<img
-								src={activeTeam.logo}
+								src={logo}
 								alt={activeTeam.name}
 								className='size-8 shrink-0 rounded-full object-contain'
 							/>
@@ -69,7 +72,7 @@ export function TeamSwitcher({
 								onClick={() => setActiveTeam(team)}
 								className='gap-2 p-2'>
 								<img
-									src={team.logo}
+									src={logo}
 									alt={team.name}
 									className='size-5 shrink-0 rounded-full object-contain'
 								/>
