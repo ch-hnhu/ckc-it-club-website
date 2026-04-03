@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
 	ArrowLeft,
@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getBreadcrumbsFromNavigation } from "@/config/navigation";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 
 function formatDate(dateString: string | null) {
 	if (!dateString) return "--";
@@ -71,6 +73,15 @@ function ApplicationQuestionDetailPage() {
 	const [question, setQuestion] = useState<ApplicationQuestionRecord | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const breadcrumb = useMemo(
+		() =>
+			getBreadcrumbsFromNavigation("/questions", [
+				{ title: question ? question.label : `Câu hỏi #${questionId ?? "--"}` },
+			]),
+		[question, questionId],
+	);
+
+	useBreadcrumb(breadcrumb);
 
 	useEffect(() => {
 		let mounted = true;

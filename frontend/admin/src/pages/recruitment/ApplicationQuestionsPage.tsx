@@ -36,6 +36,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { getBreadcrumbsFromNavigation } from "@/config/navigation";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { cn } from "@/lib/utils";
 import applicationService from "@/services/application.service";
 import type {
@@ -257,6 +259,10 @@ function renderQuestionPreview(
 }
 
 function ApplicationQuestionsPage() {
+	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/questions"), []);
+
+	useBreadcrumb(breadcrumb);
+
 	const navigate = useNavigate();
 	const [questions, setQuestions] = useState<ApplicationQuestionRecord[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -600,26 +606,26 @@ function ApplicationQuestionsPage() {
 					</p>
 				</div>
 				{draftQuestion ? (
-					<div className='flex flex-wrap items-center gap-2'>
+					<div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center md:justify-end'>
 						{isDirty ? (
-							<Badge className='rounded-full bg-amber-500/10 px-3 py-1 text-amber-700 hover:bg-amber-500/10'>
+							<Badge className='w-fit rounded-full bg-amber-500/10 px-3 py-1 text-amber-700 hover:bg-amber-500/10'>
 								Chưa lưu
 							</Badge>
 						) : (
-							<Badge variant='outline' className='rounded-full px-3 py-1'>
+							<Badge variant='outline' className='w-fit rounded-full px-3 py-1'>
 								Đồng bộ với dữ liệu hiện tại
 							</Badge>
 						)}
 						<Button
 							variant='outline'
-							className='h-9 rounded-xl px-3.5 text-sm'
+							className='h-9 w-full justify-center rounded-xl px-3.5 text-sm sm:w-auto'
 							disabled={!draftQuestion || !isDirty || saving}
 							onClick={handleDiscardChanges}>
 							<RotateCcw className='h-4 w-4' />
 							Hoàn tác
 						</Button>
 						<Button
-							className='h-9 rounded-xl px-3.5 text-sm'
+							className='h-9 w-full justify-center rounded-xl px-3.5 text-sm sm:w-auto'
 							disabled={!draftQuestion || !isDirty || saving}
 							onClick={() => void handleSaveQuestion()}>
 							<Save className='h-4 w-4' />
@@ -715,7 +721,7 @@ function ApplicationQuestionsPage() {
 												) : null}
 											</div>
 
-											<div className='pointer-events-none flex items-center gap-1 rounded-full border border-border/80 bg-background/95 p-1 opacity-0 shadow-sm transition group-hover:pointer-events-auto group-hover:opacity-100'>
+											<div className='flex items-center gap-1 rounded-full border border-border/80 bg-background/95 p-1 opacity-100 shadow-sm transition md:pointer-events-none md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:opacity-100'>
 												<Button
 													variant='ghost'
 													size='icon'
@@ -1038,14 +1044,14 @@ function ApplicationQuestionsPage() {
 						</p>
 					</div>
 
-					<div className='flex flex-wrap items-center gap-2'>
-						<div className='rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold shadow-sm'>
+					<div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center'>
+						<div className='rounded-full border border-border bg-background px-4 py-2 text-center text-sm font-semibold shadow-sm'>
 							{visibleCount} câu hỏi đang hiển thị
 						</div>
 						{selectedQuestion ? (
 							<Button
 								variant='outline'
-								className='h-9 rounded-xl border-border bg-background px-3.5 text-sm shadow-sm'
+								className='h-9 w-full justify-center rounded-xl border-border bg-background px-3.5 text-sm shadow-sm sm:w-auto'
 								onClick={() => navigate(`/questions/${selectedQuestion.id}`)}>
 								<Eye className='h-4 w-4' />
 								Xem chi tiết
@@ -1053,7 +1059,7 @@ function ApplicationQuestionsPage() {
 						) : null}
 						<Button
 							variant='outline'
-							className='h-9 rounded-xl border-border bg-background px-3.5 text-sm shadow-sm'
+							className='hidden h-9 rounded-xl border-border bg-background px-3.5 text-sm shadow-sm lg:inline-flex'
 							onClick={() => setToolRailCollapsed((prev) => !prev)}>
 							<LayoutPanelLeft className='h-4 w-4' />
 							{toolRailCollapsed ? "Mở thư viện trường" : "Thu gọn thư viện"}
@@ -1062,11 +1068,11 @@ function ApplicationQuestionsPage() {
 				</div>
 			</div>
 
-			<div className='grid min-h-[calc(100vh-10rem)] gap-4 p-4 md:p-6 lg:grid-cols-[auto_minmax(0,1fr)] lg:px-8'>
+			<div className='grid min-h-[calc(100vh-10rem)] items-start gap-4 p-4 md:p-6 lg:grid-cols-[auto_minmax(0,1fr)] lg:px-8'>
 				<Card
 					className={cn(
-						"sticky top-4 h-fit rounded-[24px] border-border/70 bg-background/90 shadow-lg backdrop-blur",
-						toolRailCollapsed ? "w-[88px]" : "w-full lg:w-[280px]",
+						"h-fit rounded-[24px] border-border/70 bg-background/90 shadow-lg backdrop-blur lg:sticky lg:top-4",
+						toolRailCollapsed ? "w-full lg:w-[88px]" : "w-full lg:w-[280px]",
 					)}>
 					<CardContent className='p-3'>
 						<div className='mb-3 flex items-center justify-between gap-2 px-2 pt-2'>
@@ -1077,7 +1083,7 @@ function ApplicationQuestionsPage() {
 							<Button
 								variant='ghost'
 								size='icon'
-								className='h-8 w-8 rounded-xl'
+								className='hidden h-8 w-8 rounded-xl lg:inline-flex'
 								onClick={() => setToolRailCollapsed((prev) => !prev)}>
 								{toolRailCollapsed ? <PanelRightOpen className='h-4 w-4' /> : <PanelRightClose className='h-4 w-4' />}
 							</Button>

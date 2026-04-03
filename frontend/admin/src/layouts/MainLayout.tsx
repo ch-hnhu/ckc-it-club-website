@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
 
 import { AppSidebar } from "../components/layout/AppSidebar";
@@ -12,6 +12,10 @@ export type OutletContextType = {
 
 function MainLayout() {
 	const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItemType[]>([{ title: "Dashboard" }]);
+	const outletContext = useMemo(
+		() => ({ setBreadcrumbs } satisfies OutletContextType),
+		[setBreadcrumbs],
+	);
 
 	return (
 		<SidebarProvider>
@@ -23,7 +27,7 @@ function MainLayout() {
 				<div className='relative flex flex-1 overflow-hidden'>
 					<main className='flex flex-1 flex-col overflow-hidden'>
 						<div className='flex-1 overflow-auto'>
-							<Outlet context={{ setBreadcrumbs } satisfies OutletContextType} />
+							<Outlet context={outletContext} />
 						</div>
 					</main>
 				</div>

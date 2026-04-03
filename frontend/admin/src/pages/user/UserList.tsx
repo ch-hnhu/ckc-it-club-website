@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import userService from "@/services/user.service";
 import type { User } from "@/types/user.type";
 
@@ -61,7 +61,10 @@ function UserList() {
 		order: "desc",
 	});
 
-	const breadcrumb = [{ title: "Dashboard", link: "/" }, { title: "Quản lý người dùng" }];
+	const breadcrumb = useMemo(
+		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý người dùng" }],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 

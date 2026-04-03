@@ -29,11 +29,11 @@
 	--chart-4: oklch(0.828 0.189 84.429);
 	--chart-5: oklch(0.769 0.188 70.08);
 	--sidebar: oklch(0.988 0.012 134);
-	--sidebar-foreground: oklch(0.24 0.03 145);
+	--sidebar-foreground: var(--foreground);
 	--sidebar-primary: oklch(0.47 0.09 145);
 	--sidebar-primary-foreground: oklch(0.985 0.01 120);
 	--sidebar-accent: oklch(0.968 0.024 138);
-	--sidebar-accent-foreground: oklch(0.28 0.028 145);
+	--sidebar-accent-foreground: var(--foreground);
 	--sidebar-border: oklch(0.905 0.018 136);
 	--sidebar-ring: oklch(0.74 0.05 142);
 	--scrollbar-track: oklch(0.965 0.014 135);
@@ -45,6 +45,10 @@ a:not([data-slot="button"]) {
 	color: var(--primary);
 	text-decoration: inherit;
 	transition: color 0.2s;
+}
+
+a[data-slot="sidebar-menu-sub-button"] {
+	color: var(--sidebar-foreground);
 }
 
 @theme inline {

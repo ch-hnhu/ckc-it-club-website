@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -61,6 +61,7 @@ import {
 	getStatusBadge,
 	getStatusConfig,
 } from "./application-detail-shared";
+import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 
 const statusOptions: Array<{ value: ApplicationStatus | "all"; label: string }> = [
@@ -101,10 +102,7 @@ function getSortValue(application: ClubApplicationRecord, key: SortKey) {
 }
 
 function ApplicationRequestsPage() {
-	const breadcrumb = [
-		{ title: "Dashboard", link: "/" },
-		{ title: "Quản lý đơn ứng tuyển", link: "/requests" },
-	];
+	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/requests"), []);
 
 	useBreadcrumb(breadcrumb);
 
@@ -286,7 +284,7 @@ function ApplicationRequestsPage() {
 						<DropdownMenuTrigger asChild>
 							<Button variant='outline' size='sm' className='h-8'>
 								<Settings2 className='h-4 w-4' />
-								View
+								Xem theo trạng thái
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align='end' className='w-[220px]'>
