@@ -22,7 +22,7 @@ const data = {
 	navHead: [
 		{
 			name: "CKC IT CLUB",
-			logo: "../../public/img/ckc-it-club-logo.jpg",
+			logo: "https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg",
 			role: "Quản trị viên",
 		},
 	],
