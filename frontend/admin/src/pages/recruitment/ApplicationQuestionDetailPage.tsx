@@ -142,17 +142,17 @@ function ApplicationQuestionDetailPage() {
 			</Button>
 
 			<div className='overflow-hidden rounded-3xl border border-border bg-card shadow-sm'>
-				<div className='border-b border-border bg-primary px-6 py-6 text-primary-foreground md:px-8 md:py-7'>
+				<div className='border-b border-border bg-background/60 px-6 py-6 md:px-8 md:py-7'>
 					<div className='mb-3 flex flex-wrap items-center gap-2'>
-						<Badge className='border border-primary-foreground/20 bg-primary-foreground text-primary hover:bg-primary-foreground'>
+						<Badge variant='secondary'>
 							Câu hỏi #{question.id}
 						</Badge>
-						<Badge variant='outline' className='border-primary-foreground/30 text-primary-foreground'>
+						<Badge variant='outline'>
 							{question.type}
 						</Badge>
 					</div>
-					<h1 className='text-2xl font-semibold leading-tight md:text-4xl'>{question.label}</h1>
-					<p className='mt-3 max-w-3xl text-base leading-7 text-primary-foreground/75 md:text-lg'>
+					<h1 className='text-2xl font-semibold leading-tight text-foreground md:text-4xl'>{question.label}</h1>
+					<p className='mt-3 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg'>
 						Chi tiết cấu hình câu hỏi ứng tuyển và danh sách lựa chọn nếu có.
 					</p>
 				</div>

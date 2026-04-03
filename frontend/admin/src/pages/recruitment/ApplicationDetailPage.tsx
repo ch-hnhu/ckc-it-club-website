@@ -80,19 +80,19 @@ function ApplicationDetailPage() {
 			</Button>
 
 			<div className='overflow-hidden rounded-3xl border border-border bg-card shadow-sm'>
-				<div className='border-b border-border bg-primary px-6 py-6 text-primary-foreground md:px-8 md:py-7'>
+				<div className='border-b border-border bg-background/60 px-6 py-6 md:px-8 md:py-7'>
 					<div className='mb-3 flex flex-wrap items-center gap-2'>
-						<Badge className='border border-primary-foreground/20 bg-primary-foreground text-primary hover:bg-primary-foreground'>
+						<Badge variant='secondary'>
 							Hồ sơ #{application.id}
 						</Badge>
-						<div className='[&_span]:border-primary-foreground/30 [&_span]:bg-transparent [&_span]:text-primary-foreground'>
+						<div>
 							{getStatusBadge(application.status)}
 						</div>
 					</div>
-					<h1 className='text-2xl font-semibold leading-tight md:text-4xl'>
+					<h1 className='text-2xl font-semibold leading-tight text-foreground md:text-4xl'>
 						Hồ sơ #{application.id} - {getApplicantName(application)}
 					</h1>
-					<p className='mt-3 max-w-3xl text-base leading-7 text-primary-foreground/75 md:text-lg'>
+					<p className='mt-3 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg'>
 						Chi tiết hồ sơ ứng tuyển và các câu trả lời đang lưu trong hệ thống.
 					</p>
 				</div>
