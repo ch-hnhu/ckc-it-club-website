@@ -4,6 +4,7 @@ return [
     'paths' => [
         'api/*',
         'sanctum/csrf-cookie',
+        'storage/*',
     ],
 
     'allowed_methods' => ['*'], // GET, POST, PUT, PATCH, DELETE, OPTIONS
