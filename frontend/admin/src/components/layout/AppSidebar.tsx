@@ -31,7 +31,6 @@ const data = {
 			title: "Dashboard",
 			url: "/",
 			icon: House,
-			isActive: true,
 			items: [
 				{
 					title: "Thống kê",

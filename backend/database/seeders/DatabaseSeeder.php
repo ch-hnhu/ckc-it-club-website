@@ -14,7 +14,6 @@ class DatabaseSeeder extends Seeder
             FacultySeeder::class,
             MajorSeeder::class,
             SchoolClassSeeder::class,
-            UserSeeder::class,
             ContactSeeder::class,
             ApplicationQuestionSeeder::class,
             ApplicationQuestionOptionSeeder::class,
