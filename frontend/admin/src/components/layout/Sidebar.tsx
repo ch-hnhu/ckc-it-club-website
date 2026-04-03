@@ -98,7 +98,9 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 									className='text-foreground hover:bg-muted flex w-full items-center justify-between rounded-lg px-3 py-2 transition-colors group'>
 									<div className='flex flex-1 items-center gap-3'>
 										<Icon className='text-muted-foreground group-hover:text-primary h-4 w-4' />
-										<span className='text-xs font-medium lg:text-sm'>{item.label}</span>
+										<span className='text-xs font-medium lg:text-sm'>
+											{item.label}
+										</span>
 									</div>
 									<ChevronRight
 										className={`text-muted-foreground h-4 w-4 transition-transform ${

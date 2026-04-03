@@ -41,6 +41,7 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 
 function UserList() {
 	const [users, setUsers] = useState<User[]>([]);
@@ -59,6 +60,10 @@ function UserList() {
 		key: "created_at",
 		order: "desc",
 	});
+
+	const breadcrumb = [{ title: "Dashboard", link: "/" }, { title: "Quản lý người dùng" }];
+
+	useBreadcrumb(breadcrumb);
 
 	// Debounce search
 	useEffect(() => {
@@ -124,7 +129,7 @@ function UserList() {
 				<div className='flex flex-col gap-1'>
 					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý người dùng</h2>
 					<p className='text-muted-foreground'>
-						Đây là danh sách tất cả người dùng trong hệ thống.
+						Danh sách tất cả người dùng trong hệ thống.
 					</p>
 				</div>
 			</div>
@@ -141,11 +146,11 @@ function UserList() {
 					<div className='flex items-center gap-2'>
 						<Button variant='outline' size='sm' className='h-8 lg:flex'>
 							<Settings2 className='h-4 w-4' />
-							View
+							Lọc
 						</Button>
 						<Button size='sm' className='h-8'>
 							<Plus className='h-4 w-4' />
-							Thêm người dùng mới
+							Thêm
 						</Button>
 					</div>
 				</div>
@@ -244,7 +249,7 @@ function UserList() {
 							{users.length === 0 && (
 								<TableRow>
 									<TableCell colSpan={6} className='h-24 text-center'>
-										Không tìm thấy người dùng nào.
+										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
 							)}
@@ -254,7 +259,7 @@ function UserList() {
 								<TableCell colSpan={6}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex-1 text-sm text-muted-foreground'>
-											{users.length} of {meta.total} row(s) displayed.
+											Đang hiện {users.length} trên tổng {meta.total} dòng.
 										</div>
 										<div className='flex items-center space-x-6 lg:space-x-8'>
 											<div className='flex items-center space-x-2'>
@@ -343,7 +348,9 @@ function UserList() {
 														}))
 													}
 													disabled={meta.current_page === meta.last_page}>
-													<span className='sr-only'>Đi đến trang cuối</span>
+													<span className='sr-only'>
+														Đi đến trang cuối
+													</span>
 													<ChevronsRight className='h-4 w-4' />
 												</Button>
 											</div>
