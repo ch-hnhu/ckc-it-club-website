@@ -11,24 +11,21 @@ class FacultySeeder extends Seeder
     public function run(): void
     {
         $faculties = [
-            'Công nghệ Thông tin',
-            'Kinh tế Thương mại',
-            'Công nghệ Điện tử',
-            'Công nghệ Cơ khí',
-            'Kỹ thuật Ô tô',
-            'Quản trị Kinh doanh',
-            'Thiết kế Đồ họa',
-            'Ngôn ngữ Anh',
-            'Du lịch - Nhà hàng - Khách sạn',
-            'Tài chính - Kế toán',
+            'Công nghệ thông tin',
+            'Cơ khí',
+            'Cơ khí động lực',
+            'Điện - Điện tử',
+            'Công nghệ nhiệt - lạnh',
+            'Giáo dục đại cương',
+            'Bộ môn Kinh tế',
         ];
 
         foreach ($faculties as $faculty) {
-            Faculty::firstOrCreate(
-                ['value' => $faculty],
+            Faculty::updateOrCreate(
+                ['slug' => Str::slug($faculty)],
                 [
+                    'value' => $faculty,
                     'label' => $faculty,
-                    'slug' => Str::slug($faculty),
                 ]
             );
         }

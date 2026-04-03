@@ -1,6 +1,9 @@
 import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/Dashboard";
+import FacultyList from "@/pages/faculty/FacultyList";
+import MajorList from "@/pages/major/MajorList";
+import SchoolClassList from "@/pages/school-class/SchoolClassList";
 import UserList from "@/pages/user/UserList";
 import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage";
 import ApplicationDetailPage from "@/pages/recruitment/ApplicationDetailPage";
@@ -32,6 +35,18 @@ const router = createBrowserRouter([
 			{
 				path: "users",
 				element: <UserList />,
+			},
+			{
+				path: "departments",
+				element: <FacultyList />,
+			},
+			{
+				path: "majors",
+				element: <MajorList />,
+			},
+			{
+				path: "classes",
+				element: <SchoolClassList />,
 			},
 			{
 				path: "requests",
