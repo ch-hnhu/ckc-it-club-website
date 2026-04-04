@@ -3,10 +3,11 @@ import Navbar from "@/components/partials/Navbar";
 import Footer from "@/components/partials/Footer";
 import BackToTop from "@/components/partials/BackToTop";
 import { getCurrentUser, type AuthUser } from "@/services/auth.service";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 const MainLayout: React.FC = () => {
 	const [user, setUser] = useState<AuthUser | null>(null);
+	const { pathname } = useLocation();
 
 	const refreshUser = useCallback(async () => {
 		const currentUser = await getCurrentUser();
@@ -16,6 +17,10 @@ const MainLayout: React.FC = () => {
 	useEffect(() => {
 		refreshUser();
 	}, [refreshUser]);
+
+	useEffect(() => {
+		window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+	}, [pathname]);
 
 	return (
 		<div className='min-h-screen bg-white text-black flex flex-col'>

@@ -84,7 +84,7 @@ const BoardSection: React.FC = () => {
 						Ban Chủ Nhiệm
 					</h2>
 					<p className='text-gray-500 mt-3'>
-						Những người dẫn dắt và xây dựng CKC IT Club
+						Những người dẫn dắt và xây dựng CKC IT CLUB
 					</p>
 				</div>
 
