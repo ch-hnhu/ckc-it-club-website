@@ -21,7 +21,7 @@ const HeroSection: React.FC = () => {
 		<>
 			<section
 				ref={heroRef}
-				className='relative min-h-screen flex items-center overflow-hidden bg-white pt-16'>
+				className='relative min-h-screen flex items-center overflow-x-hidden bg-white pt-16'>
 				{/* Pastel blob decorations */}
 
 				<div className='neo-container px-6 relative z-10'>
@@ -134,7 +134,7 @@ const HeroSection: React.FC = () => {
 					/>
 					<img
 						src='/assets/svg/21.svg'
-						className='absolute top-[42%] left-[-3%] w-44 md:w-56 opacity-70 animate-float'
+						className='absolute top-[42%] left-[2%] hidden md:block w-44 md:w-56 opacity-70 animate-float'
 						style={{ animationDelay: "2s" }}
 					/>
 					<img
@@ -151,7 +151,7 @@ const HeroSection: React.FC = () => {
 					/>
 					<img
 						src='/assets/svg/24.svg'
-						className='absolute top-[50%] right-[-4%] w-52 md:w-64 opacity-60 animate-float'
+						className='absolute top-[50%] right-[2%] hidden md:block w-52 md:w-64 opacity-60 animate-float'
 						style={{ animationDelay: "3s" }}
 					/>
 					<img

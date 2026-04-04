@@ -1,25 +1,25 @@
-/* App.css — CKC IT Club User Frontend */
+/* App.css — CKC IT CLUB User Frontend */
 /* All global styles are in src/index.css */
 /* Component-specific overrides can go here */
 
 /* Line-clamp utility (for older browsers) */
 .line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 }
 
 /* Smooth scroll offset for sticky header */
 [id] {
-  scroll-margin-top: 80px;
+	scroll-margin-top: 80px;
 }
 
 /* No scrollbar utility */
 .no-scrollbar::-webkit-scrollbar {
-  display: none;
+	display: none;
 }
 .no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 }
