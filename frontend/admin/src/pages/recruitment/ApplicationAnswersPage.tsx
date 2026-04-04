@@ -83,7 +83,7 @@ function MetricCard({
 			<CardContent className='p-5'>
 				<div className='flex items-start justify-between gap-4'>
 					<div className='space-y-1'>
-						<p className='text-sm font-semibold text-emerald-700 dark:text-emerald-300'>{label}</p>
+						<p className='text-sm font-semibold text-foreground'>{label}</p>
 						<p className='text-foreground text-3xl font-semibold tracking-tight'>{value}</p>
 						<p className='text-muted-foreground text-sm leading-6'>{description}</p>
 					</div>
@@ -257,7 +257,7 @@ function ApplicationAnswersPage() {
 								Trang quản lý câu trả lời tuyển thành viên
 							</Badge>
 							<div className='space-y-3'>
-								<h1 className='max-w-3xl text-[1.85rem] font-semibold leading-tight text-emerald-950 md:text-[2.8rem] md:leading-[1.08] xl:text-[3.05rem] dark:text-emerald-50'>
+								<h1 className='text-foreground max-w-3xl text-[1.85rem] font-semibold leading-tight md:text-[2.8rem] md:leading-[1.08] xl:text-[3.05rem]'>
 									Duyệt câu trả lời theo từng ứng viên, không cần mở từng hồ sơ riêng lẻ
 								</h1>
 								<p className='max-w-2xl text-sm leading-7 text-emerald-950/72 md:text-base dark:text-emerald-50/70'>
@@ -270,7 +270,7 @@ function ApplicationAnswersPage() {
 								{selectedApplication ? (
 									<Button
 										asChild
-										className='h-11 rounded-2xl bg-emerald-600 px-4 text-white shadow-sm hover:bg-emerald-500 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400'>
+										className='h-11 rounded-2xl bg-foreground px-4 text-background shadow-sm hover:bg-foreground/90'>
 										<Link to={`/requests/${selectedApplication.id}`}>
 											<CheckCheck className='size-4' />
 											Mở hồ sơ #{selectedApplication.id}
@@ -298,7 +298,7 @@ function ApplicationAnswersPage() {
 						<div className='self-start rounded-[28px] border border-emerald-500/15 bg-background/82 p-5 shadow-sm backdrop-blur'>
 							<div className='flex items-start justify-between gap-4'>
 								<div className='space-y-2'>
-									<p className='inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300'>
+									<p className='text-foreground inline-flex items-center gap-2 text-sm font-semibold'>
 										<BarChart3 className='size-4' />
 										Nhịp xử lý hồ sơ
 									</p>
@@ -391,14 +391,14 @@ function ApplicationAnswersPage() {
 										Chọn một hồ sơ để xem toàn bộ câu trả lời ở khung bên phải.
 									</CardDescription>
 								</div>
-								<div className='rounded-full border border-border bg-background px-3 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300'>
+								<div className='text-foreground rounded-full border border-border bg-background px-3 py-1.5 text-sm font-medium'>
 									{filteredApplications.length} hồ sơ
 								</div>
 							</div>
 
 							<div className='grid gap-3'>
 								<div className='flex flex-wrap items-center gap-2'>
-									<div className='inline-flex items-center gap-2 rounded-full border border-emerald-500/15 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300'>
+									<div className='text-foreground inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium'>
 										<Search className='size-3.5' />
 										Tìm kiếm nhanh
 									</div>
@@ -496,7 +496,7 @@ function ApplicationAnswersPage() {
 													</div>
 													<Badge
 														variant='outline'
-														className='rounded-full border-border bg-background text-primary'>
+														className='rounded-full border-border bg-background text-foreground'>
 														{application.answers.length} câu
 													</Badge>
 												</div>
@@ -563,7 +563,7 @@ function ApplicationAnswersPage() {
 										</div>
 										<Button
 											asChild
-											className='h-11 rounded-2xl bg-emerald-600 px-4 text-white shadow-sm hover:bg-emerald-500 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400'>
+											className='h-11 rounded-2xl bg-foreground px-4 text-background shadow-sm hover:bg-foreground/90'>
 											<Link to={`/requests/${selectedApplication.id}`}>
 												Mở hồ sơ chi tiết
 												<ArrowRight className='size-4' />
@@ -575,7 +575,7 @@ function ApplicationAnswersPage() {
 								<CardContent className='space-y-6 p-5 md:p-6'>
 									<div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
 										<div className='rounded-[22px] border border-border bg-muted/40 p-4'>
-											<div className='flex items-center gap-2 text-primary'>
+											<div className='flex items-center gap-2 text-foreground'>
 												<UserRound className='size-4' />
 												<p className='text-sm font-medium'>Ứng viên</p>
 											</div>
@@ -584,7 +584,7 @@ function ApplicationAnswersPage() {
 											</p>
 										</div>
 										<div className='rounded-[22px] border border-border bg-muted/40 p-4'>
-											<div className='flex items-center gap-2 text-primary'>
+											<div className='flex items-center gap-2 text-foreground'>
 												<Mail className='size-4' />
 												<p className='text-sm font-medium'>Liên hệ</p>
 											</div>
@@ -593,7 +593,7 @@ function ApplicationAnswersPage() {
 											</p>
 										</div>
 										<div className='rounded-[22px] border border-border bg-muted/40 p-4'>
-											<div className='flex items-center gap-2 text-primary'>
+											<div className='flex items-center gap-2 text-foreground'>
 												<FileText className='size-4' />
 												<p className='text-sm font-medium'>Thông tin lớp</p>
 											</div>
@@ -602,7 +602,7 @@ function ApplicationAnswersPage() {
 											</p>
 										</div>
 										<div className='rounded-[22px] border border-border bg-muted/40 p-4'>
-											<div className='flex items-center gap-2 text-primary'>
+											<div className='flex items-center gap-2 text-foreground'>
 												<Sparkles className='size-4' />
 												<p className='text-sm font-medium'>Ghi chú duyệt</p>
 											</div>
@@ -615,7 +615,7 @@ function ApplicationAnswersPage() {
 									<div className='rounded-[26px] border border-border bg-muted/20 p-4 md:p-5'>
 										<div className='flex flex-wrap items-center justify-between gap-3'>
 											<div>
-												<p className='text-sm font-semibold uppercase tracking-[0.18em] text-primary'>
+												<p className='text-foreground text-sm font-semibold uppercase tracking-[0.18em]'>
 													Câu trả lời biểu mẫu
 												</p>
 												<p className='mt-2 text-xl font-semibold text-foreground'>
@@ -636,7 +636,7 @@ function ApplicationAnswersPage() {
 														<div className='flex flex-wrap items-start justify-between gap-3'>
 															<div className='space-y-2'>
 																<div className='flex flex-wrap items-center gap-2'>
-																	<p className='text-xs font-semibold uppercase tracking-[0.16em] text-primary'>
+																	<p className='text-foreground text-xs font-semibold uppercase tracking-[0.16em]'>
 																		Câu {index + 1}
 																	</p>
 																	<Badge variant='secondary' className='rounded-full'>
@@ -649,7 +649,7 @@ function ApplicationAnswersPage() {
 															</div>
 															<Badge
 																variant='outline'
-																className='rounded-full border-border bg-muted/30 text-primary'>
+																className='rounded-full border-border bg-muted/30 text-foreground'>
 																Q-{answer.question_id}
 															</Badge>
 														</div>

@@ -116,7 +116,7 @@ function SchoolClassList() {
 					</div>
 					<div className='flex items-center gap-2'>
 						<Button variant='outline' size='sm' className='h-8 lg:flex'><Settings2 className='h-4 w-4' />View</Button>
-						<Button size='sm' className='h-8'><Plus className='h-4 w-4' />Thêm lớp</Button>
+						<Button size='sm' className='h-8 bg-foreground text-background hover:bg-foreground/90'><Plus className='h-4 w-4' />Thêm lớp</Button>
 					</div>
 				</div>
 				<div className='overflow-hidden rounded-md border'>

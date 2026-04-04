@@ -151,7 +151,9 @@ function UserList() {
 							<Settings2 className='h-4 w-4' />
 							Lọc
 						</Button>
-						<Button size='sm' className='h-8'>
+						<Button
+							size='sm'
+							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 							<Plus className='h-4 w-4' />
 							Thêm
 						</Button>
