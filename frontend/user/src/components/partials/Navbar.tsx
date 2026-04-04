@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Code2, LogIn, Menu, UserPlus, X } from "lucide-react";
+import { LogIn, Menu, UserPlus, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
 	clearAccessToken,
