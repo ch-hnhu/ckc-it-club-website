@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useEffect, useState } from "react";
 
 import { NavMain } from "@/components/layout/NavMain";
 import { NavUser } from "@/components/layout/NavUser";
@@ -13,9 +14,8 @@ import {
 	SidebarHeader,
 	SidebarRail,
 } from "@/components/ui/sidebar";
-import { useEffect, useState } from "react";
-import type { User as UserType } from "@/types/user.type";
 import userService from "@/services/user.service";
+import type { User as UserType } from "@/types/user.type";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const [user, setUser] = useState<UserType | null>(null);
