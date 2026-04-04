@@ -110,6 +110,11 @@
 		box-shadow: var(--neo-shadow-hover);
 	}
 
+	.neo-card-static:hover {
+		transform: none;
+		box-shadow: var(--neo-shadow);
+	}
+
 	.neo-btn {
 		display: inline-flex;
 		align-items: center;
@@ -227,12 +232,33 @@
 	}
 }
 
+@keyframes bubbleRise {
+	0% {
+		transform: translateY(0) scale(1);
+		opacity: 0.8;
+	}
+	10% {
+		opacity: 1;
+	}
+	80% {
+		opacity: 0.3;
+	}
+	100% {
+		transform: translateY(-120%) scale(0.6);
+		opacity: 0;
+	}
+}
+
 .animate-fade-in {
 	animation: fadeInUp 0.7s ease-out forwards;
 }
 
 .animate-float {
 	animation: floatBlob 8s ease-in-out infinite;
+}
+
+.animate-bubble-rise {
+	animation: bubbleRise 6s ease-out infinite;
 }
 
 /* ============================================
