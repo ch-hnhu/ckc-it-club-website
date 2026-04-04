@@ -116,14 +116,14 @@ const Footer: React.FC = () => {
 				{/* Bottom bar */}
 				<div className='border-t border-white/10 py-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-4'>
 					<p className='text-sm text-gray-500'>
-						© {new Date().getFullYear()} CKC IT Club — Trường Cao đẳng Kỹ thuật Cao
+						© {new Date().getFullYear()} CKC IT CLUB — Trường Cao đẳng Kỹ thuật Cao
 						Thắng. All rights reserved.
 					</p>
 					<div
 						className='flex items-center gap-1.5 text-sm font-medium'
 						style={{ color: "var(--color-primary)" }}>
 						<Code2 className='w-4 h-4' />
-						Made with ❤️ by CKC IT Club
+						Made with ♡︎ by CKC IT CLUB
 					</div>
 				</div>
 			</div>

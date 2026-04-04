@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('contacts', function (Blueprint $table) {
             $table->id();
-            $table->string('email')->nullable();
+            $table->string('email');
             $table->string('full_name')->nullable();
-            $table->text('message')->nullable();
+            $table->string('subject')->nullable();
+            $table->text('message');
             $table->enum('status', ['pending', 'processing', 'done'])->default('pending');
 
             $table->dateTime('created_at')->nullable();

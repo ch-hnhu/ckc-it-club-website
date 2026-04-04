@@ -72,41 +72,41 @@ const AboutValues: React.FC = () => {
 				{/* Left Side Bubbles */}
 				<img
 					src='/assets/svg/27.svg'
-					className='absolute -bottom-[0%] -left-[20%] w-[700px] opacity-100 animate-float'
+					className='absolute -bottom-[0%] -left-[20%] w-[700px] opacity-100 animate-bubble-rise'
 					style={{ animationDelay: "0s" }}
 				/>
 				<img
 					src='/assets/svg/28.svg'
-					className='absolute bottom-[0%] -left-[20%] w-[520px] opacity-100 animate-float'
+					className='absolute bottom-[0%] -left-[20%] w-[520px] opacity-100 animate-bubble-rise'
 					style={{ animationDelay: "2s" }}
 				/>
 				<img
 					src='/assets/svg/29.svg'
-					className='absolute bottom-[0%] left-[20%] w-[480px] opacity-100 animate-float'
+					className='absolute bottom-[0%] left-[20%] w-[480px] opacity-100 animate-bubble-rise'
 					style={{ animationDelay: "1s" }}
 				/>
 
 				{/* Right Side Bubbles */}
 				<img
 					src='/assets/svg/32.svg'
-					className='absolute -bottom-[15%] -right-[10%] w-[450px] opacity-100 animate-float'
+					className='absolute -bottom-[15%] -right-[10%] w-[450px] opacity-100 animate-bubble-rise'
 					style={{ animationDelay: "4s" }}
 				/>
 				<img
 					src='/assets/svg/33.svg'
-					className='absolute bottom-[0%] -right-[5%] w-[480px] opacity-100 animate-float'
+					className='absolute bottom-[0%] -right-[5%] w-[480px] opacity-100 animate-bubble-rise'
 					style={{ animationDelay: "2.5s" }}
 				/>
 				<img
 					src='/assets/svg/35.svg'
-					className='absolute bottom-[8%] right-[2%] w-[400px] opacity-100 animate-float'
+					className='absolute bottom-[8%] right-[2%] w-[400px] opacity-100 animate-bubble-rise'
 					style={{ animationDelay: "3.5s" }}
 				/>
 
 				{/* Center-Bottom Accents */}
 				<img
 					src='/assets/svg/30.svg'
-					className='absolute -bottom-[20%] left-[40%] w-[450px] opacity-100 animate-float'
+					className='absolute -bottom-[20%] left-[40%] w-[450px] opacity-100 animate-bubble-rise'
 					style={{ animationDelay: "3s" }}
 				/>
 			</div>
@@ -120,11 +120,11 @@ const AboutValues: React.FC = () => {
 							<h2
 								className='text-3xl sm:text-4xl font-extrabold text-black'
 								style={{ fontFamily: "var(--font-heading)" }}>
-								Về CKC IT Club
+								Về CKC IT CLUB
 							</h2>
 						</div>
 						<p className='text-gray-600 text-lg leading-relaxed'>
-							CKC IT Club là cộng đồng sinh viên IT năng động tại{" "}
+							CKC IT CLUB là cộng đồng sinh viên IT năng động tại{" "}
 							<strong className='text-black'>
 								Trường Cao đẳng Kỹ thuật Cao Thắng
 							</strong>

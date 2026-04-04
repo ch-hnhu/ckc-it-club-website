@@ -101,7 +101,7 @@ const QuickActions: React.FC = () => {
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
 						style={{ fontFamily: "var(--font-heading)" }}>
-						Khám phá CKC IT Club
+						Khám phá CKC IT CLUB
 					</h2>
 					<p className='text-gray-500 mt-3 max-w-xl mx-auto'>
 						Tất cả những gì bạn cần để học, chia sẻ và phát triển trong cộng đồng IT
