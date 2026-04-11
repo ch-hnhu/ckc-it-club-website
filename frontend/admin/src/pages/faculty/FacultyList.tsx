@@ -138,7 +138,7 @@ function FacultyList() {
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
 						<Input
-							placeholder='Filter faculties...'
+							placeholder='Tìm kiếm theo tên khoa...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'

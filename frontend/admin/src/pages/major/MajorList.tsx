@@ -116,7 +116,7 @@ function MajorList() {
 			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
-						<Input placeholder='Filter majors...' value={search} onChange={(e) => setSearch(e.target.value)} className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12' />
+						<Input placeholder='Tìm kiếm theo tên ngành...' value={search} onChange={(e) => setSearch(e.target.value)} className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12' />
 					</div>
 					<div className='flex items-center gap-2'>
 						<Button variant='outline' size='sm' className='h-8 lg:flex'><Settings2 className='h-4 w-4' />View</Button>
