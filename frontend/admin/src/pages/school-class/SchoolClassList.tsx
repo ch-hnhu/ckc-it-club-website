@@ -41,6 +41,7 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { useTableSelection } from "@/hooks/useTableSelection";
 
 function SchoolClassList() {
 	const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -48,6 +49,9 @@ function SchoolClassList() {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [sortConfig, setSortConfig] = useState<{ key: string | null; order: "asc" | "desc" | null }>({ key: "created_at", order: "desc" });
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		classes.map((schoolClass) => schoolClass.id),
+	);
 
 	useEffect(() => {
 		const handler = setTimeout(() => setDebouncedSearch(search), 500);
@@ -123,7 +127,7 @@ function SchoolClassList() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead className='w-[50px]'><Checkbox aria-label='Select all' /></TableHead>
+								<TableHead className='w-[50px]'><Checkbox aria-label='Select all' checked={allSelected} onCheckedChange={(checked) => toggleAll(checked === true)} /></TableHead>
 								<TableHead className='w-[100px]'><Button variant='ghost' onClick={() => handleSort("id")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>ID{getSortIcon("id")}</Button></TableHead>
 								<TableHead><Button variant='ghost' onClick={() => handleSort("label")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Tên lớp{getSortIcon("label")}</Button></TableHead>
 								<TableHead>Tên ngành</TableHead>
@@ -136,7 +140,7 @@ function SchoolClassList() {
 						<TableBody>
 							{classes.map((schoolClass) => (
 								<TableRow key={schoolClass.id}>
-									<TableCell><Checkbox aria-label={`Select class ${schoolClass.id}`} /></TableCell>
+									<TableCell><Checkbox aria-label={`Select class ${schoolClass.id}`} checked={isSelected(schoolClass.id)} onCheckedChange={(checked) => toggleOne(schoolClass.id, checked === true)} /></TableCell>
 									<TableCell className='font-medium'>CLS-{schoolClass.id}</TableCell>
 									<TableCell><div className='flex items-center gap-3'><div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'><BookOpen className='h-4 w-4' /></div><div className='flex flex-col'><span className='font-medium'>{schoolClass.label}</span><span className='text-xs text-muted-foreground'>{schoolClass.value}</span></div></div></TableCell>
 									<TableCell>{schoolClass.major?.label || "N/A"}</TableCell>

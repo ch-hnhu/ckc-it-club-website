@@ -41,6 +41,7 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { useTableSelection } from "@/hooks/useTableSelection";
 
 function FacultyList() {
 	const [faculties, setFaculties] = useState<Faculty[]>([]);
@@ -59,6 +60,9 @@ function FacultyList() {
 		key: "created_at",
 		order: "desc",
 	});
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		faculties.map((faculty) => faculty.id),
+	);
 
 	useEffect(() => {
 		const handler = setTimeout(() => {
@@ -158,7 +162,11 @@ function FacultyList() {
 						<TableHeader>
 							<TableRow>
 								<TableHead className='w-[50px]'>
-									<Checkbox aria-label='Select all' />
+									<Checkbox
+										aria-label='Select all'
+										checked={allSelected}
+										onCheckedChange={(checked) => toggleAll(checked === true)}
+									/>
 								</TableHead>
 								<TableHead className='w-[100px]'>
 									<Button
@@ -206,7 +214,13 @@ function FacultyList() {
 							{faculties.map((faculty) => (
 								<TableRow key={faculty.id}>
 									<TableCell>
-										<Checkbox aria-label={`Select faculty ${faculty.id}`} />
+										<Checkbox
+											aria-label={`Select faculty ${faculty.id}`}
+											checked={isSelected(faculty.id)}
+											onCheckedChange={(checked) =>
+												toggleOne(faculty.id, checked === true)
+											}
+										/>
 									</TableCell>
 									<TableCell className='font-medium'>FAC-{faculty.id}</TableCell>
 									<TableCell>

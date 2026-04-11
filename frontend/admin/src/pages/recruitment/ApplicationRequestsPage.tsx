@@ -63,6 +63,7 @@ import {
 } from "./application-detail-shared";
 import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 
 const statusOptions: Array<{ value: ApplicationStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -199,6 +200,9 @@ function ApplicationRequestsPage() {
 		(currentPage - 1) * pagination.perPage,
 		currentPage * pagination.perPage,
 	);
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		paginatedApplications.map((application) => application.id),
+	);
 
 	const handleSort = (key: SortKey) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -312,7 +316,11 @@ function ApplicationRequestsPage() {
 						<TableHeader>
 							<TableRow>
 								<TableHead className='w-[50px]'>
-									<Checkbox aria-label='Select all applications' />
+									<Checkbox
+										aria-label='Select all applications'
+										checked={allSelected}
+										onCheckedChange={(checked) => toggleAll(checked === true)}
+									/>
 								</TableHead>
 								<TableHead className='w-[120px]'>
 									<Button
@@ -400,6 +408,10 @@ function ApplicationRequestsPage() {
 											<TableCell>
 												<Checkbox
 													aria-label={`Select application ${application.id}`}
+													checked={isSelected(application.id)}
+													onCheckedChange={(checked) =>
+														toggleOne(application.id, checked === true)
+													}
 												/>
 											</TableCell>
 											<TableCell className='font-medium'>

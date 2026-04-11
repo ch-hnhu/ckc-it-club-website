@@ -41,6 +41,7 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { useTableSelection } from "@/hooks/useTableSelection";
 
 function MajorList() {
 	const [majors, setMajors] = useState<Major[]>([]);
@@ -48,6 +49,9 @@ function MajorList() {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [sortConfig, setSortConfig] = useState<{ key: string | null; order: "asc" | "desc" | null }>({ key: "created_at", order: "desc" });
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		majors.map((major) => major.id),
+	);
 
 	useEffect(() => {
 		const handler = setTimeout(() => setDebouncedSearch(search), 500);
@@ -123,7 +127,7 @@ function MajorList() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead className='w-[50px]'><Checkbox aria-label='Select all' /></TableHead>
+								<TableHead className='w-[50px]'><Checkbox aria-label='Select all' checked={allSelected} onCheckedChange={(checked) => toggleAll(checked === true)} /></TableHead>
 								<TableHead className='w-[100px]'><Button variant='ghost' onClick={() => handleSort("id")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>ID{getSortIcon("id")}</Button></TableHead>
 								<TableHead><Button variant='ghost' onClick={() => handleSort("label")} className='-ml-4 h-8 hover:bg-muted-foreground/10'> Tên ngành{getSortIcon("label")}</Button></TableHead>
 								<TableHead>Tên khoa</TableHead>
@@ -137,7 +141,7 @@ function MajorList() {
 						<TableBody>
 							{majors.map((major) => (
 								<TableRow key={major.id}>
-									<TableCell><Checkbox aria-label={`Select major ${major.id}`} /></TableCell>
+									<TableCell><Checkbox aria-label={`Select major ${major.id}`} checked={isSelected(major.id)} onCheckedChange={(checked) => toggleOne(major.id, checked === true)} /></TableCell>
 									<TableCell className='font-medium'>MAJ-{major.id}</TableCell>
 									<TableCell><div className='flex items-center gap-3'><div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'><FolderTree className='h-4 w-4' /></div><div className='flex flex-col'><span className='font-medium'>{major.label}</span><span className='text-xs text-muted-foreground'>{major.value}</span></div></div></TableCell>
 									<TableCell>{major.faculty?.label || "N/A"}</TableCell>
