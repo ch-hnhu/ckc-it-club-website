@@ -36,12 +36,7 @@ class FacultyController extends BaseApiController
 						->orWhere('slug', 'like', "%{$search}%");
 				});
 			})
-			->when($sort === 'majors_count', function ($query) use ($order) {
-				$query->orderBy($sort, $order);
-			})
-			->when($sort !== 'majors_count', function ($query) use ($sort, $order) {
-				$query->orderBy($sort, $order);
-			})
+			->orderBy($sort, $order)
 			->paginate($perPage);
 
 		return $this->paginatedResponse($data, ApiMessage::RETRIEVED);
