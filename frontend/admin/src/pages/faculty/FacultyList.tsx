@@ -206,7 +206,15 @@ function FacultyList() {
 										{getSortIcon("updated_at")}
 									</Button>
 								</TableHead>
-								<TableHead>Số ngành</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("majors_count")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Số lượng ngành
+										{getSortIcon("majors_count")}
+									</Button>
+								</TableHead>
 								<TableHead className='w-[50px]'></TableHead>
 							</TableRow>
 						</TableHeader>
