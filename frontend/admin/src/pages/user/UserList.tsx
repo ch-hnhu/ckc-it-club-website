@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import userService from "@/services/user.service";
 import type { User } from "@/types/user.type";
 
@@ -42,6 +42,7 @@ import {
 	Settings2,
 } from "lucide-react";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 
 function UserList() {
 	const [users, setUsers] = useState<User[]>([]);
@@ -60,8 +61,14 @@ function UserList() {
 		key: "created_at",
 		order: "desc",
 	});
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		users.map((user) => user.id),
+	);
 
-	const breadcrumb = [{ title: "Dashboard", link: "/" }, { title: "Quản lý người dùng" }];
+	const breadcrumb = useMemo(
+		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý người dùng" }],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 
@@ -148,7 +155,9 @@ function UserList() {
 							<Settings2 className='h-4 w-4' />
 							Lọc
 						</Button>
-						<Button size='sm' className='h-8'>
+						<Button
+							size='sm'
+							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 							<Plus className='h-4 w-4' />
 							Thêm
 						</Button>
@@ -159,7 +168,11 @@ function UserList() {
 						<TableHeader>
 							<TableRow>
 								<TableHead className='w-[50px]'>
-									<Checkbox aria-label='Select all' />
+									<Checkbox
+										aria-label='Select all'
+										checked={allSelected}
+										onCheckedChange={(checked) => toggleAll(checked === true)}
+									/>
 								</TableHead>
 								<TableHead className='w-[100px]'>
 									<Button
@@ -204,7 +217,13 @@ function UserList() {
 							{users.map((user) => (
 								<TableRow key={user.id}>
 									<TableCell>
-										<Checkbox aria-label={`Select user ${user.id}`} />
+										<Checkbox
+											aria-label={`Select user ${user.id}`}
+											checked={isSelected(user.id)}
+											onCheckedChange={(checked) =>
+												toggleOne(user.id, checked === true)
+											}
+										/>
 									</TableCell>
 									<TableCell className='font-medium'>USR-{user.id}</TableCell>
 									<TableCell>

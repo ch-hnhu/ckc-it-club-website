@@ -76,13 +76,7 @@ export function LoginForm() {
 								<Label htmlFor='email' className='font-medium text-base'>
 									Email
 								</Label>
-								<Input
-									id='email'
-									type='email'
-									placeholder='abc@caothang.edu.vn'
-									required
-									className='h-10 border border-gray-300 dark:border-gray-800'
-								/>
+								<Input id='email' type='email' placeholder='abc@caothang.edu.vn' required className='h-10' />
 							</div>
 							<div className='space-y-2'>
 								<div className='flex items-center justify-between'>
@@ -93,28 +87,20 @@ export function LoginForm() {
 										Forgot your password?
 									</a>
 								</div>
-								<Input
-									id='password'
-									type='password'
-									placeholder='Pass@123'
-									required
-									className='h-10 border border-gray-300 dark:border-gray-800'
-								/>
+								<Input id='password' type='password' placeholder='Pass@123' required className='h-10' />
 							</div>
 						</form>
 					</div>
 
-					<div className='bg-muted/20 p-6 md:p-6 py-5 border-t space-y-3'>
-						<Button
-							type='submit'
-							className='w-full bg-zinc-950 hover:bg-zinc-800 text-white shadow-sm dark:bg-primary dark:hover:bg-primary/90 dark:text-black'>
+					<div className='space-y-3 border-t bg-muted/20 p-6 py-5 md:p-6'>
+						<Button type='submit' className='w-full shadow-sm'>
 							Login
 						</Button>
 						<Button
 							variant='outline'
 							type='button'
 							onClick={handleGoogleLogin}
-							className='w-full shadow-sm hover:bg-[#f5f5f5] dark:hover:bg-zinc-800 hover:text-dark'>
+							className='w-full shadow-sm'>
 							Login with Google
 						</Button>
 					</div>

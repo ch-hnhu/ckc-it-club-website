@@ -1,9 +1,10 @@
-import { useState } from "react";
-import Header from "../components/layout/Header";
+import { useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
+
 import { AppSidebar } from "../components/layout/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import Header from "../components/layout/Header";
 import type { BreadcrumbItemType } from "../components/partials/CustomBreadcrumb";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export type OutletContextType = {
 	setBreadcrumbs: (breadcrumbs: BreadcrumbItemType[]) => void;
@@ -11,18 +12,22 @@ export type OutletContextType = {
 
 function MainLayout() {
 	const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItemType[]>([{ title: "Dashboard" }]);
+	const outletContext = useMemo(
+		() => ({ setBreadcrumbs } satisfies OutletContextType),
+		[setBreadcrumbs],
+	);
 
 	return (
 		<SidebarProvider>
 			<AppSidebar />
-			<SidebarInset className='flex flex-col h-screen bg-white dark:bg-zinc-950'>
+			<SidebarInset className='flex h-screen flex-col bg-background'>
 				<div className='flex-shrink-0'>
 					<Header breadcrumbs={breadcrumbs} />
 				</div>
-				<div className='flex flex-1 overflow-hidden relative'>
-					<main className='flex-1 flex flex-col overflow-hidden'>
+				<div className='relative flex flex-1 overflow-hidden'>
+					<main className='flex flex-1 flex-col overflow-hidden'>
 						<div className='flex-1 overflow-auto'>
-							<Outlet context={{ setBreadcrumbs } satisfies OutletContextType} />
+							<Outlet context={outletContext} />
 						</div>
 					</main>
 				</div>

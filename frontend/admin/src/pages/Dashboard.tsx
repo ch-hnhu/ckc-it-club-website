@@ -1,7 +1,7 @@
 import healthService from "@/services/health.service";
 import userService from "@/services/user.service";
 import type { User } from "@/types/user.type";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StatsGrid } from "../components/dashboard/StatsGrid";
 import { ChartCard } from "../components/dashboard/ChartCard";
 import { SimpleChart } from "../components/dashboard/SimpleChart";
@@ -28,7 +28,7 @@ function Dashboard() {
 			.catch((err) => console.error("Failed to fetch user", err));
 	}, []);
 
-	const breadcrumb = [{ title: "Dashboard", link: "/dashboard" }];
+	const breadcrumb = useMemo(() => [{ title: "Dashboard", link: "/" }], []);
 	useBreadcrumb(breadcrumb);
 
 	const chartData = [
