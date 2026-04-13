@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import majorService from "@/services/major.service";
 import type { Major } from "@/types/major.type";
+import { useMemo } from "react";
 
 import {
 	Table,
@@ -41,12 +42,18 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { getBreadcrumbsFromNavigation } from "@/config/navigation";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
 const getDisplayName = (item?: { label?: string | null; value?: string | null } | null) =>
 	item?.label?.trim() || item?.value?.trim() || "N/A";
 
 function MajorList() {
+	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/majors"), []);
+
+	useBreadcrumb(breadcrumb);
+
 	const [majors, setMajors] = useState<Major[]>([]);
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
 	const [search, setSearch] = useState("");

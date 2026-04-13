@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import facultyService from "@/services/faculty.service";
 import type { Faculty } from "@/types/faculty.type";
+import { useMemo } from "react";
 
 import {
 	Table,
@@ -41,9 +42,15 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { getBreadcrumbsFromNavigation } from "@/config/navigation";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
 function FacultyList() {
+	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/departments"), []);
+
+	useBreadcrumb(breadcrumb);
+
 	const [faculties, setFaculties] = useState<Faculty[]>([]);
 	const [meta, setMeta] = useState({
 		current_page: 1,
