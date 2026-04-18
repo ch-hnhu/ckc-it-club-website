@@ -75,7 +75,7 @@ export function LoginForm() {
 									type='email'
 									placeholder='abc@caothang.edu.vn'
 									required
-									className='h-10 border border-gray-300 dark:border-gray-800'
+									className='h-10'
 								/>
 							</div>
 							<div className='space-y-2'>

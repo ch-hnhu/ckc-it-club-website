@@ -22,11 +22,10 @@ import type { OutletContextType } from "../layouts/MainLayout";
  * Hook tùy chỉnh để cập nhật custom breadcrumb từ các component con
  */
 export function useBreadcrumb(items: BreadcrumbItemType[]) {
-	const context = useOutletContext<OutletContextType>();
+	const { setBreadcrumbs } = useOutletContext<OutletContextType>();
+	const serializedItems = JSON.stringify(items);
 
 	useEffect(() => {
-		if (context?.setBreadcrumbs) {
-			context.setBreadcrumbs(items);
-		}
-	}, []);
+		setBreadcrumbs(JSON.parse(serializedItems) as BreadcrumbItemType[]);
+	}, [serializedItems, setBreadcrumbs]);
 }

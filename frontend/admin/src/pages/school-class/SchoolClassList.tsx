@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import schoolClassService from "@/services/school-class.service";
 import type { SchoolClass } from "@/types/school-class.type";
+import { useMemo } from "react";
 
 import {
 	Table,
@@ -41,22 +42,30 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { getBreadcrumbsFromNavigation } from "@/config/navigation";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
+
+const getDisplayName = (item?: { label?: string | null; value?: string | null } | null) =>
+	item?.label?.trim() || item?.value?.trim() || "N/A";
 
 function SchoolClassList() {
+	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/classes"), []);
+
+	useBreadcrumb(breadcrumb);
+
 	const [classes, setClasses] = useState<SchoolClass[]>([]);
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
 	const [search, setSearch] = useState("");
-	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [sortConfig, setSortConfig] = useState<{ key: string | null; order: "asc" | "desc" | null }>({ key: "created_at", order: "desc" });
-
-	useEffect(() => {
-		const handler = setTimeout(() => setDebouncedSearch(search), 500);
-		return () => clearTimeout(handler);
-	}, [search]);
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		classes.map((schoolClass) => schoolClass.id),
+	);
+	const normalizedSearch = search.trim();
 
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
-	}, [debouncedSearch, sortConfig]);
+	}, [normalizedSearch, sortConfig]);
 
 	useEffect(() => {
 		const fetchClasses = async () => {
@@ -64,7 +73,7 @@ function SchoolClassList() {
 				const response = await schoolClassService.getSchoolClasses({
 					page: meta.current_page,
 					per_page: meta.per_page,
-					search: debouncedSearch,
+					search: normalizedSearch,
 					sort: sortConfig.key || undefined,
 					order: sortConfig.order || undefined,
 				});
@@ -81,7 +90,7 @@ function SchoolClassList() {
 		};
 
 		fetchClasses();
-	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
+	}, [meta.current_page, meta.per_page, normalizedSearch, sortConfig]);
 
 	const handleSort = (key: string) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -112,22 +121,22 @@ function SchoolClassList() {
 			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
-						<Input placeholder='Filter classes...' value={search} onChange={(e) => setSearch(e.target.value)} className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12' />
+						<Input placeholder='Tìm theo tên lớp, ngành hoặc khoa...' value={search} onChange={(e) => setSearch(e.target.value)} className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12' />
 					</div>
 					<div className='flex items-center gap-2'>
 						<Button variant='outline' size='sm' className='h-8 lg:flex'><Settings2 className='h-4 w-4' />View</Button>
-						<Button size='sm' className='h-8'><Plus className='h-4 w-4' />Thêm lớp</Button>
+						<Button size='sm' className='h-8 bg-foreground text-background hover:bg-foreground/90'><Plus className='h-4 w-4' />Thêm lớp</Button>
 					</div>
 				</div>
 				<div className='overflow-hidden rounded-md border'>
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead className='w-[50px]'><Checkbox aria-label='Select all' /></TableHead>
+								<TableHead className='w-[50px]'><Checkbox aria-label='Select all' checked={allSelected} onCheckedChange={(checked) => toggleAll(checked === true)} /></TableHead>
 								<TableHead className='w-[100px]'><Button variant='ghost' onClick={() => handleSort("id")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>ID{getSortIcon("id")}</Button></TableHead>
 								<TableHead><Button variant='ghost' onClick={() => handleSort("label")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Tên lớp{getSortIcon("label")}</Button></TableHead>
-								<TableHead>Tên ngành</TableHead>
-								<TableHead>Tên khoa</TableHead>								
+								<TableHead><Button variant='ghost' onClick={() => handleSort("major_label")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Tên ngành{getSortIcon("major_label")}</Button></TableHead>
+								<TableHead><Button variant='ghost' onClick={() => handleSort("faculty_label")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Tên khoa{getSortIcon("faculty_label")}</Button></TableHead>
 								<TableHead><Button variant='ghost' onClick={() => handleSort("created_at")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Ngày tạo{getSortIcon("created_at")}</Button></TableHead>
 								<TableHead><Button variant='ghost' onClick={() => handleSort("updated_at")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Ngày cập nhật{getSortIcon("updated_at")}</Button></TableHead>
 								<TableHead className='w-[50px]'></TableHead>
@@ -136,11 +145,11 @@ function SchoolClassList() {
 						<TableBody>
 							{classes.map((schoolClass) => (
 								<TableRow key={schoolClass.id}>
-									<TableCell><Checkbox aria-label={`Select class ${schoolClass.id}`} /></TableCell>
+									<TableCell><Checkbox aria-label={`Select class ${schoolClass.id}`} checked={isSelected(schoolClass.id)} onCheckedChange={(checked) => toggleOne(schoolClass.id, checked === true)} /></TableCell>
 									<TableCell className='font-medium'>CLS-{schoolClass.id}</TableCell>
 									<TableCell><div className='flex items-center gap-3'><div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'><BookOpen className='h-4 w-4' /></div><div className='flex flex-col'><span className='font-medium'>{schoolClass.label}</span><span className='text-xs text-muted-foreground'>{schoolClass.value}</span></div></div></TableCell>
-									<TableCell>{schoolClass.major?.label || "N/A"}</TableCell>
-									<TableCell>{schoolClass.major?.faculty?.label || "N/A"}</TableCell>
+									<TableCell>{getDisplayName(schoolClass.major)}</TableCell>
+									<TableCell>{getDisplayName(schoolClass.major?.faculty)}</TableCell>
 									
 									<TableCell>{formatDate(schoolClass.created_at)}</TableCell>
 									<TableCell>{formatDate(schoolClass.updated_at)}</TableCell>

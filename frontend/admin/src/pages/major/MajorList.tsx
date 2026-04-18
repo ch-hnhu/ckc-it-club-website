@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import majorService from "@/services/major.service";
 import type { Major } from "@/types/major.type";
+import { useMemo } from "react";
 
 import {
 	Table,
@@ -41,13 +42,26 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { getBreadcrumbsFromNavigation } from "@/config/navigation";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
+
+const getDisplayName = (item?: { label?: string | null; value?: string | null } | null) =>
+	item?.label?.trim() || item?.value?.trim() || "N/A";
 
 function MajorList() {
+	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/majors"), []);
+
+	useBreadcrumb(breadcrumb);
+
 	const [majors, setMajors] = useState<Major[]>([]);
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [sortConfig, setSortConfig] = useState<{ key: string | null; order: "asc" | "desc" | null }>({ key: "created_at", order: "desc" });
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		majors.map((major) => major.id),
+	);
 
 	useEffect(() => {
 		const handler = setTimeout(() => setDebouncedSearch(search), 500);
@@ -112,23 +126,23 @@ function MajorList() {
 			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
-						<Input placeholder='Filter majors...' value={search} onChange={(e) => setSearch(e.target.value)} className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12' />
+						<Input placeholder='Tìm kiếm theo tên ngành...' value={search} onChange={(e) => setSearch(e.target.value)} className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12' />
 					</div>
 					<div className='flex items-center gap-2'>
 						<Button variant='outline' size='sm' className='h-8 lg:flex'><Settings2 className='h-4 w-4' />View</Button>
-						<Button size='sm' className='h-8'><Plus className='h-4 w-4' />Thêm ngành</Button>
+						<Button size='sm' className='h-8 bg-foreground text-background hover:bg-foreground/90'><Plus className='h-4 w-4' />Thêm ngành</Button>
 					</div>
 				</div>
 				<div className='overflow-hidden rounded-md border'>
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead className='w-[50px]'><Checkbox aria-label='Select all' /></TableHead>
+								<TableHead className='w-[50px]'><Checkbox aria-label='Select all' checked={allSelected} onCheckedChange={(checked) => toggleAll(checked === true)} /></TableHead>
 								<TableHead className='w-[100px]'><Button variant='ghost' onClick={() => handleSort("id")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>ID{getSortIcon("id")}</Button></TableHead>
 								<TableHead><Button variant='ghost' onClick={() => handleSort("label")} className='-ml-4 h-8 hover:bg-muted-foreground/10'> Tên ngành{getSortIcon("label")}</Button></TableHead>
-								<TableHead>Tên khoa</TableHead>
+								<TableHead><Button variant='ghost' onClick={() => handleSort("faculty_label")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Tên khoa{getSortIcon("faculty_label")}</Button></TableHead>
 								
-								<TableHead>Số lớp</TableHead>
+								<TableHead><Button variant='ghost' onClick={() => handleSort("school_classes_count")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Số lượng lớp{getSortIcon("school_classes_count")}</Button></TableHead>
 								<TableHead><Button variant='ghost' onClick={() => handleSort("created_at")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Ngày tạo{getSortIcon("created_at")}</Button></TableHead>
 								<TableHead><Button variant='ghost' onClick={() => handleSort("updated_at")} className='-ml-4 h-8 hover:bg-muted-foreground/10'>Ngày cập nhật{getSortIcon("updated_at")}</Button></TableHead>
 								<TableHead className='w-[50px]'></TableHead>
@@ -137,10 +151,10 @@ function MajorList() {
 						<TableBody>
 							{majors.map((major) => (
 								<TableRow key={major.id}>
-									<TableCell><Checkbox aria-label={`Select major ${major.id}`} /></TableCell>
+									<TableCell><Checkbox aria-label={`Select major ${major.id}`} checked={isSelected(major.id)} onCheckedChange={(checked) => toggleOne(major.id, checked === true)} /></TableCell>
 									<TableCell className='font-medium'>MAJ-{major.id}</TableCell>
 									<TableCell><div className='flex items-center gap-3'><div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'><FolderTree className='h-4 w-4' /></div><div className='flex flex-col'><span className='font-medium'>{major.label}</span><span className='text-xs text-muted-foreground'>{major.value}</span></div></div></TableCell>
-									<TableCell>{major.faculty?.label || "N/A"}</TableCell>
+									<TableCell>{getDisplayName(major.faculty)}</TableCell>
 									<TableCell>{major.school_classes_count}</TableCell>
 									<TableCell>{formatDate(major.created_at)}</TableCell>
 									<TableCell>{formatDate(major.updated_at)}</TableCell>

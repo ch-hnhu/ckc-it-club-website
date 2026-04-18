@@ -12,7 +12,7 @@ class FacultyController extends BaseApiController
 {
 	public function index(Request $request): JsonResponse
 	{
-		$allowedSorts = ['id', 'value', 'label', 'slug', 'created_at'];
+		$allowedSorts = ['id', 'value', 'label', 'slug', 'created_at', 'updated_at', 'majors_count'];
 		$sort = $request->query('sort', 'created_at');
 		$order = $request->query('order', 'desc');
 		$perPage = (int) $request->query('per_page', 10);

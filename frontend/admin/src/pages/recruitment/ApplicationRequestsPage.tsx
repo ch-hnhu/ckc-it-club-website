@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -61,7 +61,9 @@ import {
 	getStatusBadge,
 	getStatusConfig,
 } from "./application-detail-shared";
+import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 
 const statusOptions: Array<{ value: ApplicationStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -101,10 +103,7 @@ function getSortValue(application: ClubApplicationRecord, key: SortKey) {
 }
 
 function ApplicationRequestsPage() {
-	const breadcrumb = [
-		{ title: "Dashboard", link: "/" },
-		{ title: "Quản lý đơn ứng tuyển", link: "/requests" },
-	];
+	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/requests"), []);
 
 	useBreadcrumb(breadcrumb);
 
@@ -201,6 +200,9 @@ function ApplicationRequestsPage() {
 		(currentPage - 1) * pagination.perPage,
 		currentPage * pagination.perPage,
 	);
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		paginatedApplications.map((application) => application.id),
+	);
 
 	const handleSort = (key: SortKey) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -286,7 +288,7 @@ function ApplicationRequestsPage() {
 						<DropdownMenuTrigger asChild>
 							<Button variant='outline' size='sm' className='h-8'>
 								<Settings2 className='h-4 w-4' />
-								View
+								Xem theo trạng thái
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align='end' className='w-[220px]'>
@@ -314,7 +316,11 @@ function ApplicationRequestsPage() {
 						<TableHeader>
 							<TableRow>
 								<TableHead className='w-[50px]'>
-									<Checkbox aria-label='Select all applications' />
+									<Checkbox
+										aria-label='Select all applications'
+										checked={allSelected}
+										onCheckedChange={(checked) => toggleAll(checked === true)}
+									/>
 								</TableHead>
 								<TableHead className='w-[120px]'>
 									<Button
@@ -402,6 +408,10 @@ function ApplicationRequestsPage() {
 											<TableCell>
 												<Checkbox
 													aria-label={`Select application ${application.id}`}
+													checked={isSelected(application.id)}
+													onCheckedChange={(checked) =>
+														toggleOne(application.id, checked === true)
+													}
 												/>
 											</TableCell>
 											<TableCell className='font-medium'>
