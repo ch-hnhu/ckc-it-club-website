@@ -1,5 +1,5 @@
 ---
-name: ckc-user-frontend-style
+name: frontend-user-style
 description: Soft neo-brutalism style guide for CKC IT Club user-facing frontend (frontend/user). Use when adding or changing UI so new screens match existing tokens, layouts, motion, and assets.
 ---
 
