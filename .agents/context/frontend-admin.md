@@ -1,6 +1,7 @@
 # CKC IT Club Frontend Admin Context
 
 ## Purpose
+
 - This folder is the admin dashboard frontend at `frontend/admin/`.
 - It is the control surface for admin-side operations backed by the Laravel API in `backend/`.
 - The strongest implemented admin domains today are:
@@ -12,11 +13,13 @@
 - recruitment question management
 
 ## Read This First
+
 - Treat this file as the source-of-truth for admin frontend work.
 - Do not trust `frontend/admin/README.md`; it is still the generic Vite template.
 - If your task touches API contracts or auth behavior, read `.agents/context/backend.md` before editing.
 
 ## Maintenance Rule
+
 - Any agent changing admin frontend behavior MUST review and update this file before finishing work.
 - Update this file when any of these change:
 - route surface
@@ -29,6 +32,7 @@
 - known gaps or dangerous fallback behavior
 
 ## Stack
+
 - Framework: React 19.
 - Language: TypeScript.
 - Build tool: Vite 7.
@@ -41,6 +45,7 @@
 - Optional integration: Supabase storage helper exists, but current usage appears absent.
 
 ## App Boot Flow
+
 - Entry: `src/main.tsx`
 - Root app: `src/App.tsx`
 - Global wrappers:
@@ -52,6 +57,7 @@
 - `MainLayout` provides sidebar, header, breadcrumb context, and `Outlet`
 
 ## Route Surface
+
 - `/login`
 - login page with popup-based Google OAuth admin login
 - `/`
@@ -78,6 +84,7 @@
 - recruitment answers page
 
 ## Important Reality Checks
+
 - Route definitions are the source-of-truth, not sidebar labels.
 - Sidebar nav currently contains placeholder links with no matching route surface:
 - `/reports`
@@ -87,12 +94,13 @@
 - `/divisions`
 - `/fields`
 - Dashboard contains significant placeholder/demo content rather than fully live backend-driven analytics.
-- `CreateUser` is currently a UI-only form. It logs payload to console and does not call a backend endpoint.
+- `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit is still UI-only (logs payload, no backend create endpoint call yet).
 - Recruitment application service uses `mockApplications` as a fallback when fetching `/club-applications` fails. This can mask backend outages and make the UI look “healthy” when it is not.
 - Redux Toolkit is installed, but there is no centralized Redux store in the current app. State is local component state plus services.
 - `supabase.config.ts` exists, but `uploadImage` does not appear to be actively used by current features.
 
 ## Authentication Model
+
 - Login is popup-based Google OAuth against backend web routes.
 - Login page listens for `postMessage` events with payload types:
 - `OAUTH_AUTH_SUCCESS`
@@ -111,11 +119,13 @@
 - Logout is token-based and goes through backend `/auth/logout`.
 
 ## Auth Risks and Assumptions
+
 - Admin frontend assumes backend `GET /auth/me` is the canonical token check.
 - Admin frontend relies on redirecting to `/login` on `401`, so breaking that route will break recovery.
 - There is no explicit frontend-side role check after login; auth success depends on backend already filtering admin users during OAuth.
 
 ## Layout and UI System
+
 - Main layout is sidebar-first and breadcrumb-aware.
 - Sidebar content is driven from static local config in `AppSidebar.tsx`, not from backend permissions or route introspection.
 - Theme system:
@@ -129,6 +139,7 @@
 - default body font still falls back to system stack even though `Source Sans 3` is imported in `main.tsx`
 
 ## Module Layout
+
 - `src/components/auth/`
 - route protection
 - `src/components/dashboard/`
@@ -159,6 +170,7 @@
 - breadcrumb and viewport helpers
 
 ## Service Layer Conventions
+
 - `src/services/api.service.ts` is the generic wrapper around Axios client methods.
 - Domain services are thin and mostly return raw server envelopes or normalized data.
 - Current services:
@@ -172,6 +184,7 @@
 - Prefer adding or updating endpoint wrappers in `src/services/` rather than making Axios calls directly in pages.
 
 ## Data Contract Conventions
+
 - Generic API types live in `src/types/api.types.ts`.
 - Paginated backend responses are expected as:
 - `success`
@@ -190,6 +203,7 @@
 - If backend `User` payload grows, update the type instead of using `any`.
 
 ## Feature-Specific Notes
+
 - User list:
 - server-driven pagination, search, sort
 - currently no live edit/delete action implementation
@@ -207,6 +221,7 @@
 - page is relatively advanced and should be reused, not reimplemented
 
 ## Environment Variables
+
 - Required:
 - `VITE_API_URL`
 - `VITE_BACKEND_URL`
@@ -216,11 +231,13 @@
 - If you introduce real Supabase-dependent features, update `.env.example` and this file together.
 
 ## Setup and Run
+
 ```bash
 cd frontend/admin
 npm install
 npm run dev
 ```
+
 - Standard scripts:
 - `npm run dev`
 - `npm run build`
@@ -228,6 +245,7 @@ npm run dev
 - `npm run preview`
 
 ## Files Agents Should Read Before Major Edits
+
 - `src/routes/index.tsx`
 - `src/components/auth/ProtectedRoute.tsx`
 - `src/layouts/MainLayout.tsx`
@@ -241,6 +259,7 @@ npm run dev
 - `src/index.css`
 
 ## Safe Edit Rules For Agents
+
 - Preserve the service-layer pattern. Do not scatter raw Axios calls across page components unless there is a very good reason.
 - Keep auth token storage consistent with current admin conventions unless you are deliberately refactoring the full auth flow.
 - Do not remove the popup `postMessage` OAuth pattern without updating both frontend and backend.
@@ -250,14 +269,19 @@ npm run dev
 - Do not introduce Redux unless the task explicitly requires centralized state. Current architecture is hook-and-service based.
 
 ## Known Gaps and Debt
+
 - `frontend/admin/README.md` is stale.
 - Sidebar includes dead or placeholder links.
 - Dashboard is only partially backend-backed.
-- Create user flow is incomplete.
+- Create user API integration is incomplete (UI and route are in place, submit is still UI-only).
 - Recruitment list can silently fall back to mock data on API failure.
 - Supabase helper exists without documented envs or active call sites.
 - Installed Redux dependencies are unused.
 - Font import and body font configuration are not fully aligned.
 
 ## Change Log
+
+- `2026-04-20`: Updated CreateUser avatar behavior so clearing selected image restores default avatar preview (`/img/default-avatar.jpg`) while preserving all other form field state.
+- `2026-04-20`: Added reusable shadcn-style `ui/combobox` component (Command + Popover) with optional search and multiple select support, and migrated CreateUser faculty/major/class fields to searchable comboboxes.
+- `2026-04-20`: Wired `/users/create` route in router, connected User list "Thêm" button to navigate there, and implemented full shadcn CreateUser form UI with avatar preview and dependent faculty-major-class selectors.
 - `2026-04-08`: Replaced scaffold with full admin frontend audit. Added route surface, auth/session model, service conventions, UI system notes, env requirements, and known gap inventory.
