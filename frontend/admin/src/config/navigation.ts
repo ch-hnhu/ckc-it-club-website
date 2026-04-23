@@ -1,4 +1,12 @@
-import { Building, House, Trophy, UserRoundPlus, Users, type LucideIcon } from "lucide-react";
+import {
+	Building,
+	House,
+	MailOpen,
+	Trophy,
+	UserRoundPlus,
+	Users,
+	type LucideIcon,
+} from "lucide-react";
 import type { BreadcrumbItemType } from "@/components/partials/CustomBreadcrumb";
 
 export type AdminNavHeadItem = {
@@ -99,6 +107,17 @@ export const adminNavMain: AdminNavItem[] = [
 			{
 				title: "Trường thông tin",
 				url: "/fields",
+			},
+		],
+	},
+	{
+		title: "Quản lý liên hệ",
+		url: "/contacts",
+		icon: MailOpen,
+		items: [
+			{
+				title: "Danh sách liên hệ",
+				url: "/contacts",
 			},
 		],
 	},

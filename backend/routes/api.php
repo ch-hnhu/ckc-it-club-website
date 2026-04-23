@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\ContactController as PublicContactController;
+use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\ApplicationQuestionController;
 use App\Http\Controllers\Api\V1\Admin\ClubApplicationController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
@@ -21,6 +23,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/auth/verify-token', [AuthController::class, 'verifyToken']);
+    Route::post('/contacts', [PublicContactController::class, 'store']);
 
     Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
@@ -35,6 +38,8 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('faculties', FacultyController::class)->only(['index']);
         Route::apiResource('majors', MajorController::class)->only(['index']);
         Route::apiResource('school-classes', SchoolClassController::class)->only(['index']);
+        Route::get('contacts', [AdminContactController::class, 'index']);
+        Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
 
         Route::get('club-applications', [ClubApplicationController::class, 'index']);
         Route::patch('club-applications/{clubApplication}/status', [ClubApplicationController::class, 'updateStatus']);

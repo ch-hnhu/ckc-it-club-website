@@ -66,6 +66,8 @@
 - major list
 - `/classes`
 - school class list
+- `/contacts`
+- contact management list with real backend data and status updates
 - `/requests`
 - recruitment application list
 - `/requests/:applicationId`
@@ -151,6 +153,8 @@
 - school class listing
 - `src/pages/recruitment/`
 - applications, answers, questions, detail flows
+- `src/pages/contact/`
+- contact management list/detail/status flows
 - `src/services/`
 - thin API client wrappers
 - `src/types/`
@@ -167,6 +171,7 @@
 - `faculty.service.ts`
 - `major.service.ts`
 - `school-class.service.ts`
+- `contact.service.ts`
 - `application.service.ts`
 - `health.service.ts`
 - Prefer adding or updating endpoint wrappers in `src/services/` rather than making Axios calls directly in pages.
@@ -205,6 +210,10 @@
 - supports create, update, reorder, delete
 - mirrors backend rules around question type and options
 - page is relatively advanced and should be reused, not reimplemented
+- Contact management:
+- route `/contacts`
+- server-driven pagination, search, sort, and status filtering
+- status update is live against backend `PATCH /contacts/{contact}/status`
 
 ## Environment Variables
 - Required:
@@ -260,4 +269,5 @@ npm run dev
 - Font import and body font configuration are not fully aligned.
 
 ## Change Log
+- `2026-04-23`: Added admin contact management route `/contacts`, sidebar entry, `contact.service.ts`, and live status updates backed by the Laravel API.
 - `2026-04-08`: Replaced scaffold with full admin frontend audit. Added route surface, auth/session model, service conventions, UI system notes, env requirements, and known gap inventory.

@@ -41,6 +41,7 @@
 - dashboard health access.
 - user listing.
 - faculty, major, school class listing with search and pagination.
+- contact listing and status updates.
 - club application listing and status transitions.
 - application question CRUD and reorder.
 - Recruitment domain is the strongest implemented domain in this backend.
@@ -49,6 +50,7 @@
 - Public API routes:
 - `GET /api/v1/health`
 - `GET /api/v1/auth/verify-token`
+- `POST /api/v1/contacts`
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
@@ -58,6 +60,8 @@
 - `GET /api/v1/faculties`
 - `GET /api/v1/majors`
 - `GET /api/v1/school-classes`
+- `GET /api/v1/contacts`
+- `PATCH /api/v1/contacts/{contact}/status`
 - `GET /api/v1/club-applications`
 - `PATCH /api/v1/club-applications/{clubApplication}/status`
 - `PATCH /api/v1/application-questions/reorder`
@@ -77,7 +81,6 @@
 - `app/Http/Requests/Api/V1/Product/*`
 - `app/Http/Resources/Api/V1/ProductResource.php`
 - Some schema/models exist but currently have no active API/controller surface:
-- `Contact`
 - `ClubInformation`
 - `ClubInformationValue`
 
@@ -165,7 +168,9 @@
 - answer rows joining one application to one question.
 - stores raw `answer_value`.
 - `contacts`
-- contact form-like table exists in schema and seeders, but there is no active controller/route surface.
+- public contact submissions are created through `POST /api/v1/contacts`.
+- admin can list contacts with pagination, search, sort, and status filtering.
+- admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`
 - schema exists, but implementation is incomplete and not exposed.
 
@@ -307,8 +312,9 @@ curl http://localhost:8000/api/v1/health
 - Token-expiry middleware exists but is unused.
 - Version middleware exists but is unused.
 - Generic Product request/resource files are leftover scaffolding.
-- Contact and club information domains have schema presence but no real API surface yet.
+- Club information domain still has schema presence but no real API surface yet.
 - Root documentation is partially stale.
 
 ## Change Log
+- `2026-04-23`: Added authenticated admin contact management API (`GET /contacts`, `PATCH /contacts/{contact}/status`) with explicit controller-level admin role checks.
 - `2026-04-07`: Initial backend context created after full backend audit. Captured actual route surface, auth model, recruitment rules, setup flow, known gaps, and agent editing rules.
