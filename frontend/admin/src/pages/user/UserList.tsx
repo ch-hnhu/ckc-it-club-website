@@ -41,10 +41,12 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
 function UserList() {
+	const navigate = useNavigate();
 	const [users, setUsers] = useState<User[]>([]);
 	const [meta, setMeta] = useState({
 		current_page: 1,
@@ -157,6 +159,7 @@ function UserList() {
 						</Button>
 						<Button
 							size='sm'
+							onClick={() => navigate("/users/create")}
 							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 							<Plus className='h-4 w-4' />
 							Thêm

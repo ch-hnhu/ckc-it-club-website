@@ -5,6 +5,7 @@ import FacultyList from "@/pages/faculty/FacultyList";
 import MajorList from "@/pages/major/MajorList";
 import SchoolClassList from "@/pages/school-class/SchoolClassList";
 import UserList from "@/pages/user/UserList";
+import CreateUser from "@/pages/user/CreateUser";
 import ContactList from "@/pages/contact/ContactList";
 import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage";
 import ApplicationDetailPage from "@/pages/recruitment/ApplicationDetailPage";
@@ -36,6 +37,10 @@ const router = createBrowserRouter([
 			{
 				path: "users",
 				element: <UserList />,
+			},
+			{
+				path: "users/create",
+				element: <CreateUser />,
 			},
 			{
 				path: "departments",
