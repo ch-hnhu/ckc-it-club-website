@@ -15,8 +15,18 @@ const userService = {
 	async getMe(): Promise<{ success: boolean; data: User }> {
 		return api.get("/auth/me");
 	},
+	async getUserById(id: number | string): Promise<ApiResponse<User>> {
+		return api.get(`/users/${id}`);
+	},
 	async createUser(payload: FormData): Promise<ApiResponse<User>> {
 		return api.post<ApiResponse<User>, FormData>("/users", payload, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+			},
+		});
+	},
+	async updateUser(id: number | string, payload: FormData): Promise<ApiResponse<User>> {
+		return api.put<ApiResponse<User>, FormData>(`/users/${id}`, payload, {
 			headers: {
 				"Content-Type": "multipart/form-data",
 			},
