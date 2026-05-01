@@ -23,7 +23,7 @@ export type AdminNavItem = {
 export const adminNavHead: AdminNavHeadItem[] = [
 	{
 		name: "CKC IT CLUB",
-		logo: "../../public/img/ckc-it-club-logo.jpg",
+		logo: "https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg",
 		role: "Quản trị viên",
 	},
 ];
@@ -46,7 +46,7 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
-		title: "Quản lý người dùng",
+		title: "Người dùng & Phân quyền",
 		url: "/users",
 		icon: Users,
 		items: [
@@ -142,7 +142,9 @@ export function getBreadcrumbsFromNavigation(
 	}
 
 	for (const item of adminNavMain) {
-		const childItem = item.items?.find((subItem) => normalizePath(subItem.url) === normalizedTarget);
+		const childItem = item.items?.find(
+			(subItem) => normalizePath(subItem.url) === normalizedTarget,
+		);
 		if (childItem) {
 			return [
 				rootBreadcrumb,
