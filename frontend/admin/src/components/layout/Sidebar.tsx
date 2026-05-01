@@ -72,7 +72,7 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 				isOpen ? "translate-x-0" : "-translate-x-full"
 			}`}>
 			<div className='border-border flex h-16 flex-shrink-0 items-center gap-3 border-b px-6'>
-				<div className='bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center overflow-hidden rounded-full font-bold'>
+				<div className='flex h-8 w-8 items-center justify-center overflow-hidden rounded-full font-bold'>
 					<img
 						src='../../../public/img/ckc-it-club-logo.jpg'
 						alt='Logo'
@@ -80,8 +80,8 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 					/>
 				</div>
 				<div className='min-w-0 flex-1'>
-					<h2 className='text-primary truncate text-sm font-semibold'>CKC IT CLUB</h2>
-					<p className='text-muted-foreground text-xs'>Dashboard</p>
+					<h2 className='text-foreground truncate text-sm font-semibold'>CKC IT CLUB</h2>
+					<p className='text-foreground text-xs'>Dashboard</p>
 				</div>
 			</div>
 
@@ -103,7 +103,7 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 										</span>
 									</div>
 									<ChevronRight
-										className={`text-muted-foreground h-4 w-4 transition-transform ${
+										className={`text-foreground h-4 w-4 transition-transform ${
 											isExpanded ? "rotate-90" : ""
 										}`}
 									/>
@@ -114,7 +114,7 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 											<li key={subItem.href}>
 												<Link
 													to={subItem.href}
-													className='text-muted-foreground hover:text-primary hover:bg-muted block rounded-lg px-3 py-2 text-xs transition-colors hover:!no-underline lg:text-sm'>
+													className='!text-foreground hover:!text-foreground hover:bg-muted block rounded-lg px-3 py-2 text-xs transition-colors hover:!no-underline lg:text-sm'>
 													{subItem.label}
 												</Link>
 											</li>

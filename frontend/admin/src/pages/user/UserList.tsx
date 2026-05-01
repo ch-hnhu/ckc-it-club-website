@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import userService from "@/services/user.service";
 import type { User } from "@/types/user.type";
 
@@ -17,7 +17,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,9 +40,12 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 
 function UserList() {
+	const navigate = useNavigate();
 	const [users, setUsers] = useState<User[]>([]);
 	const [meta, setMeta] = useState({
 		current_page: 1,
@@ -60,8 +62,14 @@ function UserList() {
 		key: "created_at",
 		order: "desc",
 	});
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		users.map((user) => user.id),
+	);
 
-	const breadcrumb = [{ title: "Dashboard", link: "/" }, { title: "Quản lý người dùng" }];
+	const breadcrumb = useMemo(
+		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý người dùng" }],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 
@@ -148,7 +156,10 @@ function UserList() {
 							<Settings2 className='h-4 w-4' />
 							Lọc
 						</Button>
-						<Button size='sm' className='h-8'>
+						<Button
+							size='sm'
+							onClick={() => navigate("/users/create")}
+							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 							<Plus className='h-4 w-4' />
 							Thêm
 						</Button>
@@ -159,9 +170,13 @@ function UserList() {
 						<TableHeader>
 							<TableRow>
 								<TableHead className='w-[50px]'>
-									<Checkbox aria-label='Select all' />
+									<Checkbox
+										aria-label='Select all'
+										checked={allSelected}
+										onCheckedChange={(checked) => toggleAll(checked === true)}
+									/>
 								</TableHead>
-								<TableHead className='w-[100px]'>
+								<TableHead className='w-[60px]'>
 									<Button
 										variant='ghost'
 										onClick={() => handleSort("id")}
@@ -204,9 +219,15 @@ function UserList() {
 							{users.map((user) => (
 								<TableRow key={user.id}>
 									<TableCell>
-										<Checkbox aria-label={`Select user ${user.id}`} />
+										<Checkbox
+											aria-label={`Select user ${user.id}`}
+											checked={isSelected(user.id)}
+											onCheckedChange={(checked) =>
+												toggleOne(user.id, checked === true)
+											}
+										/>
 									</TableCell>
-									<TableCell className='font-medium'>USR-{user.id}</TableCell>
+									<TableCell className='font-medium'>{user.id}</TableCell>
 									<TableCell>
 										<div className='flex items-center gap-3'>
 											<Avatar className='h-8 w-8'>
@@ -218,13 +239,15 @@ function UserList() {
 													{user.full_name?.charAt(0) || "U"}
 												</AvatarFallback>
 											</Avatar>
-											<span className='font-medium'>{user.full_name}</span>
+											<Link
+												to={`/users/${user.id}`}
+												className='font-medium hover:underline'>
+												{user.full_name}
+											</Link>
 										</div>
 									</TableCell>
 									<TableCell>{user.email}</TableCell>
-									<TableCell>
-										{new Date(user.created_at).toLocaleDateString()}
-									</TableCell>
+									<TableCell>{user.created_at}</TableCell>
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
@@ -236,10 +259,9 @@ function UserList() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
-												<DropdownMenuItem>Sửa</DropdownMenuItem>
-												<DropdownMenuSeparator />
-												<DropdownMenuItem className='text-destructive focus:text-destructive focus:bg-destructive/10'>
-													Xóa
+												<DropdownMenuItem
+													onClick={() => navigate(`/users/${user.id}`)}>
+													Sửa
 												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>

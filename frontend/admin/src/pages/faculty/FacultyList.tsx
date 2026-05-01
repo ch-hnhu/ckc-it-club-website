@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import facultyService from "@/services/faculty.service";
 import type { Faculty } from "@/types/faculty.type";
+import { useMemo } from "react";
 
 import {
 	Table,
@@ -41,8 +42,15 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
+import { getBreadcrumbsFromNavigation } from "@/config/navigation";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 
 function FacultyList() {
+	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/departments"), []);
+
+	useBreadcrumb(breadcrumb);
+
 	const [faculties, setFaculties] = useState<Faculty[]>([]);
 	const [meta, setMeta] = useState({
 		current_page: 1,
@@ -59,6 +67,9 @@ function FacultyList() {
 		key: "created_at",
 		order: "desc",
 	});
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		faculties.map((faculty) => faculty.id),
+	);
 
 	useEffect(() => {
 		const handler = setTimeout(() => {
@@ -134,7 +145,7 @@ function FacultyList() {
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
 						<Input
-							placeholder='Filter faculties...'
+							placeholder='Tìm kiếm theo tên khoa...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'
@@ -145,7 +156,9 @@ function FacultyList() {
 							<Settings2 className='h-4 w-4' />
 							View
 						</Button>
-						<Button size='sm' className='h-8'>
+						<Button
+							size='sm'
+							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 							<Plus className='h-4 w-4' />
 							Thêm Khoa mới
 						</Button>
@@ -156,7 +169,11 @@ function FacultyList() {
 						<TableHeader>
 							<TableRow>
 								<TableHead className='w-[50px]'>
-									<Checkbox aria-label='Select all' />
+									<Checkbox
+										aria-label='Select all'
+										checked={allSelected}
+										onCheckedChange={(checked) => toggleAll(checked === true)}
+									/>
 								</TableHead>
 								<TableHead className='w-[100px]'>
 									<Button
@@ -196,7 +213,15 @@ function FacultyList() {
 										{getSortIcon("updated_at")}
 									</Button>
 								</TableHead>
-								<TableHead>Số ngành</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("majors_count")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Số lượng ngành
+										{getSortIcon("majors_count")}
+									</Button>
+								</TableHead>
 								<TableHead className='w-[50px]'></TableHead>
 							</TableRow>
 						</TableHeader>
@@ -204,7 +229,13 @@ function FacultyList() {
 							{faculties.map((faculty) => (
 								<TableRow key={faculty.id}>
 									<TableCell>
-										<Checkbox aria-label={`Select faculty ${faculty.id}`} />
+										<Checkbox
+											aria-label={`Select faculty ${faculty.id}`}
+											checked={isSelected(faculty.id)}
+											onCheckedChange={(checked) =>
+												toggleOne(faculty.id, checked === true)
+											}
+										/>
 									</TableCell>
 									<TableCell className='font-medium'>FAC-{faculty.id}</TableCell>
 									<TableCell>
