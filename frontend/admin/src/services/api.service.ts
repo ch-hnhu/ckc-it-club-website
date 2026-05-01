@@ -1,4 +1,5 @@
 import apiClient from "@/config/axios.config";
+import type { AxiosRequestConfig } from "axios";
 
 export const api = {
 	get: async <TResponse>(url: string, params?: Record<string, unknown>) => {
@@ -6,18 +7,30 @@ export const api = {
 		return response.data;
 	},
 
-	post: async <TResponse, TBody = unknown>(url: string, body?: TBody) => {
-		const response = await apiClient.post<TResponse>(url, body);
+	post: async <TResponse, TBody = unknown>(
+		url: string,
+		body?: TBody,
+		config?: AxiosRequestConfig,
+	) => {
+		const response = await apiClient.post<TResponse>(url, body, config);
 		return response.data;
 	},
 
-	put: async <TResponse, TBody = unknown>(url: string, body?: TBody) => {
-		const response = await apiClient.put<TResponse>(url, body);
+	put: async <TResponse, TBody = unknown>(
+		url: string,
+		body?: TBody,
+		config?: AxiosRequestConfig,
+	) => {
+		const response = await apiClient.put<TResponse>(url, body, config);
 		return response.data;
 	},
 
-	patch: async <TResponse, TBody = unknown>(url: string, body?: TBody) => {
-		const response = await apiClient.patch<TResponse>(url, body);
+	patch: async <TResponse, TBody = unknown>(
+		url: string,
+		body?: TBody,
+		config?: AxiosRequestConfig,
+	) => {
+		const response = await apiClient.patch<TResponse>(url, body, config);
 		return response.data;
 	},
 

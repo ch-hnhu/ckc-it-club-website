@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Admin\ClubApplicationController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\MajorController;
+use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
@@ -34,6 +35,7 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('users', UserController::class);
         Route::apiResource('faculties', FacultyController::class)->only(['index']);
         Route::apiResource('majors', MajorController::class)->only(['index']);
+        Route::apiResource('roles', RoleController::class);
         Route::apiResource('school-classes', SchoolClassController::class)->only(['index']);
 
         Route::get('club-applications', [ClubApplicationController::class, 'index']);

@@ -17,7 +17,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,7 +40,7 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
@@ -177,7 +176,7 @@ function UserList() {
 										onCheckedChange={(checked) => toggleAll(checked === true)}
 									/>
 								</TableHead>
-								<TableHead className='w-[100px]'>
+								<TableHead className='w-[60px]'>
 									<Button
 										variant='ghost'
 										onClick={() => handleSort("id")}
@@ -228,7 +227,7 @@ function UserList() {
 											}
 										/>
 									</TableCell>
-									<TableCell className='font-medium'>USR-{user.id}</TableCell>
+									<TableCell className='font-medium'>{user.id}</TableCell>
 									<TableCell>
 										<div className='flex items-center gap-3'>
 											<Avatar className='h-8 w-8'>
@@ -240,13 +239,15 @@ function UserList() {
 													{user.full_name?.charAt(0) || "U"}
 												</AvatarFallback>
 											</Avatar>
-											<span className='font-medium'>{user.full_name}</span>
+											<Link
+												to={`/users/${user.id}`}
+												className='font-medium hover:underline'>
+												{user.full_name}
+											</Link>
 										</div>
 									</TableCell>
 									<TableCell>{user.email}</TableCell>
-									<TableCell>
-										{new Date(user.created_at).toLocaleDateString()}
-									</TableCell>
+									<TableCell>{user.created_at}</TableCell>
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
@@ -258,10 +259,9 @@ function UserList() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
-												<DropdownMenuItem>Sửa</DropdownMenuItem>
-												<DropdownMenuSeparator />
-												<DropdownMenuItem className='text-destructive focus:text-destructive focus:bg-destructive/10'>
-													Xóa
+												<DropdownMenuItem
+													onClick={() => navigate(`/users/${user.id}`)}>
+													Sửa
 												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>

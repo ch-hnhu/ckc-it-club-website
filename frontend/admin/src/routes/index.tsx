@@ -6,6 +6,7 @@ import MajorList from "@/pages/major/MajorList";
 import SchoolClassList from "@/pages/school-class/SchoolClassList";
 import UserList from "@/pages/user/UserList";
 import CreateUser from "@/pages/user/CreateUser";
+import UpdateUser from "@/pages/user/UpdateUser";
 import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage";
 import ApplicationDetailPage from "@/pages/recruitment/ApplicationDetailPage";
 import ApplicationQuestionsPage from "@/pages/recruitment/ApplicationQuestionsPage";
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
 			{
 				path: "users/create",
 				element: <CreateUser />,
+			},
+			{
+				path: "users/:id",
+				element: <UpdateUser />,
 			},
 			{
 				path: "departments",
