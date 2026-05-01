@@ -1,8 +1,9 @@
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -19,32 +20,47 @@ import { Separator } from "@/components/ui/separator";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import facultyService from "@/services/faculty.service";
 import majorService from "@/services/major.service";
+import roleService from "@/services/role.service";
 import schoolClassService from "@/services/school-class.service";
+import userService from "@/services/user.service";
+import type { ApiErrorResponse } from "@/types/api.types";
 import type { Faculty } from "@/types/faculty.type";
 import type { Major } from "@/types/major.type";
+import type { RoleOption } from "@/types/role.type";
 import type { SchoolClass } from "@/types/school-class.type";
 
 type CreateUserFormState = {
 	full_name: string;
+	gender: string;
 	email: string;
 	password: string;
 	student_code: string;
 	faculty_id: number | null;
 	major_id: number | null;
 	class_id: number | null;
+	roles: string[];
 };
+
+type CreateUserFieldErrorKey = keyof CreateUserFormState | "avatar";
+type CreateUserFieldErrors = Partial<Record<CreateUserFieldErrorKey, string>>;
 
 const MAX_SELECT_FETCH_SIZE = 200;
 const DEFAULT_AVATAR_SRC = "/img/default-avatar.png";
+const GENDER_OPTIONS: ComboboxOption[] = [
+	{ value: "male", label: "Nam" },
+	{ value: "female", label: "Nữ" },
+];
 
 const getInitialFormState = (): CreateUserFormState => ({
 	full_name: "",
+	gender: "",
 	email: "",
 	password: "",
 	student_code: "",
 	faculty_id: null,
 	major_id: null,
 	class_id: null,
+	roles: [],
 });
 
 function CreateUser() {
@@ -58,8 +74,10 @@ function CreateUser() {
 	const [faculties, setFaculties] = useState<Faculty[]>([]);
 	const [majors, setMajors] = useState<Major[]>([]);
 	const [schoolClasses, setSchoolClasses] = useState<SchoolClass[]>([]);
+	const [roles, setRoles] = useState<RoleOption[]>([]);
 	const [loadingOptions, setLoadingOptions] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
+	const [fieldErrors, setFieldErrors] = useState<CreateUserFieldErrors>({});
 
 	const breadcrumb = useMemo(
 		() => [
@@ -76,30 +94,33 @@ function CreateUser() {
 		const fetchSelectOptions = async () => {
 			setLoadingOptions(true);
 			try {
-				const [facultyResponse, majorResponse, classResponse] = await Promise.all([
-					facultyService.getFaculties({
-						per_page: MAX_SELECT_FETCH_SIZE,
-						sort: "label",
-						order: "asc",
-					}),
-					majorService.getMajors({
-						per_page: MAX_SELECT_FETCH_SIZE,
-						sort: "label",
-						order: "asc",
-					}),
-					schoolClassService.getSchoolClasses({
-						per_page: MAX_SELECT_FETCH_SIZE,
-						sort: "label",
-						order: "asc",
-					}),
-				]);
+				const [facultyResponse, majorResponse, classResponse, roleResponse] =
+					await Promise.all([
+						facultyService.getFaculties({
+							per_page: MAX_SELECT_FETCH_SIZE,
+							sort: "label",
+							order: "asc",
+						}),
+						majorService.getMajors({
+							per_page: MAX_SELECT_FETCH_SIZE,
+							sort: "label",
+							order: "asc",
+						}),
+						schoolClassService.getSchoolClasses({
+							per_page: MAX_SELECT_FETCH_SIZE,
+							sort: "label",
+							order: "asc",
+						}),
+						roleService.getRoles(),
+					]);
 
 				setFaculties(facultyResponse.data);
 				setMajors(majorResponse.data);
 				setSchoolClasses(classResponse.data);
+				setRoles(roleResponse.data);
 			} catch (error) {
-				console.error("Không thể tải danh sách khoa/ngành/lớp:", error);
-				toast.error("Không thể tải danh sách khoa, ngành, lớp.", {
+				console.error("Không thể tải danh sách khoa/ngành/lớp/vai trò:", error);
+				toast.error("Không thể tải danh sách khoa, ngành, lớp, vai trò.", {
 					position: "top-right",
 				});
 			} finally {
@@ -162,21 +183,27 @@ function CreateUser() {
 		[filteredClasses],
 	);
 
-	const avatarFallback = useMemo(() => {
-		const source = form.full_name.trim() || form.email.trim();
-		if (!source) {
-			return "U";
-		}
-		const words = source.split(/\s+/).filter(Boolean);
-		if (words.length === 1) {
-			return words[0].slice(0, 2).toUpperCase();
-		}
-		return `${words[0][0] ?? ""}${words[words.length - 1][0] ?? ""}`.toUpperCase();
-	}, [form.full_name, form.email]);
+	const roleOptions = useMemo<ComboboxOption[]>(
+		() =>
+			roles.map((role) => ({
+				value: role.value,
+				label: role.label,
+			})),
+		[roles],
+	);
 
 	const updateField =
 		(field: "full_name" | "email" | "password" | "student_code") =>
 		(event: ChangeEvent<HTMLInputElement>) => {
+			setFieldErrors((prev) => {
+				if (!prev[field]) {
+					return prev;
+				}
+
+				const next = { ...prev };
+				delete next[field];
+				return next;
+			});
 			setForm((prev) => ({ ...prev, [field]: event.target.value }));
 		};
 
@@ -187,6 +214,10 @@ function CreateUser() {
 		}
 
 		if (!file.type.startsWith("image/")) {
+			setFieldErrors((prev) => ({
+				...prev,
+				avatar: "Vui lòng chọn file ảnh hợp lệ.",
+			}));
 			toast.error("Vui lòng chọn file ảnh hợp lệ.", { position: "top-right" });
 			event.target.value = "";
 			return;
@@ -201,6 +232,15 @@ function CreateUser() {
 
 		setAvatarPreview(objectUrl);
 		setAvatarFile(file);
+		setFieldErrors((prev) => {
+			if (!prev.avatar) {
+				return prev;
+			}
+
+			const next = { ...prev };
+			delete next.avatar;
+			return next;
+		});
 	};
 
 	const clearAvatar = () => {
@@ -220,42 +260,81 @@ function CreateUser() {
 	const resetForm = () => {
 		clearAvatar();
 		setForm(getInitialFormState());
+		setFieldErrors({});
 	};
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
-		const missingFields: string[] = [];
-		if (!form.full_name.trim()) missingFields.push("full_name");
-		if (!form.email.trim()) missingFields.push("email");
-		if (!form.password.trim()) missingFields.push("password");
-		if (!form.student_code.trim()) missingFields.push("student_code");
-		if (!form.faculty_id) missingFields.push("faculty");
-		if (!form.major_id) missingFields.push("major");
-		if (!form.class_id) missingFields.push("class");
+		const clientValidationErrors: CreateUserFieldErrors = {};
+		if (!form.full_name.trim()) clientValidationErrors.full_name = "Vui lòng nhập họ và tên.";
+		if (!form.gender) clientValidationErrors.gender = "Vui lòng chọn giới tính.";
+		if (!form.student_code.trim())
+			clientValidationErrors.student_code = "Vui lòng nhập mã sinh viên.";
+		if (!form.email.trim()) clientValidationErrors.email = "Vui lòng nhập email.";
+		if (!form.password.trim()) clientValidationErrors.password = "Vui lòng nhập mật khẩu.";
+		if (!form.faculty_id) clientValidationErrors.faculty_id = "Vui lòng chọn khoa.";
+		if (!form.major_id) clientValidationErrors.major_id = "Vui lòng chọn ngành.";
+		if (!form.class_id) clientValidationErrors.class_id = "Vui lòng chọn lớp.";
+		if (form.roles.length === 0) clientValidationErrors.roles = "Vui lòng chọn vai trò.";
 
-		if (missingFields.length > 0) {
-			toast.error(`Vui lòng nhập đầy đủ: ${missingFields.join(", ")}.`, {
-				position: "top-right",
-			});
+		if (Object.keys(clientValidationErrors).length > 0) {
+			setFieldErrors(clientValidationErrors);
 			return;
 		}
 
+		setFieldErrors({});
+
 		setSubmitting(true);
 		try {
-			const payload = {
-				avatar: avatarFile?.name ?? null,
-				full_name: form.full_name.trim(),
-				email: form.email.trim(),
-				password: form.password,
-				student_code: form.student_code.trim(),
-				faculty_id: form.faculty_id,
-				major_id: form.major_id,
-				class_id: form.class_id,
-			};
+			const payload = new FormData();
+			payload.append("full_name", form.full_name.trim());
+			payload.append("gender", form.gender);
+			payload.append("email", form.email.trim());
+			payload.append("password", form.password);
+			payload.append("password_confirmation", form.password);
+			payload.append("student_code", form.student_code.trim());
+			payload.append("faculty_id", String(form.faculty_id));
+			payload.append("major_id", String(form.major_id));
+			payload.append("class_id", String(form.class_id));
+			form.roles.forEach((role) => {
+				payload.append("roles[]", role);
+			});
 
-			console.log("Create user payload (UI only):", payload);
-			toast.success("Đã thu thập dữ liệu tạo user. Form hiện ở chế độ UI-only.", {
+			if (avatarFile) {
+				payload.append("avatar", avatarFile);
+			}
+
+			await userService.createUser(payload);
+			toast.success("Tạo người dùng thành công.", {
+				position: "top-right",
+			});
+			navigate("/users");
+		} catch (error) {
+			const axiosError = error as AxiosError<ApiErrorResponse>;
+			const responseData = axiosError.response?.data;
+
+			if (responseData?.errors) {
+				const serverFieldErrors: CreateUserFieldErrors = {};
+
+				Object.entries(responseData.errors).forEach(([key, messages]) => {
+					if (messages.length === 0) {
+						return;
+					}
+
+					const normalizedKey = key.startsWith("roles.") ? "roles" : key;
+					if (normalizedKey in form || normalizedKey === "avatar") {
+						serverFieldErrors[normalizedKey as CreateUserFieldErrorKey] = messages[0];
+					}
+				});
+
+				if (Object.keys(serverFieldErrors).length > 0) {
+					setFieldErrors(serverFieldErrors);
+					return;
+				}
+			}
+
+			toast.error(responseData?.message ?? "Không thể tạo người dùng.", {
 				position: "top-right",
 			});
 		} finally {
@@ -291,9 +370,6 @@ function CreateUser() {
 									{avatarPreview ? (
 										<AvatarImage src={avatarPreview} alt='Avatar preview' />
 									) : null}
-									<AvatarFallback className='text-3xl font-semibold'>
-										{avatarFallback}
-									</AvatarFallback>
 								</Avatar>
 							</div>
 
@@ -329,6 +405,9 @@ function CreateUser() {
 								<p className='text-xs text-muted-foreground'>
 									Hỗ trợ PNG, JPG, WEBP.
 								</p>
+								{fieldErrors.avatar ? (
+									<p className='text-sm text-destructive'>{fieldErrors.avatar}</p>
+								) : null}
 							</div>
 						</CardContent>
 					</Card>
@@ -343,7 +422,7 @@ function CreateUser() {
 						</CardHeader>
 						<CardContent className='space-y-6'>
 							<div className='grid gap-4 md:grid-cols-2'>
-								<div className='space-y-2 md:col-span-2'>
+								<div className='space-y-2'>
 									<Label htmlFor='full_name'>
 										Họ tên <span className='text-red-500'>*</span>
 									</Label>
@@ -354,6 +433,84 @@ function CreateUser() {
 										onChange={updateField("full_name")}
 										required
 									/>
+									{fieldErrors.full_name ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.full_name}
+										</p>
+									) : null}
+								</div>
+
+								<div className='space-y-2'>
+									<Label>Giới tính</Label>
+									<Combobox
+										value={form.gender}
+										onValueChange={(value) => {
+											setForm((prev) => ({
+												...prev,
+												gender: value,
+											}));
+											setFieldErrors((prev) => {
+												const next = { ...prev };
+												delete next.gender;
+												return next;
+											});
+										}}
+										options={GENDER_OPTIONS}
+										searchable={false}
+										placeholder='Chọn giới tính'
+										disabled={loadingOptions}
+									/>
+									{fieldErrors.gender ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.gender}
+										</p>
+									) : null}
+								</div>
+
+								<div className='space-y-2'>
+									<Label htmlFor='student_code'>Mã sinh viên</Label>
+									<Input
+										id='student_code'
+										placeholder='0306123456'
+										value={form.student_code}
+										onChange={updateField("student_code")}
+										required
+									/>
+									{fieldErrors.student_code ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.student_code}
+										</p>
+									) : null}
+								</div>
+
+								<div className='space-y-2'>
+									<Label>
+										Vai trò <span className='text-red-500'>*</span>
+									</Label>
+									<Combobox
+										value={form.roles}
+										onValueChange={(value) => {
+											setForm((prev) => ({
+												...prev,
+												roles: value,
+											}));
+											setFieldErrors((prev) => {
+												const next = { ...prev };
+												delete next.roles;
+												return next;
+											});
+										}}
+										options={roleOptions}
+										placeholder='Chọn vai trò'
+										searchPlaceholder='Tìm vai trò...'
+										disabled={loadingOptions || roleOptions.length === 0}
+										multiple={true}
+									/>
+									{fieldErrors.roles ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.roles}
+										</p>
+									) : null}
 								</div>
 
 								<div className='space-y-2'>
@@ -368,6 +525,11 @@ function CreateUser() {
 										onChange={updateField("email")}
 										required
 									/>
+									{fieldErrors.email ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.email}
+										</p>
+									) : null}
 								</div>
 
 								<div className='space-y-2'>
@@ -382,17 +544,11 @@ function CreateUser() {
 										onChange={updateField("password")}
 										required
 									/>
-								</div>
-
-								<div className='space-y-2 md:col-span-2'>
-									<Label htmlFor='student_code'>Mã sinh viên</Label>
-									<Input
-										id='student_code'
-										placeholder='0306123456'
-										value={form.student_code}
-										onChange={updateField("student_code")}
-										required
-									/>
+									{fieldErrors.password ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.password}
+										</p>
+									) : null}
 								</div>
 							</div>
 
@@ -403,32 +559,50 @@ function CreateUser() {
 									<Label>Khoa</Label>
 									<Combobox
 										value={form.faculty_id ? String(form.faculty_id) : ""}
-										onValueChange={(value) =>
+										onValueChange={(value) => {
 											setForm((prev) => ({
 												...prev,
 												faculty_id: value ? Number(value) : null,
 												major_id: null,
 												class_id: null,
-											}))
-										}
+											}));
+											setFieldErrors((prev) => {
+												const next = { ...prev };
+												delete next.faculty_id;
+												delete next.major_id;
+												delete next.class_id;
+												return next;
+											});
+										}}
 										options={facultyOptions}
 										placeholder='Chọn khoa'
 										searchPlaceholder='Tìm khoa...'
 										disabled={loadingOptions}
 									/>
+									{fieldErrors.faculty_id ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.faculty_id}
+										</p>
+									) : null}
 								</div>
 
 								<div className='space-y-2'>
 									<Label>Ngành</Label>
 									<Combobox
 										value={form.major_id ? String(form.major_id) : ""}
-										onValueChange={(value) =>
+										onValueChange={(value) => {
 											setForm((prev) => ({
 												...prev,
 												major_id: value ? Number(value) : null,
 												class_id: null,
-											}))
-										}
+											}));
+											setFieldErrors((prev) => {
+												const next = { ...prev };
+												delete next.major_id;
+												delete next.class_id;
+												return next;
+											});
+										}}
 										options={majorOptions}
 										placeholder='Chọn ngành'
 										searchPlaceholder='Tìm ngành...'
@@ -438,18 +612,32 @@ function CreateUser() {
 											majorOptions.length === 0
 										}
 									/>
+									{fieldErrors.major_id ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.major_id}
+										</p>
+									) : null}
 								</div>
 
 								<div className='space-y-2'>
 									<Label>Lớp</Label>
 									<Combobox
 										value={form.class_id ? String(form.class_id) : ""}
-										onValueChange={(value) =>
+										onValueChange={(value) => {
 											setForm((prev) => ({
 												...prev,
 												class_id: value ? Number(value) : null,
-											}))
-										}
+											}));
+											setFieldErrors((prev) => {
+												if (!prev.class_id) {
+													return prev;
+												}
+
+												const next = { ...prev };
+												delete next.class_id;
+												return next;
+											});
+										}}
 										options={classOptions}
 										placeholder='Chọn lớp'
 										searchPlaceholder='Tìm lớp...'
@@ -459,6 +647,11 @@ function CreateUser() {
 											classOptions.length === 0
 										}
 									/>
+									{fieldErrors.class_id ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.class_id}
+										</p>
+									) : null}
 								</div>
 							</div>
 						</CardContent>

@@ -1,5 +1,5 @@
 import { api } from "@/services/api.service";
-import type { PaginatedResponse } from "@/types/api.types";
+import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type { User } from "@/types/user.type";
 
 const userService = {
@@ -14,6 +14,13 @@ const userService = {
 	},
 	async getMe(): Promise<{ success: boolean; data: User }> {
 		return api.get("/auth/me");
+	},
+	async createUser(payload: FormData): Promise<ApiResponse<User>> {
+		return api.post<ApiResponse<User>, FormData>("/users", payload, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+			},
+		});
 	},
 	async logout(): Promise<{ success: boolean; message: string }> {
 		return api.post("/auth/logout");

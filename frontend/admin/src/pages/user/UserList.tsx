@@ -244,9 +244,7 @@ function UserList() {
 										</div>
 									</TableCell>
 									<TableCell>{user.email}</TableCell>
-									<TableCell>
-										{new Date(user.created_at).toLocaleDateString()}
-									</TableCell>
+									<TableCell>{user.created_at}</TableCell>
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
