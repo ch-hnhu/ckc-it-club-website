@@ -15,6 +15,7 @@ import ApplicationAnswersPage from "@/pages/recruitment/ApplicationAnswersPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NotFound from "@/pages/NotFound";
+import RoleList from "@/pages/role/RoleList";
 
 const router = createBrowserRouter([
 	{
@@ -45,6 +46,10 @@ const router = createBrowserRouter([
 			{
 				path: "users/:id",
 				element: <UpdateUser />,
+			},
+			{
+				path: "roles",
+				element: <RoleList />,
 			},
 			{
 				path: "departments",
