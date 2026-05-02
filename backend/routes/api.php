@@ -30,17 +30,20 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::get('/', [DashboardController::class, 'index']);
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/', [DashboardController::class, 'index']);
 
-        Route::apiResource('users', UserController::class);
-        Route::apiResource('faculties', FacultyController::class)->only(['index']);
-        Route::apiResource('majors', MajorController::class)->only(['index']);
-        Route::apiResource('roles', RoleController::class);
-        Route::apiResource('school-classes', SchoolClassController::class)->only(['index']);
+            Route::apiResource('users', UserController::class);
+            Route::apiResource('faculties', FacultyController::class)->only(['index']);
+            Route::apiResource('majors', MajorController::class)->only(['index']);
+            Route::apiResource('roles', RoleController::class);
+            Route::apiResource('school-classes', SchoolClassController::class)->only(['index']);
 
-        Route::get('club-applications', [ClubApplicationController::class, 'index']);
-        Route::patch('club-applications/{clubApplication}/status', [ClubApplicationController::class, 'updateStatus']);
-        Route::patch('application-questions/reorder', [ApplicationQuestionController::class, 'reorder']);
-        Route::apiResource('application-questions', ApplicationQuestionController::class);
+            // Club applications
+            Route::get('club-applications', [ClubApplicationController::class, 'index']);
+            Route::patch('club-applications/{clubApplication}/status', [ClubApplicationController::class, 'updateStatus']);
+            Route::patch('application-questions/reorder', [ApplicationQuestionController::class, 'reorder']);
+            Route::apiResource('application-questions', ApplicationQuestionController::class);
+        });
     });
 });
