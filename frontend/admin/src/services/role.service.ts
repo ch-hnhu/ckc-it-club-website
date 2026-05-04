@@ -1,5 +1,5 @@
 import { api } from "@/services/api.service";
-import type { PaginatedResponse } from "@/types/api.types";
+import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type { Role } from "@/types/role.type";
 
 const roleService = {
@@ -11,6 +11,14 @@ const roleService = {
 		order?: "asc" | "desc";
 	}): Promise<PaginatedResponse<Role>> {
 		return api.get("/roles", params);
+	},
+
+	async createRole(payload: FormData): Promise<ApiResponse<Role>> {
+		return api.post<ApiResponse<Role>, FormData>("/roles", payload, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+			},
+		});
 	},
 };
 

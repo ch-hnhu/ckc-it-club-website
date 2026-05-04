@@ -582,7 +582,6 @@ function UpdateUser() {
 												placeholder='0306123456'
 												value={form.student_code}
 												onChange={updateField("student_code")}
-												required
 											/>
 											{fieldErrors.student_code ? (
 												<p className='text-sm text-destructive'>

@@ -42,10 +42,12 @@ import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import roleService from "@/services/role.service";
 import type { Role } from "@/types/role.type";
+import CreateRoleModal from "./CreateRoleModal";
 
 function RoleList() {
 	const navigate = useNavigate();
 	const [roles, setRoles] = useState<Role[]>([]);
+	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const [meta, setMeta] = useState({
 		current_page: 1,
 		last_page: 1,
@@ -157,7 +159,7 @@ function RoleList() {
 						</Button>
 						<Button
 							size='sm'
-							onClick={() => navigate("/roles/create")}
+							onClick={() => setIsCreateModalOpen(true)}
 							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 							<Plus className='h-4 w-4' />
 							Thêm
@@ -366,6 +368,12 @@ function RoleList() {
 					</Table>
 				</div>
 			</div>
+
+			<CreateRoleModal
+				open={isCreateModalOpen}
+				onOpenChange={setIsCreateModalOpen}
+				onSuccess={() => fetchRoles()}
+			/>
 		</div>
 	);
 }
