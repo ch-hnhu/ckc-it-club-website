@@ -18,17 +18,22 @@ enum RolesEnum: string
     case CLUB_MEMBER = 'club-member';
     case USER = 'user';
 
+    public static function values(): array
+    {
+        return array_column(self::cases(), 'value');
+    }
+
     public function label(): string
     {
         return match ($this) {
-            self::ADMIN => 'Admin',
+            self::ADMIN => 'Quản trị viên',
             self::PRESIDENT => 'Chủ nhiệm',
             self::VICE_PRESIDENT => 'Phó Chủ nhiệm',
             self::ACADEMIC_HEAD => 'Trưởng ban Học thuật',
             self::COMMUNICATIONS_HEAD => 'Trưởng ban Truyền thông',
             self::VOLUNTEER_HEAD => 'Trưởng ban Tình nguyện',
             self::CLUB_MEMBER => 'Thành viên CLB',
-            self::USER => 'User',
+            self::USER => 'Người dùng',
         };
     }
 }

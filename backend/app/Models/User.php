@@ -8,10 +8,13 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Laravel\Sanctum\HasApiTokens;
 use App\Enums\RolesEnum;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
  * @property string $full_name
+ * @property string|null $gender
  * @property string $email
  * @property string|null $avatar
  * @property string|null $provider
@@ -34,6 +37,7 @@ class User extends Authenticatable
         'email_verified_at',
         'password',
         'student_code',
+        'gender',
         'is_active',
         'faculty_id',
         'major_id',
@@ -42,6 +46,14 @@ class User extends Authenticatable
         'provider_id',
         'avatar',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime:d/m/Y',
+            'updated_at' => 'datetime:d/m/Y',
+        ];
+    }
 
     public function faculty()
     {
@@ -56,6 +68,22 @@ class User extends Authenticatable
     public function class()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    /**
+     * Convert local avatar path to public URL while keeping external URLs unchanged.
+     */
+    public function getAvatarAttribute(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        if (Str::startsWith($value, ['http://', 'https://'])) {
+            return $value;
+        }
+
+        return Storage::disk('public')->url($value);
     }
 
     /**

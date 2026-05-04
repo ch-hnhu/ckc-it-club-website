@@ -38,6 +38,10 @@ enum ApiMessage: string
     case USERS_RETRIEVED = 'Users retrieved successfully';
     case USER_NOT_FOUND = 'User not found';
 
+    // Role Specific
+    case ROLES_RETRIEVED = 'Roles retrieved successfully';
+    case ROLE_CREATED = 'Role created successfully';
+
     // Database & Server Errors
     case DATABASE_ERROR = 'Database error occurred';
     case SERVER_ERROR = 'Internal server error';

@@ -1,6 +1,7 @@
 # CKC IT Club Backend Context
 
 ## Purpose
+
 - This folder is the Laravel backend for the CKC IT Club system.
 - It currently acts as an API backend for two frontend clients:
 - `frontend/admin`: admin dashboard.
@@ -8,11 +9,13 @@
 - The most complete backend flow today is admin-side management of users, academic reference data, and club recruitment applications.
 
 ## Read This First
+
 - Treat this file as the backend source-of-truth for agent work.
 - Do not trust `backend/README.md` or the root `README.md` blindly. Both still contain generic Laravel text and at least one stale setup step.
 - Prefer reading actual code in `routes/`, `app/Http/Controllers/`, `app/Models/`, `database/migrations/`, and `database/seeders/`.
 
 ## Maintenance Rule
+
 - Any agent that changes backend behavior MUST review and update this file before finishing work.
 - Update this file when any of these change:
 - route surface
@@ -27,6 +30,7 @@
 - Keep updates short and factual. Do not turn this file into a full changelog of code diffs.
 
 ## Stack
+
 - Framework: Laravel 12.
 - PHP: `^8.2` in Composer. Docker image currently uses PHP `8.4-fpm-alpine`.
 - Auth: Laravel Sanctum personal access tokens.
@@ -36,6 +40,7 @@
 - Frontend asset tooling inside backend: Vite + Tailwind 4, but backend is API-first.
 
 ## Main Business Scope Right Now
+
 - Google OAuth login for admin and user flows.
 - Admin authenticated API for:
 - dashboard health access.
@@ -47,6 +52,7 @@
 - Recruitment domain is the strongest implemented domain in this backend.
 
 ## What Is Actually Implemented
+
 - Public API routes:
 - `GET /api/v1/health`
 - `GET /api/v1/auth/verify-token`
@@ -59,6 +65,7 @@
 - `GET /api/v1/users`
 - `GET /api/v1/faculties`
 - `GET /api/v1/majors`
+- `GET /api/v1/roles`
 - `GET /api/v1/school-classes`
 - `GET /api/v1/contacts`
 - `PATCH /api/v1/contacts/{contact}/status`
@@ -72,6 +79,7 @@
 - `GET /auth/google/callback`
 
 ## Important Reality Checks
+
 - Admin API routes are protected by `auth:sanctum`, but they are not additionally protected by explicit role middleware.
 - Admin access is currently enforced mainly at OAuth login time in `AuthBaseController::handleAdmin()`.
 - A user who already has a valid admin-issued token can access admin API routes without extra per-route role checks.
@@ -85,6 +93,7 @@
 - `ClubInformationValue`
 
 ## Backend Layout
+
 - `app/Enums/`: centralized enums such as API messages, HTTP status, and roles.
 - `app/Traits/ApiResponse.php`: standard JSON response helpers.
 - `app/Http/Controllers/Auth/`: OAuth login, token verification, auth session endpoints.
@@ -100,6 +109,7 @@
 - `docker/` and `Dockerfile`: production-ish container flow for Render.
 
 ## Request and Response Conventions
+
 - API responses are expected to be JSON.
 - `ForceJsonResponse` middleware sets `Accept: application/json` for API requests.
 - Most controllers use `BaseApiController` + `ApiResponse` trait for consistent response shape:
@@ -111,6 +121,7 @@
 - `Accept-Language` header
 
 ## Authentication Model
+
 - Google OAuth redirects start on web routes, not API routes.
 - Login type is stored in session before redirect:
 - admin flow: `redirectAdmin()`
@@ -131,6 +142,7 @@
 - Existing tokens are deleted on successful login before issuing a new one.
 
 ## Authorization Model
+
 - Default role assignment happens automatically on new `User` creation via model boot hook.
 - Default assigned role: `user`.
 - Role seeding is handled in `database/seeders/RoleSeeder.php`.
@@ -138,8 +150,14 @@
 - If you add sensitive admin endpoints, add explicit role/permission checks. Do not assume `auth:sanctum` is enough.
 
 ## Core Data Model
+
 - `users`
 - identity, OAuth provider data, profile fields, academic references, active flag.
+- admin-created avatars are stored on Laravel `public` disk under `avatars/`, and the relative path is persisted in `users.avatar`.
+- admin create-user flow now persists `gender` directly on the `users` table and assigns the selected Spatie roles from the submitted `roles` array.
+- `User` API serialization formats `created_at` and `updated_at` as `d/m/Y` for frontend direct display.
+- `roles`
+- admin role create payload uses `label` for the display name, `name` for the internal value, and `is_system` as a boolean flag.
 - belongs to `faculty`, `major`, `school class`.
 - can create/update other records through `created_by` and `updated_by`.
 - `faculties`
@@ -175,6 +193,7 @@
 - schema exists, but implementation is incomplete and not exposed.
 
 ## Recruitment Domain Rules
+
 - Question CRUD lives in `ApplicationQuestionController`.
 - Option rules:
 - `radio` and `select` must have at least 2 options.
@@ -195,6 +214,7 @@
 - `passed` and `failed` are terminal in current logic.
 
 ## Seeder Reality
+
 - `DatabaseSeeder` currently runs:
 - `RoleSeeder`
 - `UserSeeder`
@@ -213,7 +233,9 @@
 - Conclusion: do not “clean up” this mismatch casually. It currently works because `ClubApplicationSeeder` backfills `admin@gmail.com`.
 
 ## Setup and Run
+
 - Backend install:
+
 ```bash
 cd backend
 composer install
@@ -221,28 +243,33 @@ npm install
 cp .env.example .env
 php artisan key:generate
 ```
+
 - Required env categories:
 - app URL and locale.
 - MySQL connection.
 - frontend URLs for CORS and OAuth postMessage redirects.
 - Google OAuth credentials.
 - Recommended dev bootstrap:
+
 ```bash
 php artisan migrate:fresh --seed
 php artisan storage:link
 composer run dev
 ```
+
 - `composer run dev` starts:
 - Laravel dev server
 - queue listener
 - pail log tailing
 - Vite dev server
 - Health check:
+
 ```bash
 curl http://localhost:8000/api/v1/health
 ```
 
 ## Environment Variables That Matter
+
 - `APP_URL`
 - `DB_*`
 - `ADMIN_FRONTEND_URL`
@@ -254,6 +281,7 @@ curl http://localhost:8000/api/v1/health
 - `MYSQL_ATTR_SSL_CA` when using SSL-protected MySQL providers
 
 ## Docker and Deploy Notes
+
 - There is a Dockerfile intended for Render-style deployment.
 - Container startup script:
 - can generate `APP_KEY` if missing.
@@ -262,6 +290,7 @@ curl http://localhost:8000/api/v1/health
 - serves through nginx + php-fpm on `PORT`, default `10000`.
 
 ## Files Agents Should Prefer Reading Before Edits
+
 - `routes/api.php`
 - `routes/web.php`
 - `bootstrap/app.php`
@@ -276,6 +305,7 @@ curl http://localhost:8000/api/v1/health
 - `database/seeders/DatabaseSeeder.php`
 
 ## Safe Edit Rules For Agents
+
 - Prefer extending existing admin controllers over inventing a parallel module structure.
 - Preserve the response envelope from `ApiResponse` unless there is an explicit API contract change.
 - When adding admin-only endpoints, add explicit authorization checks. The current codebase under-enforces authorization.
@@ -286,6 +316,7 @@ curl http://localhost:8000/api/v1/health
 - Do not assume tests will catch regressions. Test coverage is effectively minimal.
 
 ## Common Task Playbooks
+
 - Add a new authenticated admin endpoint:
 - add route in `routes/api.php`
 - create controller action under `app/Http/Controllers/Api/V1/Admin/`
@@ -307,6 +338,7 @@ curl http://localhost:8000/api/v1/health
 - review `verify-token` contract with frontend before changing it
 
 ## Known Gaps and Debt
+
 - Test suite is only Laravel example tests.
 - Admin routes do not enforce role middleware.
 - Token-expiry middleware exists but is unused.
@@ -316,5 +348,5 @@ curl http://localhost:8000/api/v1/health
 - Root documentation is partially stale.
 
 ## Change Log
-- `2026-04-23`: Added authenticated admin contact management API (`GET /contacts`, `PATCH /contacts/{contact}/status`) with explicit controller-level admin role checks.
+
 - `2026-04-07`: Initial backend context created after full backend audit. Captured actual route surface, auth model, recruitment rules, setup flow, known gaps, and agent editing rules.

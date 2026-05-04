@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AxiosError } from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
@@ -28,6 +28,7 @@ import type { Faculty } from "@/types/faculty.type";
 import type { Major } from "@/types/major.type";
 import type { Role } from "@/types/role.type";
 import type { SchoolClass } from "@/types/school-class.type";
+import type { User } from "@/types/user.type";
 
 type CreateUserFormState = {
 	full_name: string;
@@ -43,6 +44,21 @@ type CreateUserFormState = {
 
 type CreateUserFieldErrorKey = keyof CreateUserFormState | "avatar";
 type CreateUserFieldErrors = Partial<Record<CreateUserFieldErrorKey, string>>;
+
+type RoleDetail = {
+	id?: number;
+	name?: string;
+	label?: string;
+	value?: string;
+};
+
+type UserDetail = User & {
+	student_code?: string | null;
+	faculty_id?: number | null;
+	major_id?: number | null;
+	class_id?: number | null;
+	roles?: Array<string | RoleDetail>;
+};
 
 const MAX_SELECT_FETCH_SIZE = 200;
 const DEFAULT_AVATAR_SRC = "/img/default-avatar.png";
@@ -63,19 +79,39 @@ const getInitialFormState = (): CreateUserFormState => ({
 	roles: [],
 });
 
-function CreateUser() {
+const normalizeRoles = (roleList: UserDetail["roles"]): string[] => {
+	if (!Array.isArray(roleList)) {
+		return [];
+	}
+
+	return roleList
+		.map((role) => {
+			if (typeof role === "string") {
+				return role;
+			}
+
+			return role.value ?? role.name ?? role.label ?? "";
+		})
+		.filter((role): role is string => Boolean(role));
+};
+
+function UpdateUser() {
 	const navigate = useNavigate();
+	const { id } = useParams<{ id: string }>();
 	const avatarInputRef = useRef<HTMLInputElement | null>(null);
 	const avatarObjectUrlRef = useRef<string | null>(null);
 
 	const [form, setForm] = useState<CreateUserFormState>(getInitialFormState);
+	const [initialForm, setInitialForm] = useState<CreateUserFormState>(getInitialFormState);
 	const [avatarFile, setAvatarFile] = useState<File | null>(null);
 	const [avatarPreview, setAvatarPreview] = useState(DEFAULT_AVATAR_SRC);
+	const [initialAvatarPreview, setInitialAvatarPreview] = useState(DEFAULT_AVATAR_SRC);
 	const [faculties, setFaculties] = useState<Faculty[]>([]);
 	const [majors, setMajors] = useState<Major[]>([]);
 	const [schoolClasses, setSchoolClasses] = useState<SchoolClass[]>([]);
 	const [roles, setRoles] = useState<Role[]>([]);
 	const [loadingOptions, setLoadingOptions] = useState(true);
+	const [loadingUser, setLoadingUser] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<CreateUserFieldErrors>({});
 
@@ -83,7 +119,7 @@ function CreateUser() {
 		() => [
 			{ title: "Dashboard", link: "/" },
 			{ title: "Quản lý người dùng", link: "/users" },
-			{ title: "Tạo người dùng" },
+			{ title: "Cập nhật người dùng" },
 		],
 		[],
 	);
@@ -130,6 +166,59 @@ function CreateUser() {
 
 		fetchSelectOptions();
 	}, []);
+
+	useEffect(() => {
+		if (!id) {
+			toast.error("Không tìm thấy mã người dùng để cập nhật.", {
+				position: "top-right",
+			});
+			navigate("/users");
+			return;
+		}
+
+		const fetchUserDetail = async () => {
+			setLoadingUser(true);
+			try {
+				const response = await userService.getUserById(id);
+				const user = response.data as UserDetail;
+
+				const mappedForm: CreateUserFormState = {
+					full_name: user.full_name ?? "",
+					gender: user.gender ?? "",
+					email: user.email ?? "",
+					password: "",
+					student_code: user.student_code ?? "",
+					faculty_id: user.faculty_id ?? null,
+					major_id: user.major_id ?? null,
+					class_id: user.class_id ?? null,
+					roles: normalizeRoles(user.roles),
+				};
+
+				const nextAvatarPreview = user.avatar || DEFAULT_AVATAR_SRC;
+
+				setForm(mappedForm);
+				setInitialForm(mappedForm);
+				setAvatarPreview(nextAvatarPreview);
+				setInitialAvatarPreview(nextAvatarPreview);
+				setAvatarFile(null);
+				setFieldErrors({});
+
+				if (avatarInputRef.current) {
+					avatarInputRef.current.value = "";
+				}
+			} catch (error) {
+				console.error("Không thể tải thông tin người dùng:", error);
+				toast.error("Không thể tải dữ liệu người dùng.", {
+					position: "top-right",
+				});
+				navigate("/users");
+			} finally {
+				setLoadingUser(false);
+			}
+		};
+
+		fetchUserDetail();
+	}, [id, navigate]);
 
 	useEffect(() => {
 		return () => {
@@ -258,18 +347,40 @@ function CreateUser() {
 	};
 
 	const resetForm = () => {
-		clearAvatar();
-		setForm(getInitialFormState());
+		if (avatarObjectUrlRef.current) {
+			URL.revokeObjectURL(avatarObjectUrlRef.current);
+			avatarObjectUrlRef.current = null;
+		}
+
+		setAvatarFile(null);
+		setAvatarPreview(initialAvatarPreview);
+		setForm(initialForm);
 		setFieldErrors({});
+
+		if (avatarInputRef.current) {
+			avatarInputRef.current.value = "";
+		}
 	};
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
+		if (!id) {
+			toast.error("Không tìm thấy mã người dùng để cập nhật.", {
+				position: "top-right",
+			});
+			return;
+		}
+
 		const clientValidationErrors: CreateUserFieldErrors = {};
 		if (!form.full_name.trim()) clientValidationErrors.full_name = "Vui lòng nhập họ và tên.";
+		if (!form.gender) clientValidationErrors.gender = "Vui lòng chọn giới tính.";
+		if (!form.student_code.trim())
+			clientValidationErrors.student_code = "Vui lòng nhập mã sinh viên.";
 		if (!form.email.trim()) clientValidationErrors.email = "Vui lòng nhập email.";
-		if (!form.password.trim()) clientValidationErrors.password = "Vui lòng nhập mật khẩu.";
+		if (!form.faculty_id) clientValidationErrors.faculty_id = "Vui lòng chọn khoa.";
+		if (!form.major_id) clientValidationErrors.major_id = "Vui lòng chọn ngành.";
+		if (!form.class_id) clientValidationErrors.class_id = "Vui lòng chọn lớp.";
 		if (form.roles.length === 0) clientValidationErrors.roles = "Vui lòng chọn vai trò.";
 
 		if (Object.keys(clientValidationErrors).length > 0) {
@@ -285,8 +396,10 @@ function CreateUser() {
 			payload.append("full_name", form.full_name.trim());
 			payload.append("gender", form.gender);
 			payload.append("email", form.email.trim());
-			payload.append("password", form.password);
-			payload.append("password_confirmation", form.password);
+			if (form.password.trim()) {
+				payload.append("password", form.password);
+				payload.append("password_confirmation", form.password);
+			}
 			payload.append("student_code", form.student_code.trim());
 			payload.append("faculty_id", String(form.faculty_id));
 			payload.append("major_id", String(form.major_id));
@@ -299,8 +412,8 @@ function CreateUser() {
 				payload.append("avatar", avatarFile);
 			}
 
-			await userService.createUser(payload);
-			toast.success("Tạo người dùng thành công.", {
+			await userService.updateUser(id, payload);
+			toast.success("Lưu thông tin người dùng thành công.", {
 				position: "top-right",
 			});
 			navigate("/users");
@@ -328,7 +441,7 @@ function CreateUser() {
 				}
 			}
 
-			toast.error(responseData?.message ?? "Không thể tạo người dùng.", {
+			toast.error(responseData?.message ?? "Không thể lưu người dùng.", {
 				position: "top-right",
 			});
 		} finally {
@@ -340,8 +453,8 @@ function CreateUser() {
 		<div className='h-full flex-1 flex-col'>
 			<div className='flex flex-wrap items-center justify-between gap-3 p-4 md:p-6 lg:p-8'>
 				<div className='space-y-1'>
-					<h2 className='text-2xl font-semibold tracking-tight'>Tạo người dùng</h2>
-					<p className='text-muted-foreground'>Thêm người dùng mới vào hệ thống.</p>
+					<h2 className='text-2xl font-semibold tracking-tight'>Cập nhật người dùng</h2>
+					<p className='text-muted-foreground'>Chỉnh sửa thông tin người dùng.</p>
 				</div>
 				<Button type='button' variant='outline' onClick={() => navigate("/users")}>
 					<ArrowLeft className='h-4 w-4' />
@@ -410,244 +523,254 @@ function CreateUser() {
 						<CardHeader>
 							<CardTitle>Thông tin người dùng</CardTitle>
 							<CardDescription>
-								Điền đầy đủ thông tin để tạo người dùng mới. Các trường có dấu * là
+								Điền đầy đủ thông tin để cập nhật người dùng. Các trường có dấu * là
 								bắt buộc.
 							</CardDescription>
 						</CardHeader>
 						<CardContent className='space-y-6'>
-							<div className='grid gap-4 md:grid-cols-2'>
-								<div className='space-y-2'>
-									<Label htmlFor='full_name'>
-										Họ tên <span className='text-red-500'>*</span>
-									</Label>
-									<Input
-										id='full_name'
-										placeholder='Nguyễn Văn A'
-										value={form.full_name}
-										onChange={updateField("full_name")}
-										required
-									/>
-									{fieldErrors.full_name ? (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.full_name}
-										</p>
-									) : null}
+							{loadingUser ? (
+								<div className='flex items-center gap-2 text-sm text-muted-foreground'>
+									<Loader2 className='h-4 w-4 animate-spin' />
+									Đang tải dữ liệu người dùng...
 								</div>
+							) : (
+								<>
+									<div className='grid gap-4 md:grid-cols-2'>
+										<div className='space-y-2'>
+											<Label htmlFor='full_name'>
+												Họ tên <span className='text-red-500'>*</span>
+											</Label>
+											<Input
+												id='full_name'
+												placeholder='Nguyễn Văn A'
+												value={form.full_name}
+												onChange={updateField("full_name")}
+												required
+											/>
+											{fieldErrors.full_name ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.full_name}
+												</p>
+											) : null}
+										</div>
 
-								<div className='space-y-2'>
-									<Label>Giới tính</Label>
-									<Combobox
-										value={form.gender}
-										onValueChange={(value) => {
-											setForm((prev) => ({
-												...prev,
-												gender: value,
-											}));
-											setFieldErrors((prev) => {
-												const next = { ...prev };
-												delete next.gender;
-												return next;
-											});
-										}}
-										options={GENDER_OPTIONS}
-										searchable={false}
-										placeholder='Chọn giới tính'
-										disabled={loadingOptions}
-									/>
-									{fieldErrors.gender ? (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.gender}
-										</p>
-									) : null}
-								</div>
+										<div className='space-y-2'>
+											<Label>Giới tính</Label>
+											<Combobox
+												value={form.gender}
+												onValueChange={(value) => {
+													setForm((prev) => ({
+														...prev,
+														gender: value,
+													}));
+													setFieldErrors((prev) => {
+														const next = { ...prev };
+														delete next.gender;
+														return next;
+													});
+												}}
+												options={GENDER_OPTIONS}
+												searchable={false}
+												placeholder='Chọn giới tính'
+												disabled={loadingOptions}
+											/>
+											{fieldErrors.gender ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.gender}
+												</p>
+											) : null}
+										</div>
 
-								<div className='space-y-2'>
-									<Label htmlFor='student_code'>Mã sinh viên</Label>
-									<Input
-										id='student_code'
-										placeholder='0306123456'
-										value={form.student_code}
-										onChange={updateField("student_code")}
-										required
-									/>
-									{fieldErrors.student_code ? (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.student_code}
-										</p>
-									) : null}
-								</div>
+										<div className='space-y-2'>
+											<Label htmlFor='student_code'>Mã sinh viên</Label>
+											<Input
+												id='student_code'
+												placeholder='0306123456'
+												value={form.student_code}
+												onChange={updateField("student_code")}
+												required
+											/>
+											{fieldErrors.student_code ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.student_code}
+												</p>
+											) : null}
+										</div>
 
-								<div className='space-y-2'>
-									<Label>
-										Vai trò <span className='text-red-500'>*</span>
-									</Label>
-									<Combobox
-										value={form.roles}
-										onValueChange={(value) => {
-											setForm((prev) => ({
-												...prev,
-												roles: value,
-											}));
-											setFieldErrors((prev) => {
-												const next = { ...prev };
-												delete next.roles;
-												return next;
-											});
-										}}
-										options={roleOptions}
-										placeholder='Chọn vai trò'
-										searchPlaceholder='Tìm vai trò...'
-										disabled={loadingOptions || roleOptions.length === 0}
-										multiple={true}
-									/>
-									{fieldErrors.roles ? (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.roles}
-										</p>
-									) : null}
-								</div>
-
-								<div className='space-y-2'>
-									<Label htmlFor='email'>
-										Email <span className='text-red-500'>*</span>
-									</Label>
-									<Input
-										id='email'
-										type='email'
-										placeholder='user@caothang.edu.vn'
-										value={form.email}
-										onChange={updateField("email")}
-										required
-									/>
-									{fieldErrors.email ? (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.email}
-										</p>
-									) : null}
-								</div>
-
-								<div className='space-y-2'>
-									<Label htmlFor='password'>
-										Mật khẩu <span className='text-red-500'>*</span>
-									</Label>
-									<Input
-										id='password'
-										type='password'
-										placeholder='••••••••'
-										value={form.password}
-										onChange={updateField("password")}
-										required
-									/>
-									{fieldErrors.password ? (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.password}
-										</p>
-									) : null}
-								</div>
-							</div>
-
-							<Separator />
-
-							<div className='grid gap-4 md:grid-cols-3'>
-								<div className='space-y-2'>
-									<Label>Khoa</Label>
-									<Combobox
-										value={form.faculty_id ? String(form.faculty_id) : ""}
-										onValueChange={(value) => {
-											setForm((prev) => ({
-												...prev,
-												faculty_id: value ? Number(value) : null,
-												major_id: null,
-												class_id: null,
-											}));
-											setFieldErrors((prev) => {
-												const next = { ...prev };
-												delete next.faculty_id;
-												delete next.major_id;
-												delete next.class_id;
-												return next;
-											});
-										}}
-										options={facultyOptions}
-										placeholder='Chọn khoa'
-										searchPlaceholder='Tìm khoa...'
-										disabled={loadingOptions}
-									/>
-									{fieldErrors.faculty_id ? (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.faculty_id}
-										</p>
-									) : null}
-								</div>
-
-								<div className='space-y-2'>
-									<Label>Ngành</Label>
-									<Combobox
-										value={form.major_id ? String(form.major_id) : ""}
-										onValueChange={(value) => {
-											setForm((prev) => ({
-												...prev,
-												major_id: value ? Number(value) : null,
-												class_id: null,
-											}));
-											setFieldErrors((prev) => {
-												const next = { ...prev };
-												delete next.major_id;
-												delete next.class_id;
-												return next;
-											});
-										}}
-										options={majorOptions}
-										placeholder='Chọn ngành'
-										searchPlaceholder='Tìm ngành...'
-										disabled={
-											loadingOptions ||
-											!form.faculty_id ||
-											majorOptions.length === 0
-										}
-									/>
-									{fieldErrors.major_id ? (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.major_id}
-										</p>
-									) : null}
-								</div>
-
-								<div className='space-y-2'>
-									<Label>Lớp</Label>
-									<Combobox
-										value={form.class_id ? String(form.class_id) : ""}
-										onValueChange={(value) => {
-											setForm((prev) => ({
-												...prev,
-												class_id: value ? Number(value) : null,
-											}));
-											setFieldErrors((prev) => {
-												if (!prev.class_id) {
-													return prev;
+										<div className='space-y-2'>
+											<Label>
+												Vai trò <span className='text-red-500'>*</span>
+											</Label>
+											<Combobox
+												value={form.roles}
+												onValueChange={(value) => {
+													setForm((prev) => ({
+														...prev,
+														roles: value,
+													}));
+													setFieldErrors((prev) => {
+														const next = { ...prev };
+														delete next.roles;
+														return next;
+													});
+												}}
+												options={roleOptions}
+												placeholder='Chọn vai trò'
+												searchPlaceholder='Tìm vai trò...'
+												disabled={
+													loadingOptions || roleOptions.length === 0
 												}
+												multiple={true}
+											/>
+											{fieldErrors.roles ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.roles}
+												</p>
+											) : null}
+										</div>
 
-												const next = { ...prev };
-												delete next.class_id;
-												return next;
-											});
-										}}
-										options={classOptions}
-										placeholder='Chọn lớp'
-										searchPlaceholder='Tìm lớp...'
-										disabled={
-											loadingOptions ||
-											!form.major_id ||
-											classOptions.length === 0
-										}
-									/>
-									{fieldErrors.class_id ? (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.class_id}
-										</p>
-									) : null}
-								</div>
-							</div>
+										<div className='space-y-2'>
+											<Label htmlFor='email'>
+												Email <span className='text-red-500'>*</span>
+											</Label>
+											<Input
+												id='email'
+												type='email'
+												placeholder='user@caothang.edu.vn'
+												value={form.email}
+												onChange={updateField("email")}
+												required
+											/>
+											{fieldErrors.email ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.email}
+												</p>
+											) : null}
+										</div>
+
+										<div className='space-y-2'>
+											<Label htmlFor='password'>Mật khẩu mới</Label>
+											<Input
+												id='password'
+												type='password'
+												placeholder='Để trống nếu không đổi mật khẩu'
+												value={form.password}
+												onChange={updateField("password")}
+											/>
+											{fieldErrors.password ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.password}
+												</p>
+											) : null}
+										</div>
+									</div>
+
+									<Separator />
+
+									<div className='grid gap-4 md:grid-cols-3'>
+										<div className='space-y-2'>
+											<Label>Khoa</Label>
+											<Combobox
+												value={
+													form.faculty_id ? String(form.faculty_id) : ""
+												}
+												onValueChange={(value) => {
+													setForm((prev) => ({
+														...prev,
+														faculty_id: value ? Number(value) : null,
+														major_id: null,
+														class_id: null,
+													}));
+													setFieldErrors((prev) => {
+														const next = { ...prev };
+														delete next.faculty_id;
+														delete next.major_id;
+														delete next.class_id;
+														return next;
+													});
+												}}
+												options={facultyOptions}
+												placeholder='Chọn khoa'
+												searchPlaceholder='Tìm khoa...'
+												disabled={loadingOptions}
+											/>
+											{fieldErrors.faculty_id ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.faculty_id}
+												</p>
+											) : null}
+										</div>
+
+										<div className='space-y-2'>
+											<Label>Ngành</Label>
+											<Combobox
+												value={form.major_id ? String(form.major_id) : ""}
+												onValueChange={(value) => {
+													setForm((prev) => ({
+														...prev,
+														major_id: value ? Number(value) : null,
+														class_id: null,
+													}));
+													setFieldErrors((prev) => {
+														const next = { ...prev };
+														delete next.major_id;
+														delete next.class_id;
+														return next;
+													});
+												}}
+												options={majorOptions}
+												placeholder='Chọn ngành'
+												searchPlaceholder='Tìm ngành...'
+												disabled={
+													loadingOptions ||
+													!form.faculty_id ||
+													majorOptions.length === 0
+												}
+											/>
+											{fieldErrors.major_id ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.major_id}
+												</p>
+											) : null}
+										</div>
+
+										<div className='space-y-2'>
+											<Label>Lớp</Label>
+											<Combobox
+												value={form.class_id ? String(form.class_id) : ""}
+												onValueChange={(value) => {
+													setForm((prev) => ({
+														...prev,
+														class_id: value ? Number(value) : null,
+													}));
+													setFieldErrors((prev) => {
+														if (!prev.class_id) {
+															return prev;
+														}
+
+														const next = { ...prev };
+														delete next.class_id;
+														return next;
+													});
+												}}
+												options={classOptions}
+												placeholder='Chọn lớp'
+												searchPlaceholder='Tìm lớp...'
+												disabled={
+													loadingOptions ||
+													!form.major_id ||
+													classOptions.length === 0
+												}
+											/>
+											{fieldErrors.class_id ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.class_id}
+												</p>
+											) : null}
+										</div>
+									</div>
+								</>
+							)}
 						</CardContent>
 						<CardFooter className='flex flex-wrap items-center justify-between gap-2 border-t'>
 							<Button
@@ -665,7 +788,9 @@ function CreateUser() {
 									disabled={submitting}>
 									Hủy
 								</Button>
-								<Button type='submit' disabled={loadingOptions || submitting}>
+								<Button
+									type='submit'
+									disabled={loadingOptions || loadingUser || submitting}>
 									{submitting ? (
 										<Loader2 className='h-4 w-4 animate-spin' />
 									) : null}
@@ -680,4 +805,4 @@ function CreateUser() {
 	);
 }
 
-export default CreateUser;
+export default UpdateUser;

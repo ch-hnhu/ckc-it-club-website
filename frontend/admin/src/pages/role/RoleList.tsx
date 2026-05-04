@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import userService from "@/services/user.service";
-import type { User } from "@/types/user.type";
 
 import {
 	Table,
@@ -20,7 +18,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	Select,
 	SelectContent,
@@ -40,13 +37,17 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
+import roleService from "@/services/role.service";
+import type { Role } from "@/types/role.type";
+import CreateRoleModal from "./CreateRoleModal";
 
-function UserList() {
+function RoleList() {
 	const navigate = useNavigate();
-	const [users, setUsers] = useState<User[]>([]);
+	const [roles, setRoles] = useState<Role[]>([]);
+	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const [meta, setMeta] = useState({
 		current_page: 1,
 		last_page: 1,
@@ -63,11 +64,11 @@ function UserList() {
 		order: "desc",
 	});
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
-		users.map((user) => user.id),
+		roles.map((role) => role.id),
 	);
 
 	const breadcrumb = useMemo(
-		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý người dùng" }],
+		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý vai trò" }],
 		[],
 	);
 
@@ -86,19 +87,19 @@ function UserList() {
 	}, [debouncedSearch, sortConfig]);
 
 	useEffect(() => {
-		fetchUsers();
+		fetchRoles();
 	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
 
-	const fetchUsers = async () => {
+	const fetchRoles = async () => {
 		try {
-			const response = await userService.getUsers({
+			const response = await roleService.getRoles({
 				page: meta.current_page,
 				per_page: meta.per_page,
 				search: debouncedSearch,
 				sort: sortConfig.key || undefined,
 				order: sortConfig.order || undefined,
 			});
-			setUsers(response.data);
+			setRoles(response.data);
 			setMeta({
 				current_page: response.meta.current_page,
 				last_page: response.meta.last_page,
@@ -135,9 +136,9 @@ function UserList() {
 		<div className='h-full flex-1 flex-col'>
 			<div className='flex items-center p-4 md:p-6 lg:p-8'>
 				<div className='flex flex-col gap-1'>
-					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý người dùng</h2>
+					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý vai trò</h2>
 					<p className='text-muted-foreground'>
-						Danh sách tất cả người dùng trong hệ thống.
+						Danh sách tất cả vai trò trong hệ thống.
 					</p>
 				</div>
 			</div>
@@ -145,7 +146,7 @@ function UserList() {
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
 						<Input
-							placeholder='Lọc người dùng...'
+							placeholder='Lọc vai trò...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'
@@ -158,7 +159,7 @@ function UserList() {
 						</Button>
 						<Button
 							size='sm'
-							onClick={() => navigate("/users/create")}
+							onClick={() => setIsCreateModalOpen(true)}
 							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 							<Plus className='h-4 w-4' />
 							Thêm
@@ -188,19 +189,19 @@ function UserList() {
 								<TableHead>
 									<Button
 										variant='ghost'
-										onClick={() => handleSort("full_name")}
+										onClick={() => handleSort("name")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Tên người dùng
-										{getSortIcon("full_name")}
+										Role
+										{getSortIcon("name")}
 									</Button>
 								</TableHead>
 								<TableHead>
 									<Button
 										variant='ghost'
-										onClick={() => handleSort("email")}
+										onClick={() => handleSort("total_users")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Email
-										{getSortIcon("email")}
+										Số lượng
+										{getSortIcon("total_users")}
 									</Button>
 								</TableHead>
 								<TableHead>
@@ -208,7 +209,7 @@ function UserList() {
 										variant='ghost'
 										onClick={() => handleSort("created_at")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Ngày tham gia
+										Ngày tạo
 										{getSortIcon("created_at")}
 									</Button>
 								</TableHead>
@@ -216,38 +217,21 @@ function UserList() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{users.map((user) => (
-								<TableRow key={user.id}>
+							{roles.map((role) => (
+								<TableRow key={role.id}>
 									<TableCell>
 										<Checkbox
-											aria-label={`Select user ${user.id}`}
-											checked={isSelected(user.id)}
+											aria-label={`Select role ${role.id}`}
+											checked={isSelected(role.id)}
 											onCheckedChange={(checked) =>
-												toggleOne(user.id, checked === true)
+												toggleOne(role.id, checked === true)
 											}
 										/>
 									</TableCell>
-									<TableCell className='font-medium'>{user.id}</TableCell>
-									<TableCell>
-										<div className='flex items-center gap-3'>
-											<Avatar className='h-8 w-8'>
-												<AvatarImage
-													src={user.avatar}
-													alt={user.full_name}
-												/>
-												<AvatarFallback>
-													{user.full_name?.charAt(0) || "U"}
-												</AvatarFallback>
-											</Avatar>
-											<Link
-												to={`/users/${user.id}`}
-												className='font-medium hover:underline'>
-												{user.full_name}
-											</Link>
-										</div>
-									</TableCell>
-									<TableCell>{user.email}</TableCell>
-									<TableCell>{user.created_at}</TableCell>
+									<TableCell className='font-medium'>{role.id}</TableCell>
+									<TableCell>{role.label}</TableCell>
+									<TableCell>{role.total_users ?? 0}</TableCell>
+									<TableCell>{role.created_at ?? "-"}</TableCell>
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
@@ -260,7 +244,7 @@ function UserList() {
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
 												<DropdownMenuItem
-													onClick={() => navigate(`/users/${user.id}`)}>
+													onClick={() => navigate(`/roles/${role.id}`)}>
 													Sửa
 												</DropdownMenuItem>
 											</DropdownMenuContent>
@@ -268,7 +252,7 @@ function UserList() {
 									</TableCell>
 								</TableRow>
 							))}
-							{users.length === 0 && (
+							{roles.length === 0 && (
 								<TableRow>
 									<TableCell colSpan={6} className='h-24 text-center'>
 										Không tìm thấy kết quả phù hợp.
@@ -281,7 +265,7 @@ function UserList() {
 								<TableCell colSpan={6}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex-1 text-sm text-muted-foreground'>
-											Đang hiện {users.length} trên tổng {meta.total} dòng.
+											Đang hiện {roles.length} trên tổng {meta.total} dòng.
 										</div>
 										<div className='flex items-center space-x-6 lg:space-x-8'>
 											<div className='flex items-center space-x-2'>
@@ -384,8 +368,14 @@ function UserList() {
 					</Table>
 				</div>
 			</div>
+
+			<CreateRoleModal
+				open={isCreateModalOpen}
+				onOpenChange={setIsCreateModalOpen}
+				onSuccess={() => fetchRoles()}
+			/>
 		</div>
 	);
 }
 
-export default UserList;
+export default RoleList;

@@ -65,7 +65,7 @@
 - `/users`
 - user list
 - `/users/create`
-- create-user form UI
+- create-user form UI with avatar upload, required gender selection, and role loading from `/roles`
 - `/departments`
 - faculty list
 - `/majors`
@@ -96,7 +96,7 @@
 - `/divisions`
 - `/fields`
 - Dashboard contains significant placeholder/demo content rather than fully live backend-driven analytics.
-- `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit is still UI-only (logs payload, no backend create endpoint call yet).
+- `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar) and redirects to `/users` on success.
 - Recruitment application service uses `mockApplications` as a fallback when fetching `/club-applications` fails. This can mask backend outages and make the UI look “healthy” when it is not.
 - Redux Toolkit is installed, but there is no centralized Redux store in the current app. State is local component state plus services.
 - `supabase.config.ts` exists, but `uploadImage` does not appear to be actively used by current features.
@@ -215,7 +215,7 @@
 - Create user:
 - UI exists
 - no API integration yet
-- role selection is local only
+- create-user form now loads roles from the backend and submits `gender` plus selected roles to the API
 - Recruitment applications:
 - list uses client-side filtering/sorting after fetch
 - status update is live against backend

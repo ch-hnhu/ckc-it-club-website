@@ -6,7 +6,7 @@ import MajorList from "@/pages/major/MajorList";
 import SchoolClassList from "@/pages/school-class/SchoolClassList";
 import UserList from "@/pages/user/UserList";
 import CreateUser from "@/pages/user/CreateUser";
-import ContactList from "@/pages/contact/ContactList";
+import UpdateUser from "@/pages/user/UpdateUser";
 import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage";
 import ApplicationDetailPage from "@/pages/recruitment/ApplicationDetailPage";
 import ApplicationQuestionsPage from "@/pages/recruitment/ApplicationQuestionsPage";
@@ -15,6 +15,7 @@ import ApplicationAnswersPage from "@/pages/recruitment/ApplicationAnswersPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NotFound from "@/pages/NotFound";
+import RoleList from "@/pages/role/RoleList";
 
 const router = createBrowserRouter([
 	{
@@ -41,6 +42,14 @@ const router = createBrowserRouter([
 			{
 				path: "users/create",
 				element: <CreateUser />,
+			},
+			{
+				path: "users/:id",
+				element: <UpdateUser />,
+			},
+			{
+				path: "roles",
+				element: <RoleList />,
 			},
 			{
 				path: "departments",

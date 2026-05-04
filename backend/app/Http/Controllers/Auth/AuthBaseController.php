@@ -7,8 +7,6 @@ use App\Http\Controllers\Controller;
 use GuzzleHttp\Client;
 use Laravel\Socialite\Facades\Socialite;
 use App\Models\User;
-use Psy\Readline\Hoa\ConsoleWindow;
-use Spatie\Permission\Models\Role;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -514,7 +512,7 @@ abstract class AuthBaseController extends Controller
                     'avatar' => $user->avatar,
                     'provider' => $user->provider,
                     'email_verified_at' => $user->email_verified_at,
-                    'created_at' => $user->created_at,
+                    'created_at' => $user->created_at?->format('d/m/Y'),
                 ]
             ], HttpStatus::OK->value);
 
