@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
-use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Http\Requests\Api\V1\Role\StoreRoleRequest;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
@@ -21,38 +20,44 @@ class RoleController extends BaseApiController
         $perPage = (int) $request->query('per_page', 0);
         $search = $request->query('search');
 
-        $allowedSorts = ['id', 'name', 'created_at', 'total_users'];
+        $allowedSorts = ['id', 'label', 'created_at', 'total_users'];
         if (! in_array($sort, $allowedSorts, true)) {
             $sort = 'id';
         }
 
-        $roles = Role::query()
-            ->whereIn('name', RolesEnum::values())
-            ->select('id', 'name', 'created_at')
-            ->get()
-            ->map(function (Role $role) {
-                $label = RolesEnum::from($role->name)->label();
+        $query = Role::query()
+            ->select('id', 'name', 'label', 'created_at');
 
+        if ($search) {
+            $searchTerm = '%'.mb_strtolower($search).'%';
+            $query->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
+                ->orWhereRaw('LOWER(label) LIKE ?', [$searchTerm]);
+        }
+
+        // Apply sorting at database level for created_at, label, and total_users
+        if ($sort === 'created_at') {
+            $query->orderBy('created_at', $order);
+        } elseif ($sort === 'label') {
+            $query->orderBy('label', $order);
+        } elseif ($sort === 'id') {
+            $query->orderBy('id', $order);
+        }
+
+        $roles = $query->get()
+            ->map(function (Role $role) {
                 return [
                     'id' => $role->id,
                     'value' => $role->name,
-                    'label' => $label,
+                    'label' => $role->label,
                     'created_at' => $role->created_at?->format('d/m/Y'),
                     'total_users' => (int) DB::table('model_has_roles')->where('role_id', $role->id)->count(),
-                    '__sort_label' => $label,
-                    '__sort_created_at' => $role->created_at?->getTimestamp() ?? 0,
                 ];
             });
 
-        if ($search) {
-            $searchTerm = mb_strtolower($search);
-            $roles = $roles->filter(function (array $role) use ($searchTerm) {
-                return str_contains(mb_strtolower($role['value']), $searchTerm)
-                    || str_contains(mb_strtolower($role['label']), $searchTerm);
-            })->values();
+        // Only need to sort by total_users at application level
+        if ($sort === 'total_users') {
+            $roles = $this->sortRolesByTotalUsers($roles, $order);
         }
-
-        $roles = $this->sortRoles($roles, $sort, $order)->map(fn (array $role) => Arr::except($role, ['__sort_label', '__sort_created_at']));
 
         if ($perPage > 0) {
             $page = LengthAwarePaginator::resolveCurrentPage();
@@ -75,29 +80,26 @@ class RoleController extends BaseApiController
         return $this->successResponse(true, $roles, ApiMessage::ROLES_RETRIEVED);
     }
 
-    private function sortRoles($roles, string $sort, string $order)
+    private function sortRolesByTotalUsers($roles, string $order)
     {
-        return match ($sort) {
-            'name' => $roles->sortBy(
-                fn (array $role) => $role['__sort_label'],
-                SORT_NATURAL | SORT_FLAG_CASE,
-                $order === 'desc'
-            )->values(),
-            'created_at' => $roles->sortBy(
-                fn (array $role) => $role['__sort_created_at'],
-                SORT_NUMERIC,
-                $order === 'desc'
-            )->values(),
-            'total_users' => $roles->sortBy(
-                fn (array $role) => $role['total_users'],
-                SORT_NUMERIC,
-                $order === 'desc'
-            )->values(),
-            default => $roles->sortBy(
-                fn (array $role) => $role['id'],
-                SORT_NUMERIC,
-                $order === 'desc'
-            )->values(),
-        };
+        return $roles->sortBy(
+            fn (array $role) => $role['total_users'],
+            SORT_NUMERIC,
+            $order === 'desc'
+        )->values();
+    }
+
+    public function store(StoreRoleRequest $request)
+    {
+        $validated = $request->validated();
+
+        $user = Role::create([
+            'name' => $validated['name'],
+            'label' => $validated['label'],
+            'guard_name' => 'web',
+            'is_system' => $validated['is_system'],
+        ]);
+
+        return $this->successResponse(true, $user, ApiMessage::ROLE_CREATED);
     }
 }
