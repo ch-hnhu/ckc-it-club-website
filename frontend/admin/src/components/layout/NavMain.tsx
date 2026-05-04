@@ -22,6 +22,7 @@ export function NavMain({
 		title: string;
 		url: string;
 		icon?: LucideIcon;
+		badge?: number;
 		isActive?: boolean;
 		items?: {
 			title: string;
@@ -55,7 +56,18 @@ export function NavMain({
 									<SidebarMenuButton tooltip={item.title}>
 										{item.icon && <item.icon />}
 										<span>{item.title}</span>
-										<ChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
+										{typeof item.badge === "number" && item.badge > 0 ? (
+											<span className='ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-sidebar-accent px-1 text-xs font-medium text-sidebar-accent-foreground tabular-nums'>
+												{item.badge > 99 ? "99+" : item.badge}
+											</span>
+										) : null}
+										<ChevronRight
+											className={`transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 ${
+												typeof item.badge === "number" && item.badge > 0
+													? "ml-2"
+													: "ml-auto"
+											}`}
+										/>
 									</SidebarMenuButton>
 								</CollapsibleTrigger>
 								<CollapsibleContent>

@@ -55,7 +55,7 @@ import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import contactService from "@/services/contact.service";
-import type { ContactRecord, ContactStatus } from "@/types/contact.type";
+import type { ContactRecord, ContactStats, ContactStatus } from "@/types/contact.type";
 
 const statusOptions: Array<{ value: ContactStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -70,12 +70,21 @@ const updateStatusOptions: Array<{ value: ContactStatus; label: string }> = [
 	{ value: "done", label: "Đã phản hồi" },
 ];
 
+const orderedStatuses: ContactStatus[] = ["pending", "processing", "done"];
+
 type SortKey = "id" | "full_name" | "email" | "subject" | "status" | "created_at";
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
 	dateStyle: "medium",
 	timeStyle: "short",
 });
+
+const emptyStats: ContactStats = {
+	total: 0,
+	pending: 0,
+	processing: 0,
+	done: 0,
+};
 
 function formatDate(value: string | null) {
 	if (!value) return "--";
@@ -112,6 +121,16 @@ function getStatusBadge(status: ContactStatus) {
 	);
 }
 
+function getNextStatusOptions(currentStatus: ContactStatus) {
+	const currentIndex = orderedStatuses.indexOf(currentStatus);
+
+	if (currentIndex === -1) return [];
+
+	const nextStatus = orderedStatuses[currentIndex + 1];
+
+	return updateStatusOptions.filter((option) => option.value === nextStatus);
+}
+
 function ContactList() {
 	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/contacts"), []);
 
@@ -120,12 +139,13 @@ function ContactList() {
 	const [contacts, setContacts] = useState<ContactRecord[]>([]);
 	const [selectedContact, setSelectedContact] = useState<ContactRecord | null>(null);
 	const [statusDialogContact, setStatusDialogContact] = useState<ContactRecord | null>(null);
-	const [nextStatus, setNextStatus] = useState<ContactStatus>("processing");
+	const [nextStatus, setNextStatus] = useState<ContactStatus | "">("");
 	const [loading, setLoading] = useState(true);
 	const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState<ContactStatus | "all">("all");
+	const [stats, setStats] = useState<ContactStats>(emptyStats);
 	const [meta, setMeta] = useState({
 		current_page: 1,
 		last_page: 1,
@@ -144,6 +164,15 @@ function ContactList() {
 		contacts.map((contact) => contact.id),
 	);
 
+	const loadStats = async () => {
+		try {
+			const nextStats = await contactService.getStats();
+			setStats(nextStats);
+		} catch (error) {
+			console.error(error);
+		}
+	};
+
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setDebouncedSearch(search.trim());
@@ -155,6 +184,29 @@ function ContactList() {
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
 	}, [debouncedSearch, sortConfig, statusFilter]);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		const fetchStats = async () => {
+			try {
+				const nextStats = await contactService.getStats();
+				if (!cancelled) {
+					setStats(nextStats);
+				}
+			} catch (error) {
+				if (!cancelled) {
+					console.error(error);
+				}
+			}
+		};
+
+		void fetchStats();
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -223,11 +275,12 @@ function ContactList() {
 
 	const openStatusDialog = (contact: ContactRecord) => {
 		setStatusDialogContact(contact);
-		setNextStatus(contact.status);
+		const nextOption = getNextStatusOptions(contact.status)[0];
+		setNextStatus(nextOption?.value ?? "");
 	};
 
 	const handleStatusUpdate = async () => {
-		if (!statusDialogContact) return;
+		if (!statusDialogContact || nextStatus === "") return;
 
 		setIsSubmittingStatus(true);
 		try {
@@ -240,6 +293,8 @@ function ContactList() {
 			);
 			setSelectedContact((prev) => (prev?.id === updatedContact.id ? updatedContact : prev));
 			setStatusDialogContact(null);
+			await loadStats();
+			window.dispatchEvent(new Event("contacts:stats-refresh"));
 			toast.success("Đã cập nhật trạng thái liên hệ.");
 		} catch (error) {
 			console.error(error);
@@ -249,9 +304,12 @@ function ContactList() {
 		}
 	};
 
-	const pendingCount = contacts.filter((contact) => contact.status === "pending").length;
-	const processingCount = contacts.filter((contact) => contact.status === "processing").length;
-	const doneCount = contacts.filter((contact) => contact.status === "done").length;
+	const pendingCount = stats.pending;
+	const processingCount = stats.processing;
+	const doneCount = stats.done;
+	const nextStatusOptions = statusDialogContact
+		? getNextStatusOptions(statusDialogContact.status)
+		: [];
 
 	return (
 		<div className='h-full flex-1 flex-col'>
@@ -303,6 +361,49 @@ function ContactList() {
 						</CardContent>
 					</Card>
 				</div> */}
+
+				<div className='grid gap-4 md:grid-cols-3'>
+					<Card>
+						<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+							<CardTitle className='text-sm font-medium'>Tổng liên hệ</CardTitle>
+							<MailOpen className='h-4 w-4 text-muted-foreground' />
+						</CardHeader>
+						<CardContent>
+							<div className='text-2xl font-semibold'>{stats.total}</div>
+							<p className='text-sm text-muted-foreground'>
+								Tổng số yêu cầu liên hệ đang lưu trong hệ thống.
+							</p>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+							<CardTitle className='text-sm font-medium'>Cần xử lý</CardTitle>
+							<Clock3 className='h-4 w-4 text-muted-foreground' />
+						</CardHeader>
+						<CardContent>
+							<div className='text-2xl font-semibold'>{pendingCount}</div>
+							<p className='text-sm text-muted-foreground'>
+								{pendingCount} mới, {processingCount} đang xử lý, {doneCount} đã phản hồi.
+							</p>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+							<CardTitle className='text-sm font-medium'>Trang hiện tại</CardTitle>
+							<LoaderCircle className='h-4 w-4 text-muted-foreground' />
+						</CardHeader>
+						<CardContent>
+							<div className='text-2xl font-semibold'>
+								{meta.current_page}/{meta.last_page}
+							</div>
+							<p className='text-sm text-muted-foreground'>
+								{loading
+									? "Đang tải dữ liệu..."
+									: `Đang hiển thị ${contacts.length} liên hệ trên trang này.`}
+							</p>
+						</CardContent>
+					</Card>
+				</div>
 
 				<div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
@@ -666,18 +767,24 @@ function ContactList() {
 									</label>
 									<Select
 										value={nextStatus}
-										onValueChange={(value) => setNextStatus(value as ContactStatus)}>
+										onValueChange={(value) => setNextStatus(value as ContactStatus)}
+										disabled={nextStatusOptions.length === 0}>
 										<SelectTrigger id='contact-status'>
 											<SelectValue placeholder='Chọn trạng thái' />
 										</SelectTrigger>
 										<SelectContent>
-											{updateStatusOptions.map((option) => (
+											{nextStatusOptions.map((option) => (
 												<SelectItem key={option.value} value={option.value}>
 													{option.label}
 												</SelectItem>
 											))}
 										</SelectContent>
 									</Select>
+									{nextStatusOptions.length === 0 ? (
+										<p className='text-sm text-muted-foreground'>
+											Liên hệ này đã ở bước cuối của luồng xử lý.
+										</p>
+									) : null}
 								</div>
 							</div>
 							<DialogFooter>
@@ -689,9 +796,7 @@ function ContactList() {
 								</Button>
 								<Button
 									onClick={handleStatusUpdate}
-									disabled={
-										isSubmittingStatus || nextStatus === statusDialogContact.status
-									}>
+									disabled={isSubmittingStatus || nextStatus === ""}>
 									{isSubmittingStatus ? "Đang cập nhật..." : "Lưu thay đổi"}
 								</Button>
 							</DialogFooter>

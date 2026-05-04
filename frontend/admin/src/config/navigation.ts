@@ -24,6 +24,7 @@ export type AdminNavItem = {
 	title: string;
 	url: string;
 	icon: LucideIcon;
+	badge?: number;
 	isActive?: boolean;
 	items?: AdminNavChildItem[];
 };

@@ -1,5 +1,12 @@
 export type ContactStatus = "pending" | "processing" | "done";
 
+export interface ContactStats {
+	total: number;
+	pending: number;
+	processing: number;
+	done: number;
+}
+
 export interface ContactRecord {
 	id: number;
 	email: string;

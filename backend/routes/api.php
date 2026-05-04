@@ -36,11 +36,13 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:admin')->group(function () {
             Route::get('/', [DashboardController::class, 'index']);
 
-            Route::apiResource('users', UserController::class);
-            Route::apiResource('faculties', FacultyController::class)->only(['index']);
-            Route::apiResource('majors', MajorController::class)->only(['index']);
-            Route::apiResource('roles', RoleController::class);
-            Route::apiResource('school-classes', SchoolClassController::class)->only(['index']);
+        Route::apiResource('users', UserController::class);
+        Route::apiResource('faculties', FacultyController::class)->only(['index']);
+        Route::apiResource('majors', MajorController::class)->only(['index']);
+        Route::apiResource('school-classes', SchoolClassController::class)->only(['index']);
+        Route::get('contacts/stats', [AdminContactController::class, 'stats']);
+        Route::get('contacts', [AdminContactController::class, 'index']);
+        Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
 
             // Club applications
             Route::get('club-applications', [ClubApplicationController::class, 'index']);

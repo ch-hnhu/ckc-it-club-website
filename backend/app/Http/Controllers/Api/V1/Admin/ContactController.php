@@ -66,11 +66,36 @@ class ContactController extends BaseApiController
             ->when(in_array($status, self::ALLOWED_STATUSES, true), function (Builder $query) use ($status) {
                 $query->where('status', $status);
             })
-            ->orderBy($sort, $order)
+            ->when($sort === 'status', function (Builder $query) use ($order) {
+                $statusOrder = implode("','", self::ALLOWED_STATUSES);
+                $query->orderByRaw("FIELD(status, '{$statusOrder}') {$order}");
+            }, function (Builder $query) use ($sort, $order) {
+                $query->orderBy($sort, $order);
+            })
             ->paginate($perPage)
             ->through(fn (Contact $contact) => $this->transformContact($contact));
 
         return $this->paginatedResponse($contacts, 'Contacts retrieved successfully');
+    }
+
+    public function stats(Request $request): JsonResponse
+    {
+        if ($response = $this->ensureAdminAccess($request)) {
+            return $response;
+        }
+
+        $stats = [
+            'total' => Contact::query()->count(),
+            'pending' => Contact::query()->where('status', 'pending')->count(),
+            'processing' => Contact::query()->where('status', 'processing')->count(),
+            'done' => Contact::query()->where('status', 'done')->count(),
+        ];
+
+        return $this->successResponse(
+            true,
+            $stats,
+            'Contact stats retrieved successfully'
+        );
     }
 
     public function updateStatus(
@@ -81,7 +106,22 @@ class ContactController extends BaseApiController
             return $response;
         }
 
-        $contact->status = $request->validated('status');
+        $nextStatus = $request->validated('status');
+        $allowedTransitions = $this->getAllowedTransitions($contact->status);
+
+        if (! in_array($nextStatus, $allowedTransitions, true)) {
+            return $this->validationErrorResponse([
+                'status' => [
+                    sprintf(
+                        'Trang thai "%s" chi co the chuyen sang: %s.',
+                        $contact->status,
+                        empty($allowedTransitions) ? 'khong con buoc tiep theo' : implode(', ', $allowedTransitions)
+                    ),
+                ],
+            ], 'Invalid contact status transition');
+        }
+
+        $contact->status = $nextStatus;
         $contact->updated_by = $request->user()?->id;
         $contact->updated_at = now();
         $contact->save();
@@ -111,6 +151,21 @@ class ContactController extends BaseApiController
         }
 
         return null;
+    }
+
+    private function getAllowedTransitions(string $currentStatus): array
+    {
+        $currentIndex = array_search($currentStatus, self::ALLOWED_STATUSES, true);
+
+        if ($currentIndex === false) {
+            return [];
+        }
+
+        $nextIndex = $currentIndex + 1;
+
+        return isset(self::ALLOWED_STATUSES[$nextIndex])
+            ? [self::ALLOWED_STATUSES[$nextIndex]]
+            : [];
     }
 
     private function transformContact(Contact $contact): array

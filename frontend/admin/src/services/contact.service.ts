@@ -1,6 +1,11 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
-import type { ContactRecord, ContactStatus, UpdateContactStatusPayload } from "@/types/contact.type";
+import type {
+	ContactRecord,
+	ContactStats,
+	ContactStatus,
+	UpdateContactStatusPayload,
+} from "@/types/contact.type";
 
 const contactService = {
 	getContacts(params?: {
@@ -12,6 +17,11 @@ const contactService = {
 		order?: "asc" | "desc";
 	}): Promise<PaginatedResponse<ContactRecord>> {
 		return api.get("/contacts", params);
+	},
+
+	async getStats(): Promise<ContactStats> {
+		const response = await api.get<ApiResponse<ContactStats>>("/contacts/stats");
+		return response.data;
 	},
 
 	async updateStatus(contactId: number, payload: UpdateContactStatusPayload): Promise<ContactRecord> {
