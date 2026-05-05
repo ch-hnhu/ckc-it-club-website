@@ -4,6 +4,7 @@ import Dashboard from "../pages/Dashboard";
 import FacultyList from "@/pages/faculty/FacultyList";
 import MajorList from "@/pages/major/MajorList";
 import SchoolClassList from "@/pages/school-class/SchoolClassList";
+import ContactList from "@/pages/contact/ContactList";
 import UserList from "@/pages/user/UserList";
 import CreateUser from "@/pages/user/CreateUser";
 import UpdateUser from "@/pages/user/UpdateUser";
@@ -62,6 +63,10 @@ const router = createBrowserRouter([
 			{
 				path: "classes",
 				element: <SchoolClassList />,
+			},
+			{
+				path: "contacts",
+				element: <ContactList />,
 			},
 			{
 				path: "requests",

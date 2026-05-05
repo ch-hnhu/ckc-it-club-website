@@ -24,6 +24,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/auth/verify-token', [AuthController::class, 'verifyToken']);
+    Route::post('/contacts', [PublicContactController::class, 'store']);
 
     Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
