@@ -43,6 +43,8 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
+import type { RoleEnum } from "@/types/role.type";
+import { CompactBadgeList } from "../../components/ui/compact-badge-list";
 
 function UserList() {
 	const navigate = useNavigate();
@@ -55,6 +57,7 @@ function UserList() {
 	});
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const [roleFilter, setRoleFilter] = useState<RoleEnum | string>("");
 	const [sortConfig, setSortConfig] = useState<{
 		key: string | null;
 		order: "asc" | "desc" | null;
@@ -83,11 +86,11 @@ function UserList() {
 
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
-	}, [debouncedSearch, sortConfig]);
+	}, [debouncedSearch, roleFilter, sortConfig]);
 
 	useEffect(() => {
 		fetchUsers();
-	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
+	}, [meta.current_page, meta.per_page, debouncedSearch, roleFilter, sortConfig]);
 
 	const fetchUsers = async () => {
 		try {
@@ -95,6 +98,7 @@ function UserList() {
 				page: meta.current_page,
 				per_page: meta.per_page,
 				search: debouncedSearch,
+				role: roleFilter || undefined,
 				sort: sortConfig.key || undefined,
 				order: sortConfig.order || undefined,
 			});
@@ -131,6 +135,18 @@ function UserList() {
 		return <ArrowUpDown className='ml-2 h-4 w-4' />;
 	};
 
+	const roleOptions: Array<{ value: RoleEnum | string; label: string }> = [
+		{ value: "", label: "Tất cả vai trò" },
+		{ value: "admin", label: "Quản trị viên" },
+		{ value: "president", label: "Chủ nhiệm CLB" },
+		{ value: "vice-president", label: "Phó Chủ nhiệm CLB" },
+		{ value: "academic-head", label: "Trưởng ban Học thuật" },
+		{ value: "communications-head", label: "Trưởng ban Truyền thông" },
+		{ value: "volunteer-head", label: "Trưởng ban Tình nguyện" },
+		{ value: "club-member", label: "Thành viên CLB" },
+		{ value: "user", label: "Người dùng" },
+	];
+
 	return (
 		<div className='h-full flex-1 flex-col'>
 			<div className='flex items-center p-4 md:p-6 lg:p-8'>
@@ -145,17 +161,35 @@ function UserList() {
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
 						<Input
-							placeholder='Lọc người dùng...'
+							placeholder='Tìm kiếm...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
-						<Button variant='outline' size='sm' className='h-8 lg:flex'>
-							<Settings2 className='h-4 w-4' />
-							Lọc
-						</Button>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant='outline' size='sm' className='h-8'>
+									<Settings2 className='h-4 w-4' />
+									Lọc theo vai trò
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align='end' className='w-[220px]'>
+								{roleOptions.map((option) => (
+									<DropdownMenuItem
+										key={option.value}
+										onClick={() => setRoleFilter(option.value)}
+										className={
+											roleFilter === option.value
+												? "bg-muted font-medium"
+												: ""
+										}>
+										{option.label}
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuContent>
+						</DropdownMenu>
 						<Button
 							size='sm'
 							onClick={() => navigate("/users/create")}
@@ -197,6 +231,15 @@ function UserList() {
 								<TableHead>
 									<Button
 										variant='ghost'
+										onClick={() => handleSort("roles.value")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Vai trò
+										{getSortIcon("roles.value")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
 										onClick={() => handleSort("email")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
 										Email
@@ -216,7 +259,7 @@ function UserList() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{users.map((user) => (
+							{users.map((user: User) => (
 								<TableRow key={user.id}>
 									<TableCell>
 										<Checkbox
@@ -246,6 +289,17 @@ function UserList() {
 											</Link>
 										</div>
 									</TableCell>
+									<TableCell>
+										<CompactBadgeList
+											items={user.roles.map((role) => ({
+												key: role.id,
+												label: role.label,
+											}))}
+											maxVisibleItems={1}
+											badgeClassName='border-primary-500/20 bg-primary-500/10 text-primary-700 hover:bg-primary-500/10'
+											overflowBadgeClassName='border-primary-500/20 bg-primary-500/10 text-primary-700 hover:bg-primary-500/10'
+										/>
+									</TableCell>
 									<TableCell>{user.email}</TableCell>
 									<TableCell>{user.created_at}</TableCell>
 									<TableCell>
@@ -270,7 +324,7 @@ function UserList() {
 							))}
 							{users.length === 0 && (
 								<TableRow>
-									<TableCell colSpan={6} className='h-24 text-center'>
+									<TableCell colSpan={7} className='h-24 text-center'>
 										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
@@ -278,7 +332,7 @@ function UserList() {
 						</TableBody>
 						<TableFooter className='bg-transparent'>
 							<TableRow>
-								<TableCell colSpan={6}>
+								<TableCell colSpan={7}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex-1 text-sm text-muted-foreground'>
 											Đang hiện {users.length} trên tổng {meta.total} dòng.
