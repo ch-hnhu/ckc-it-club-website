@@ -20,13 +20,13 @@ class RoleController extends BaseApiController
         $perPage = (int) $request->query('per_page', 0);
         $search = $request->query('search');
 
-        $allowedSorts = ['id', 'label', 'created_at', 'total_users'];
+        $allowedSorts = ['id', 'name', 'label', 'is_system', 'created_at', 'total_users'];
         if (! in_array($sort, $allowedSorts, true)) {
             $sort = 'id';
         }
 
         $query = Role::query()
-            ->select('id', 'name', 'label', 'created_at');
+            ->select('id', 'name', 'label', 'created_at', 'is_system');
 
         if ($search) {
             $searchTerm = '%'.mb_strtolower($search).'%';
@@ -34,11 +34,14 @@ class RoleController extends BaseApiController
                 ->orWhereRaw('LOWER(label) LIKE ?', [$searchTerm]);
         }
 
-        // Apply sorting at database level for created_at, label, and total_users
         if ($sort === 'created_at') {
             $query->orderBy('created_at', $order);
+        } elseif ($sort === 'name') {
+            $query->orderBy('name', $order);
         } elseif ($sort === 'label') {
             $query->orderBy('label', $order);
+        } elseif ($sort === 'is_system') {
+            $query->orderBy('is_system', $order);
         } elseif ($sort === 'id') {
             $query->orderBy('id', $order);
         }
@@ -49,6 +52,7 @@ class RoleController extends BaseApiController
                     'id' => $role->id,
                     'value' => $role->name,
                     'label' => $role->label,
+                    'is_system' => (int) $role->is_system,
                     'created_at' => $role->created_at?->format('d/m/Y'),
                     'total_users' => (int) DB::table('model_has_roles')->where('role_id', $role->id)->count(),
                 ];
@@ -101,5 +105,18 @@ class RoleController extends BaseApiController
         ]);
 
         return $this->successResponse(true, $user, ApiMessage::ROLE_CREATED);
+    }
+
+    public function destroy(string $id)
+    {
+        $role = Role::findOrFail($id);
+
+        if ($role->is_system) {
+            return $this->errorResponse(false, ApiMessage::ROLE_SYSTEM, 503);
+        }
+
+        $role->delete();
+
+        return $this->successResponse(true, null, ApiMessage::ROLE_DELETED);
     }
 }

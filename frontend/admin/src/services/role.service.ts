@@ -20,6 +20,10 @@ const roleService = {
 			},
 		});
 	},
+
+	async deleteRole(id: number | string): Promise<ApiResponse<null>> {
+		return api.delete(`/roles/${id}`);
+	},
 };
 
 export default roleService;
