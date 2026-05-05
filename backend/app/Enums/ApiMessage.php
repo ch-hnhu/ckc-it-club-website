@@ -41,6 +41,8 @@ enum ApiMessage: string
     // Role Specific
     case ROLES_RETRIEVED = 'Roles retrieved successfully';
     case ROLE_CREATED = 'Role created successfully';
+    case ROLE_SYSTEM = 'System roles cannot be deleted';
+    case ROLE_DELETED = 'Role deleted successfully';
 
     // Database & Server Errors
     case DATABASE_ERROR = 'Database error occurred';
