@@ -157,16 +157,14 @@ function RoleList() {
 				</div>
 			</div>
 			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
-				<div className='flex items-center justify-between'>
-					<div className='flex flex-1 items-center gap-2'>
+				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2'>
+					<div className='flex flex-1 items-center gap-2 justify-between'>
 						<Input
 							placeholder='Tìm kiếm...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'
+							className='h-8 w-full sm:max-w-sm flex-1 min-w-0'
 						/>
-					</div>
-					<div className='flex items-center gap-2'>
 						<Button
 							size='sm'
 							onClick={() => setIsCreateModalOpen(true)}

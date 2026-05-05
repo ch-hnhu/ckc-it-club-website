@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import userService from "@/services/user.service";
+import roleService from "@/services/role.service";
 import type { User } from "@/types/user.type";
 
 import {
@@ -45,6 +46,7 @@ import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import type { RoleEnum } from "@/types/role.type";
 import { CompactBadgeList } from "../../components/ui/compact-badge-list";
+import { Combobox } from "@/components/ui/combobox";
 
 function UserList() {
 	const navigate = useNavigate();
@@ -58,6 +60,9 @@ function UserList() {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [roleFilter, setRoleFilter] = useState<RoleEnum | string>("");
+	const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string }>>([
+		{ value: "", label: "Tất cả vai trò" },
+	]);
 	const [sortConfig, setSortConfig] = useState<{
 		key: string | null;
 		order: "asc" | "desc" | null;
@@ -91,6 +96,25 @@ function UserList() {
 	useEffect(() => {
 		fetchUsers();
 	}, [meta.current_page, meta.per_page, debouncedSearch, roleFilter, sortConfig]);
+
+	useEffect(() => {
+		fetchRoles();
+	}, []);
+
+	const fetchRoles = async () => {
+		try {
+			const response = await roleService.getRoles({ per_page: 100 });
+			setRoleOptions([
+				{ value: "", label: "Tất cả vai trò" },
+				...response.data.map((role) => ({
+					value: role.value,
+					label: role.label,
+				})),
+			]);
+		} catch (error) {
+			console.error("Đã có lỗi xảy ra khi tải danh sách vai trò:", error);
+		}
+	};
 
 	const fetchUsers = async () => {
 		try {
@@ -135,18 +159,6 @@ function UserList() {
 		return <ArrowUpDown className='ml-2 h-4 w-4' />;
 	};
 
-	const roleOptions: Array<{ value: RoleEnum | string; label: string }> = [
-		{ value: "", label: "Tất cả vai trò" },
-		{ value: "admin", label: "Quản trị viên" },
-		{ value: "president", label: "Chủ nhiệm CLB" },
-		{ value: "vice-president", label: "Phó Chủ nhiệm CLB" },
-		{ value: "academic-head", label: "Trưởng ban Học thuật" },
-		{ value: "communications-head", label: "Trưởng ban Truyền thông" },
-		{ value: "volunteer-head", label: "Trưởng ban Tình nguyện" },
-		{ value: "club-member", label: "Thành viên CLB" },
-		{ value: "user", label: "Người dùng" },
-	];
-
 	return (
 		<div className='h-full flex-1 flex-col'>
 			<div className='flex items-center p-4 md:p-6 lg:p-8'>
@@ -158,38 +170,30 @@ function UserList() {
 				</div>
 			</div>
 			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
-				<div className='flex items-center justify-between'>
-					<div className='flex flex-1 items-center gap-2'>
+				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2'>
+					<div className='flex flex-1 items-center gap-2 w-full'>
 						<Input
 							placeholder='Tìm kiếm...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'
+							className='h-8 w-full sm:max-w-sm flex-1 min-w-0'
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant='outline' size='sm' className='h-8'>
-									<Settings2 className='h-4 w-4' />
-									Lọc theo vai trò
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align='end' className='w-[220px]'>
-								{roleOptions.map((option) => (
-									<DropdownMenuItem
-										key={option.value}
-										onClick={() => setRoleFilter(option.value)}
-										className={
-											roleFilter === option.value
-												? "bg-muted font-medium"
-												: ""
-										}>
-										{option.label}
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<Combobox
+							value={(roleFilter as string) || ""}
+							onValueChange={(value) => setRoleFilter(value)}
+							options={roleOptions}
+							placeholder='Lọc theo vai trò'
+							searchPlaceholder='Tìm vai trò...'
+							triggerClassName='h-8 w-full sm:max-w-sm flex-1
+							min-w-[250px]'
+							h-8
+							w-full
+							sm:max-w-sm
+							flex-1
+							min-w-0
+						/>
 						<Button
 							size='sm'
 							onClick={() => navigate("/users/create")}
