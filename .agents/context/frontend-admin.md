@@ -72,6 +72,8 @@
 - major list
 - `/classes`
 - school class list
+- `/contacts`
+- contact management list with real backend data and status updates
 - `/requests`
 - recruitment application list
 - `/requests/:applicationId`
@@ -137,6 +139,7 @@
 - neutral base palette
 - custom pastel accents such as `--pastel-blue`, `--pastel-pink`, `--pastel-green`, `--pastel-orange`
 - default body font still falls back to system stack even though `Source Sans 3` is imported in `main.tsx`
+- Shared checkbox UI lives in `src/components/ui/checkbox.tsx`, wraps `@radix-ui/react-checkbox`, and explicitly centers/sets the indicator color so checked ticks remain visible across table/list usage.
 
 ## Module Layout
 
@@ -162,6 +165,8 @@
 - school class listing
 - `src/pages/recruitment/`
 - applications, answers, questions, detail flows
+- `src/pages/contact/`
+- contact management list/detail/status flows
 - `src/services/`
 - thin API client wrappers
 - `src/types/`
@@ -179,6 +184,7 @@
 - `faculty.service.ts`
 - `major.service.ts`
 - `school-class.service.ts`
+- `contact.service.ts`
 - `application.service.ts`
 - `health.service.ts`
 - Prefer adding or updating endpoint wrappers in `src/services/` rather than making Axios calls directly in pages.
@@ -219,6 +225,10 @@
 - supports create, update, reorder, delete
 - mirrors backend rules around question type and options
 - page is relatively advanced and should be reused, not reimplemented
+- Contact management:
+- route `/contacts`
+- server-driven pagination, search, sort, and status filtering
+- status update is live against backend `PATCH /contacts/{contact}/status`
 
 ## Environment Variables
 
@@ -284,4 +294,5 @@ npm run dev
 - `2026-04-20`: Updated CreateUser avatar behavior so clearing selected image restores default avatar preview (`/img/default-avatar.jpg`) while preserving all other form field state.
 - `2026-04-20`: Added reusable shadcn-style `ui/combobox` component (Command + Popover) with optional search and multiple select support, and migrated CreateUser faculty/major/class fields to searchable comboboxes.
 - `2026-04-20`: Wired `/users/create` route in router, connected User list "Thêm" button to navigate there, and implemented full shadcn CreateUser form UI with avatar preview and dependent faculty-major-class selectors.
+- `2026-04-23`: Added admin contact management route `/contacts`, sidebar entry, `contact.service.ts`, and live status updates backed by the Laravel API.
 - `2026-04-08`: Replaced scaffold with full admin frontend audit. Added route surface, auth/session model, service conventions, UI system notes, env requirements, and known gap inventory.

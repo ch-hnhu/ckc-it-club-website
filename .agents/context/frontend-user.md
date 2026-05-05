@@ -53,7 +53,7 @@
 
 ## Important Reality Checks
 - User login exists as a popup-based Google OAuth flow triggered from the navbar, not as a dedicated login page.
-- `ContactPage` currently simulates form submission locally with `setTimeout`; it does not post to a backend contact endpoint.
+- `ContactPage` posts real data to `POST /api/v1/contacts`, shows backend success or error feedback, and resets the form on success.
 - `Navbar` and auth service use `localStorage` for the access token.
 - `src/config/axios.config.ts` tries to read the token from `sessionStorage`, not `localStorage`.
 - The same Axios interceptor redirects `401` responses to `/login`, but this app has no `/login` route.
@@ -153,13 +153,12 @@
 - `auth.service.ts`
 - `health.service.ts`
 - `api.service.ts`
+- `contact.service.ts`
 - Prefer centralizing real backend integration in services rather than embedding fetch logic into pages, unless you are deliberately consolidating auth behavior.
 
 ## Data and Form Reality
-- `ContactPage` is currently presentation-first, not data-integrated.
-- It keeps form state locally and shows a success state after a simulated delay.
-- There is a `contacts` table in the backend, but the user frontend does not currently submit into it.
-- If you wire real contact submission, update both frontend and backend context docs.
+- It keeps form state locally, submits to the backend through `contact.service.ts`, and resets the form after a successful response.
+- Contact submissions are stored in the backend `contacts` table through the public API.
 
 ## Environment Variables
 - Current app uses:
@@ -188,6 +187,7 @@ npm run dev
 - `src/config/axios.config.ts`
 - `src/pages/LandingPage.tsx`
 - `src/pages/ContactPage.tsx`
+- `src/services/contact.service.ts`
 - `src/index.css`
 
 ## Safe Edit Rules For Agents
@@ -201,7 +201,7 @@ npm run dev
 ## Known Gaps and Debt
 - `frontend/user/README.md` is stale.
 - No `.env.example` is committed for this package.
-- Contact form is simulated and not wired to backend.
+- Contact form now submits to backend, but there is still no dedicated admin workflow for reviewing contact submissions from the public site.
 - Axios auth behavior and actual auth storage are inconsistent.
 - Axios redirects to a missing `/login` route.
 - Several links in landing sections are still placeholders.

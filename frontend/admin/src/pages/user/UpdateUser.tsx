@@ -374,13 +374,7 @@ function UpdateUser() {
 
 		const clientValidationErrors: CreateUserFieldErrors = {};
 		if (!form.full_name.trim()) clientValidationErrors.full_name = "Vui lòng nhập họ và tên.";
-		if (!form.gender) clientValidationErrors.gender = "Vui lòng chọn giới tính.";
-		if (!form.student_code.trim())
-			clientValidationErrors.student_code = "Vui lòng nhập mã sinh viên.";
 		if (!form.email.trim()) clientValidationErrors.email = "Vui lòng nhập email.";
-		if (!form.faculty_id) clientValidationErrors.faculty_id = "Vui lòng chọn khoa.";
-		if (!form.major_id) clientValidationErrors.major_id = "Vui lòng chọn ngành.";
-		if (!form.class_id) clientValidationErrors.class_id = "Vui lòng chọn lớp.";
 		if (form.roles.length === 0) clientValidationErrors.roles = "Vui lòng chọn vai trò.";
 
 		if (Object.keys(clientValidationErrors).length > 0) {
@@ -588,7 +582,6 @@ function UpdateUser() {
 												placeholder='0306123456'
 												value={form.student_code}
 												onChange={updateField("student_code")}
-												required
 											/>
 											{fieldErrors.student_code ? (
 												<p className='text-sm text-destructive'>
