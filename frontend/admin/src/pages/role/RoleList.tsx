@@ -15,6 +15,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,6 +44,7 @@ import { useTableSelection } from "@/hooks/useTableSelection";
 import roleService from "@/services/role.service";
 import type { Role } from "@/types/role.type";
 import CreateRoleModal from "./CreateRoleModal";
+import { toast } from "sonner";
 
 function RoleList() {
 	const navigate = useNavigate();
@@ -132,6 +134,18 @@ function RoleList() {
 		return <ArrowUpDown className='ml-2 h-4 w-4' />;
 	};
 
+	const handleDelete = async (id: number) => {
+		if (!window.confirm("Bạn có chắc chắn muốn xoá vai trò này?")) return;
+
+		try {
+			await roleService.deleteRole(id);
+			toast.success("Xoá vai trò thành công.", { position: "top-right" });
+			fetchRoles();
+		} catch (error) {
+			toast.error("Không thể xoá vai trò này.", { position: "top-right" });
+		}
+	};
+
 	return (
 		<div className='h-full flex-1 flex-col'>
 			<div className='flex items-center p-4 md:p-6 lg:p-8'>
@@ -189,10 +203,28 @@ function RoleList() {
 								<TableHead>
 									<Button
 										variant='ghost'
-										onClick={() => handleSort("name")}
+										onClick={() => handleSort("label")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
 										Role
+										{getSortIcon("label")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("name")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Value
 										{getSortIcon("name")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("is_system")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Is System
+										{getSortIcon("is_system")}
 									</Button>
 								</TableHead>
 								<TableHead>
@@ -230,6 +262,13 @@ function RoleList() {
 									</TableCell>
 									<TableCell className='font-medium'>{role.id}</TableCell>
 									<TableCell>{role.label}</TableCell>
+									<TableCell>{role.value}</TableCell>
+									<TableCell>
+										<Checkbox
+											aria-label={`Role ${role.id} is system role`}
+											checked={Boolean(role.is_system)}
+										/>
+									</TableCell>
 									<TableCell>{role.total_users ?? 0}</TableCell>
 									<TableCell>{role.created_at ?? "-"}</TableCell>
 									<TableCell>
@@ -247,6 +286,23 @@ function RoleList() {
 													onClick={() => navigate(`/roles/${role.id}`)}>
 													Sửa
 												</DropdownMenuItem>
+												<DropdownMenuSeparator />
+												<DropdownMenuItem
+													className='text-destructive focus:text-destructive focus:bg-destructive/10'
+													onClick={() => {
+														if (role.is_system) {
+															toast.error(
+																"Không thể xoá vai trò hệ thống.",
+																{
+																	position: "top-right",
+																},
+															);
+															return;
+														}
+														handleDelete(role.id);
+													}}>
+													Xoá
+												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>
 									</TableCell>
@@ -262,7 +318,7 @@ function RoleList() {
 						</TableBody>
 						<TableFooter className='bg-transparent'>
 							<TableRow>
-								<TableCell colSpan={6}>
+								<TableCell colSpan={8}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex-1 text-sm text-muted-foreground'>
 											Đang hiện {roles.length} trên tổng {meta.total} dòng.
