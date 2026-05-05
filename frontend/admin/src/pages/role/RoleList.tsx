@@ -36,20 +36,20 @@ import {
 	ChevronsRight,
 	MoreHorizontal,
 	Plus,
-	Settings2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import roleService from "@/services/role.service";
 import type { Role } from "@/types/role.type";
 import CreateRoleModal from "./CreateRoleModal";
+import UpdateRoleModal from "./UpdateRoleModal";
 import { toast } from "sonner";
 
 function RoleList() {
-	const navigate = useNavigate();
 	const [roles, setRoles] = useState<Role[]>([]);
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+	const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+	const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
 	const [meta, setMeta] = useState({
 		current_page: 1,
 		last_page: 1,
@@ -160,17 +160,13 @@ function RoleList() {
 				<div className='flex items-center justify-between'>
 					<div className='flex flex-1 items-center gap-2'>
 						<Input
-							placeholder='Lọc vai trò...'
+							placeholder='Tìm kiếm...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
-						<Button variant='outline' size='sm' className='h-8 lg:flex'>
-							<Settings2 className='h-4 w-4' />
-							Lọc
-						</Button>
 						<Button
 							size='sm'
 							onClick={() => setIsCreateModalOpen(true)}
@@ -283,7 +279,30 @@ function RoleList() {
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
 												<DropdownMenuItem
-													onClick={() => navigate(`/roles/${role.id}`)}>
+													onClick={() => {
+														if (role.is_system) {
+															toast.error(
+																"Không thể sửa vai trò hệ thống.",
+																{
+																	position: "top-right",
+																},
+															);
+															return;
+														} else if (
+															role.total_users &&
+															role.total_users > 0
+														) {
+															toast.error(
+																"Không thể cập nhật vai trò đang được gán cho người dùng.",
+																{
+																	position: "top-right",
+																},
+															);
+															return;
+														}
+														setSelectedRoleId(role.id);
+														setIsUpdateModalOpen(true);
+													}}>
 													Sửa
 												</DropdownMenuItem>
 												<DropdownMenuSeparator />
@@ -293,6 +312,17 @@ function RoleList() {
 														if (role.is_system) {
 															toast.error(
 																"Không thể xoá vai trò hệ thống.",
+																{
+																	position: "top-right",
+																},
+															);
+															return;
+														} else if (
+															role.total_users &&
+															role.total_users > 0
+														) {
+															toast.error(
+																"Không thể xoá vai trò đang được gán cho người dùng.",
 																{
 																	position: "top-right",
 																},
@@ -428,6 +458,16 @@ function RoleList() {
 			<CreateRoleModal
 				open={isCreateModalOpen}
 				onOpenChange={setIsCreateModalOpen}
+				onSuccess={() => fetchRoles()}
+			/>
+
+			<UpdateRoleModal
+				open={isUpdateModalOpen}
+				onOpenChange={(v) => {
+					setIsUpdateModalOpen(v);
+					if (!v) setSelectedRoleId(null);
+				}}
+				roleId={selectedRoleId}
 				onSuccess={() => fetchRoles()}
 			/>
 		</div>
