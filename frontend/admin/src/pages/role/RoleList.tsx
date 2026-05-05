@@ -310,7 +310,7 @@ function RoleList() {
 							))}
 							{roles.length === 0 && (
 								<TableRow>
-									<TableCell colSpan={6} className='h-24 text-center'>
+									<TableCell colSpan={8} className='h-24 text-center'>
 										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
