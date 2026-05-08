@@ -139,6 +139,7 @@
 - neutral base palette
 - custom pastel accents such as `--pastel-blue`, `--pastel-pink`, `--pastel-green`, `--pastel-orange`
 - default body font still falls back to system stack even though `Source Sans 3` is imported in `main.tsx`
+- Shared checkbox UI lives in `src/components/ui/checkbox.tsx`, wraps `@radix-ui/react-checkbox`, and explicitly centers/sets the indicator color so checked ticks remain visible across table/list usage.
 
 ## Module Layout
 
