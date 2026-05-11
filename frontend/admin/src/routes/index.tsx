@@ -17,6 +17,7 @@ import { LoginForm } from "@/pages/auth/LoginForm";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NotFound from "@/pages/NotFound";
 import RoleList from "@/pages/role/RoleList";
+import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
 
 const router = createBrowserRouter([
 	{
@@ -67,6 +68,10 @@ const router = createBrowserRouter([
 			{
 				path: "contacts",
 				element: <ContactList />,
+			},
+			{
+				path: "divisions",
+				element: <DivisionManagementPage />,
 			},
 			{
 				path: "requests",
