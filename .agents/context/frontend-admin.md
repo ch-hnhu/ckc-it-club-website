@@ -74,6 +74,8 @@
 - school class list
 - `/contacts`
 - contact management list with real backend data and status updates
+- `/divisions`
+- division management dashboard for the 3 fixed club divisions: academic, volunteer, and event
 - `/requests`
 - recruitment application list
 - `/requests/:applicationId`
@@ -93,7 +95,6 @@
 - `/roles`
 - `/permissions`
 - `/club-info`
-- `/divisions`
 - `/fields`
 - Dashboard contains significant placeholder/demo content rather than fully live backend-driven analytics.
 - `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar) and redirects to `/users` on success.
@@ -167,6 +168,8 @@
 - applications, answers, questions, detail flows
 - `src/pages/contact/`
 - contact management list/detail/status flows
+- `src/pages/division/`
+- division management dashboard pages
 - `src/services/`
 - thin API client wrappers
 - `src/types/`
@@ -295,4 +298,5 @@ npm run dev
 - `2026-04-20`: Added reusable shadcn-style `ui/combobox` component (Command + Popover) with optional search and multiple select support, and migrated CreateUser faculty/major/class fields to searchable comboboxes.
 - `2026-04-20`: Wired `/users/create` route in router, connected User list "Thêm" button to navigate there, and implemented full shadcn CreateUser form UI with avatar preview and dependent faculty-major-class selectors.
 - `2026-04-23`: Added admin contact management route `/contacts`, sidebar entry, `contact.service.ts`, and live status updates backed by the Laravel API.
+- `2026-05-12`: Added admin route `/divisions` with a local-data management dashboard for the 3 fixed club divisions (academic, volunteer, event).
 - `2026-04-08`: Replaced scaffold with full admin frontend audit. Added route surface, auth/session model, service conventions, UI system notes, env requirements, and known gap inventory.
