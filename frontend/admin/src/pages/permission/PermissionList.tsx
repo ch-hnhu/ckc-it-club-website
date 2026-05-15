@@ -55,7 +55,7 @@ function PermissionList() {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [roleFilter, setRoleFilter] = useState<RoleEnum | string>("");
-	const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string }>>([
+	const [roleOptions] = useState<Array<{ value: string; label: string }>>([
 		{ value: "", label: "Tất cả vai trò" },
 	]);
 	const [sortConfig, setSortConfig] = useState<{
