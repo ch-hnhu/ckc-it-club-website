@@ -50,7 +50,7 @@ const CONTACT_SUBJECTS = [
 ];
 
 const SOCIAL_LINKS = [
-	{ icon: Facebook, label: "Facebook", href: "#", color: "#1877F2" },
+	{ icon: Facebook, label: "Facebook", href: "https://www.facebook.com/itclub.caothang", color: "#1877F2" },
 	{ icon: Github, label: "GitHub", href: "#", color: "#111" },
 	{ icon: MessageCircle, label: "Discord", href: "#", color: "#5865F2" },
 ];
@@ -126,6 +126,18 @@ const ContactPage: React.FC = () => {
 		return () => observer.disconnect();
 	}, []);
 
+	useEffect(() => {
+		if (feedback?.type !== "success") {
+			return;
+		}
+
+		const timerId = window.setTimeout(() => {
+			setFeedback(null);
+		}, 5000);
+
+		return () => window.clearTimeout(timerId);
+	}, [feedback]);
+
 	const handleChange =
 		(field: keyof ContactFormState) =>
 		(event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -145,7 +157,7 @@ const ContactPage: React.FC = () => {
 		setFeedback(null);
 
 		try {
-			const response = await contactService.submit({
+			await contactService.submit({
 				full_name: formState.name.trim(),
 				email: formState.email.trim(),
 				subject: formState.subject,
@@ -155,7 +167,7 @@ const ContactPage: React.FC = () => {
 			setFormState(INITIAL_FORM_STATE);
 			setFeedback({
 				type: "success",
-				message: response.message || "Gửi liên hệ thành công.",
+				message: "Gửi liên hệ thành công. CKC IT CLUB sẽ phản hồi bạn sớm nhất có thể.",
 			});
 			sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 		} catch (error) {

@@ -2,6 +2,7 @@
 import schoolClassService from "@/services/school-class.service";
 import type { SchoolClass } from "@/types/school-class.type";
 import { useMemo } from "react";
+import AcademicStructureImportDialog from "@/components/academic-structure/AcademicStructureImportDialog";
 
 import {
 	Table,
@@ -67,29 +68,29 @@ function SchoolClassList() {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
 	}, [normalizedSearch, sortConfig]);
 
-	useEffect(() => {
-		const fetchClasses = async () => {
-			try {
-				const response = await schoolClassService.getSchoolClasses({
-					page: meta.current_page,
-					per_page: meta.per_page,
-					search: normalizedSearch,
-					sort: sortConfig.key || undefined,
-					order: sortConfig.order || undefined,
-				});
-				setClasses(response.data);
-				setMeta({
-					current_page: response.meta.current_page,
-					last_page: response.meta.last_page,
-					per_page: response.meta.per_page,
-					total: response.meta.total,
-				});
-			} catch (error) {
-				console.error("Đã có lỗi xảy ra:", error);
-			}
-		};
+	const fetchClasses = async () => {
+		try {
+			const response = await schoolClassService.getSchoolClasses({
+				page: meta.current_page,
+				per_page: meta.per_page,
+				search: normalizedSearch,
+				sort: sortConfig.key || undefined,
+				order: sortConfig.order || undefined,
+			});
+			setClasses(response.data);
+			setMeta({
+				current_page: response.meta.current_page,
+				last_page: response.meta.last_page,
+				per_page: response.meta.per_page,
+				total: response.meta.total,
+			});
+		} catch (error) {
+			console.error("Đã có lỗi xảy ra:", error);
+		}
+	};
 
-		fetchClasses();
+	useEffect(() => {
+		void fetchClasses();
 	}, [meta.current_page, meta.per_page, normalizedSearch, sortConfig]);
 
 	const handleSort = (key: string) => {
@@ -124,6 +125,7 @@ function SchoolClassList() {
 						<Input placeholder='Tìm theo tên lớp, ngành hoặc khoa...' value={search} onChange={(e) => setSearch(e.target.value)} className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12' />
 					</div>
 					<div className='flex items-center gap-2'>
+						<AcademicStructureImportDialog onImported={() => fetchClasses()} />
 						<Button variant='outline' size='sm' className='h-8 lg:flex'><Settings2 className='h-4 w-4' />View</Button>
 						<Button size='sm' className='h-8 bg-foreground text-background hover:bg-foreground/90'><Plus className='h-4 w-4' />Thêm lớp</Button>
 					</div>

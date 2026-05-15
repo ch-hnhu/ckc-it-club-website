@@ -95,6 +95,12 @@ function formatDate(value: string | null) {
 	return dateFormatter.format(date);
 }
 
+function truncateMessage(value: string, maxLength = 50) {
+	if (value.length <= maxLength) return value;
+
+	return `${value.slice(0, maxLength).trimEnd()}...`;
+}
+
 function getStatusLabel(status: ContactStatus) {
 	switch (status) {
 		case "pending":
@@ -533,8 +539,8 @@ function ContactList() {
 												<p className='font-medium'>
 													{contact.full_name || "Ẩn danh"}
 												</p>
-												<p className='line-clamp-1 text-sm text-muted-foreground'>
-													{contact.message}
+												<p className='text-sm text-muted-foreground'>
+													{truncateMessage(contact.message)}
 												</p>
 											</div>
 										</TableCell>

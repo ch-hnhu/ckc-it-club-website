@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\ApplicationQuestionController;
+use App\Http\Controllers\Api\V1\Admin\AcademicStructureController;
 use App\Http\Controllers\Api\V1\Admin\ClubApplicationController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
@@ -39,6 +40,7 @@ Route::prefix('v1')->group(function () {
 
             Route::apiResource('users', UserController::class);
             Route::apiResource('roles', RoleController::class);
+            Route::post('academic-structure/import', [AcademicStructureController::class, 'import']);
             Route::apiResource('permissions', PermissionController::class);
             Route::apiResource('faculties', FacultyController::class)->only(['index']);
             Route::apiResource('majors', MajorController::class)->only(['index']);
