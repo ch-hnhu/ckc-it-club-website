@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import userService from "@/services/user.service";
-import roleService from "@/services/role.service";
-import type { User } from "@/types/user.type";
 
 import {
 	Table,
@@ -20,8 +17,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	Select,
 	SelectContent,
@@ -40,16 +35,17 @@ import {
 	MoreHorizontal,
 	Plus,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import permissionService from "@/services/permission.service";
+import type { Permission } from "@/types/permission.type";
 import { useTableSelection } from "@/hooks/useTableSelection";
-import type { RoleEnum } from "@/types/role.type";
-import { CompactBadgeList } from "../../components/ui/compact-badge-list";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/ui/combobox";
+import type { RoleEnum } from "@/types/role.type";
+import { CompactBadgeList } from "@/components/ui/compact-badge-list";
 
-function UserList() {
-	const navigate = useNavigate();
-	const [users, setUsers] = useState<User[]>([]);
+function PermissionList() {
+	const [permissions, setPermissions] = useState<Permission[]>([]);
 	const [meta, setMeta] = useState({
 		current_page: 1,
 		last_page: 1,
@@ -59,22 +55,19 @@ function UserList() {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [roleFilter, setRoleFilter] = useState<RoleEnum | string>("");
-	const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string }>>([
+	const [roleOptions] = useState<Array<{ value: string; label: string }>>([
 		{ value: "", label: "Tất cả vai trò" },
 	]);
 	const [sortConfig, setSortConfig] = useState<{
 		key: string | null;
 		order: "asc" | "desc" | null;
 	}>({
-		key: "created_at",
-		order: "desc",
+		key: "id",
+		order: "asc",
 	});
-	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
-		users.map((user) => user.id),
-	);
 
 	const breadcrumb = useMemo(
-		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý người dùng" }],
+		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý quyền" }],
 		[],
 	);
 
@@ -90,42 +83,22 @@ function UserList() {
 
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
-	}, [debouncedSearch, roleFilter, sortConfig]);
+	}, [debouncedSearch, sortConfig]);
 
 	useEffect(() => {
-		fetchUsers();
-	}, [meta.current_page, meta.per_page, debouncedSearch, roleFilter, sortConfig]);
+		fetchPermissions();
+	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
 
-	useEffect(() => {
-		fetchRoles();
-	}, []);
-
-	const fetchRoles = async () => {
+	const fetchPermissions = async () => {
 		try {
-			const response = await roleService.getRoles({ per_page: 100 });
-			setRoleOptions([
-				{ value: "", label: "Tất cả vai trò" },
-				...response.data.map((role) => ({
-					value: role.value,
-					label: role.label,
-				})),
-			]);
-		} catch (error) {
-			console.error("Đã có lỗi xảy ra khi tải danh sách vai trò:", error);
-		}
-	};
-
-	const fetchUsers = async () => {
-		try {
-			const response = await userService.getUsers({
+			const response = await permissionService.getPermissions({
 				page: meta.current_page,
 				per_page: meta.per_page,
 				search: debouncedSearch,
-				role: roleFilter || undefined,
 				sort: sortConfig.key || undefined,
 				order: sortConfig.order || undefined,
 			});
-			setUsers(response.data);
+			setPermissions(response.data);
 			setMeta({
 				current_page: response.meta.current_page,
 				last_page: response.meta.last_page,
@@ -158,14 +131,16 @@ function UserList() {
 		return <ArrowUpDown className='ml-2 h-4 w-4' />;
 	};
 
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		permissions.map((permission) => permission.id),
+	);
+
 	return (
 		<div className='h-full flex-1 flex-col'>
 			<div className='flex items-center p-4 md:p-6 lg:p-8'>
 				<div className='flex flex-col gap-1'>
-					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý người dùng</h2>
-					<p className='text-muted-foreground'>
-						Danh sách tất cả người dùng trong hệ thống.
-					</p>
+					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý quyền</h2>
+					<p className='text-muted-foreground'>Danh sách tất cả quyền trong hệ thống.</p>
 				</div>
 			</div>
 			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
@@ -195,7 +170,7 @@ function UserList() {
 						/>
 						<Button
 							size='sm'
-							onClick={() => navigate("/users/create")}
+							onClick={() => "TODO: Open create permission modal"}
 							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 							<Plus className='h-4 w-4' />
 							Thêm
@@ -213,7 +188,7 @@ function UserList() {
 										onCheckedChange={(checked) => toggleAll(checked === true)}
 									/>
 								</TableHead>
-								<TableHead className='w-[60px]'>
+								<TableHead className='w-[80px]'>
 									<Button
 										variant='ghost'
 										onClick={() => handleSort("id")}
@@ -225,76 +200,51 @@ function UserList() {
 								<TableHead>
 									<Button
 										variant='ghost'
-										onClick={() => handleSort("full_name")}
+										onClick={() => handleSort("name")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Tên người dùng
-										{getSortIcon("full_name")}
+										Permission
+										{getSortIcon("name")}
 									</Button>
 								</TableHead>
 								<TableHead>
 									<Button
 										variant='ghost'
-										onClick={() => handleSort("roles.value")}
+										onClick={() => handleSort("description")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Vai trò
-										{getSortIcon("roles.value")}
+										Mô tả
+										{getSortIcon("description")}
 									</Button>
 								</TableHead>
 								<TableHead>
 									<Button
 										variant='ghost'
-										onClick={() => handleSort("email")}
+										onClick={() => handleSort("roles")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Email
-										{getSortIcon("email")}
-									</Button>
-								</TableHead>
-								<TableHead>
-									<Button
-										variant='ghost'
-										onClick={() => handleSort("created_at")}
-										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Ngày tham gia
-										{getSortIcon("created_at")}
+										Roles
+										{getSortIcon("roles")}
 									</Button>
 								</TableHead>
 								<TableHead className='w-[50px]'></TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{users.map((user: User) => (
-								<TableRow key={user.id}>
+							{permissions.map((permission) => (
+								<TableRow key={permission.id}>
 									<TableCell>
 										<Checkbox
-											aria-label={`Select user ${user.id}`}
-											checked={isSelected(user.id)}
+											aria-label={`Select permission ${permission.id}`}
+											checked={isSelected(permission.id)}
 											onCheckedChange={(checked) =>
-												toggleOne(user.id, checked === true)
+												toggleOne(permission.id, checked === true)
 											}
 										/>
 									</TableCell>
-									<TableCell className='font-medium'>{user.id}</TableCell>
-									<TableCell>
-										<div className='flex items-center gap-3'>
-											<Avatar className='h-8 w-8'>
-												<AvatarImage
-													src={user.avatar}
-													alt={user.full_name}
-												/>
-												<AvatarFallback>
-													{user.full_name?.charAt(0) || "U"}
-												</AvatarFallback>
-											</Avatar>
-											<Link
-												to={`/users/${user.id}`}
-												className='font-medium hover:underline'>
-												{user.full_name}
-											</Link>
-										</div>
-									</TableCell>
+									<TableCell className='font-medium'>{permission.id}</TableCell>
+									<TableCell>{permission.name}</TableCell>
+									<TableCell>{permission.description}</TableCell>
 									<TableCell>
 										<CompactBadgeList
-											items={user.roles.map((role) => ({
+											items={permission.roles.map((role) => ({
 												key: role.id,
 												label: role.label,
 											}))}
@@ -303,8 +253,6 @@ function UserList() {
 											overflowBadgeClassName='border-primary-500/20 bg-primary-500/10 text-primary-700 hover:bg-primary-500/10'
 										/>
 									</TableCell>
-									<TableCell>{user.email}</TableCell>
-									<TableCell>{user.created_at}</TableCell>
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
@@ -316,18 +264,15 @@ function UserList() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
-												<DropdownMenuItem
-													onClick={() => navigate(`/users/${user.id}`)}>
-													Sửa
-												</DropdownMenuItem>
+												<DropdownMenuItem>Chi tiết</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>
 									</TableCell>
 								</TableRow>
 							))}
-							{users.length === 0 && (
+							{permissions.length === 0 && (
 								<TableRow>
-									<TableCell colSpan={7} className='h-24 text-center'>
+									<TableCell colSpan={6} className='h-24 text-center'>
 										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
@@ -335,10 +280,11 @@ function UserList() {
 						</TableBody>
 						<TableFooter className='bg-transparent'>
 							<TableRow>
-								<TableCell colSpan={7}>
+								<TableCell colSpan={6}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex-1 text-sm text-muted-foreground'>
-											Đang hiện {users.length} trên tổng {meta.total} dòng.
+											Đang hiện {permissions.length} trên tổng {meta.total}{" "}
+											dòng.
 										</div>
 										<div className='flex items-center space-x-6 lg:space-x-8'>
 											<div className='flex items-center space-x-2'>
@@ -445,4 +391,4 @@ function UserList() {
 	);
 }
 
-export default UserList;
+export default PermissionList;

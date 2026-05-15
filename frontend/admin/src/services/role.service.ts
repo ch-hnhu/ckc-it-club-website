@@ -21,6 +21,18 @@ const roleService = {
 		});
 	},
 
+	async getRole(id: number | string): Promise<ApiResponse<Role>> {
+		return api.get(`/roles/${id}`);
+	},
+
+	async updateRole(id: number | string, payload: FormData): Promise<ApiResponse<Role>> {
+		return api.put<ApiResponse<Role>, FormData>(`/roles/${id}`, payload, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+			},
+		});
+	},
+
 	async deleteRole(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/roles/${id}`);
 	},

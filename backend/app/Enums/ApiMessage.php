@@ -43,6 +43,9 @@ enum ApiMessage: string
     case ROLE_CREATED = 'Role created successfully';
     case ROLE_SYSTEM = 'System roles cannot be deleted';
     case ROLE_DELETED = 'Role deleted successfully';
+    case CANNOT_UPDATE_SYSTEM_ROLE = 'System roles cannot be updated';
+    case CANNOT_UPDATE_ROLE_WITH_USERS = 'Cannot update role that has assigned users';
+    case CANNOT_DELETE_ROLE_WITH_USERS = 'Cannot delete role that has assigned users';
 
     // Database & Server Errors
     case DATABASE_ERROR = 'Database error occurred';

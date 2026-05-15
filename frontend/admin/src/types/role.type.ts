@@ -6,3 +6,13 @@ export interface Role {
 	created_at: string | null;
 	total_users?: number;
 }
+
+export type RoleEnum =
+	| "admin"
+	| "president"
+	| "vice-president"
+	| "academic-head"
+	| "communications-head"
+	| "volunteer-head"
+	| "club-member"
+	| "user";
