@@ -7,6 +7,7 @@ const userService = {
 		page?: number;
 		per_page?: number;
 		search?: string;
+		role?: string;
 		sort?: string;
 		order?: "asc" | "desc";
 	}): Promise<PaginatedResponse<User>> {

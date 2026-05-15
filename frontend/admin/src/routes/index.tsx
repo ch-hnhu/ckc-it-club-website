@@ -18,6 +18,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NotFound from "@/pages/NotFound";
 import RoleList from "@/pages/role/RoleList";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
+import PermissionList from "@/pages/permission/PermissionList";
 
 const router = createBrowserRouter([
 	{
@@ -52,6 +53,10 @@ const router = createBrowserRouter([
 			{
 				path: "roles",
 				element: <RoleList />,
+			},
+			{
+				path: "permissions",
+				element: <PermissionList />,
 			},
 			{
 				path: "departments",

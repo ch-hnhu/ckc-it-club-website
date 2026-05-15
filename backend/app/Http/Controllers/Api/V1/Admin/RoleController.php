@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
+use App\Http\Requests\Api\V1\Role\UpdateRoleRequest;
 
 class RoleController extends BaseApiController
 {
@@ -58,7 +59,6 @@ class RoleController extends BaseApiController
                 ];
             });
 
-        // Only need to sort by total_users at application level
         if ($sort === 'total_users') {
             $roles = $this->sortRolesByTotalUsers($roles, $order);
         }
@@ -107,12 +107,71 @@ class RoleController extends BaseApiController
         return $this->successResponse(true, $user, ApiMessage::ROLE_CREATED);
     }
 
+    public function show(string $id)
+    {
+        $role = Role::findOrFail($id);
+
+        $data = [
+            'id' => $role->id,
+            'value' => $role->name,
+            'label' => $role->label,
+            'is_system' => (int) $role->is_system,
+            'created_at' => $role->created_at?->format('d/m/Y'),
+            'total_users' => (int) DB::table('model_has_roles')->where('role_id', $role->id)->count(),
+        ];
+
+        return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+    }
+
+    public function update(UpdateRoleRequest $request, string $id)
+    {
+        $validated = $request->validated();
+
+        $role = Role::findOrFail($id);
+
+        if ($role->is_system) {
+            return $this->errorResponse(false, ApiMessage::CANNOT_UPDATE_SYSTEM_ROLE, 403);
+        }
+
+        $hasUsers = DB::table('model_has_roles')
+            ->where('role_id', $role->id)
+            ->count() > 0;
+
+        if ($hasUsers) {
+            return $this->errorResponse(false, ApiMessage::CANNOT_UPDATE_ROLE_WITH_USERS, 403);
+        }
+
+        $role->name = $validated['name'];
+        $role->label = $validated['label'];
+        $role->is_system = $validated['is_system'];
+        $role->save();
+
+        $data = [
+            'id' => $role->id,
+            'value' => $role->name,
+            'label' => $role->label,
+            'is_system' => (int) $role->is_system,
+            'created_at' => $role->created_at?->format('d/m/Y'),
+            'total_users' => (int) DB::table('model_has_roles')->where('role_id', $role->id)->count(),
+        ];
+
+        return $this->successResponse(true, $data, ApiMessage::UPDATED);
+    }
+
     public function destroy(string $id)
     {
         $role = Role::findOrFail($id);
 
         if ($role->is_system) {
             return $this->errorResponse(false, ApiMessage::ROLE_SYSTEM, 503);
+        }
+
+        $hasUsers = DB::table('model_has_roles')
+            ->where('role_id', $role->id)
+            ->exists();
+
+        if ($hasUsers) {
+            return $this->errorResponse(false, ApiMessage::CANNOT_DELETE_ROLE_WITH_USERS, 403);
         }
 
         $role->delete();

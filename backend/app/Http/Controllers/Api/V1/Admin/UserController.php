@@ -23,14 +23,22 @@ class UserController extends BaseApiController
         $order = $request->query('order', 'desc');
         $perPage = $request->query('per_page', 10);
         $search = $request->query('search');
+        $role = $request->query('role');
 
         $data = User::query()
+            ->with('roles:id,name,label')
             ->when($search, function ($query, $search) {
                 $query->where('full_name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             })
+            ->when($role, function ($query, $role) {
+                $query->whereHas('roles', function ($q) use ($role) {
+                    $q->where('name', $role);
+                });
+            })
             ->orderBy($sort, $order)
             ->paginate($perPage);
+
         return $this->paginatedResponse($data, ApiMessage::USERS_RETRIEVED);
     }
 
@@ -69,7 +77,7 @@ class UserController extends BaseApiController
      */
     public function show(string $id)
     {
-        $user = User::with('roles:id,name')->findOrFail($id);
+        $user = User::with('roles:id,name,label')->findOrFail($id);
         return $this->successResponse(true, $user, ApiMessage::USER_RETRIEVED);
     }
 

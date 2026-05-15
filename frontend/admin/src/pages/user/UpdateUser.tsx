@@ -90,7 +90,7 @@ const normalizeRoles = (roleList: UserDetail["roles"]): string[] => {
 				return role;
 			}
 
-			return role.value ?? role.name ?? role.label ?? "";
+			return role.name ?? role.label ?? "";
 		})
 		.filter((role): role is string => Boolean(role));
 };
