@@ -67,10 +67,6 @@ export const adminNavMain: AdminNavItem[] = [
 				title: "Vai trò",
 				url: "/roles",
 			},
-			{
-				title: "Phân quyền",
-				url: "/permissions",
-			},
 		],
 	},
 	{
