@@ -55,7 +55,7 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
-		title: "Người dùng & Phân quyền",
+		title: "Người dùng & Vai trò",
 		url: "/users",
 		icon: Users,
 		items: [
@@ -66,10 +66,6 @@ export const adminNavMain: AdminNavItem[] = [
 			{
 				title: "Vai trò",
 				url: "/roles",
-			},
-			{
-				title: "Phân quyền",
-				url: "/permissions",
 			},
 		],
 	},
