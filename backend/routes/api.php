@@ -41,6 +41,9 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('users', UserController::class);
             Route::apiResource('roles', RoleController::class);
             Route::post('academic-structure/import', [AcademicStructureController::class, 'import']);
+            Route::get('academic-structure/imports/stats', [AcademicStructureController::class, 'stats']);
+            Route::get('academic-structure/imports', [AcademicStructureController::class, 'index']);
+            Route::get('academic-structure/imports/{academicStructureImport}/download', [AcademicStructureController::class, 'download']);
             Route::apiResource('permissions', PermissionController::class);
             Route::apiResource('faculties', FacultyController::class)->only(['index']);
             Route::apiResource('majors', MajorController::class)->only(['index']);

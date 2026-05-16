@@ -39,6 +39,7 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 			label: "Quản lý đơn vị",
 			icon: Building,
 			subItems: [
+				{ label: "Tải lên danh sách đơn vị", href: "/organization/upload" },
 				{ label: "Khoa", href: "/departments" },
 				{ label: "Ngành", href: "/majors" },
 				{ label: "Lớp", href: "/classes" },

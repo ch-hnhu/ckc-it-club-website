@@ -2,7 +2,6 @@
 import majorService from "@/services/major.service";
 import type { Major } from "@/types/major.type";
 import { useMemo } from "react";
-import AcademicStructureImportDialog from "@/components/academic-structure/AcademicStructureImportDialog";
 
 import {
 	Table,
@@ -130,7 +129,6 @@ function MajorList() {
 						<Input placeholder='Tìm kiếm theo tên ngành...' value={search} onChange={(e) => setSearch(e.target.value)} className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12' />
 					</div>
 					<div className='flex items-center gap-2'>
-						<AcademicStructureImportDialog onImported={() => fetchMajors()} />
 						<Button variant='outline' size='sm' className='h-8 lg:flex'><Settings2 className='h-4 w-4' />View</Button>
 						<Button size='sm' className='h-8 bg-foreground text-background hover:bg-foreground/90'><Plus className='h-4 w-4' />Thêm ngành</Button>
 					</div>

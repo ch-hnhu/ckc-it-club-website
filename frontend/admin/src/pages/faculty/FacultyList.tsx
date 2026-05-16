@@ -2,7 +2,6 @@
 import facultyService from "@/services/faculty.service";
 import type { Faculty } from "@/types/faculty.type";
 import { useMemo } from "react";
-import AcademicStructureImportDialog from "@/components/academic-structure/AcademicStructureImportDialog";
 
 import {
 	Table,
@@ -153,7 +152,6 @@ function FacultyList() {
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
-						<AcademicStructureImportDialog onImported={() => fetchFaculties()} />
 						<Button variant='outline' size='sm' className='h-8 lg:flex'>
 							<Settings2 className='h-4 w-4' />
 							View
