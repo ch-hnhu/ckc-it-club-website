@@ -45,9 +45,9 @@ Route::prefix('v1')->group(function () {
             Route::get('academic-structure/imports', [AcademicStructureController::class, 'index']);
             Route::get('academic-structure/imports/{academicStructureImport}/download', [AcademicStructureController::class, 'download']);
             Route::apiResource('permissions', PermissionController::class);
-            Route::apiResource('faculties', FacultyController::class)->only(['index']);
-            Route::apiResource('majors', MajorController::class)->only(['index']);
-            Route::apiResource('school-classes', SchoolClassController::class)->only(['index']);
+            Route::apiResource('faculties', FacultyController::class)->except(['create', 'edit']);
+            Route::apiResource('majors', MajorController::class)->except(['create', 'edit']);
+            Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit']);
             Route::get('contacts/stats', [AdminContactController::class, 'stats']);
             Route::get('contacts', [AdminContactController::class, 'index']);
             Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
