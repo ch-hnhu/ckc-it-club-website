@@ -7,8 +7,31 @@ use Illuminate\Database\Eloquent\Model;
 
 class ClubInformation extends Model
 {
-	/** @use HasFactory<\Database\Factories\ClubInformationFactory> */
-	use HasFactory;
+    /** @use HasFactory<\Database\Factories\ClubInformationFactory> */
+    use HasFactory;
 
-	protected $table = 'club_informations';
+    protected $table = 'club_informations';
+
+    protected $fillable = [
+        'value',
+        'label',
+        'slug',
+        'type',
+        'description',
+        'is_active',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'created_at' => 'datetime:d/m/Y',
+            'updated_at' => 'datetime:d/m/Y',
+        ];
+    }
+
+    public function clubInformationValues()
+    {
+        return $this->hasMany(ClubInformationValue::class, 'club_information_id');
+    }
 }

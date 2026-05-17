@@ -195,7 +195,7 @@ function FacultyList() {
 										{getSortIcon("label")}
 									</Button>
 								</TableHead>
-								
+
 								<TableHead>
 									<Button
 										variant='ghost'
@@ -205,7 +205,7 @@ function FacultyList() {
 										{getSortIcon("created_at")}
 									</Button>
 								</TableHead>
-								
+
 								<TableHead>
 									<Button
 										variant='ghost'
@@ -247,7 +247,9 @@ function FacultyList() {
 											</div>
 											<div className='flex flex-col'>
 												<span className='font-medium'>{faculty.label}</span>
-												<span className='text-xs text-muted-foreground'>{faculty.value}</span>
+												<span className='text-xs text-muted-foreground'>
+													{faculty.value}
+												</span>
 											</div>
 										</div>
 									</TableCell>
@@ -278,7 +280,7 @@ function FacultyList() {
 							{faculties.length === 0 && (
 								<TableRow>
 									<TableCell colSpan={7} className='h-24 text-center'>
-										Không tìm thấy khoa!
+										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
 							)}
@@ -306,11 +308,15 @@ function FacultyList() {
 														<SelectValue placeholder={meta.per_page} />
 													</SelectTrigger>
 													<SelectContent side='top'>
-														{[10, 20, 25, 30, 40, 50].map((pageSize) => (
-															<SelectItem key={pageSize} value={`${pageSize}`}>
-																{pageSize}
-															</SelectItem>
-														))}
+														{[10, 20, 25, 30, 40, 50].map(
+															(pageSize) => (
+																<SelectItem
+																	key={pageSize}
+																	value={`${pageSize}`}>
+																	{pageSize}
+																</SelectItem>
+															),
+														)}
 													</SelectContent>
 												</Select>
 											</div>
@@ -321,9 +327,16 @@ function FacultyList() {
 												<Button
 													variant='outline'
 													className='hidden h-8 w-8 p-0 lg:flex'
-													onClick={() => setMeta((prev) => ({ ...prev, current_page: 1 }))}
+													onClick={() =>
+														setMeta((prev) => ({
+															...prev,
+															current_page: 1,
+														}))
+													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to first page</span>
+													<span className='sr-only'>
+														Go to first page
+													</span>
 													<ChevronsLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -336,7 +349,9 @@ function FacultyList() {
 														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to previous page</span>
+													<span className='sr-only'>
+														Go to previous page
+													</span>
 													<ChevronLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -355,7 +370,12 @@ function FacultyList() {
 												<Button
 													variant='outline'
 													className='hidden h-8 w-8 p-0 lg:flex'
-													onClick={() => setMeta((prev) => ({ ...prev, current_page: meta.last_page }))}
+													onClick={() =>
+														setMeta((prev) => ({
+															...prev,
+															current_page: meta.last_page,
+														}))
+													}
 													disabled={meta.current_page === meta.last_page}>
 													<span className='sr-only'>Go to last page</span>
 													<ChevronsRight className='h-4 w-4' />

@@ -295,7 +295,9 @@ function ContactList() {
 			});
 
 			setContacts((prev) =>
-				prev.map((contact) => (contact.id === updatedContact.id ? updatedContact : contact)),
+				prev.map((contact) =>
+					contact.id === updatedContact.id ? updatedContact : contact,
+				),
 			);
 			setSelectedContact((prev) => (prev?.id === updatedContact.id ? updatedContact : prev));
 			setStatusDialogContact(null);
@@ -389,7 +391,8 @@ function ContactList() {
 						<CardContent>
 							<div className='text-2xl font-semibold'>{pendingCount}</div>
 							<p className='text-sm text-muted-foreground'>
-								{pendingCount} mới, {processingCount} đang xử lý, {doneCount} đã phản hồi.
+								{pendingCount} mới, {processingCount} đang xử lý, {doneCount} đã
+								phản hồi.
 							</p>
 						</CardContent>
 					</Card>
@@ -434,7 +437,9 @@ function ContactList() {
 								<DropdownMenuItem
 									key={option.value}
 									onClick={() => setStatusFilter(option.value)}
-									className={statusFilter === option.value ? "bg-muted font-medium" : ""}>
+									className={
+										statusFilter === option.value ? "bg-muted font-medium" : ""
+									}>
 									{option.label}
 								</DropdownMenuItem>
 							))}
@@ -533,7 +538,9 @@ function ContactList() {
 												}
 											/>
 										</TableCell>
-										<TableCell className='font-medium'>CT-{contact.id}</TableCell>
+										<TableCell className='font-medium'>
+											CT-{contact.id}
+										</TableCell>
 										<TableCell>
 											<div className='space-y-1'>
 												<p className='font-medium'>
@@ -558,7 +565,9 @@ function ContactList() {
 														<MoreHorizontal className='h-4 w-4' />
 													</Button>
 												</DropdownMenuTrigger>
-												<DropdownMenuContent align='end' className='w-[200px]'>
+												<DropdownMenuContent
+													align='end'
+													className='w-[200px]'>
 													<DropdownMenuItem
 														onClick={() => setSelectedContact(contact)}>
 														Xem chi tiết
@@ -575,7 +584,7 @@ function ContactList() {
 							) : (
 								<TableRow>
 									<TableCell colSpan={8} className='h-24 text-center'>
-										Không tìm thấy liên hệ nào phù hợp.
+										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
 							)}
@@ -585,7 +594,8 @@ function ContactList() {
 								<TableCell colSpan={8}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex-1 text-sm text-muted-foreground'>
-											Đang hiển thị {contacts.length} trên tổng {meta.total} liên hệ.
+											Đang hiển thị {contacts.length} trên tổng {meta.total}{" "}
+											liên hệ.
 										</div>
 										<div className='flex items-center space-x-6 lg:space-x-8'>
 											<div className='flex items-center space-x-2'>
@@ -603,13 +613,15 @@ function ContactList() {
 														<SelectValue placeholder={meta.per_page} />
 													</SelectTrigger>
 													<SelectContent side='top'>
-														{[10, 20, 25, 30, 40, 50].map((pageSize) => (
-															<SelectItem
-																key={pageSize}
-																value={`${pageSize}`}>
-																{pageSize}
-															</SelectItem>
-														))}
+														{[10, 20, 25, 30, 40, 50].map(
+															(pageSize) => (
+																<SelectItem
+																	key={pageSize}
+																	value={`${pageSize}`}>
+																	{pageSize}
+																</SelectItem>
+															),
+														)}
 													</SelectContent>
 												</Select>
 											</div>
@@ -621,10 +633,15 @@ function ContactList() {
 													variant='outline'
 													className='hidden h-8 w-8 p-0 lg:flex'
 													onClick={() =>
-														setMeta((prev) => ({ ...prev, current_page: 1 }))
+														setMeta((prev) => ({
+															...prev,
+															current_page: 1,
+														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to first page</span>
+													<span className='sr-only'>
+														Go to first page
+													</span>
 													<ChevronsLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -640,7 +657,9 @@ function ContactList() {
 														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Quay lại trang trước</span>
+													<span className='sr-only'>
+														Quay lại trang trước
+													</span>
 													<ChevronLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -656,7 +675,9 @@ function ContactList() {
 														}))
 													}
 													disabled={meta.current_page === meta.last_page}>
-													<span className='sr-only'>Đi đến trang tiếp theo</span>
+													<span className='sr-only'>
+														Đi đến trang tiếp theo
+													</span>
 													<ChevronRight className='h-4 w-4' />
 												</Button>
 												<Button
@@ -669,7 +690,9 @@ function ContactList() {
 														}))
 													}
 													disabled={meta.current_page === meta.last_page}>
-													<span className='sr-only'>Đi đến trang cuối</span>
+													<span className='sr-only'>
+														Đi đến trang cuối
+													</span>
 													<ChevronsRight className='h-4 w-4' />
 												</Button>
 											</div>
@@ -682,7 +705,9 @@ function ContactList() {
 				</div>
 			</div>
 
-			<Dialog open={Boolean(selectedContact)} onOpenChange={(open) => !open && setSelectedContact(null)}>
+			<Dialog
+				open={Boolean(selectedContact)}
+				onOpenChange={(open) => !open && setSelectedContact(null)}>
 				<DialogContent className='sm:max-w-[640px]'>
 					{selectedContact ? (
 						<>
@@ -773,7 +798,9 @@ function ContactList() {
 									</label>
 									<Select
 										value={nextStatus}
-										onValueChange={(value) => setNextStatus(value as ContactStatus)}
+										onValueChange={(value) =>
+											setNextStatus(value as ContactStatus)
+										}
 										disabled={nextStatusOptions.length === 0}>
 										<SelectTrigger id='contact-status'>
 											<SelectValue placeholder='Chọn trạng thái' />

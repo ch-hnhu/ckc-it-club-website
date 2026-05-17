@@ -76,6 +76,8 @@
 - contact management list with real backend data and status updates
 - `/divisions`
 - division management dashboard for the 3 fixed club divisions: academic, volunteer, and event
+- `/club-informations`
+- club information list backed by `GET /club-informations` with search, sort, and pagination
 - `/requests`
 - recruitment application list
 - `/requests/:applicationId`
@@ -92,8 +94,6 @@
 - Route definitions are the source-of-truth, not sidebar labels.
 - Sidebar nav currently contains placeholder links with no matching route surface:
 - `/reports`
-- `/roles`
-- `/permissions`
 - `/club-info`
 - `/fields`
 - Dashboard contains significant placeholder/demo content rather than fully live backend-driven analytics.
@@ -232,6 +232,11 @@
 - route `/contacts`
 - server-driven pagination, search, sort, and status filtering
 - status update is live against backend `PATCH /contacts/{contact}/status`
+- Club information management:
+- route `/club-informations`
+- server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
+- date fields are displayed directly from the API, which formats them as `d/m/Y`
+- current admin UI is list-only because no create/update/detail route is wired yet
 
 ## Environment Variables
 

@@ -482,7 +482,7 @@ function ApplicationRequestsPage() {
 							) : (
 								<TableRow>
 									<TableCell colSpan={9} className='h-24 text-center'>
-										Không tìm thấy đơn ứng tuyển nào.
+										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
 							)}
