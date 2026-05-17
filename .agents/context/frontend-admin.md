@@ -131,6 +131,7 @@
 
 - Main layout is sidebar-first and breadcrumb-aware.
 - Sidebar content is driven from static local config in `AppSidebar.tsx`, not from backend permissions or route introspection.
+- Sidebar main navigation is accordion-like: only one dropdown group is open at a time, and route changes reopen the group containing the active route.
 - Theme system:
 - `ThemeProvider` writes selected theme to `localStorage` under `vite-ui-theme`
 - applies `light`, `dark`, or system-derived class to `document.documentElement`
