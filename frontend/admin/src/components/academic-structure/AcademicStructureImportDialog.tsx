@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Upload } from "lucide-react";
+import { useState, type ComponentProps } from "react";
+import { Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,11 +11,16 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { downloadAcademicStructureTemplate } from "@/lib/academic-structure-template";
 import academicStructureService from "@/services/academic-structure.service";
-import type { AcademicStructureImportSummary } from "@/types/academic-structure.type";
 
 interface AcademicStructureImportDialogProps {
 	onImported?: () => void | Promise<void>;
+	triggerLabel?: string;
+	triggerVariant?: ComponentProps<typeof Button>["variant"];
+	triggerSize?: ComponentProps<typeof Button>["size"];
+	triggerClassName?: string;
 }
 
 function getErrorMessage(error: unknown) {
@@ -42,17 +47,19 @@ function getErrorMessage(error: unknown) {
 
 function AcademicStructureImportDialog({
 	onImported,
+	triggerLabel = "Import Excel",
+	triggerVariant = "outline",
+	triggerSize = "sm",
+	triggerClassName,
 }: AcademicStructureImportDialogProps) {
 	const [open, setOpen] = useState(false);
 	const [file, setFile] = useState<File | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [result, setResult] = useState<AcademicStructureImportSummary | null>(null);
 
 	const handleOpenChange = (nextOpen: boolean) => {
 		setOpen(nextOpen);
 		if (!nextOpen) {
 			setFile(null);
-			setResult(null);
 			setIsSubmitting(false);
 		}
 	};
@@ -66,8 +73,6 @@ function AcademicStructureImportDialog({
 		setIsSubmitting(true);
 		try {
 			const response = await academicStructureService.importStructure(file);
-			setResult(response.data);
-			await onImported?.();
 
 			if (response.data.errors.length > 0) {
 				toast.success(
@@ -76,6 +81,9 @@ function AcademicStructureImportDialog({
 			} else {
 				toast.success("Đã import dữ liệu khoa, ngành, lớp.");
 			}
+
+			handleOpenChange(false);
+			await onImported?.();
 		} catch (error) {
 			toast.error(getErrorMessage(error));
 		} finally {
@@ -85,9 +93,13 @@ function AcademicStructureImportDialog({
 
 	return (
 		<>
-			<Button variant='outline' size='sm' className='h-8' onClick={() => setOpen(true)}>
+			<Button
+				variant={triggerVariant}
+				size={triggerSize}
+				className={cn("h-8", triggerClassName)}
+				onClick={() => setOpen(true)}>
 				<Upload className='h-4 w-4' />
-				Import Excel
+				{triggerLabel}
 			</Button>
 
 			<Dialog open={open} onOpenChange={handleOpenChange}>
@@ -102,16 +114,32 @@ function AcademicStructureImportDialog({
 
 					<div className='space-y-4'>
 						<div className='rounded-md border bg-muted/30 p-4 text-sm leading-6'>
-							<p className='font-medium'>Cột hỗ trợ</p>
+							<div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+								<div>
+									<p className='font-medium'>Cột hỗ trợ</p>
+									<p className='text-muted-foreground'>
+										File mẫu mặc định gồm 3 cột <code>Tên Khoa</code>,{" "}
+										<code>Tên Ngành</code>, <code>Tên Lớp</code>.
+									</p>
+								</div>
+								<Button
+									type='button'
+									variant='outline'
+									size='sm'
+									onClick={downloadAcademicStructureTemplate}>
+									<Download className='h-4 w-4' />
+									Tải file mẫu
+								</Button>
+							</div>
 							<p className='text-muted-foreground'>
-								Ưu tiên dùng <code>faculty_label, major_label, class_label</code>.
+								Ưu tiên dùng <code>Tên Khoa, Tên Ngành, Tên Lớp</code>.
 							</p>
 							<p className='text-muted-foreground'>
-								Có thể thêm <code>faculty_value, major_value, class_value</code> nếu
-								muốn tách mã và tên.
+								Hệ thống cũng hỗ trợ các cột kỹ thuật như{" "}
+								<code>faculty_label, major_label, class_label</code> nếu cần.
 							</p>
 							<p className='mt-2 text-muted-foreground'>
-								Ví dụ dữ liệu: <code>Công nghệ thông tin, Kỹ thuật phần mềm, CTK42</code>
+								Ví dụ dữ liệu: <code>Công nghệ thông tin, Quản trị mạng, QTM 24</code>
 							</p>
 						</div>
 
@@ -125,7 +153,6 @@ function AcademicStructureImportDialog({
 								accept='.xlsx,.csv,text/csv'
 								onChange={(event) => {
 									setFile(event.target.files?.[0] ?? null);
-									setResult(null);
 								}}
 							/>
 							<p className='text-xs text-muted-foreground'>
@@ -133,56 +160,6 @@ function AcademicStructureImportDialog({
 							</p>
 						</div>
 
-						{result ? (
-							<div className='space-y-3 rounded-md border p-4 text-sm'>
-								<div className='grid gap-2 sm:grid-cols-3'>
-									<div>
-										<p className='text-muted-foreground'>Dòng hợp lệ</p>
-										<p className='text-lg font-semibold'>{result.processed_rows}</p>
-									</div>
-									<div>
-										<p className='text-muted-foreground'>Tạo mới</p>
-										<p className='text-lg font-semibold'>
-											{result.created.faculties +
-												result.created.majors +
-												result.created.school_classes}
-										</p>
-									</div>
-									<div>
-										<p className='text-muted-foreground'>Dòng lỗi</p>
-										<p className='text-lg font-semibold'>{result.errors.length}</p>
-									</div>
-								</div>
-
-								<div className='grid gap-3 sm:grid-cols-2'>
-									<div className='rounded-md bg-muted/30 p-3'>
-										<p className='font-medium'>Tạo mới</p>
-										<p>Khoa: {result.created.faculties}</p>
-										<p>Ngành: {result.created.majors}</p>
-										<p>Lớp: {result.created.school_classes}</p>
-									</div>
-									<div className='rounded-md bg-muted/30 p-3'>
-										<p className='font-medium'>Đã tồn tại</p>
-										<p>Khoa: {result.existing.faculties}</p>
-										<p>Ngành: {result.existing.majors}</p>
-										<p>Lớp: {result.existing.school_classes}</p>
-									</div>
-								</div>
-
-								{result.errors.length > 0 ? (
-									<div className='space-y-2'>
-										<p className='font-medium'>Lỗi theo dòng</p>
-										<div className='max-h-40 space-y-2 overflow-y-auto rounded-md bg-destructive/5 p-3'>
-											{result.errors.slice(0, 10).map((item) => (
-												<p key={`${item.row}-${item.message}`}>
-													Dòng {item.row}: {item.message}
-												</p>
-											))}
-										</div>
-									</div>
-								) : null}
-							</div>
-						) : null}
 					</div>
 
 					<DialogFooter>
