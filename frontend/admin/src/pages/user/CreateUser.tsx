@@ -34,6 +34,7 @@ type CreateUserFormState = {
 	gender: string;
 	email: string;
 	password: string;
+	is_active: boolean;
 	student_code: string;
 	faculty_id: number | null;
 	major_id: number | null;
@@ -50,12 +51,17 @@ const GENDER_OPTIONS: ComboboxOption[] = [
 	{ value: "male", label: "Nam" },
 	{ value: "female", label: "Nữ" },
 ];
+const STATUS_OPTIONS: ComboboxOption[] = [
+	{ value: "active", label: "Hoạt động" },
+	{ value: "inactive", label: "Tạm khóa" },
+];
 
 const getInitialFormState = (): CreateUserFormState => ({
 	full_name: "",
 	gender: "",
 	email: "",
 	password: "",
+	is_active: true,
 	student_code: "",
 	faculty_id: null,
 	major_id: null,
@@ -287,6 +293,7 @@ function CreateUser() {
 			payload.append("email", form.email.trim());
 			payload.append("password", form.password);
 			payload.append("password_confirmation", form.password);
+			payload.append("is_active", form.is_active ? "1" : "0");
 			payload.append("student_code", form.student_code.trim());
 			payload.append("faculty_id", String(form.faculty_id));
 			payload.append("major_id", String(form.major_id));
@@ -541,6 +548,32 @@ function CreateUser() {
 									{fieldErrors.password ? (
 										<p className='text-sm text-destructive'>
 											{fieldErrors.password}
+										</p>
+									) : null}
+								</div>
+
+								<div className='space-y-2'>
+									<Label>Trạng thái</Label>
+									<Combobox
+										value={form.is_active ? "active" : "inactive"}
+										onValueChange={(value) => {
+											setForm((prev) => ({
+												...prev,
+												is_active: value !== "inactive",
+											}));
+											setFieldErrors((prev) => {
+												const next = { ...prev };
+												delete next.is_active;
+												return next;
+											});
+										}}
+										options={STATUS_OPTIONS}
+										searchable={false}
+										placeholder='Chọn trạng thái'
+									/>
+									{fieldErrors.is_active ? (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.is_active}
 										</p>
 									) : null}
 								</div>

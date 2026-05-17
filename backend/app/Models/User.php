@@ -50,6 +50,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'is_active' => 'boolean',
             'created_at' => 'datetime:d/m/Y',
             'updated_at' => 'datetime:d/m/Y',
         ];

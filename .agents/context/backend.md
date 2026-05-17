@@ -153,7 +153,7 @@
 - `users`
 - identity, OAuth provider data, profile fields, academic references, active flag.
 - admin-created avatars are stored on Laravel `public` disk under `avatars/`, and the relative path is persisted in `users.avatar`.
-- admin create-user flow now persists `gender` directly on the `users` table and assigns the selected Spatie roles from the submitted `roles` array.
+- admin create/update user flow persists `gender` and `is_active` directly on the `users` table and assigns the selected Spatie roles from the submitted `roles` array.
 - `User` API serialization formats `created_at` and `updated_at` as `d/m/Y` for frontend direct display.
 - `roles`
 - admin role create payload uses `label` for the display name, `name` for the internal value, and `is_system` as a boolean flag.

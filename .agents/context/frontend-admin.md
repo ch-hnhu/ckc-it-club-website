@@ -97,7 +97,7 @@
 - `/club-info`
 - `/fields`
 - Dashboard contains significant placeholder/demo content rather than fully live backend-driven analytics.
-- `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar) and redirects to `/users` on success.
+- `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar), selected `is_active` status, and redirects to `/users` on success.
 - Recruitment application service uses `mockApplications` as a fallback when fetching `/club-applications` fails. This can mask backend outages and make the UI look “healthy” when it is not.
 - Redux Toolkit is installed, but there is no centralized Redux store in the current app. State is local component state plus services.
 - `supabase.config.ts` exists, but `uploadImage` does not appear to be actively used by current features.
@@ -206,6 +206,7 @@
 - `id`
 - `full_name`
 - `email`
+- `is_active`
 - `avatar`
 - `created_at`
 - `updated_at`
@@ -215,11 +216,11 @@
 
 - User list:
 - server-driven pagination, search, sort
-- currently no live edit/delete action implementation
+- displays `is_active` as a status badge
+- currently no live delete action implementation
 - Create user:
 - UI exists
-- no API integration yet
-- create-user form now loads roles from the backend and submits `gender` plus selected roles to the API
+- create-user form loads roles from the backend and submits `gender`, `is_active`, plus selected roles to the API
 - Recruitment applications:
 - list uses client-side filtering/sorting after fetch
 - status update is live against backend
