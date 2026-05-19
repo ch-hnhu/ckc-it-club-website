@@ -236,9 +236,11 @@
 - status update is live against backend `PATCH /contacts/{contact}/status`
 - Club information management:
 - route `/club-informations`
-- server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
+- route `/club-informations/:id`
+- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
+- detail uses `clubInformationService.getClubInformation(id, params)`; the nested value table supports API-driven search/sort and local pagination.
 - date fields are displayed directly from the API, which formats them as `d/m/Y`
-- current admin UI is list-only because no create/update/detail route is wired yet
+- create/update/delete flows are not wired yet
 
 ## Environment Variables
 

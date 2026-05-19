@@ -89,7 +89,7 @@
 - Some files are scaffolding leftovers and not part of the current domain:
 - `app/Http/Requests/Api/V1/Product/*`
 - `app/Http/Resources/Api/V1/ProductResource.php`
-- Club information admin listing exists, but create/update/delete flows are not complete yet.
+- Club information admin listing/detail exists, but create/update/delete flows are not complete yet.
 
 ## Backend Layout
 
@@ -190,6 +190,7 @@
 - admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`
 - admin can list club information records through `GET /api/v1/club-informations` with pagination, search, and sort.
+- admin can fetch one club information record through `GET /api/v1/club-informations/{id}`; nested `club_information_values` accept `search`, `sort`, and `order` query params for the detail table.
 - list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
 - create/update/delete flows are still incomplete.
 

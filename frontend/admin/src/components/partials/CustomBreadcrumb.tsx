@@ -22,7 +22,7 @@ export function CustomBreadcrumb({ items }: CustomBreadcrumbProps) {
 	if (!items || items.length === 0) return null;
 
 	return (
-		<Breadcrumb>
+		<Breadcrumb className='hidden md:block'>
 			<BreadcrumbList>
 				{items.map((item, index) => {
 					const isLast = index === items.length - 1;

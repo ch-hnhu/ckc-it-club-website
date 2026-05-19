@@ -20,6 +20,7 @@ import RoleList from "@/pages/role/RoleList";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
 import PermissionList from "@/pages/permission/PermissionList";
 import ClubInformationList from "@/pages/club-information/ClubInformationList";
+import ClubInformationDetailPage from "@/pages/club-information/ClubInformationDetailPage";
 import OrganizationImportListPage from "@/pages/organization/OrganizationImportListPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
 
@@ -88,6 +89,10 @@ const router = createBrowserRouter([
 			{
 				path: "club-informations",
 				element: <ClubInformationList />,
+			},
+			{
+				path: "club-informations/:id",
+				element: <ClubInformationDetailPage />,
 			},
 			{
 				path: "requests",

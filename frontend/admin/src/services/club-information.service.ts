@@ -12,6 +12,17 @@ const clubInformationService = {
 	}): Promise<PaginatedResponse<ClubInformation>> {
 		return api.get("/club-informations", params);
 	},
+
+	async getClubInformation(
+		id: number,
+		params?: {
+			search?: string;
+			sort?: string;
+			order?: "asc" | "desc";
+		},
+	): Promise<{ success: boolean; data: ClubInformation }> {
+		return api.get(`/club-informations/${id}`, params);
+	},
 };
 
 export default clubInformationService;

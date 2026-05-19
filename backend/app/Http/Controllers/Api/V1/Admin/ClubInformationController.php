@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Models\ClubInformation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\ClubInformation;
 
 class ClubInformationController extends BaseApiController
 {
@@ -49,6 +49,36 @@ class ClubInformationController extends BaseApiController
             ->map(fn (ClubInformation $clubInformation) => $this->formatClubInformation($clubInformation));
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $allowedValueSorts = ['id', 'value', 'is_active', 'created_at', 'updated_at'];
+        $valueSort = in_array($request->query('sort'), $allowedValueSorts, true)
+            ? $request->query('sort')
+            : 'created_at';
+        $valueOrder = in_array($request->query('order'), ['asc', 'desc'], true)
+            ? $request->query('order')
+            : 'desc';
+        $valueSearch = trim((string) $request->query('search', ''));
+
+        $clubInformation = ClubInformation::with([
+            'clubInformationValues' => function ($query) use ($valueSearch, $valueSort, $valueOrder) {
+                $query
+                    ->when($valueSearch !== '', function ($query) use ($valueSearch) {
+                        $query->where(function ($subQuery) use ($valueSearch) {
+                            $subQuery->where('value', 'like', "%{$valueSearch}%");
+
+                            if (ctype_digit($valueSearch)) {
+                                $subQuery->orWhere('id', (int) $valueSearch);
+                            }
+                        });
+                    })
+                    ->orderBy($valueSort, $valueOrder);
+            },
+        ])->findOrFail($id);
+
+        return $this->successResponse(true, $this->formatClubInformation($clubInformation), ApiMessage::RETRIEVED);
     }
 
     private function formatClubInformation(ClubInformation $clubInformation): array
