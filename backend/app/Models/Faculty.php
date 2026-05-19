@@ -15,6 +15,8 @@ class Faculty extends Model
 		'value',
 		'label',
 		'slug',
+		'created_by',
+		'updated_by',
 	];
 
 	public function majors(): HasMany

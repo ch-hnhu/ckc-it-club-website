@@ -17,6 +17,8 @@ class Major extends Model
 		'label',
 		'slug',
 		'faculty_id',
+		'created_by',
+		'updated_by',
 	];
 
 	public function faculty(): BelongsTo

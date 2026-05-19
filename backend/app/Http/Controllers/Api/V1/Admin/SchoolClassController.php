@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Http\Requests\Api\V1\SchoolClass\StoreSchoolClassRequest;
+use App\Http\Requests\Api\V1\SchoolClass\UpdateSchoolClassRequest;
 use App\Models\SchoolClass;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class SchoolClassController extends BaseApiController
 {
@@ -61,5 +65,56 @@ class SchoolClassController extends BaseApiController
 			->paginate($perPage);
 
 		return $this->paginatedResponse($data, ApiMessage::RETRIEVED);
+	}
+
+	public function show(SchoolClass $schoolClass): JsonResponse
+	{
+		$schoolClass->load(['major:id,value,label,slug,faculty_id', 'major.faculty:id,value,label,slug']);
+
+		return $this->successResponse(true, $schoolClass, 'Lấy thông tin lớp thành công.');
+	}
+
+	public function store(StoreSchoolClassRequest $request): JsonResponse
+	{
+		$schoolClass = SchoolClass::query()->create([
+			'major_id' => $request->integer('major_id'),
+			'label' => trim($request->string('label')->value()),
+			'value' => trim($request->string('value')->value()),
+			'slug' => Str::slug($request->string('label')->value()) ?: Str::slug($request->string('value')->value()),
+			'created_by' => $request->user()?->id,
+			'updated_by' => $request->user()?->id,
+		]);
+
+		$schoolClass->load(['major:id,value,label,slug,faculty_id', 'major.faculty:id,value,label,slug']);
+
+		return $this->createdResponse($schoolClass, 'Tạo lớp thành công.');
+	}
+
+	public function update(UpdateSchoolClassRequest $request, SchoolClass $schoolClass): JsonResponse
+	{
+		$schoolClass->update([
+			'major_id' => $request->integer('major_id'),
+			'label' => trim($request->string('label')->value()),
+			'value' => trim($request->string('value')->value()),
+			'slug' => Str::slug($request->string('label')->value()) ?: Str::slug($request->string('value')->value()),
+			'updated_by' => $request->user()?->id,
+		]);
+
+		$schoolClass->load(['major:id,value,label,slug,faculty_id', 'major.faculty:id,value,label,slug']);
+
+		return $this->successResponse(true, $schoolClass, 'Cập nhật lớp thành công.');
+	}
+
+	public function destroy(Request $request, SchoolClass $schoolClass): JsonResponse
+	{
+		if (User::query()->where('class_id', $schoolClass->id)->exists()) {
+			return $this->validationErrorResponse([
+				'school_class' => ['Không thể xóa lớp đang được gán cho người dùng.'],
+			]);
+		}
+
+		$schoolClass->delete();
+
+		return $this->successResponse(true, null, 'Xóa lớp thành công.');
 	}
 }
