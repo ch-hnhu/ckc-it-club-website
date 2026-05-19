@@ -59,13 +59,13 @@ import type { ContactRecord, ContactStats, ContactStatus } from "@/types/contact
 
 const statusOptions: Array<{ value: ContactStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
-	{ value: "pending", label: "Mới nhận" },
+	{ value: "pending", label: "Chờ xử lý" },
 	{ value: "processing", label: "Đang xử lý" },
 	{ value: "done", label: "Đã phản hồi" },
 ];
 
 const updateStatusOptions: Array<{ value: ContactStatus; label: string }> = [
-	{ value: "pending", label: "Mới nhận" },
+	{ value: "pending", label: "Chờ xử lý" },
 	{ value: "processing", label: "Đang xử lý" },
 	{ value: "done", label: "Đã phản hồi" },
 ];
@@ -104,7 +104,7 @@ function truncateMessage(value: string, maxLength = 50) {
 function getStatusLabel(status: ContactStatus) {
 	switch (status) {
 		case "pending":
-			return "Mới nhận";
+			return "Chờ xử lý";
 		case "processing":
 			return "Đang xử lý";
 		case "done":

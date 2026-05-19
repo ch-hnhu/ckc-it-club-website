@@ -20,6 +20,7 @@ import RoleList from "@/pages/role/RoleList";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
 import PermissionList from "@/pages/permission/PermissionList";
 import ClubInformationList from "@/pages/club-information/ClubInformationList";
+import OrganizationImportListPage from "@/pages/organization/OrganizationImportListPage";
 
 const router = createBrowserRouter([
 	{
@@ -58,6 +59,10 @@ const router = createBrowserRouter([
 			{
 				path: "permissions",
 				element: <PermissionList />,
+			},
+			{
+				path: "organization/upload",
+				element: <OrganizationImportListPage />,
 			},
 			{
 				path: "departments",

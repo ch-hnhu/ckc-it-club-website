@@ -16,6 +16,8 @@ class SchoolClass extends Model
 		'label',
 		'slug',
 		'major_id',
+		'created_by',
+		'updated_by',
 	];
 
 	public function major(): BelongsTo
