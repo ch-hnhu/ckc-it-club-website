@@ -42,8 +42,10 @@ import {
 	ChevronsLeft,
 	ChevronsRight,
 	MoreHorizontal,
+	Pencil,
 	Plus,
 	Settings2,
+	Trash2,
 } from "lucide-react";
 import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
@@ -292,12 +294,14 @@ function SchoolClassList() {
 														setSelectedSchoolClass(schoolClass);
 														setIsFormOpen(true);
 													}}>
+													<Pencil className='h-4 w-4' />
 													Sửa
 												</DropdownMenuItem>
 												<DropdownMenuSeparator />
 												<DropdownMenuItem
 													className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 													onClick={() => void handleDelete(schoolClass)}>
+													<Trash2 className='h-4 w-4 text-destructive' />
 													Xóa
 												</DropdownMenuItem>
 											</DropdownMenuContent>

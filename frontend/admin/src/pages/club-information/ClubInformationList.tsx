@@ -7,6 +7,7 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	Eye,
 	MoreHorizontal,
 	Plus,
 } from "lucide-react";
@@ -335,6 +336,7 @@ function ClubInformationList() {
 																`/club-informations/${item.id}`,
 															)
 														}>
+														<Eye className='h-4 w-4' />
 														Chi tiết
 													</DropdownMenuItem>
 												</DropdownMenuContent>

@@ -10,7 +10,9 @@ import {
 	Clock3,
 	LoaderCircle,
 	MailOpen,
+	Eye,
 	MoreHorizontal,
+	RefreshCw,
 	Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -570,10 +572,12 @@ function ContactList() {
 													className='w-[200px]'>
 													<DropdownMenuItem
 														onClick={() => setSelectedContact(contact)}>
+														<Eye className='h-4 w-4' />
 														Xem chi tiết
 													</DropdownMenuItem>
 													<DropdownMenuItem
 														onClick={() => openStatusDialog(contact)}>
+														<RefreshCw className='h-4 w-4' />
 														Cập nhật trạng thái
 													</DropdownMenuItem>
 												</DropdownMenuContent>

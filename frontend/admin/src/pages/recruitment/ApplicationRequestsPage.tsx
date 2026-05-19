@@ -7,7 +7,9 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	Eye,
 	MoreHorizontal,
+	RefreshCw,
 	Settings2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -462,6 +464,7 @@ function ApplicationRequestsPage() {
 																	`/requests/${application.id}`,
 																)
 															}>
+															<Eye className='h-4 w-4' />
 															Xem chi tiết
 														</DropdownMenuItem>
 														<DropdownMenuItem
@@ -471,6 +474,7 @@ function ApplicationRequestsPage() {
 															disabled={
 																availableStatuses.length === 0
 															}>
+															<RefreshCw className='h-4 w-4' />
 															Cập nhật trạng thái
 														</DropdownMenuItem>
 													</DropdownMenuContent>

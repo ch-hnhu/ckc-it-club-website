@@ -38,6 +38,7 @@ import {
 	ChevronsLeft,
 	ChevronsRight,
 	MoreHorizontal,
+	Pencil,
 	Plus,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -343,6 +344,7 @@ function UserList() {
 											<DropdownMenuContent align='end' className='w-[160px]'>
 												<DropdownMenuItem
 													onClick={() => navigate(`/users/${user.id}`)}>
+													<Pencil className='h-4 w-4' />
 													Sửa
 												</DropdownMenuItem>
 											</DropdownMenuContent>

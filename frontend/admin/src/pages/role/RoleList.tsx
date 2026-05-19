@@ -35,7 +35,9 @@ import {
 	ChevronsLeft,
 	ChevronsRight,
 	MoreHorizontal,
+	Pencil,
 	Plus,
+	Trash2,
 } from "lucide-react";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
@@ -301,6 +303,7 @@ function RoleList() {
 														setSelectedRoleId(role.id);
 														setIsUpdateModalOpen(true);
 													}}>
+													<Pencil className='h-4 w-4' />
 													Sửa
 												</DropdownMenuItem>
 												<DropdownMenuSeparator />
@@ -329,6 +332,7 @@ function RoleList() {
 														}
 														handleDelete(role.id);
 													}}>
+													<Trash2 className='h-4 w-4 text-destructive' />
 													Xoá
 												</DropdownMenuItem>
 											</DropdownMenuContent>

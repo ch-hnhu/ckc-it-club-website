@@ -124,7 +124,7 @@ export const adminNavMain: AdminNavItem[] = [
 		icon: UserRoundPlus,
 		items: [
 			{
-				title: "Câu hỏi ứng tuyển",
+				title: "Form ứng tuyển",
 				url: "/questions",
 			},
 			{
