@@ -69,6 +69,7 @@
 - `GET /api/v1/school-classes`
 - `GET /api/v1/contacts`
 - `PATCH /api/v1/contacts/{contact}/status`
+- `GET /api/v1/club-informations`
 - `GET /api/v1/club-applications`
 - `PATCH /api/v1/club-applications/{clubApplication}/status`
 - `PATCH /api/v1/application-questions/reorder`
@@ -88,9 +89,7 @@
 - Some files are scaffolding leftovers and not part of the current domain:
 - `app/Http/Requests/Api/V1/Product/*`
 - `app/Http/Resources/Api/V1/ProductResource.php`
-- Some schema/models exist but currently have no active API/controller surface:
-- `ClubInformation`
-- `ClubInformationValue`
+- Club information admin listing exists, but create/update/delete flows are not complete yet.
 
 ## Backend Layout
 
@@ -154,7 +153,7 @@
 - `users`
 - identity, OAuth provider data, profile fields, academic references, active flag.
 - admin-created avatars are stored on Laravel `public` disk under `avatars/`, and the relative path is persisted in `users.avatar`.
-- admin create-user flow now persists `gender` directly on the `users` table and assigns the selected Spatie roles from the submitted `roles` array.
+- admin create/update user flow persists `gender` and `is_active` directly on the `users` table and assigns the selected Spatie roles from the submitted `roles` array.
 - `User` API serialization formats `created_at` and `updated_at` as `d/m/Y` for frontend direct display.
 - `roles`
 - admin role create payload uses `label` for the display name, `name` for the internal value, and `is_system` as a boolean flag.
@@ -190,7 +189,9 @@
 - admin can list contacts with pagination, search, sort, and status filtering.
 - admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`
-- schema exists, but implementation is incomplete and not exposed.
+- admin can list club information records through `GET /api/v1/club-informations` with pagination, search, and sort.
+- list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
+- create/update/delete flows are still incomplete.
 
 ## Recruitment Domain Rules
 

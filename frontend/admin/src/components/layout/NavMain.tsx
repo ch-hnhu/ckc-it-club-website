@@ -1,4 +1,5 @@
 import { ChevronRight, type LucideIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -31,25 +32,36 @@ export function NavMain({
 	}[];
 }) {
 	const { pathname } = useLocation();
+	const activeItemTitle = useMemo(
+		() =>
+			items.find(
+				(item) =>
+					pathname === item.url ||
+					pathname.startsWith(item.url + "/") ||
+					item.items?.some(
+						(subItem) =>
+							pathname === subItem.url || pathname.startsWith(subItem.url + "/"),
+					),
+			)?.title ?? null,
+		[items, pathname],
+	);
+	const [openItemTitle, setOpenItemTitle] = useState<string | null>(activeItemTitle);
+
+	useEffect(() => {
+		setOpenItemTitle(activeItemTitle);
+	}, [activeItemTitle]);
 
 	return (
 		<SidebarGroup>
 			{title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
 			<SidebarMenu>
 				{items.map((item) => {
-					const isParentActive =
-						pathname === item.url ||
-						pathname.startsWith(item.url + "/") ||
-						item.items?.some(
-							(subItem) =>
-								pathname === subItem.url || pathname.startsWith(subItem.url + "/"),
-						);
-
 					return (
 						<Collapsible
 							key={item.title}
 							asChild
-							defaultOpen={isParentActive}
+							open={openItemTitle === item.title}
+							onOpenChange={(open) => setOpenItemTitle(open ? item.title : null)}
 							className='group/collapsible'>
 							<SidebarMenuItem>
 								<CollapsibleTrigger asChild>

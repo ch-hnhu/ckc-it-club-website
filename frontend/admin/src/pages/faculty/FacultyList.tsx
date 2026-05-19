@@ -296,7 +296,7 @@ function FacultyList() {
 														setSelectedFaculty(faculty);
 														setIsFormOpen(true);
 													}}>
-													Sửa<a href=""></a>
+													Sửa<a href=''></a>
 												</DropdownMenuItem>
 												<DropdownMenuSeparator />
 												<DropdownMenuItem
@@ -312,7 +312,7 @@ function FacultyList() {
 							{faculties.length === 0 && (
 								<TableRow>
 									<TableCell colSpan={7} className='h-24 text-center'>
-										Không tìm thấy khoa!
+										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
 							)}
@@ -340,11 +340,15 @@ function FacultyList() {
 														<SelectValue placeholder={meta.per_page} />
 													</SelectTrigger>
 													<SelectContent side='top'>
-														{[10, 20, 25, 30, 40, 50].map((pageSize) => (
-															<SelectItem key={pageSize} value={`${pageSize}`}>
-																{pageSize}
-															</SelectItem>
-														))}
+														{[10, 20, 25, 30, 40, 50].map(
+															(pageSize) => (
+																<SelectItem
+																	key={pageSize}
+																	value={`${pageSize}`}>
+																	{pageSize}
+																</SelectItem>
+															),
+														)}
 													</SelectContent>
 												</Select>
 											</div>
@@ -356,10 +360,15 @@ function FacultyList() {
 													variant='outline'
 													className='hidden h-8 w-8 p-0 lg:flex'
 													onClick={() =>
-														setMeta((prev) => ({ ...prev, current_page: 1 }))
+														setMeta((prev) => ({
+															...prev,
+															current_page: 1,
+														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to first page</span>
+													<span className='sr-only'>
+														Go to first page
+													</span>
 													<ChevronsLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -372,7 +381,9 @@ function FacultyList() {
 														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to previous page</span>
+													<span className='sr-only'>
+														Go to previous page
+													</span>
 													<ChevronLeft className='h-4 w-4' />
 												</Button>
 												<Button

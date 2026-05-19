@@ -8,6 +8,7 @@ export interface User {
 	}>;
 	gender?: string | null;
 	email: string;
+	is_active: boolean;
 	avatar: string;
 	created_at: string;
 	updated_at: string;

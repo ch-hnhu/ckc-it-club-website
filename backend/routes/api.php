@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\Admin\ClubInformationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\ApplicationQuestionController;
@@ -40,6 +41,7 @@ Route::prefix('v1')->group(function () {
 
             Route::apiResource('users', UserController::class);
             Route::apiResource('roles', RoleController::class);
+            Route::apiResource('club-informations', ClubInformationController::class);
             Route::post('academic-structure/import', [AcademicStructureController::class, 'import']);
             Route::get('academic-structure/imports/stats', [AcademicStructureController::class, 'stats']);
             Route::get('academic-structure/imports', [AcademicStructureController::class, 'index']);

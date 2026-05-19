@@ -76,6 +76,8 @@
 - contact management list with real backend data and status updates
 - `/divisions`
 - division management dashboard for the 3 fixed club divisions: academic, volunteer, and event
+- `/club-informations`
+- club information list backed by `GET /club-informations` with search, sort, and pagination
 - `/requests`
 - recruitment application list
 - `/requests/:applicationId`
@@ -92,12 +94,10 @@
 - Route definitions are the source-of-truth, not sidebar labels.
 - Sidebar nav currently contains placeholder links with no matching route surface:
 - `/reports`
-- `/roles`
-- `/permissions`
 - `/club-info`
 - `/fields`
 - Dashboard contains significant placeholder/demo content rather than fully live backend-driven analytics.
-- `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar) and redirects to `/users` on success.
+- `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar), selected `is_active` status, and redirects to `/users` on success.
 - Recruitment application service uses `mockApplications` as a fallback when fetching `/club-applications` fails. This can mask backend outages and make the UI look “healthy” when it is not.
 - Redux Toolkit is installed, but there is no centralized Redux store in the current app. State is local component state plus services.
 - `supabase.config.ts` exists, but `uploadImage` does not appear to be actively used by current features.
@@ -131,6 +131,7 @@
 
 - Main layout is sidebar-first and breadcrumb-aware.
 - Sidebar content is driven from static local config in `AppSidebar.tsx`, not from backend permissions or route introspection.
+- Sidebar main navigation is accordion-like: only one dropdown group is open at a time, and route changes reopen the group containing the active route.
 - Theme system:
 - `ThemeProvider` writes selected theme to `localStorage` under `vite-ui-theme`
 - applies `light`, `dark`, or system-derived class to `document.documentElement`
@@ -206,6 +207,7 @@
 - `id`
 - `full_name`
 - `email`
+- `is_active`
 - `avatar`
 - `created_at`
 - `updated_at`
@@ -215,11 +217,11 @@
 
 - User list:
 - server-driven pagination, search, sort
-- currently no live edit/delete action implementation
+- displays `is_active` as a status badge
+- currently no live delete action implementation
 - Create user:
 - UI exists
-- no API integration yet
-- create-user form now loads roles from the backend and submits `gender` plus selected roles to the API
+- create-user form loads roles from the backend and submits `gender`, `is_active`, plus selected roles to the API
 - Recruitment applications:
 - list uses client-side filtering/sorting after fetch
 - status update is live against backend
@@ -232,6 +234,11 @@
 - route `/contacts`
 - server-driven pagination, search, sort, and status filtering
 - status update is live against backend `PATCH /contacts/{contact}/status`
+- Club information management:
+- route `/club-informations`
+- server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
+- date fields are displayed directly from the API, which formats them as `d/m/Y`
+- current admin UI is list-only because no create/update/detail route is wired yet
 
 ## Environment Variables
 
