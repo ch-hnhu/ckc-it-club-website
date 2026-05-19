@@ -6,6 +6,7 @@ use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Contact\UpdateContactStatusRequest;
 use App\Models\Contact;
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -125,6 +126,18 @@ class ContactController extends BaseApiController
         $contact->updated_by = $request->user()?->id;
         $contact->updated_at = now();
         $contact->save();
+
+        $admin = $request->user();
+        $statusLabels = ['pending' => 'chờ xử lý', 'processing' => 'đang xử lý', 'done' => 'đã xong'];
+        NotificationService::dispatch(
+            'Cập nhật trạng thái liên hệ',
+            ($admin?->full_name ?? 'Admin') . ' đã cập nhật liên hệ #' . $contact->id . ' sang "' . ($statusLabels[$nextStatus] ?? $nextStatus) . '"',
+            'status_changed',
+            'contact',
+            $contact->id,
+            $admin?->full_name ?? 'Admin',
+            '/contacts',
+        );
 
         return $this->successResponse(
             true,

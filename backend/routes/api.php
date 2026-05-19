@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Admin\ClubInformationController;
@@ -53,6 +54,12 @@ Route::prefix('v1')->group(function () {
             Route::get('contacts/stats', [AdminContactController::class, 'stats']);
             Route::get('contacts', [AdminContactController::class, 'index']);
             Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+
+            // Notifications
+            Route::get('notifications', [NotificationController::class, 'index']);
+            Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+            Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+            Route::patch('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 
             // Club applications
             Route::get('club-applications', [ClubApplicationController::class, 'index']);

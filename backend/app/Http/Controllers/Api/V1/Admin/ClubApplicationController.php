@@ -6,6 +6,7 @@ use App\Enums\HttpStatus;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\ClubApplication\UpdateClubApplicationStatusRequest;
 use App\Models\ClubApplication;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 
 class ClubApplicationController extends BaseApiController
@@ -71,6 +72,24 @@ class ClubApplicationController extends BaseApiController
             'applicant.class',
             'answers.question',
         ]);
+
+        $admin = auth()->user();
+        $statusLabels = [
+            'processing' => 'đang xử lý',
+            'interview' => 'phỏng vấn',
+            'passed' => 'đã duyệt',
+            'failed' => 'từ chối',
+        ];
+        $applicantName = $clubApplication->applicant?->full_name ?? 'ứng viên';
+        NotificationService::dispatch(
+            'Cập nhật trạng thái đơn xét tuyển',
+            ($admin?->full_name ?? 'Admin') . ' đã chuyển đơn của ' . $applicantName . ' sang "' . ($statusLabels[$nextStatus] ?? $nextStatus) . '"',
+            'status_changed',
+            'club_application',
+            $clubApplication->id,
+            $admin?->full_name ?? 'Admin',
+            '/requests/' . $clubApplication->id,
+        );
 
         return $this->successResponse(
             true,

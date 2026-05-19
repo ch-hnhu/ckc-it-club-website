@@ -177,21 +177,23 @@ function ClubInformationList() {
 			</div>
 
 			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
-				<div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-					<Input
-						placeholder='Tìm kiếm theo tên, kiểu dữ liệu hoặc mô tả...'
-						value={search}
-						onChange={(event) => setSearch(event.target.value)}
-						className='h-8 w-full sm:max-w-sm'
-					/>
-					<div className='flex items-center gap-2'>
-						<Button
-							size='sm'
-							onClick={() => navigate("/users/create")}
-							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
-							<Plus className='h-4 w-4' />
-							Thêm
-						</Button>
+				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2'>
+					<div className='flex flex-1 items-center gap-2 justify-between'>
+						<Input
+							placeholder='Tìm kiếm theo tên, kiểu dữ liệu hoặc mô tả...'
+							value={search}
+							onChange={(event) => setSearch(event.target.value)}
+							className='h-8 w-full sm:max-w-sm'
+						/>
+						<div className='flex items-center gap-2'>
+							<Button
+								size='sm'
+								onClick={() => navigate("/users/create")}
+								className='h-8 bg-foreground text-background hover:bg-foreground/90'>
+								<Plus className='h-4 w-4' />
+								Thêm
+							</Button>
+						</div>
 					</div>
 				</div>
 

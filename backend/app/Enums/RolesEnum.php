@@ -23,6 +23,18 @@ enum RolesEnum: string
         return array_column(self::cases(), 'value');
     }
 
+    public static function adminRoles(): array
+    {
+        return [
+            self::ADMIN->value,
+            self::PRESIDENT->value,
+            self::VICE_PRESIDENT->value,
+            self::ACADEMIC_HEAD->value,
+            self::COMMUNICATIONS_HEAD->value,
+            self::VOLUNTEER_HEAD->value,
+        ];
+    }
+
     public function label(): string
     {
         return match ($this) {

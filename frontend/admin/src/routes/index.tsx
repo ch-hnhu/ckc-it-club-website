@@ -21,6 +21,7 @@ import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
 import PermissionList from "@/pages/permission/PermissionList";
 import ClubInformationList from "@/pages/club-information/ClubInformationList";
 import OrganizationImportListPage from "@/pages/organization/OrganizationImportListPage";
+import NotificationsPage from "@/pages/notification/NotificationsPage";
 
 const router = createBrowserRouter([
 	{
@@ -107,6 +108,10 @@ const router = createBrowserRouter([
 			{
 				path: "answers",
 				element: <ApplicationAnswersPage />,
+			},
+			{
+				path: "notifications",
+				element: <NotificationsPage />,
 			},
 		],
 	},
