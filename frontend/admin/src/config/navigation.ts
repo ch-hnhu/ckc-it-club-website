@@ -71,9 +71,13 @@ export const adminNavMain: AdminNavItem[] = [
 	},
 	{
 		title: "Quản lý đơn vị",
-		url: "/departments",
+		url: "/organization/upload",
 		icon: Building,
 		items: [
+			{
+				title: "Tải lên danh sách đơn vị",
+				url: "/organization/upload",
+			},
 			{
 				title: "Khoa",
 				url: "/departments",
@@ -99,11 +103,7 @@ export const adminNavMain: AdminNavItem[] = [
 			},
 			{
 				title: "Thông tin CLB",
-				url: "/club-info",
-			},
-			{
-				title: "Trường thông tin",
-				url: "/fields",
+				url: "/club-informations",
 			},
 		],
 	},

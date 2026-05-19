@@ -1,9 +1,11 @@
-﻿import { useEffect, useState } from "react";
-import facultyService from "@/services/faculty.service";
-import type { Faculty } from "@/types/faculty.type";
-import { useMemo } from "react";
-import AcademicStructureImportDialog from "@/components/academic-structure/AcademicStructureImportDialog";
+﻿import { useEffect, useMemo, useState } from "react";
+import { AxiosError } from "axios";
+import { toast } from "sonner";
 
+import FacultyFormModal from "@/pages/faculty/FacultyFormModal";
+import facultyService from "@/services/faculty.service";
+import type { ApiErrorResponse } from "@/types/api.types";
+import type { Faculty } from "@/types/faculty.type";
 import {
 	Table,
 	TableBody,
@@ -68,6 +70,8 @@ function FacultyList() {
 		key: "created_at",
 		order: "desc",
 	});
+	const [isFormOpen, setIsFormOpen] = useState(false);
+	const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
 		faculties.map((faculty) => faculty.id),
 	);
@@ -82,10 +86,6 @@ function FacultyList() {
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
 	}, [debouncedSearch, sortConfig]);
-
-	useEffect(() => {
-		fetchFaculties();
-	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
 
 	const fetchFaculties = async () => {
 		try {
@@ -105,8 +105,13 @@ function FacultyList() {
 			});
 		} catch (error) {
 			console.error("Đã có lỗi xảy ra:", error);
+			toast.error("Không thể tải danh sách khoa.", { position: "top-right" });
 		}
 	};
+
+	useEffect(() => {
+		void fetchFaculties();
+	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
 
 	const handleSort = (key: string) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -134,11 +139,29 @@ function FacultyList() {
 		return new Date(value).toLocaleDateString("vi-VN");
 	};
 
+	const handleDelete = async (faculty: Faculty) => {
+		if (!window.confirm(`Bạn có chắc muốn xóa khoa "${faculty.label}"?`)) return;
+
+		try {
+			await facultyService.deleteFaculty(faculty.id);
+			toast.success("Xóa khoa thành công.", { position: "top-right" });
+			await fetchFaculties();
+		} catch (error) {
+			console.error(error);
+			const responseData = (error as AxiosError<ApiErrorResponse>).response?.data;
+			const message =
+				Object.values(responseData?.errors ?? {}).flat()[0] ??
+				responseData?.message ??
+				"Không thể xóa khoa này.";
+			toast.error(message, { position: "top-right" });
+		}
+	};
+
 	return (
 		<div className='h-full flex-1 flex-col'>
 			<div className='flex items-center p-4 md:p-6 lg:p-8'>
 				<div className='flex flex-col gap-1'>
-					<h2 className='text-2xl font-semibold tracking-tight'>Faculty Management</h2>
+					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý khoa</h2>
 					<p className='text-muted-foreground'>Danh sách tất cả khoa trong hệ thống.</p>
 				</div>
 			</div>
@@ -149,17 +172,20 @@ function FacultyList() {
 							placeholder='Tìm kiếm theo tên khoa...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className='h-8 sm:w-64 md:w-72 lg:w-80 w-11/12'
+							className='h-8 w-11/12 sm:w-64 md:w-72 lg:w-80'
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
-						<AcademicStructureImportDialog onImported={() => fetchFaculties()} />
 						<Button variant='outline' size='sm' className='h-8 lg:flex'>
 							<Settings2 className='h-4 w-4' />
-							View
+							Xem
 						</Button>
 						<Button
 							size='sm'
+							onClick={() => {
+								setSelectedFaculty(null);
+								setIsFormOpen(true);
+							}}
 							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 							<Plus className='h-4 w-4' />
 							Thêm Khoa mới
@@ -195,7 +221,6 @@ function FacultyList() {
 										{getSortIcon("label")}
 									</Button>
 								</TableHead>
-								
 								<TableHead>
 									<Button
 										variant='ghost'
@@ -205,7 +230,6 @@ function FacultyList() {
 										{getSortIcon("created_at")}
 									</Button>
 								</TableHead>
-								
 								<TableHead>
 									<Button
 										variant='ghost'
@@ -247,7 +271,9 @@ function FacultyList() {
 											</div>
 											<div className='flex flex-col'>
 												<span className='font-medium'>{faculty.label}</span>
-												<span className='text-xs text-muted-foreground'>{faculty.value}</span>
+												<span className='text-xs text-muted-foreground'>
+													{faculty.value}
+												</span>
 											</div>
 										</div>
 									</TableCell>
@@ -265,10 +291,18 @@ function FacultyList() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
-												<DropdownMenuItem>Edit</DropdownMenuItem>
+												<DropdownMenuItem
+													onClick={() => {
+														setSelectedFaculty(faculty);
+														setIsFormOpen(true);
+													}}>
+													Sửa<a href=''></a>
+												</DropdownMenuItem>
 												<DropdownMenuSeparator />
-												<DropdownMenuItem className='text-destructive focus:text-destructive focus:bg-destructive/10'>
-													Delete
+												<DropdownMenuItem
+													className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+													onClick={() => void handleDelete(faculty)}>
+													Xóa
 												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>
@@ -278,7 +312,7 @@ function FacultyList() {
 							{faculties.length === 0 && (
 								<TableRow>
 									<TableCell colSpan={7} className='h-24 text-center'>
-										Không tìm thấy khoa!
+										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
 							)}
@@ -306,11 +340,15 @@ function FacultyList() {
 														<SelectValue placeholder={meta.per_page} />
 													</SelectTrigger>
 													<SelectContent side='top'>
-														{[10, 20, 25, 30, 40, 50].map((pageSize) => (
-															<SelectItem key={pageSize} value={`${pageSize}`}>
-																{pageSize}
-															</SelectItem>
-														))}
+														{[10, 20, 25, 30, 40, 50].map(
+															(pageSize) => (
+																<SelectItem
+																	key={pageSize}
+																	value={`${pageSize}`}>
+																	{pageSize}
+																</SelectItem>
+															),
+														)}
 													</SelectContent>
 												</Select>
 											</div>
@@ -321,9 +359,16 @@ function FacultyList() {
 												<Button
 													variant='outline'
 													className='hidden h-8 w-8 p-0 lg:flex'
-													onClick={() => setMeta((prev) => ({ ...prev, current_page: 1 }))}
+													onClick={() =>
+														setMeta((prev) => ({
+															...prev,
+															current_page: 1,
+														}))
+													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to first page</span>
+													<span className='sr-only'>
+														Go to first page
+													</span>
 													<ChevronsLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -336,7 +381,9 @@ function FacultyList() {
 														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to previous page</span>
+													<span className='sr-only'>
+														Go to previous page
+													</span>
 													<ChevronLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -355,7 +402,12 @@ function FacultyList() {
 												<Button
 													variant='outline'
 													className='hidden h-8 w-8 p-0 lg:flex'
-													onClick={() => setMeta((prev) => ({ ...prev, current_page: meta.last_page }))}
+													onClick={() =>
+														setMeta((prev) => ({
+															...prev,
+															current_page: meta.last_page,
+														}))
+													}
 													disabled={meta.current_page === meta.last_page}>
 													<span className='sr-only'>Go to last page</span>
 													<ChevronsRight className='h-4 w-4' />
@@ -369,6 +421,16 @@ function FacultyList() {
 					</Table>
 				</div>
 			</div>
+
+			<FacultyFormModal
+				open={isFormOpen}
+				onOpenChange={(open) => {
+					setIsFormOpen(open);
+					if (!open) setSelectedFaculty(null);
+				}}
+				faculty={selectedFaculty}
+				onSuccess={() => void fetchFaculties()}
+			/>
 		</div>
 	);
 }

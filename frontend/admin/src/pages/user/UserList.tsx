@@ -158,6 +158,21 @@ function UserList() {
 		return <ArrowUpDown className='ml-2 h-4 w-4' />;
 	};
 
+	const getStatusBadge = (isActive: boolean) => (
+		<CompactBadgeList
+			items={[
+				{
+					key: isActive ? "active" : "inactive",
+					label: isActive ? "Hoạt động" : "Tạm khóa",
+					className: isActive
+						? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10"
+						: "border-slate-500/30 bg-slate-500/10 text-slate-700 hover:bg-slate-500/10",
+				},
+			]}
+			maxVisibleItems={1}
+		/>
+	);
+
 	return (
 		<div className='h-full flex-1 flex-col'>
 			<div className='flex items-center p-4 md:p-6 lg:p-8'>
@@ -202,7 +217,7 @@ function UserList() {
 						</Button>
 					</div>
 				</div>
-				<div className='overflow-hidden rounded-md border'>
+				<div className='overflow-x-auto rounded-md border'>
 					<Table>
 						<TableHeader>
 							<TableRow>
@@ -247,6 +262,15 @@ function UserList() {
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
 										Email
 										{getSortIcon("email")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("is_active")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Trạng thái
+										{getSortIcon("is_active")}
 									</Button>
 								</TableHead>
 								<TableHead>
@@ -304,6 +328,7 @@ function UserList() {
 										/>
 									</TableCell>
 									<TableCell>{user.email}</TableCell>
+									<TableCell>{getStatusBadge(user.is_active)}</TableCell>
 									<TableCell>{user.created_at}</TableCell>
 									<TableCell>
 										<DropdownMenu>
@@ -327,7 +352,7 @@ function UserList() {
 							))}
 							{users.length === 0 && (
 								<TableRow>
-									<TableCell colSpan={7} className='h-24 text-center'>
+									<TableCell colSpan={8} className='h-24 text-center'>
 										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
@@ -335,7 +360,7 @@ function UserList() {
 						</TableBody>
 						<TableFooter className='bg-transparent'>
 							<TableRow>
-								<TableCell colSpan={7}>
+								<TableCell colSpan={8}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex-1 text-sm text-muted-foreground'>
 											Đang hiện {users.length} trên tổng {meta.total} dòng.

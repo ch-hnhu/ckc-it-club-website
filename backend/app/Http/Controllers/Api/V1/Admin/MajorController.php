@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Http\Requests\Api\V1\Major\StoreMajorRequest;
+use App\Http\Requests\Api\V1\Major\UpdateMajorRequest;
 use App\Models\Major;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class MajorController extends BaseApiController
 {
@@ -59,5 +63,62 @@ class MajorController extends BaseApiController
 			->paginate($perPage);
 
 		return $this->paginatedResponse($data, ApiMessage::RETRIEVED);
+	}
+
+	public function show(Major $major): JsonResponse
+	{
+		$major->load(['faculty:id,value,label,slug'])->loadCount('schoolClasses');
+
+		return $this->successResponse(true, $major, 'Lấy thông tin ngành thành công.');
+	}
+
+	public function store(StoreMajorRequest $request): JsonResponse
+	{
+		$major = Major::query()->create([
+			'faculty_id' => $request->integer('faculty_id'),
+			'label' => trim($request->string('label')->value()),
+			'value' => trim($request->string('value')->value()),
+			'slug' => Str::slug($request->string('label')->value()) ?: Str::slug($request->string('value')->value()),
+			'created_by' => $request->user()?->id,
+			'updated_by' => $request->user()?->id,
+		]);
+
+		$major->load(['faculty:id,value,label,slug'])->loadCount('schoolClasses');
+
+		return $this->createdResponse($major, 'Tạo ngành thành công.');
+	}
+
+	public function update(UpdateMajorRequest $request, Major $major): JsonResponse
+	{
+		$major->update([
+			'faculty_id' => $request->integer('faculty_id'),
+			'label' => trim($request->string('label')->value()),
+			'value' => trim($request->string('value')->value()),
+			'slug' => Str::slug($request->string('label')->value()) ?: Str::slug($request->string('value')->value()),
+			'updated_by' => $request->user()?->id,
+		]);
+
+		$major->load(['faculty:id,value,label,slug'])->loadCount('schoolClasses');
+
+		return $this->successResponse(true, $major, 'Cập nhật ngành thành công.');
+	}
+
+	public function destroy(Request $request, Major $major): JsonResponse
+	{
+		if ($major->schoolClasses()->exists()) {
+			return $this->validationErrorResponse([
+				'major' => ['Không thể xóa ngành đang có lớp trực thuộc.'],
+			]);
+		}
+
+		if (User::query()->where('major_id', $major->id)->exists()) {
+			return $this->validationErrorResponse([
+				'major' => ['Không thể xóa ngành đang được gán cho người dùng.'],
+			]);
+		}
+
+		$major->delete();
+
+		return $this->successResponse(true, null, 'Xóa ngành thành công.');
 	}
 }

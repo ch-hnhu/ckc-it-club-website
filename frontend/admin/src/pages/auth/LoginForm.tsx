@@ -3,12 +3,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { listenOAuthAuthMessage } from "@/services/auth.service";
 import { toast } from "sonner";
 
 export function LoginForm() {
 	const navigate = useNavigate();
+	const location = useLocation();
 
 	useEffect(() => {
 		return listenOAuthAuthMessage({
@@ -17,7 +18,18 @@ export function LoginForm() {
 					localStorage.setItem("access_token", payload.token);
 				}
 
-				const redirectPath = sessionStorage.getItem("redirectPath") || "/";
+				const fromPath = (location.state as { from?: { pathname?: string; search?: string } } | null)
+					?.from;
+				const stateRedirectPath = fromPath
+					? `${fromPath.pathname ?? "/"}${fromPath.search ?? ""}`
+					: null;
+				const storedRedirectPath = sessionStorage.getItem("redirectPath");
+				const redirectPath =
+					storedRedirectPath && storedRedirectPath !== "/login"
+						? storedRedirectPath
+						: stateRedirectPath && stateRedirectPath !== "/login"
+							? stateRedirectPath
+							: "/";
 				sessionStorage.removeItem("redirectPath");
 
 				toast.success(payload.message || "Đăng nhập thành công!", {
@@ -30,7 +42,7 @@ export function LoginForm() {
 				toast.error(payload.message || "Đăng nhập thất bại!", { position: "top-right" });
 			},
 		});
-	}, [navigate]);
+	}, [location.state, navigate]);
 
 	const handleGoogleLogin = (e: React.FormEvent) => {
 		e.preventDefault(); // Prevent form submission
