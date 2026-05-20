@@ -70,6 +70,10 @@
 - `GET /api/v1/contacts`
 - `PATCH /api/v1/contacts/{contact}/status`
 - `GET /api/v1/club-informations`
+- `POST /api/v1/club-informations`
+- `PUT/PATCH /api/v1/club-informations/{clubInformation}`
+- `POST /api/v1/club-informations/{clubInformation}/values`
+- `PUT/PATCH /api/v1/club-informations/{clubInformation}/values/{clubInformationValue}`
 - `GET /api/v1/club-applications`
 - `PATCH /api/v1/club-applications/{clubApplication}/status`
 - `PATCH /api/v1/application-questions/reorder`
@@ -190,9 +194,11 @@
 - admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`
 - admin can list club information records through `GET /api/v1/club-informations` with pagination, search, and sort.
-- admin can fetch one club information record through `GET /api/v1/club-informations/{id}`; nested `club_information_values` accept `search`, `sort`, and `order` query params for the detail table.
+- admin can create and update parent club information records through the resource `store` and `update` actions.
+- admin can fetch one club information record through `GET /api/v1/club-informations/{id}`; nested `club_information_values` accept `search`, `sort`, and `order` query params for the detail table, including `alt`, `link`, and `position` sorting for media/banner values.
+- admin can create and update nested values through `/club-informations/{clubInformation}/values`; value payloads support `value`, `link`, `alt`, `position`, and `is_active`.
 - list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
-- create/update/delete flows are still incomplete.
+- delete flow for parent club information records is still incomplete.
 
 ## Recruitment Domain Rules
 

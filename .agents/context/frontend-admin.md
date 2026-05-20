@@ -239,8 +239,14 @@
 - route `/club-informations/:id`
 - list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
 - detail uses `clubInformationService.getClubInformation(id, params)`; the nested value table supports API-driven search/sort and local pagination.
+- image and banner rows render the thumbnail preview and URL in the same value cell, matching the user list pattern; there is no separate image column.
+- the nested value table supports sorting by `alt` for image rows and `link`/`position` for banner rows in addition to the existing value/date/status keys.
+- backend `show()` whitelists `alt`, `link`, and `position` for nested value sorting so those headers sort server-side instead of falling back to `created_at`.
+- detail can switch the parent information card into an inline edit form and submit through `clubInformationService.updateClubInformation`.
+- detail can create nested values from a modal through `clubInformationService.createClubInformationValue`, then refreshes the value table.
+- detail value popup can switch from read-only view to edit mode and submit through `clubInformationService.updateClubInformationValue`.
 - date fields are displayed directly from the API, which formats them as `d/m/Y`
-- create/update/delete flows are not wired yet
+- delete flow for parent club information records is not wired yet
 
 ## Environment Variables
 

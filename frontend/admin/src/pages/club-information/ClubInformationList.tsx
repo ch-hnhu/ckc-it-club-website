@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
 	Select,
 	SelectContent,
@@ -188,7 +188,7 @@ function ClubInformationList() {
 						<div className='flex items-center gap-2'>
 							<Button
 								size='sm'
-								onClick={() => navigate("/users/create")}
+								onClick={() => navigate("/club-informations/create")}
 								className='h-8 bg-foreground text-background hover:bg-foreground/90'>
 								<Plus className='h-4 w-4' />
 								Thêm
@@ -231,7 +231,7 @@ function ClubInformationList() {
 										variant='ghost'
 										onClick={() => handleSort("type")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Kiểu dữ liệu
+										Loại
 										{getSortIcon("type")}
 									</Button>
 								</TableHead>
@@ -277,15 +277,17 @@ function ClubInformationList() {
 												}
 											/>
 										</TableCell>
-										<TableCell className='font-medium'>{item.id}</TableCell>
-										<TableCell>
-											<div className='flex flex-col'>
-												<span className='font-medium'>{item.label}</span>
-												<span className='text-xs text-muted-foreground'>
-													{formatText(item.value)}
-												</span>
-											</div>
-										</TableCell>
+											<TableCell className='font-medium'>{item.id}</TableCell>
+											<TableCell>
+												<Link
+													to={`/club-informations/${item.id}`}
+													className='flex w-fit flex-col rounded-sm outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'>
+													<span className='font-medium'>{item.label}</span>
+													<span className='text-xs text-muted-foreground'>
+														{formatText(item.value)}
+													</span>
+												</Link>
+											</TableCell>
 										<TableCell>
 											<CompactBadgeList
 												items={toBadgeItems(item.type)}

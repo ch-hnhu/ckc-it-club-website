@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Http\Requests\Api\V1\ClubInformation\StoreClubInformationRequest;
+use App\Http\Requests\Api\V1\ClubInformation\StoreClubInformationValueRequest;
+use App\Http\Requests\Api\V1\ClubInformation\UpdateClubInformationRequest;
 use App\Models\ClubInformation;
+use App\Models\ClubInformationValue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -51,9 +55,28 @@ class ClubInformationController extends BaseApiController
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
     }
 
+    public function store(StoreClubInformationRequest $request): JsonResponse
+    {
+        $clubInformation = ClubInformation::create([
+            'label' => trim($request->string('label')->value()),
+            'value' => trim($request->string('value')->value()),
+            'slug' => trim($request->string('slug')->value()),
+            'type' => $request->input('type'),
+            'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
+            'is_active' => $request->boolean('is_active', true),
+            'created_by' => $request->user()?->id,
+            'updated_by' => $request->user()?->id,
+        ]);
+
+        return $this->createdResponse(
+            $this->formatClubInformation($clubInformation),
+            'Tạo cấu hình thành công.'
+        );
+    }
+
     public function show(Request $request, int $id): JsonResponse
     {
-        $allowedValueSorts = ['id', 'value', 'is_active', 'created_at', 'updated_at'];
+        $allowedValueSorts = ['id', 'value', 'alt', 'link', 'position', 'is_active', 'created_at', 'updated_at'];
         $valueSort = in_array($request->query('sort'), $allowedValueSorts, true)
             ? $request->query('sort')
             : 'created_at';
@@ -67,7 +90,8 @@ class ClubInformationController extends BaseApiController
                 $query
                     ->when($valueSearch !== '', function ($query) use ($valueSearch) {
                         $query->where(function ($subQuery) use ($valueSearch) {
-                            $subQuery->where('value', 'like', "%{$valueSearch}%");
+                            $subQuery->where('value', 'like', "%{$valueSearch}%")
+                                ->orWhere('alt', 'like', "%{$valueSearch}%");
 
                             if (ctype_digit($valueSearch)) {
                                 $subQuery->orWhere('id', (int) $valueSearch);
@@ -79,6 +103,74 @@ class ClubInformationController extends BaseApiController
         ])->findOrFail($id);
 
         return $this->successResponse(true, $this->formatClubInformation($clubInformation), ApiMessage::RETRIEVED);
+    }
+
+    public function update(
+        UpdateClubInformationRequest $request,
+        ClubInformation $clubInformation
+    ): JsonResponse {
+        $clubInformation->update([
+            'label' => trim($request->string('label')->value()),
+            'value' => trim($request->string('value')->value()),
+            'slug' => trim($request->string('slug')->value()),
+            'type' => $request->input('type'),
+            'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
+            'is_active' => $request->boolean('is_active', true),
+            'updated_by' => $request->user()?->id,
+        ]);
+
+        $clubInformation->load('clubInformationValues');
+
+        return $this->successResponse(
+            true,
+            $this->formatClubInformation($clubInformation),
+            'Cập nhật cấu hình thành công.'
+        );
+    }
+
+    public function storeValue(
+        StoreClubInformationValueRequest $request,
+        ClubInformation $clubInformation
+    ): JsonResponse {
+        $value = $clubInformation->clubInformationValues()->create([
+            'value' => trim($request->string('value')->value()),
+            'link' => $request->filled('link') ? trim($request->string('link')->value()) : null,
+            'alt' => $request->filled('alt') ? trim($request->string('alt')->value()) : null,
+            'position' => $request->filled('position') ? (int) $request->input('position') : null,
+            'is_active' => $request->boolean('is_active', true),
+            'created_by' => $request->user()?->id,
+            'updated_by' => $request->user()?->id,
+        ]);
+
+        return $this->createdResponse(
+            $this->formatClubInformationValue($value),
+            'Tạo giá trị cấu hình thành công.'
+        );
+    }
+
+    public function updateValue(
+        StoreClubInformationValueRequest $request,
+        ClubInformation $clubInformation,
+        ClubInformationValue $clubInformationValue
+    ): JsonResponse {
+        if ($clubInformationValue->club_information_id !== $clubInformation->id) {
+            return $this->notFoundResponse('Giá trị cấu hình không tồn tại.');
+        }
+
+        $clubInformationValue->update([
+            'value' => trim($request->string('value')->value()),
+            'link' => $request->filled('link') ? trim($request->string('link')->value()) : null,
+            'alt' => $request->filled('alt') ? trim($request->string('alt')->value()) : null,
+            'position' => $request->filled('position') ? (int) $request->input('position') : null,
+            'is_active' => $request->boolean('is_active', true),
+            'updated_by' => $request->user()?->id,
+        ]);
+
+        return $this->successResponse(
+            true,
+            $this->formatClubInformationValue($clubInformationValue),
+            'Cập nhật giá trị cấu hình thành công.'
+        );
     }
 
     private function formatClubInformation(ClubInformation $clubInformation): array
@@ -95,15 +187,23 @@ class ClubInformationController extends BaseApiController
             'updated_at' => $this->formatDate($clubInformation->updated_at),
             'club_information_values' => $clubInformation
                 ->clubInformationValues
-                ->map(fn ($value) => [
-                    'id' => $value->id,
-                    'club_information_id' => $value->club_information_id,
-                    'value' => $value->value,
-                    'is_active' => (bool) $value->is_active,
-                    'created_at' => $this->formatDate($value->created_at),
-                    'updated_at' => $this->formatDate($value->updated_at),
-                ])
+                ->map(fn (ClubInformationValue $value) => $this->formatClubInformationValue($value))
                 ->values(),
+        ];
+    }
+
+    private function formatClubInformationValue(ClubInformationValue $value): array
+    {
+        return [
+            'id' => $value->id,
+            'club_information_id' => $value->club_information_id,
+            'value' => $value->value,
+            'link' => $value->link,
+            'alt' => $value->alt,
+            'position' => $value->position,
+            'is_active' => (bool) $value->is_active,
+            'created_at' => $this->formatDate($value->created_at),
+            'updated_at' => $this->formatDate($value->updated_at),
         ];
     }
 
