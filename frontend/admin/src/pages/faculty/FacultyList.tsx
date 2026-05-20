@@ -43,7 +43,6 @@ import {
 	ChevronsRight,
 	MoreHorizontal,
 	Plus,
-	Settings2,
 } from "lucide-react";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
@@ -181,10 +180,6 @@ function FacultyList() {
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
-						<Button variant='outline' size='sm' className='h-8 lg:flex'>
-							<Settings2 className='h-4 w-4' />
-							Xem
-						</Button>
 						<Button
 							size='sm'
 							onClick={() => {
