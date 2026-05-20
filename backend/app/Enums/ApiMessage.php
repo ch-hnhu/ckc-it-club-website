@@ -47,6 +47,10 @@ enum ApiMessage: string
     case CANNOT_UPDATE_ROLE_WITH_USERS = 'Cannot update role that has assigned users';
     case CANNOT_DELETE_ROLE_WITH_USERS = 'Cannot delete role that has assigned users';
 
+    // Permission Specific
+    case PERMISSIONS_UPDATED = 'Permissions updated successfully';
+    case CANNOT_REMOVE_ADMIN_PANEL_ACCESS = 'Cannot remove admin_panel.access from the admin role';
+
     // Database & Server Errors
     case DATABASE_ERROR = 'Database error occurred';
     case SERVER_ERROR = 'Internal server error';

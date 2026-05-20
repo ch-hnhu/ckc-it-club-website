@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Contact\UpdateContactStatusRequest;
 use App\Models\Contact;
@@ -13,15 +12,6 @@ use Illuminate\Http\Request;
 
 class ContactController extends BaseApiController
 {
-    private const ADMIN_ROLES = [
-        RolesEnum::ADMIN,
-        RolesEnum::PRESIDENT,
-        RolesEnum::VICE_PRESIDENT,
-        RolesEnum::ACADEMIC_HEAD,
-        RolesEnum::COMMUNICATIONS_HEAD,
-        RolesEnum::VOLUNTEER_HEAD,
-    ];
-
     private const ALLOWED_SORTS = [
         'id',
         'email',
@@ -40,10 +30,6 @@ class ContactController extends BaseApiController
 
     public function index(Request $request): JsonResponse
     {
-        if ($response = $this->ensureAdminAccess($request)) {
-            return $response;
-        }
-
         $search = trim((string) $request->query('search', ''));
         $status = (string) $request->query('status', '');
         $sort = (string) $request->query('sort', 'created_at');
@@ -81,10 +67,6 @@ class ContactController extends BaseApiController
 
     public function stats(Request $request): JsonResponse
     {
-        if ($response = $this->ensureAdminAccess($request)) {
-            return $response;
-        }
-
         $stats = [
             'total' => Contact::query()->count(),
             'pending' => Contact::query()->where('status', 'pending')->count(),
@@ -103,10 +85,6 @@ class ContactController extends BaseApiController
         UpdateContactStatusRequest $request,
         Contact $contact
     ): JsonResponse {
-        if ($response = $this->ensureAdminAccess($request)) {
-            return $response;
-        }
-
         $nextStatus = $request->validated('status');
         $allowedTransitions = $this->getAllowedTransitions($contact->status);
 
@@ -144,26 +122,6 @@ class ContactController extends BaseApiController
             $this->transformContact($contact->fresh()),
             'Contact status updated successfully'
         );
-    }
-
-    private function ensureAdminAccess(Request $request): ?JsonResponse
-    {
-        $user = $request->user();
-
-        if (! $user) {
-            return $this->unauthorizedResponse();
-        }
-
-        $roles = array_map(
-            static fn (RolesEnum $role) => $role->value,
-            self::ADMIN_ROLES
-        );
-
-        if (! $user->hasAnyRole($roles)) {
-            return $this->forbiddenResponse();
-        }
-
-        return null;
     }
 
     private function getAllowedTransitions(string $currentStatus): array

@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
+use App\Enums\PermissionsEnum;
+use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Role\StoreRoleRequest;
-use Illuminate\Pagination\LengthAwarePaginator;
+use App\Http\Requests\Api\V1\Role\SyncRolePermissionsRequest;
+use App\Http\Requests\Api\V1\Role\UpdateRoleRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
-use App\Http\Requests\Api\V1\Role\UpdateRoleRequest;
 
 class RoleController extends BaseApiController
 {
@@ -109,7 +112,7 @@ class RoleController extends BaseApiController
 
     public function show(string $id)
     {
-        $role = Role::findOrFail($id);
+        $role = Role::with('permissions:id,name,description')->findOrFail($id);
 
         $data = [
             'id' => $role->id,
@@ -118,6 +121,11 @@ class RoleController extends BaseApiController
             'is_system' => (int) $role->is_system,
             'created_at' => $role->created_at?->format('d/m/Y'),
             'total_users' => (int) DB::table('model_has_roles')->where('role_id', $role->id)->count(),
+            'permissions' => $role->permissions->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'description' => $p->description,
+            ])->values(),
         ];
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
@@ -177,5 +185,33 @@ class RoleController extends BaseApiController
         $role->delete();
 
         return $this->successResponse(true, null, ApiMessage::ROLE_DELETED);
+    }
+
+    public function syncPermissions(SyncRolePermissionsRequest $request, string $id): JsonResponse
+    {
+        $role = Role::findOrFail($id);
+        $permNames = $request->validated()['permissions'];
+
+        if ($role->name === RolesEnum::ADMIN->value
+            && ! in_array(PermissionsEnum::ADMIN_PANEL_ACCESS->value, $permNames, true)) {
+            return $this->errorResponse(false, ApiMessage::CANNOT_REMOVE_ADMIN_PANEL_ACCESS, 403);
+        }
+
+        $role->syncPermissions($permNames);
+
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $role->load('permissions:id,name,description');
+
+        return $this->successResponse(true, [
+            'id' => $role->id,
+            'value' => $role->name,
+            'label' => $role->label,
+            'permissions' => $role->permissions->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'description' => $p->description,
+            ])->values(),
+        ], ApiMessage::PERMISSIONS_UPDATED);
     }
 }

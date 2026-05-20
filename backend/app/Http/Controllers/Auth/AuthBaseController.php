@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\PermissionsEnum;
 use App\Enums\RolesEnum;
 use App\Http\Controllers\Controller;
 use GuzzleHttp\Client;
@@ -210,16 +211,7 @@ abstract class AuthBaseController extends Controller
         $user = User::where('email', $oauthUser->getEmail())->first();
 
         try {
-            $ADMIN_ROLES = [
-                RolesEnum::ADMIN,
-                RolesEnum::PRESIDENT,
-                RolesEnum::VICE_PRESIDENT,
-                RolesEnum::ACADEMIC_HEAD,
-                RolesEnum::COMMUNICATIONS_HEAD,
-                RolesEnum::VOLUNTEER_HEAD,
-            ];
-
-            if (! $user || ! $user->hasAnyRole($ADMIN_ROLES)) {
+            if (! $user || ! $user->hasPermissionTo(PermissionsEnum::ADMIN_PANEL_ACCESS->value)) {
                 $frontendUrl = rtrim(env('ADMIN_FRONTEND_URL', 'http://localhost:5173'), '/');
                 $payload = json_encode([
                     'type' => 'OAUTH_AUTH_ERROR',
@@ -589,17 +581,24 @@ abstract class AuthBaseController extends Controller
                 ], HttpStatus::UNAUTHORIZED->value);
             }
 
+            $user->load('roles:id,name,label');
+
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'id' => $user->id,
-                    'full_name' => $user->full_name,
-                    'email' => $user->email,
-                    'avatar' => $user->avatar,
-                    'provider' => $user->provider,
+                    'id'                => $user->id,
+                    'full_name'         => $user->full_name,
+                    'email'             => $user->email,
+                    'avatar'            => $user->avatar,
+                    'provider'          => $user->provider,
                     'email_verified_at' => $user->email_verified_at,
-                    'created_at' => $user->created_at?->format('d/m/Y'),
-                ]
+                    'created_at'        => $user->created_at?->format('d/m/Y'),
+                    'roles'             => $user->roles->map(fn ($r) => [
+                        'name'  => $r->name,
+                        'label' => $r->label,
+                    ])->values(),
+                    'permissions'       => $user->getAllPermissions()->pluck('name')->values(),
+                ],
             ], HttpStatus::OK->value);
 
         } catch (\Exception $e) {

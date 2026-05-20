@@ -15,6 +15,7 @@ import ApplicationQuestionDetailPage from "@/pages/recruitment/ApplicationQuesti
 import ApplicationAnswersPage from "@/pages/recruitment/ApplicationAnswersPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { PermissionRoute } from "@/components/auth/PermissionRoute";
 import NotFound from "@/pages/NotFound";
 import RoleList from "@/pages/role/RoleList";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
@@ -41,83 +42,163 @@ const router = createBrowserRouter([
 		children: [
 			{
 				index: true,
-				element: <Dashboard />,
+				element: (
+					<PermissionRoute permission='dashboard.view'>
+						<Dashboard />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "users",
-				element: <UserList />,
+				element: (
+					<PermissionRoute permission='users.view'>
+						<UserList />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "users/create",
-				element: <CreateUser />,
+				element: (
+					<PermissionRoute permission='users.create'>
+						<CreateUser />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "users/:id",
-				element: <UpdateUser />,
+				element: (
+					<PermissionRoute permission='users.update'>
+						<UpdateUser />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "roles",
-				element: <RoleList />,
+				element: (
+					<PermissionRoute permission='roles.view'>
+						<RoleList />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "permissions",
-				element: <PermissionList />,
+				element: (
+					<PermissionRoute permission='permissions.view'>
+						<PermissionList />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "organization/upload",
-				element: <OrganizationImportListPage />,
+				element: (
+					<PermissionRoute permission='academic_structure.import'>
+						<OrganizationImportListPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "departments",
-				element: <FacultyList />,
+				element: (
+					<PermissionRoute permission='academic_data.view'>
+						<FacultyList />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "majors",
-				element: <MajorList />,
+				element: (
+					<PermissionRoute permission='academic_data.view'>
+						<MajorList />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "classes",
-				element: <SchoolClassList />,
+				element: (
+					<PermissionRoute permission='academic_data.view'>
+						<SchoolClassList />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "contacts",
-				element: <ContactList />,
+				element: (
+					<PermissionRoute permission='contacts.view'>
+						<ContactList />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "divisions",
-				element: <DivisionManagementPage />,
+				element: (
+					<PermissionRoute permission='club_info.view'>
+						<DivisionManagementPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "club-informations",
-				element: <ClubInformationList />,
+				element: (
+					<PermissionRoute permission='club_info.view'>
+						<ClubInformationList />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "club-informations/create",
-				element: <CreateClubInformationPage />,
+				element: (
+					<PermissionRoute permission='club_info.manage'>
+						<CreateClubInformationPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "club-informations/:id",
-				element: <ClubInformationDetailPage />,
+				element: (
+					<PermissionRoute permission='club_info.view'>
+						<ClubInformationDetailPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "requests",
-				element: <ApplicationRequestsPage />,
+				element: (
+					<PermissionRoute permission='applications.view'>
+						<ApplicationRequestsPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "requests/:applicationId",
-				element: <ApplicationDetailPage />,
+				element: (
+					<PermissionRoute permission='applications.view'>
+						<ApplicationDetailPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "questions",
-				element: <ApplicationQuestionsPage />,
+				element: (
+					<PermissionRoute permission='application_questions.view'>
+						<ApplicationQuestionsPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "questions/:questionId",
-				element: <ApplicationQuestionDetailPage />,
+				element: (
+					<PermissionRoute permission='application_questions.view'>
+						<ApplicationQuestionDetailPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "answers",
-				element: <ApplicationAnswersPage />,
+				element: (
+					<PermissionRoute permission='applications.view'>
+						<ApplicationAnswersPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "notifications",

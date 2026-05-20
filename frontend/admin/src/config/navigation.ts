@@ -18,6 +18,7 @@ export type AdminNavHeadItem = {
 export type AdminNavChildItem = {
 	title: string;
 	url: string;
+	permission?: string;
 };
 
 export type AdminNavItem = {
@@ -26,6 +27,7 @@ export type AdminNavItem = {
 	icon: LucideIcon;
 	badge?: number;
 	isActive?: boolean;
+	permission?: string;
 	items?: AdminNavChildItem[];
 };
 
@@ -43,29 +45,35 @@ export const adminNavMain: AdminNavItem[] = [
 		url: "/",
 		icon: House,
 		isActive: true,
+		permission: "dashboard.view",
 		items: [
 			{
 				title: "Thống kê",
 				url: "/",
-			},
-			{
-				title: "Báo cáo",
-				url: "/reports",
+				permission: "dashboard.view",
 			},
 		],
 	},
 	{
-		title: "Người dùng & Vai trò",
+		title: "Người dùng & Phân quyền",
 		url: "/users",
 		icon: Users,
+		permission: "users.view",
 		items: [
 			{
 				title: "Người dùng",
 				url: "/users",
+				permission: "users.view",
 			},
 			{
 				title: "Vai trò",
 				url: "/roles",
+				permission: "roles.view",
+			},
+			{
+				title: "Quyền hạn",
+				url: "/permissions",
+				permission: "permissions.view",
 			},
 		],
 	},
@@ -73,37 +81,45 @@ export const adminNavMain: AdminNavItem[] = [
 		title: "Quản lý đơn vị",
 		url: "/organization/upload",
 		icon: Building,
+		permission: "academic_data.view",
 		items: [
 			{
 				title: "Tải lên danh sách đơn vị",
 				url: "/organization/upload",
+				permission: "academic_structure.import",
 			},
 			{
 				title: "Khoa",
 				url: "/departments",
+				permission: "academic_data.view",
 			},
 			{
 				title: "Ngành",
 				url: "/majors",
+				permission: "academic_data.view",
 			},
 			{
 				title: "Lớp",
 				url: "/classes",
+				permission: "academic_data.view",
 			},
 		],
 	},
 	{
 		title: "Quản lý CLB",
-		url: "/club-info",
+		url: "/club-informations",
 		icon: Trophy,
+		permission: "club_info.view",
 		items: [
 			{
 				title: "Các ban",
 				url: "/divisions",
+				permission: "club_info.view",
 			},
 			{
 				title: "Thông tin CLB",
 				url: "/club-informations",
+				permission: "club_info.view",
 			},
 		],
 	},
@@ -111,10 +127,12 @@ export const adminNavMain: AdminNavItem[] = [
 		title: "Quản lý liên hệ",
 		url: "/contacts",
 		icon: MailOpen,
+		permission: "contacts.view",
 		items: [
 			{
 				title: "Danh sách liên hệ",
 				url: "/contacts",
+				permission: "contacts.view",
 			},
 		],
 	},
@@ -122,18 +140,22 @@ export const adminNavMain: AdminNavItem[] = [
 		title: "Tuyển thành viên",
 		url: "/requests",
 		icon: UserRoundPlus,
+		permission: "applications.view",
 		items: [
 			{
 				title: "Form ứng tuyển",
 				url: "/questions",
+				permission: "application_questions.view",
 			},
 			{
 				title: "Câu trả lời",
 				url: "/answers",
+				permission: "applications.view",
 			},
 			{
 				title: "Yêu cầu tham gia",
 				url: "/requests",
+				permission: "applications.view",
 			},
 		],
 	},
