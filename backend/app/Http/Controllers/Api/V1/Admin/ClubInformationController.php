@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\ClubInformation\StoreClubInformationValueRequest;
 use App\Http\Requests\Api\V1\ClubInformation\UpdateClubInformationRequest;
 use App\Models\ClubInformation;
 use App\Models\ClubInformationValue;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -68,6 +69,17 @@ class ClubInformationController extends BaseApiController
             'updated_by' => $request->user()?->id,
         ]);
 
+        $admin = $request->user();
+        NotificationService::dispatch(
+            'Tạo cấu hình thông tin CLB',
+            ($admin?->full_name ?? 'Admin').' đã tạo cấu hình "'.$clubInformation->label.'"',
+            'created',
+            'club_information',
+            $clubInformation->id,
+            $admin?->full_name ?? 'Admin',
+            '/club-informations/'.$clubInformation->id,
+        );
+
         return $this->createdResponse(
             $this->formatClubInformation($clubInformation),
             'Tạo cấu hình thành công.'
@@ -121,6 +133,17 @@ class ClubInformationController extends BaseApiController
 
         $clubInformation->load('clubInformationValues');
 
+        $admin = $request->user();
+        NotificationService::dispatch(
+            'Cập nhật cấu hình thông tin CLB',
+            ($admin?->full_name ?? 'Admin').' đã cập nhật cấu hình "'.$clubInformation->label.'"',
+            'updated',
+            'club_information',
+            $clubInformation->id,
+            $admin?->full_name ?? 'Admin',
+            '/club-informations/'.$clubInformation->id,
+        );
+
         return $this->successResponse(
             true,
             $this->formatClubInformation($clubInformation),
@@ -146,6 +169,17 @@ class ClubInformationController extends BaseApiController
             'updated_by' => $request->user()?->id,
         ]);
 
+        $admin = $request->user();
+        NotificationService::dispatch(
+            'Thêm giá trị cấu hình CLB',
+            ($admin?->full_name ?? 'Admin').' đã thêm giá trị cho cấu hình "'.$clubInformation->label.'"',
+            'created',
+            'club_information_value',
+            $value->id,
+            $admin?->full_name ?? 'Admin',
+            '/club-informations/'.$clubInformation->id,
+        );
+
         return $this->createdResponse(
             $this->formatClubInformationValue($value),
             'Tạo giá trị cấu hình thành công.'
@@ -169,6 +203,17 @@ class ClubInformationController extends BaseApiController
             'is_active' => $clubInformation->type === 'boolean' ? true : $request->boolean('is_active', true),
             'updated_by' => $request->user()?->id,
         ]);
+
+        $admin = $request->user();
+        NotificationService::dispatch(
+            'Cập nhật giá trị cấu hình CLB',
+            ($admin?->full_name ?? 'Admin').' đã cập nhật giá trị cho cấu hình "'.$clubInformation->label.'"',
+            'updated',
+            'club_information_value',
+            $clubInformationValue->id,
+            $admin?->full_name ?? 'Admin',
+            '/club-informations/'.$clubInformation->id,
+        );
 
         return $this->successResponse(
             true,
