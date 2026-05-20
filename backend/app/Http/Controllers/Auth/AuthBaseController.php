@@ -261,6 +261,48 @@ abstract class AuthBaseController extends Controller
                 );
             }
 
+            if ($user->is_active === false) {
+                $frontendUrl = rtrim(env('ADMIN_FRONTEND_URL', 'http://localhost:5173'), '/');
+                $payload = json_encode([
+                    'type' => 'OAUTH_AUTH_ERROR',
+                    'message' => 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.',
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+                return response(
+                    sprintf(
+                        <<<'HTML'
+                        <!doctype html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="utf-8">
+                            <title>Login Error</title>
+                        </head>
+                        <body>
+                            <script>
+                                (function () {
+                                    var payload = %s;
+                                    var targetOrigin = "%s";
+
+                                    if (window.opener) {
+                                        window.opener.postMessage(payload, targetOrigin);
+                                        window.close();
+                                        return;
+                                    }
+
+                                    window.location.href = targetOrigin + '/login?error=' + encodeURIComponent(payload.message);
+                                })();
+                            </script>
+                        </body>
+                        </html>
+                        HTML,
+                        $payload,
+                        $frontendUrl
+                    ),
+                    200,
+                    ['Content-Type' => 'text/html; charset=UTF-8']
+                );
+            }
+
             // Update existing user's OAuth info
             $user->update([
                 'full_name' => $oauthUser->getName(),
@@ -358,6 +400,50 @@ abstract class AuthBaseController extends Controller
 
     protected function handleUser($oauthUser, $provider)
     {
+        $existingUser = User::where('email', $oauthUser->getEmail())->first();
+
+        if ($existingUser && $existingUser->is_active === false) {
+            $frontendUrl = rtrim(env('USER_FRONTEND_URL', 'http://localhost:5173'), '/');
+            $payload = json_encode([
+                'type' => 'OAUTH_AUTH_ERROR',
+                'message' => 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.',
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+            return response(
+                sprintf(
+                    <<<'HTML'
+                    <!doctype html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Login Error</title>
+                    </head>
+                    <body>
+                        <script>
+                            (function () {
+                                var payload = %s;
+                                var targetOrigin = "%s";
+
+                                if (window.opener) {
+                                    window.opener.postMessage(payload, targetOrigin);
+                                    window.close();
+                                    return;
+                                }
+
+                                window.location.href = targetOrigin + '/login?error=' + encodeURIComponent(payload.message);
+                            })();
+                        </script>
+                    </body>
+                    </html>
+                    HTML,
+                    $payload,
+                    $frontendUrl
+                ),
+                200,
+                ['Content-Type' => 'text/html; charset=UTF-8']
+            );
+        }
+
         // Find or create user
         $user = $this->findOrCreateUser($oauthUser, $provider);
 
