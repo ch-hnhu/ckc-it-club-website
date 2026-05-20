@@ -295,9 +295,9 @@ function CreateUser() {
 			payload.append("password_confirmation", form.password);
 			payload.append("is_active", form.is_active ? "1" : "0");
 			payload.append("student_code", form.student_code.trim());
-			payload.append("faculty_id", String(form.faculty_id));
-			payload.append("major_id", String(form.major_id));
-			payload.append("class_id", String(form.class_id));
+			if (form.faculty_id !== null) payload.append("faculty_id", String(form.faculty_id));
+			if (form.major_id !== null) payload.append("major_id", String(form.major_id));
+			if (form.class_id !== null) payload.append("class_id", String(form.class_id));
 			form.roles.forEach((role) => {
 				payload.append("roles[]", role);
 			});
@@ -475,7 +475,6 @@ function CreateUser() {
 										placeholder='0306123456'
 										value={form.student_code}
 										onChange={updateField("student_code")}
-										required
 									/>
 									{fieldErrors.student_code ? (
 										<p className='text-sm text-destructive'>
