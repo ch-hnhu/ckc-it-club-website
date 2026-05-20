@@ -45,6 +45,7 @@ Route::prefix('v1')->group(function () {
             Route::post('club-informations/{clubInformation}/values', [ClubInformationController::class, 'storeValue']);
             Route::put('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
             Route::patch('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
+            Route::delete('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'destroyValue']);
             Route::apiResource('club-informations', ClubInformationController::class);
             Route::post('academic-structure/import', [AcademicStructureController::class, 'import']);
             Route::get('academic-structure/imports/stats', [AcademicStructureController::class, 'stats']);

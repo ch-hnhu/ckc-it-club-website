@@ -84,6 +84,15 @@ const clubInformationService = {
 			payload,
 		);
 	},
+
+	async deleteClubInformationValue(
+		clubInformationId: number,
+		valueId: number,
+	): Promise<ApiResponse<{ id: number }>> {
+		return api.delete<ApiResponse<{ id: number }>>(
+			`/club-informations/${clubInformationId}/values/${valueId}`,
+		);
+	},
 };
 
 export default clubInformationService;

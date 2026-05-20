@@ -74,6 +74,7 @@
 - `PUT/PATCH /api/v1/club-informations/{clubInformation}`
 - `POST /api/v1/club-informations/{clubInformation}/values`
 - `PUT/PATCH /api/v1/club-informations/{clubInformation}/values/{clubInformationValue}`
+- `DELETE /api/v1/club-informations/{clubInformation}/values/{clubInformationValue}`
 - `GET /api/v1/club-applications`
 - `PATCH /api/v1/club-applications/{clubApplication}/status`
 - `PATCH /api/v1/application-questions/reorder`
@@ -196,7 +197,7 @@
 - admin can list club information records through `GET /api/v1/club-informations` with pagination, search, and sort.
 - admin can create and update parent club information records through the resource `store` and `update` actions.
 - admin can fetch one club information record through `GET /api/v1/club-informations/{id}`; nested `club_information_values` accept `search`, `sort`, and `order` query params for the detail table, including `alt`, `link`, and `position` sorting for media/banner values.
-- admin can create and update nested values through `/club-informations/{clubInformation}/values`; value payloads support `value`, `link`, `alt`, `position`, and `is_active`.
+- admin can create, update, and delete nested values through `/club-informations/{clubInformation}/values`; value payloads support `value`, `link`, `alt`, `position`, and `is_active`.
 - list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
 - delete flow for parent club information records is still incomplete.
 

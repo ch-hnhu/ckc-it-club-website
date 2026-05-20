@@ -33,6 +33,15 @@ import {
 	type ClubInformation,
 	type ClubInformationValue,
 } from "@/types/club-information";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -206,6 +215,10 @@ function ClubInformationDetailPage() {
 	const [valueFieldErrors, setValueFieldErrors] = useState<ValueFieldErrors>({});
 	const [valueSubmitting, setValueSubmitting] = useState(false);
 	const [selectedValue, setSelectedValue] = useState<ClubInformationValue | null>(null);
+	const [valuePendingDelete, setValuePendingDelete] = useState<ClubInformationValue | null>(
+		null,
+	);
+	const [valueDeleting, setValueDeleting] = useState(false);
 	const [isEditingValue, setIsEditingValue] = useState(false);
 	const [detailValueForm, setDetailValueForm] = useState<ValueFormState>(getInitialValueForm);
 	const [detailValueFieldErrors, setDetailValueFieldErrors] = useState<ValueFieldErrors>({});
@@ -285,7 +298,8 @@ function ClubInformationDetailPage() {
 
 	const isImageType = info?.type === "image" || info?.type === "banner";
 	const isBannerType = info?.type === "banner";
-	const tableColSpan = 7 + (isImageType ? 1 : 0) + (isBannerType ? 2 : 0);
+	const isBooleanType = info?.type === "boolean";
+	const tableColSpan = 7 + (isImageType ? 1 : 0) + (isBannerType ? 2 : 0) - (isBooleanType ? 1 : 0);
 	const valueColLabel = isImageType
 		? "Ảnh"
 		: info?.type === "url"
@@ -429,6 +443,66 @@ function ClubInformationDetailPage() {
 			});
 		} finally {
 			setDetailValueSubmitting(false);
+		}
+	};
+
+	const handleDeleteValueDialogOpenChange = (open: boolean) => {
+		if (!open && valueDeleting) return;
+		if (!open) setValuePendingDelete(null);
+	};
+
+	const handleDeleteValueSubmit = async () => {
+		if (!valuePendingDelete) return;
+
+		const clubInformationId = Number(id);
+		if (!Number.isFinite(clubInformationId)) {
+			toast.error("Thiếu mã cấu hình.", { position: "top-right" });
+			return;
+		}
+
+		try {
+			setValueDeleting(true);
+			const response = await clubInformationService.deleteClubInformationValue(
+				clubInformationId,
+				valuePendingDelete.id,
+			);
+
+			setInfo((prev) =>
+				prev
+					? {
+							...prev,
+							club_information_values: (prev.club_information_values ?? []).filter(
+								(item) => item.id !== valuePendingDelete.id,
+							),
+						}
+					: prev,
+			);
+			if (selectedValue?.id === valuePendingDelete.id) closeValueDetail();
+			setValCurrentPage((prev) =>
+				Math.min(prev, Math.max(1, Math.ceil((sortedValues.length - 1) / valPerPage))),
+			);
+			setValuePendingDelete(null);
+			setRefreshKey((prev) => prev + 1);
+			toast.success(response.message ?? "Xóa giá trị cấu hình thành công.", {
+				position: "top-right",
+			});
+		} catch (deleteError) {
+			if (axios.isAxiosError<ApiErrorResponse>(deleteError)) {
+				const responseData = deleteError.response?.data;
+				const serverMessage =
+					Object.values(responseData?.errors ?? {}).flat()[0] ??
+					responseData?.message ??
+					"Không thể xóa giá trị cấu hình.";
+
+				toast.error(serverMessage, { position: "top-right" });
+				return;
+			}
+
+			toast.error(getErrorMessage(deleteError, "Không thể xóa giá trị cấu hình."), {
+				position: "top-right",
+			});
+		} finally {
+			setValueDeleting(false);
 		}
 	};
 
@@ -920,7 +994,9 @@ function ClubInformationDetailPage() {
 								<Button
 									size='sm'
 									onClick={() => handleAddValueDialogOpenChange(true)}
-									className='h-8 bg-foreground text-background hover:bg-foreground/90'>
+									disabled={isBooleanType && values.length >= 1}
+									title={isBooleanType && values.length >= 1 ? "Cấu hình boolean chỉ được có 1 giá trị" : undefined}
+									className='h-8 bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50'>
 									<Plus className='h-4 w-4' />
 									Thêm
 								</Button>
@@ -990,14 +1066,16 @@ function ClubInformationDetailPage() {
 												</TableHead>
 											</>
 										)}
-										<TableHead className='w-[110px]'>
-											<Button
-												variant='ghost'
-												onClick={() => handleValSort("is_active")}
-												className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-												Trạng thái{getValSortIcon("is_active")}
-											</Button>
-										</TableHead>
+										{!isBooleanType && (
+											<TableHead className='w-[110px]'>
+												<Button
+													variant='ghost'
+													onClick={() => handleValSort("is_active")}
+													className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+													Trạng thái{getValSortIcon("is_active")}
+												</Button>
+											</TableHead>
+										)}
 										<TableHead className='w-[105px]'>
 											<Button
 												variant='ghost'
@@ -1146,12 +1224,14 @@ function ClubInformationDetailPage() {
 													</>
 												)}
 
-												<TableCell>
-													<CompactBadgeList
-														items={getStatusBadgeItems(val.is_active)}
-														maxVisibleItems={1}
-													/>
-												</TableCell>
+												{!isBooleanType && (
+													<TableCell>
+														<CompactBadgeList
+															items={getStatusBadgeItems(val.is_active)}
+															maxVisibleItems={1}
+														/>
+													</TableCell>
+												)}
 												<TableCell className='text-sm text-muted-foreground'>
 													{formatDate(val.created_at)}
 												</TableCell>
@@ -1181,7 +1261,11 @@ function ClubInformationDetailPage() {
 																Chi tiết
 															</DropdownMenuItem>
 															<DropdownMenuSeparator />
-															<DropdownMenuItem className='text-destructive focus:bg-destructive/10 focus:text-destructive'>
+															<DropdownMenuItem
+																className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+																onClick={() =>
+																	setValuePendingDelete(val)
+																}>
 																<Trash2 className='h-4 w-4 text-destructive' />
 																Xóa
 															</DropdownMenuItem>
@@ -1302,6 +1386,37 @@ function ClubInformationDetailPage() {
 					</div>
 				</div>
 			</div>
+
+			<AlertDialog
+				open={Boolean(valuePendingDelete)}
+				onOpenChange={handleDeleteValueDialogOpenChange}>
+				<AlertDialogContent className='w-[calc(100vw-2rem)] max-w-[540px] overflow-hidden'>
+					<AlertDialogHeader className='min-w-0'>
+						<AlertDialogTitle>Xóa giá trị cấu hình?</AlertDialogTitle>
+						<AlertDialogDescription className='min-w-0 space-y-2'>
+							<span>Giá trị</span>
+							<span className='block max-w-full break-all rounded-md bg-muted/50 px-2 py-1 font-medium text-foreground'>
+								{valuePendingDelete?.value ?? ""}
+							</span>
+							<span className='block break-words'>
+								sẽ bị xóa khỏi cấu hình "{info.label}". Hành động này không thể
+								hoàn tác.
+							</span>
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter className='min-w-0'>
+						<AlertDialogCancel disabled={valueDeleting}>Hủy</AlertDialogCancel>
+						<Button
+							type='button'
+							variant='destructive'
+							onClick={() => void handleDeleteValueSubmit()}
+							disabled={valueDeleting}>
+							{valueDeleting ? <Loader2 className='h-4 w-4 animate-spin' /> : null}
+							Xóa
+						</Button>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 
 			<Dialog open={isAddValueDialogOpen} onOpenChange={handleAddValueDialogOpenChange}>
 				<DialogContent className='sm:max-w-[540px]'>
@@ -1451,20 +1566,22 @@ function ClubInformationDetailPage() {
 							</div>
 						)}
 
-						{/* is_active */}
-						<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
-							<Label htmlFor='val_active' className='cursor-pointer'>
-								{valueForm.is_active ? "Đang dùng" : "Tạm ẩn"}
-							</Label>
-							<Switch
-								id='val_active'
-								checked={valueForm.is_active}
-								onCheckedChange={(checked) =>
-									setValueForm((p) => ({ ...p, is_active: checked }))
-								}
-								disabled={valueSubmitting}
-							/>
-						</div>
+						{/* is_active — ẩn cho boolean vì chính value true/false đã là toggle */}
+						{!isBooleanType && (
+							<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
+								<Label htmlFor='val_active' className='cursor-pointer'>
+									{valueForm.is_active ? "Đang dùng" : "Tạm ẩn"}
+								</Label>
+								<Switch
+									id='val_active'
+									checked={valueForm.is_active}
+									onCheckedChange={(checked) =>
+										setValueForm((p) => ({ ...p, is_active: checked }))
+									}
+									disabled={valueSubmitting}
+								/>
+							</div>
+						)}
 
 						<DialogFooter>
 							<Button
@@ -1708,27 +1825,30 @@ function ClubInformationDetailPage() {
 									</div>
 								) : null}
 
-									<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
-										<Label htmlFor='detail_val_active' className='cursor-pointer'>
-											{(isEditingValue
-												? detailValueForm.is_active
-												: selectedValue.is_active !== false)
-												? "Đang dùng"
-												: "Tạm ẩn"}
-										</Label>
-										<Switch
-											id='detail_val_active'
-											checked={
-												isEditingValue
+									{/* is_active — ẩn cho boolean vì chính value true/false đã là toggle */}
+									{!isBooleanType && (
+										<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
+											<Label htmlFor='detail_val_active' className='cursor-pointer'>
+												{(isEditingValue
 													? detailValueForm.is_active
-													: selectedValue.is_active !== false
-											}
-											onCheckedChange={(checked) =>
-												setDetailValueField("is_active", checked)
-											}
-											disabled={!isEditingValue || detailValueSubmitting}
-										/>
-									</div>
+													: selectedValue.is_active !== false)
+													? "Đang dùng"
+													: "Tạm ẩn"}
+											</Label>
+											<Switch
+												id='detail_val_active'
+												checked={
+													isEditingValue
+														? detailValueForm.is_active
+														: selectedValue.is_active !== false
+												}
+												onCheckedChange={(checked) =>
+													setDetailValueField("is_active", checked)
+												}
+												disabled={!isEditingValue || detailValueSubmitting}
+											/>
+										</div>
+									)}
 									{detailValueFieldErrors.is_active ? (
 										<p className='text-sm text-destructive'>
 											{detailValueFieldErrors.is_active}

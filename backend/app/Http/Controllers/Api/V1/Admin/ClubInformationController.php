@@ -132,12 +132,16 @@ class ClubInformationController extends BaseApiController
         StoreClubInformationValueRequest $request,
         ClubInformation $clubInformation
     ): JsonResponse {
+        if ($clubInformation->type === 'boolean' && $clubInformation->clubInformationValues()->exists()) {
+            return $this->errorResponse(false, 'Cấu hình kiểu boolean chỉ được có đúng 1 giá trị.', 422);
+        }
+
         $value = $clubInformation->clubInformationValues()->create([
             'value' => trim($request->string('value')->value()),
             'link' => $request->filled('link') ? trim($request->string('link')->value()) : null,
             'alt' => $request->filled('alt') ? trim($request->string('alt')->value()) : null,
             'position' => $request->filled('position') ? (int) $request->input('position') : null,
-            'is_active' => $request->boolean('is_active', true),
+            'is_active' => $clubInformation->type === 'boolean' ? true : $request->boolean('is_active', true),
             'created_by' => $request->user()?->id,
             'updated_by' => $request->user()?->id,
         ]);
@@ -162,7 +166,7 @@ class ClubInformationController extends BaseApiController
             'link' => $request->filled('link') ? trim($request->string('link')->value()) : null,
             'alt' => $request->filled('alt') ? trim($request->string('alt')->value()) : null,
             'position' => $request->filled('position') ? (int) $request->input('position') : null,
-            'is_active' => $request->boolean('is_active', true),
+            'is_active' => $clubInformation->type === 'boolean' ? true : $request->boolean('is_active', true),
             'updated_by' => $request->user()?->id,
         ]);
 
@@ -170,6 +174,24 @@ class ClubInformationController extends BaseApiController
             true,
             $this->formatClubInformationValue($clubInformationValue),
             'Cập nhật giá trị cấu hình thành công.'
+        );
+    }
+
+    public function destroyValue(
+        ClubInformation $clubInformation,
+        ClubInformationValue $clubInformationValue
+    ): JsonResponse {
+        if ($clubInformationValue->club_information_id !== $clubInformation->id) {
+            return $this->notFoundResponse('Giá trị cấu hình không tồn tại.');
+        }
+
+        $deletedId = $clubInformationValue->id;
+        $clubInformationValue->delete();
+
+        return $this->successResponse(
+            true,
+            ['id' => $deletedId],
+            'Xóa giá trị cấu hình thành công.'
         );
     }
 
