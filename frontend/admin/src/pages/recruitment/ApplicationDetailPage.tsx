@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import {
 	formatDate,
@@ -42,12 +41,11 @@ function ApplicationDetailPage() {
 		[applicationId, applications],
 	);
 	const breadcrumb = useMemo(
-		() =>
-			getBreadcrumbsFromNavigation("/requests", [
-				{
-					title: application ? getApplicantName(application) : `Hồ sơ #${applicationId ?? "--"}`,
-				},
-			]),
+		() => [
+			{ title: "Dashboard", link: "/" },
+			{ title: "Quản lý yêu cầu tham gia", link: "/requests" },
+			{ title: application ? getApplicantName(application) : `Hồ sơ #${applicationId ?? "--"}` },
+		],
 		[application, applicationId],
 	);
 

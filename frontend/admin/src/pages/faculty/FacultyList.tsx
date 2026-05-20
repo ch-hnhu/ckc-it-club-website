@@ -45,12 +45,17 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
 function FacultyList() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/departments"), []);
+	const breadcrumb = useMemo(
+		() => [
+			{ title: "Dashboard", link: "/" },
+			{ title: "Quản lý Khoa" },
+		],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 

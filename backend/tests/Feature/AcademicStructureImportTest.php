@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\RolesEnum;
+use App\Models\AcademicStructureImport;
 use App\Models\Faculty;
 use App\Models\Major;
 use App\Models\SchoolClass;
@@ -82,10 +83,45 @@ class AcademicStructureImportTest extends TestCase
         $this->assertDatabaseHas('school_classes', ['slug' => 'qtkd01']);
     }
 
+    public function test_import_with_unsupported_file_type_is_recorded_as_failed(): void
+    {
+        $admin = $this->createAdminUser();
+
+        $file = UploadedFile::fake()->createWithContent(
+            'academic-structure.pdf',
+            'not a supported spreadsheet',
+        );
+
+        $response = $this
+            ->actingAsAdmin($admin)
+            ->post('/api/v1/academic-structure/import', ['file' => $file], [
+                'Accept' => 'application/json',
+            ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('errors.file.0', 'Chỉ hỗ trợ file .xlsx hoặc .csv.');
+
+        $this->assertDatabaseHas('academic_structure_imports', [
+            'original_file_name' => 'academic-structure.pdf',
+            'file_type' => 'Other',
+            'status' => 'failed',
+            'processed_rows' => 0,
+            'error_message' => 'Chỉ hỗ trợ file .xlsx hoặc .csv.',
+        ]);
+
+        $this->assertSame(1, AcademicStructureImport::query()->where('status', 'failed')->count());
+    }
+
     private function createAdminUser(): User
     {
         $adminRole = Role::findOrCreate(RolesEnum::ADMIN->value, 'web');
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'email' => 'admin@example.com',
+            'full_name' => 'Admin User',
+            'is_active' => true,
+        ]);
         $user->assignRole($adminRole);
 
         return $user;

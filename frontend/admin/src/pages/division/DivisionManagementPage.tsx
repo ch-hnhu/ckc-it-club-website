@@ -5,6 +5,7 @@ import {
 	CalendarRange,
 	Clock3,
 	HeartHandshake,
+	Megaphone,
 	ShieldCheck,
 	Target,
 	Users,
@@ -25,7 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-type DivisionId = "academic" | "volunteer" | "event";
+type DivisionId = "academic" | "volunteer" | "communication";
 
 	type DivisionTheme = {
 		accent: string;
@@ -183,13 +184,13 @@ const divisions: DivisionData[] = [
 		],
 	},
 	{
-		id: "event",
-		name: "Ban Sự kiện",
-		shortLabel: "Sự kiện",
-		icon: CalendarRange,
+		id: "communication",
+		name: "Ban Truyền thông",
+		shortLabel: "Truyền thông",
+		icon: Megaphone,
 		description:
-			"Chịu trách nhiệm concept, timeline, truyền thông nội bộ và phối hợp triển khai các chương trình lớn của CLB.",
-		status: "Đang chuẩn bị demo day",
+			"Chịu trách nhiệm nội dung, hình ảnh, kênh truyền thông và phối hợp lan tỏa các hoạt động lớn của CLB.",
+		status: "Đang chuẩn bị chiến dịch demo day",
 		theme: {
 			accent: "bg-sky-500",
 			soft: "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
@@ -203,39 +204,39 @@ const divisions: DivisionData[] = [
 		openPositions: 1,
 		projectsRunning: 6,
 		meetingSchedule: "19:30 Thứ 6 hàng tuần",
-		responseTime: "Khóa timeline trước sự kiện 7 ngày",
+		responseTime: "Chốt kế hoạch nội dung trước chiến dịch 7 ngày",
 		lead: "Võ Quốc Đạt",
 		viceLead: "Đặng Bảo Nghi",
 		focusAreas: [
-			"Thiết kế format sự kiện, kịch bản sân khấu và line-up",
-			"Phân công production checklist và phối hợp liên ban",
-			"Quản lý timeline trước, trong và sau sự kiện",
+			"Xây dựng lịch nội dung cho fanpage, website và email",
+			"Thiết kế key visual, poster và bộ nhận diện cho từng chiến dịch",
+			"Quản lý truyền thông trước, trong và sau hoạt động của CLB",
 		],
 		currentProjects: [
-			"Demo Day dự án thành viên",
-			"Talkshow định hướng nghề nghiệp ngành IT",
-			"Mini game onboarding cho tân thành viên",
+			"Chiến dịch truyền thông Demo Day dự án thành viên",
+			"Bộ nội dung talkshow định hướng nghề nghiệp ngành IT",
+			"Mini game onboarding trên fanpage cho tân thành viên",
 		],
 		metrics: [
-			{ label: "Sự kiện quý này", value: "08 sự kiện" },
-			{ label: "Checklist đang mở", value: "19 đầu việc" },
+			{ label: "Chiến dịch quý này", value: "08 chiến dịch" },
+			{ label: "Nội dung đang mở", value: "19 đầu việc" },
 			{ label: "Mốc deadline gần nhất", value: "5 ngày" },
 		],
 		kpis: [
 			{
-				label: "Bám timeline",
+				label: "Bám lịch nội dung",
 				value: 86,
-				helper: "Tiến độ ổn, cần chốt MC và media kit",
+				helper: "Tiến độ ổn, cần chốt media kit và lịch đăng",
 			},
 			{
 				label: "Phối hợp liên ban",
 				value: 90,
-				helper: "Nhịp phối hợp với học thuật và truyền thông tốt",
+				helper: "Nhịp phối hợp với học thuật và tình nguyện tốt",
 			},
 			{
-				label: "Mức sẵn sàng sân khấu",
+				label: "Mức sẵn sàng hình ảnh",
 				value: 68,
-				helper: "Còn thiếu phương án dự phòng thiết bị",
+				helper: "Còn thiếu bộ ảnh dự phòng và template recap",
 			},
 		],
 	},
@@ -275,7 +276,7 @@ function DivisionManagementPage() {
 								</h1>
 								<p className='max-w-2xl text-sm leading-6 text-slate-300 md:text-base'>
 									Theo dõi nhanh nhân sự, tiến độ và trọng tâm hoạt động của
-									ba ban: học thuật, tình nguyện và sự kiện trong cùng một màn
+									ba ban: học thuật, tình nguyện và truyền thông trong cùng một màn
 									hình quản trị.
 								</p>
 							</div>
@@ -592,8 +593,8 @@ function DivisionManagementPage() {
 								<Badge variant='outline'>03 điều phối viên</Badge>
 							</div>
 							<div className='flex items-center justify-between rounded-xl border px-4 py-3'>
-								<span>Ban Sự kiện</span>
-								<Badge variant='outline'>01 production lead</Badge>
+								<span>Ban Truyền thông</span>
+								<Badge variant='outline'>01 media lead</Badge>
 							</div>
 						</CardContent>
 					</Card>
@@ -621,7 +622,7 @@ function DivisionManagementPage() {
 									Tuần 2
 								</div>
 								<p className='mt-2 text-muted-foreground'>
-									Đồng bộ lịch workshop, chiến dịch cộng đồng và sự kiện nội bộ.
+									Đồng bộ lịch workshop, chiến dịch cộng đồng và kế hoạch truyền thông nội bộ.
 								</p>
 							</div>
 							<div className='rounded-xl border px-4 py-3'>
@@ -645,8 +646,8 @@ function DivisionManagementPage() {
 						</CardHeader>
 						<CardContent className='space-y-3 text-sm text-muted-foreground'>
 							<div className='rounded-xl border px-4 py-3 leading-6'>
-								Thiết lập checklist bàn giao sau mỗi sự kiện để ban học thuật và
-								tình nguyện cùng tái sử dụng tài nguyên.
+								Thiết lập checklist bàn giao sau mỗi chiến dịch để ban học thuật và
+								tình nguyện cùng tái sử dụng tài nguyên truyền thông.
 							</div>
 							<div className='rounded-xl border px-4 py-3 leading-6'>
 								Dùng chung một đầu mối cập nhật tiến độ hàng tuần để hạn chế lệch

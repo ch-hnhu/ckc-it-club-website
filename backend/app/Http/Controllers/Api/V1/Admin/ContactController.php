@@ -133,6 +133,21 @@ class ContactController extends BaseApiController
         );
     }
 
+    public function destroy(Request $request, Contact $contact): JsonResponse
+    {
+        if ($response = $this->ensureAdminAccess($request)) {
+            return $response;
+        }
+
+        $contact->delete();
+
+        return $this->successResponse(
+            true,
+            null,
+            'Contact deleted successfully'
+        );
+    }
+
     private function ensureAdminAccess(Request $request): ?JsonResponse
     {
         $user = $request->user();

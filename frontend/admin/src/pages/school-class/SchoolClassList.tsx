@@ -45,7 +45,6 @@ import {
 	Plus,
 	Settings2,
 } from "lucide-react";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
@@ -53,7 +52,13 @@ const getDisplayName = (item?: { label?: string | null; value?: string | null } 
 	item?.label?.trim() || item?.value?.trim() || "N/A";
 
 function SchoolClassList() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/classes"), []);
+	const breadcrumb = useMemo(
+		() => [
+			{ title: "Dashboard", link: "/" },
+			{ title: "Quản lý Lớp" },
+		],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 

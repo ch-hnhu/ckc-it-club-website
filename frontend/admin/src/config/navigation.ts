@@ -108,17 +108,6 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
-		title: "Quản lý liên hệ",
-		url: "/contacts",
-		icon: MailOpen,
-		items: [
-			{
-				title: "Danh sách liên hệ",
-				url: "/contacts",
-			},
-		],
-	},
-	{
 		title: "Tuyển thành viên",
 		url: "/requests",
 		icon: UserRoundPlus,
@@ -136,6 +125,11 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/requests",
 			},
 		],
+	},
+	{
+		title: "Quản lý liên hệ",
+		url: "/contacts",
+		icon: MailOpen,
 	},
 ];
 

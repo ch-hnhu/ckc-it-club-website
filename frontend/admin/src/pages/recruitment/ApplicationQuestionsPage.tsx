@@ -36,7 +36,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { cn } from "@/lib/utils";
 import applicationService from "@/services/application.service";
@@ -259,7 +258,13 @@ function renderQuestionPreview(
 }
 
 function ApplicationQuestionsPage() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/questions"), []);
+	const breadcrumb = useMemo(
+		() => [
+			{ title: "Dashboard", link: "/" },
+			{ title: "Quản lý Câu hỏi ứng tuyển" },
+		],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 

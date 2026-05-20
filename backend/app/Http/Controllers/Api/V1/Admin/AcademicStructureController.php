@@ -39,6 +39,12 @@ class AcademicStructureController extends BaseApiController
         'Excel',
         'CSV',
         'ZIP',
+        'Other',
+    ];
+
+    private const SUPPORTED_IMPORT_EXTENSIONS = [
+        'csv',
+        'xlsx',
     ];
 
     public function index(Request $request): JsonResponse
@@ -103,13 +109,29 @@ class AcademicStructureController extends BaseApiController
         AcademicStructureImportService $academicStructureImportService,
     ): JsonResponse {
         $file = $request->file('file');
+
+        Storage::disk('local')->makeDirectory('academic-structure-imports');
         $storedFilePath = $file?->store('academic-structure-imports', 'local');
 
+        if ($file && $storedFilePath === false) {
+            Log::warning('Academic structure import: failed to store file to local disk', [
+                'original_name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+            ]);
+        }
+
         try {
+            $extension = strtolower((string) $file?->getClientOriginalExtension());
+
+            if (! in_array($extension, self::SUPPORTED_IMPORT_EXTENSIONS, true)) {
+                throw new RuntimeException('Chỉ hỗ trợ file .xlsx hoặc .csv.');
+            }
+
             $rows = $spreadsheetReader->readRows($file);
             $summary = $academicStructureImportService->import($rows);
 
-            $this->storeImportHistory($file, $storedFilePath, $request->user(), 'completed', $summary);
+            $status = count($summary['errors'] ?? []) > 0 ? 'failed' : 'completed';
+            $this->storeImportHistory($file, $storedFilePath, $request->user(), $status, $summary);
 
             return $this->successResponse(
                 true,
@@ -157,10 +179,10 @@ class AcademicStructureController extends BaseApiController
             return $this->notFoundResponse('Không tìm thấy file gốc.');
         }
 
-        return Storage::disk($academicStructureImport->storage_disk)->download(
-            $academicStructureImport->stored_file_path,
-            $academicStructureImport->original_file_name,
-        );
+        $fullPath = Storage::disk($academicStructureImport->storage_disk)
+            ->path($academicStructureImport->stored_file_path);
+
+        return response()->download($fullPath, $academicStructureImport->original_file_name);
     }
 
     /**
@@ -202,9 +224,10 @@ class AcademicStructureController extends BaseApiController
     private function resolveFileType(UploadedFile $file): string
     {
         return match (strtolower($file->getClientOriginalExtension())) {
-            'csv', 'txt' => 'CSV',
+            'csv' => 'CSV',
             'zip' => 'ZIP',
-            default => 'Excel',
+            'xlsx' => 'Excel',
+            default => 'Other',
         };
     }
 
@@ -237,6 +260,13 @@ class AcademicStructureController extends BaseApiController
             'processed_rows' => $item->processed_rows,
             'errors_count' => $item->errors_count,
             'error_message' => $item->error_message,
+            'created_faculties' => $item->created_faculties,
+            'created_majors' => $item->created_majors,
+            'created_school_classes' => $item->created_school_classes,
+            'existing_faculties' => $item->existing_faculties,
+            'existing_majors' => $item->existing_majors,
+            'existing_school_classes' => $item->existing_school_classes,
+            'error_details' => $item->error_details,
         ];
     }
 }

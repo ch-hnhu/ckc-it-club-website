@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AxiosError } from "axios";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -55,6 +56,7 @@ import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import contactService from "@/services/contact.service";
+import type { ApiErrorResponse } from "@/types/api.types";
 import type { ContactRecord, ContactStats, ContactStatus } from "@/types/contact.type";
 
 const statusOptions: Array<{ value: ContactStatus | "all"; label: string }> = [
@@ -152,6 +154,7 @@ function ContactList() {
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState<ContactStatus | "all">("all");
 	const [stats, setStats] = useState<ContactStats>(emptyStats);
+	const [reloadToken, setReloadToken] = useState(0);
 	const [meta, setMeta] = useState({
 		current_page: 1,
 		last_page: 1,
@@ -255,7 +258,7 @@ function ContactList() {
 		return () => {
 			cancelled = true;
 		};
-	}, [debouncedSearch, meta.current_page, meta.per_page, sortConfig, statusFilter]);
+	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken, sortConfig, statusFilter]);
 
 	const handleSort = (key: SortKey) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -309,6 +312,41 @@ function ContactList() {
 			toast.error("Không thể cập nhật trạng thái liên hệ.");
 		} finally {
 			setIsSubmittingStatus(false);
+		}
+	};
+
+	const handleDeleteContact = async (contact: ContactRecord) => {
+		const contactLabel = contact.full_name?.trim() || contact.email;
+
+		if (!window.confirm(`Bạn có chắc muốn xóa liên hệ từ "${contactLabel}"?`)) {
+			return;
+		}
+
+		try {
+			await contactService.deleteContact(contact.id);
+			setSelectedContact((prev) => (prev?.id === contact.id ? null : prev));
+			setStatusDialogContact((prev) => (prev?.id === contact.id ? null : prev));
+			await loadStats();
+			window.dispatchEvent(new Event("contacts:stats-refresh"));
+
+			if (contacts.length === 1 && meta.current_page > 1) {
+				setMeta((prev) => ({
+					...prev,
+					current_page: prev.current_page - 1,
+				}));
+			} else {
+				setReloadToken((prev) => prev + 1);
+			}
+
+			toast.success("Đã xóa liên hệ.");
+		} catch (error) {
+			console.error(error);
+			const responseData = (error as AxiosError<ApiErrorResponse>).response?.data;
+			const message =
+				Object.values(responseData?.errors ?? {}).flat()[0] ??
+				responseData?.message ??
+				"Không thể xóa liên hệ.";
+			toast.error(message);
 		}
 	};
 
@@ -576,6 +614,12 @@ function ContactList() {
 														onClick={() => openStatusDialog(contact)}>
 														Cập nhật trạng thái
 													</DropdownMenuItem>
+													<DropdownMenuSeparator />
+													<DropdownMenuItem
+														className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+														onClick={() => void handleDeleteContact(contact)}>
+														Xóa liên hệ
+													</DropdownMenuItem>
 												</DropdownMenuContent>
 											</DropdownMenu>
 										</TableCell>
@@ -757,6 +801,11 @@ function ContactList() {
 							<DialogFooter>
 								<Button variant='outline' onClick={() => setSelectedContact(null)}>
 									Đóng
+								</Button>
+								<Button
+									variant='destructive'
+									onClick={() => void handleDeleteContact(selectedContact)}>
+									Xóa liên hệ
 								</Button>
 								<Button
 									onClick={() => {

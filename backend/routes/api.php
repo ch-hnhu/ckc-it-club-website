@@ -53,6 +53,7 @@ Route::prefix('v1')->group(function () {
             Route::get('contacts/stats', [AdminContactController::class, 'stats']);
             Route::get('contacts', [AdminContactController::class, 'index']);
             Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+            Route::delete('contacts/{contact}', [AdminContactController::class, 'destroy']);
 
             // Club applications
             Route::get('club-applications', [ClubApplicationController::class, 'index']);
