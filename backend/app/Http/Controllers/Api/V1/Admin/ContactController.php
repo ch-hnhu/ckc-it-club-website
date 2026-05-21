@@ -109,7 +109,7 @@ class ContactController extends BaseApiController
         $statusLabels = ['pending' => 'chờ xử lý', 'processing' => 'đang xử lý', 'done' => 'đã xong'];
         NotificationService::dispatch(
             'Cập nhật trạng thái liên hệ',
-            ($admin?->full_name ?? 'Admin') . ' đã cập nhật liên hệ #' . $contact->id . ' sang "' . ($statusLabels[$nextStatus] ?? $nextStatus) . '"',
+            ($admin?->full_name ?? 'Admin').' đã cập nhật liên hệ #'.$contact->id.' sang "'.($statusLabels[$nextStatus] ?? $nextStatus).'"',
             'status_changed',
             'contact',
             $contact->id,
@@ -122,6 +122,41 @@ class ContactController extends BaseApiController
             $this->transformContact($contact->fresh()),
             'Contact status updated successfully'
         );
+    }
+
+    public function destroy(Request $request, Contact $contact): JsonResponse
+    {
+        if ($response = $this->ensureAdminAccess($request)) {
+            return $response;
+        }
+
+        $contact->delete();
+
+        return $this->successResponse(
+            true,
+            null,
+            'Contact deleted successfully'
+        );
+    }
+
+    private function ensureAdminAccess(Request $request): ?JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return $this->unauthorizedResponse();
+        }
+
+        $roles = array_map(
+            static fn (RolesEnum $role) => $role->value,
+            self::ADMIN_ROLES
+        );
+
+        if (! $user->hasAnyRole($roles)) {
+            return $this->forbiddenResponse();
+        }
+
+        return null;
     }
 
     private function getAllowedTransitions(string $currentStatus): array

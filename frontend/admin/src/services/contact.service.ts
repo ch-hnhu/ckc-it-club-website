@@ -32,6 +32,10 @@ const contactService = {
 
 		return response.data;
 	},
+
+	async deleteContact(contactId: number): Promise<void> {
+		await api.delete<ApiResponse<null>>(`/contacts/${contactId}`);
+	},
 };
 
 export default contactService;

@@ -37,6 +37,14 @@ import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { downloadAcademicStructureTemplate } from "@/lib/academic-structure-template";
 import { cn } from "@/lib/utils";
 import academicStructureService from "@/services/academic-structure.service";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import type {
 	AcademicStructureImportFileType,
@@ -60,6 +68,7 @@ import {
 	FileSpreadsheet,
 	FileText,
 	Files,
+	Loader2,
 	MoreHorizontal,
 	Search,
 	TriangleAlert,
@@ -85,6 +94,7 @@ const fileTypeOptions: Array<{ value: string; label: string }> = [
 	{ value: "Excel", label: "Excel" },
 	{ value: "CSV", label: "CSV" },
 	{ value: "ZIP", label: "ZIP" },
+	{ value: "Other", label: "Khác" },
 ];
 
 const statusMeta: Record<
@@ -103,6 +113,7 @@ const statusMeta: Record<
 	},
 };
 
+
 const typeMeta: Record<AcademicStructureImportFileType, { className: string }> = {
 	Excel: {
 		className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700",
@@ -112,6 +123,9 @@ const typeMeta: Record<AcademicStructureImportFileType, { className: string }> =
 	},
 	ZIP: {
 		className: "border-violet-500/20 bg-violet-500/10 text-violet-700",
+	},
+	Other: {
+		className: "border-rose-500/20 bg-rose-500/10 text-rose-700",
 	},
 };
 
@@ -157,12 +171,13 @@ function OrganizationImportListPage() {
 		key: "created_at",
 		order: "desc",
 	});
+	const [downloadingId, setDownloadingId] = useState<number | null>(null);
+	const [detailItem, setDetailItem] = useState<AcademicStructureImportRecord | null>(null);
 
 	const breadcrumb = useMemo(
 		() => [
 			{ title: "Dashboard", link: "/" },
-			{ title: "Quản lý đơn vị" },
-			{ title: "File import đơn vị" },
+			{ title: "Quản lý File import đơn vị" },
 		],
 		[],
 	);
@@ -293,6 +308,8 @@ function OrganizationImportListPage() {
 	};
 
 	const handleDownload = async (item: AcademicStructureImportRecord) => {
+		if (downloadingId !== null) return;
+		setDownloadingId(item.id);
 		try {
 			const blob = await academicStructureService.downloadImportFile(item.id);
 			const blobUrl = window.URL.createObjectURL(blob);
@@ -303,21 +320,23 @@ function OrganizationImportListPage() {
 			link.click();
 			link.remove();
 			window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+			toast.success(`Đã tải file "${item.file_name}".`);
 		} catch (error) {
 			console.error("Failed to download import file", error);
 			toast.error("Không thể tải lại file đã upload.");
+		} finally {
+			setDownloadingId(null);
 		}
 	};
 
 	const showDetails = (item: AcademicStructureImportRecord) => {
-		toast.info(item.description, {
-			description: `Upload bởi ${item.uploaded_by_name} vào ${formatDateTime(item.uploaded_at)}.`,
-		});
+		setDetailItem(item);
 	};
 
 	return (
-		<div className='min-h-full bg-muted/30'>
-			<div className='space-y-6 p-4 md:p-6 lg:p-8'>
+		<>
+		<div className='min-h-full overflow-x-hidden bg-muted/30'>
+			<div className='min-w-0 space-y-6 p-4 md:p-6 lg:p-8'>
 				<Card className='overflow-hidden border-none bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white shadow-xl'>
 					<CardContent className='grid gap-6 p-6 md:p-8 xl:grid-cols-[1.4fr_0.8fr]'>
 						<div className='space-y-5'>
@@ -426,28 +445,28 @@ function OrganizationImportListPage() {
 					</Card>
 				</div>
 
-				<Card className='border-border/70'>
+				<Card className='min-w-0 border-border/70'>
 					<CardHeader className='gap-4 border-b pb-4'>
-						<div className='flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between'>
-							<div className='space-y-1.5'>
+						<div className='flex min-w-0 flex-col gap-4'>
+							<div className='min-w-0 space-y-1.5'>
 								<CardTitle className='text-xl'>Danh sách file import đơn vị</CardTitle>
-								<CardDescription>
+								<CardDescription className='max-w-full'>
 									Lịch sử upload được lấy trực tiếp từ backend và tự refetch sau
 									mỗi lần import thành công.
 								</CardDescription>
 							</div>
-							<div className='flex flex-col gap-3 md:flex-row md:items-center'>
-								<div className='relative min-w-[280px] flex-1'>
+							<div className='grid w-full min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(160px,220px)_minmax(160px,220px)]'>
+								<div className='relative min-w-0'>
 									<Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
 									<Input
 										value={search}
 										onChange={(event) => setSearch(event.target.value)}
 										placeholder='Tìm theo tên file, người upload hoặc lỗi'
-										className='pl-9'
+										className='w-full pl-9'
 									/>
 								</div>
 								<Select value={typeFilter} onValueChange={setTypeFilter}>
-									<SelectTrigger className='w-full md:w-[180px]'>
+									<SelectTrigger className='w-full'>
 										<SelectValue placeholder='Loại file' />
 									</SelectTrigger>
 									<SelectContent>
@@ -459,7 +478,7 @@ function OrganizationImportListPage() {
 									</SelectContent>
 								</Select>
 								<Select value={statusFilter} onValueChange={setStatusFilter}>
-									<SelectTrigger className='w-full md:w-[190px]'>
+									<SelectTrigger className='w-full'>
 										<SelectValue placeholder='Trạng thái' />
 									</SelectTrigger>
 									<SelectContent>
@@ -475,8 +494,8 @@ function OrganizationImportListPage() {
 					</CardHeader>
 
 					<CardContent className='p-0'>
-						<div className='overflow-x-auto'>
-							<Table>
+						<div className='min-w-0 overflow-x-auto'>
+							<Table className='min-w-[980px]'>
 								<TableHeader>
 									<TableRow>
 										<TableHead className='min-w-[260px]'>
@@ -533,7 +552,6 @@ function OrganizationImportListPage() {
 												{getSortIcon("status")}
 											</Button>
 										</TableHead>
-										<TableHead className='w-[80px] text-right'>Thao tác</TableHead>
 									</TableRow>
 								</TableHeader>
 
@@ -608,9 +626,14 @@ function OrganizationImportListPage() {
 																Xem chi tiết
 															</DropdownMenuItem>
 															<DropdownMenuItem
+																disabled={downloadingId === item.id}
 																onClick={() => void handleDownload(item)}>
-																<Download className='h-4 w-4' />
-																Tải file gốc
+																{downloadingId === item.id ? (
+																	<Loader2 className='h-4 w-4 animate-spin' />
+																) : (
+																	<Download className='h-4 w-4' />
+																)}
+																{downloadingId === item.id ? "Đang tải..." : "Tải file gốc"}
 															</DropdownMenuItem>
 														</DropdownMenuContent>
 													</DropdownMenu>
@@ -742,6 +765,186 @@ function OrganizationImportListPage() {
 				</Card>
 			</div>
 		</div>
+
+		<Sheet open={!!detailItem} onOpenChange={(open) => { if (!open) setDetailItem(null); }}>
+			<SheetContent side='right' className='flex flex-col gap-0 overflow-hidden p-0 sm:max-w-lg'>
+				{detailItem && (
+					<>
+						<SheetHeader className='border-b px-6 py-5'>
+							<div className='flex items-start gap-3 pr-6'>
+								<div className='min-w-0 flex-1 space-y-1'>
+									<SheetTitle className='truncate text-base leading-snug'>
+										{detailItem.file_name}
+									</SheetTitle>
+									<SheetDescription className='line-clamp-2 text-xs'>
+										{detailItem.description}
+									</SheetDescription>
+								</div>
+								<Badge
+									variant='outline'
+									className={cn(
+										"mt-0.5 shrink-0 gap-1.5",
+										statusMeta[detailItem.status].className,
+									)}>
+									{(() => {
+										const Icon = statusMeta[detailItem.status].icon;
+										return <Icon className='h-3 w-3' />;
+									})()}
+									{statusMeta[detailItem.status].label}
+								</Badge>
+							</div>
+						</SheetHeader>
+
+						<div className='flex-1 overflow-y-auto'>
+							{/* Thông tin file */}
+							<div className='space-y-3 px-6 py-4'>
+								<p className='text-[11px] font-semibold uppercase tracking-widest text-muted-foreground'>
+									Thông tin file
+								</p>
+								<div className='grid grid-cols-2 gap-x-6 gap-y-3 text-sm'>
+									<div className='space-y-0.5'>
+										<p className='text-xs text-muted-foreground'>Loại file</p>
+										<Badge variant='outline' className={typeMeta[detailItem.file_type].className}>
+											{detailItem.file_type}
+										</Badge>
+									</div>
+									<div className='space-y-0.5'>
+										<p className='text-xs text-muted-foreground'>Kích thước</p>
+										<p className='font-medium'>{formatFileSize(detailItem.file_size_bytes)}</p>
+									</div>
+									<div className='space-y-0.5'>
+										<p className='text-xs text-muted-foreground'>Người upload</p>
+										<p className='font-medium'>{detailItem.uploaded_by_name}</p>
+									</div>
+									<div className='space-y-0.5'>
+										<p className='text-xs text-muted-foreground'>Thời gian</p>
+										<p className='font-medium'>{formatDateTime(detailItem.uploaded_at)}</p>
+									</div>
+								</div>
+							</div>
+
+							<Separator />
+
+							{/* Kết quả xử lý */}
+							<div className='space-y-4 px-6 py-4'>
+								<p className='text-[11px] font-semibold uppercase tracking-widest text-muted-foreground'>
+									Kết quả xử lý
+								</p>
+								<div className='grid grid-cols-3 gap-2'>
+									<div className='rounded-lg border bg-muted/30 p-3 text-center'>
+										<p className='text-2xl font-bold'>{detailItem.processed_rows}</p>
+										<p className='mt-0.5 text-[11px] text-muted-foreground'>Tổng dòng</p>
+									</div>
+									<div className='rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-center'>
+										<p className='text-2xl font-bold text-emerald-700'>
+											{detailItem.processed_rows - detailItem.errors_count}
+										</p>
+										<p className='mt-0.5 text-[11px] text-emerald-600'>Thành công</p>
+									</div>
+									<div className='rounded-lg border border-rose-200 bg-rose-50 p-3 text-center'>
+										<p className='text-2xl font-bold text-rose-700'>
+											{detailItem.errors_count}
+										</p>
+										<p className='mt-0.5 text-[11px] text-rose-600'>Lỗi</p>
+									</div>
+								</div>
+
+								<div className='space-y-2'>
+									<p className='text-xs font-medium text-muted-foreground'>Đã tạo mới</p>
+									<div className='grid grid-cols-3 gap-2'>
+										{(
+											[
+												{ label: "Khoa", value: detailItem.created_faculties },
+												{ label: "Ngành", value: detailItem.created_majors },
+												{ label: "Lớp", value: detailItem.created_school_classes },
+											] as const
+										).map(({ label, value }) => (
+											<div key={label} className='rounded-md border px-3 py-2 text-center'>
+												<p className='text-lg font-semibold'>{value}</p>
+												<p className='text-[11px] text-muted-foreground'>{label}</p>
+											</div>
+										))}
+									</div>
+								</div>
+
+								<div className='space-y-2'>
+									<p className='text-xs font-medium text-muted-foreground'>Đã tồn tại (bỏ qua)</p>
+									<div className='grid grid-cols-3 gap-2'>
+										{(
+											[
+												{ label: "Khoa", value: detailItem.existing_faculties },
+												{ label: "Ngành", value: detailItem.existing_majors },
+												{ label: "Lớp", value: detailItem.existing_school_classes },
+											] as const
+										).map(({ label, value }) => (
+											<div key={label} className='rounded-md border bg-muted/20 px-3 py-2 text-center'>
+												<p className='text-lg font-semibold text-muted-foreground'>{value}</p>
+												<p className='text-[11px] text-muted-foreground'>{label}</p>
+											</div>
+										))}
+									</div>
+								</div>
+							</div>
+
+							{/* Chi tiết lỗi từng dòng */}
+							{(detailItem.error_details?.length ?? 0) > 0 && (
+								<>
+									<Separator />
+									<div className='space-y-3 px-6 py-4'>
+										<p className='text-[11px] font-semibold uppercase tracking-widest text-muted-foreground'>
+											Chi tiết lỗi ({detailItem.errors_count} dòng)
+										</p>
+										<div className='space-y-1.5'>
+											{detailItem.error_details!.map((err, idx) => (
+												<div
+													key={idx}
+													className='flex gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm'>
+													<span className='shrink-0 font-semibold text-rose-700'>
+														Dòng {err.row}
+													</span>
+													<span className='text-rose-600'>{err.message}</span>
+												</div>
+											))}
+										</div>
+									</div>
+								</>
+							)}
+
+							{/* Lý do thất bại hoàn toàn */}
+							{detailItem.error_message && (detailItem.error_details?.length ?? 0) === 0 && (
+								<>
+									<Separator />
+									<div className='space-y-3 px-6 py-4'>
+										<p className='text-[11px] font-semibold uppercase tracking-widest text-muted-foreground'>
+											Lý do thất bại
+										</p>
+										<div className='rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700'>
+											{detailItem.error_message}
+										</div>
+									</div>
+								</>
+							)}
+						</div>
+
+						<div className='border-t p-4'>
+							<Button
+								variant='outline'
+								className='w-full'
+								disabled={downloadingId === detailItem.id}
+								onClick={() => void handleDownload(detailItem)}>
+								{downloadingId === detailItem.id ? (
+									<Loader2 className='h-4 w-4 animate-spin' />
+								) : (
+									<Download className='h-4 w-4' />
+								)}
+								{downloadingId === detailItem.id ? "Đang tải..." : "Tải file gốc"}
+							</Button>
+						</div>
+					</>
+				)}
+			</SheetContent>
+		</Sheet>
+		</>
 	);
 }
 

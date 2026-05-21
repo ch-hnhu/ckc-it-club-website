@@ -67,6 +67,10 @@
 - `GET /api/v1/majors`
 - `GET /api/v1/roles`
 - `GET /api/v1/school-classes`
+- `POST /api/v1/academic-structure/import`
+- `GET /api/v1/academic-structure/imports`
+- `GET /api/v1/academic-structure/imports/stats`
+- `GET /api/v1/academic-structure/imports/{academicStructureImport}/download`
 - `GET /api/v1/contacts`
 - `PATCH /api/v1/contacts/{contact}/status`
 - `GET /api/v1/club-informations`
@@ -200,7 +204,10 @@
 - admin can create, update, and delete nested values through `/club-informations/{clubInformation}/values`; value payloads support `value`, `link`, `alt`, `position`, and `is_active`.
 - creating/updating club information records and creating/updating nested values dispatch database notifications to admin roles.
 - list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
-- delete flow for parent club information records is still incomplete.
+- create/update/delete flows are still incomplete.
+- `academic_structure_imports`
+- admin academic structure import history for uploaded faculty/major/class files.
+- valid imports support `.xlsx` and `.csv`; unsupported uploaded file extensions are stored as `file_type = Other`, `status = failed`, and returned as validation errors so the admin UI can show failed upload history.
 
 ## Recruitment Domain Rules
 

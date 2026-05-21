@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 
 function formatDate(dateString: string | null) {
@@ -74,10 +73,11 @@ function ApplicationQuestionDetailPage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const breadcrumb = useMemo(
-		() =>
-			getBreadcrumbsFromNavigation("/questions", [
-				{ title: question ? question.label : `Câu hỏi #${questionId ?? "--"}` },
-			]),
+		() => [
+			{ title: "Dashboard", link: "/" },
+			{ title: "Quản lý Câu hỏi ứng tuyển", link: "/questions" },
+			{ title: question ? question.label : `Câu hỏi #${questionId ?? "--"}` },
+		],
 		[question, questionId],
 	);
 

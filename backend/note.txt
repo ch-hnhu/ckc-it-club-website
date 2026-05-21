@@ -3,3 +3,12 @@ php artisan migrate:fresh --seed
 
 # tạo symbolic link để truy cập file trong thư mục storage
 php artisan storage:link
+
+Các điểm cần sửa ở version:
+- thêm thông tin chi tiết (nhiều dòng mẫu) ở file import
+- Xem chi tiết các file tải lên
+- Tải xuống các file
+- Thêm icon cho action của import ds
+- Lỗi tràn giao diện ở trang import
+- Bỏ title thao tác ở trang import
+- Sort cho toàn bộ title ở trang 

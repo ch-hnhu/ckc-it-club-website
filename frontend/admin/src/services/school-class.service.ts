@@ -9,6 +9,7 @@ const schoolClassService = {
 		search?: string;
 		sort?: string;
 		order?: "asc" | "desc";
+		major_id?: number;
 	}): Promise<PaginatedResponse<SchoolClass>> {
 		return api.get("/school-classes", params);
 	},
