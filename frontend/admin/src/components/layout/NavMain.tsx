@@ -56,6 +56,28 @@ export function NavMain({
 			{title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
 			<SidebarMenu>
 				{items.map((item) => {
+					const hasSubItems = Boolean(item.items?.length);
+
+					if (!hasSubItems) {
+						const isActive = pathname === item.url || pathname.startsWith(item.url + "/");
+
+						return (
+							<SidebarMenuItem key={item.title}>
+								<SidebarMenuButton asChild tooltip={item.title} isActive={isActive}>
+									<Link to={item.url}>
+										{item.icon && <item.icon />}
+										<span>{item.title}</span>
+										{typeof item.badge === "number" && item.badge > 0 ? (
+											<span className='ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-sidebar-accent px-1 text-xs font-medium text-sidebar-accent-foreground tabular-nums'>
+												{item.badge > 99 ? "99+" : item.badge}
+											</span>
+										) : null}
+									</Link>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+						);
+					}
+
 					return (
 						<Collapsible
 							key={item.title}

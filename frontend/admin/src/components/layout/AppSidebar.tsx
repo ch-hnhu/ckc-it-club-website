@@ -15,16 +15,16 @@ import {
 	SidebarRail,
 } from "@/components/ui/sidebar";
 import contactService from "@/services/contact.service";
-import userService from "@/services/user.service";
+import { useAuth } from "@/contexts/AuthContext";
 import type { AdminNavItem } from "@/config/navigation";
 import type { ContactStats } from "@/types/contact.type";
-import type { User as UserType } from "@/types/user.type";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-	const [user, setUser] = useState<UserType | null>(null);
+	const { user, hasPermission, hasAnyPermission } = useAuth();
 	const [contactStats, setContactStats] = useState<ContactStats | null>(null);
 
 	const fetchContactStats = () => {
+		if (!hasPermission("contacts.view")) return;
 		contactService
 			.getStats()
 			.then((stats) => setContactStats(stats))
@@ -32,37 +32,43 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	};
 
 	useEffect(() => {
-		userService
-			.getMe()
-			.then((response) => {
-				if (response.success) {
-					setUser(response.data);
-				}
-			})
-			.catch((err) => console.error("Failed to fetch user", err));
-	}, []);
-
-	useEffect(() => {
-		const handleContactStatsRefresh = () => {
-			fetchContactStats();
-		};
-
+		const handleContactStatsRefresh = () => fetchContactStats();
 		fetchContactStats();
 		window.addEventListener("contacts:stats-refresh", handleContactStatsRefresh);
-
-		return () => {
+		return () =>
 			window.removeEventListener("contacts:stats-refresh", handleContactStatsRefresh);
-		};
-	}, []);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [user]);
 
-	const navItems: AdminNavItem[] = adminNavMain.map((item) =>
-		item.url === "/contacts"
-			? {
-					...item,
-					badge: contactStats?.pending ?? 0,
-				}
-			: item,
-	);
+	const filteredNavItems: AdminNavItem[] = adminNavMain
+		.map((item) => {
+			const visibleChildren = item.items?.filter(
+				(child) => !child.permission || hasPermission(child.permission),
+			);
+
+			const withBadge =
+				item.url === "/contacts" ? { ...item, badge: contactStats?.pending ?? 0 } : item;
+
+			return { ...withBadge, items: visibleChildren };
+		})
+		.filter((item) => {
+			if (!item.items || item.items.length === 0) return false;
+			return (
+				!item.permission ||
+				hasPermission(item.permission) ||
+				hasAnyPermission(item.items.map((c) => c.permission).filter(Boolean) as string[])
+			);
+		});
+
+	const navUser = user
+		? {
+				id: user.id,
+				full_name: user.full_name,
+				email: user.email,
+				avatar: user.avatar,
+				roles: user.roles,
+			}
+		: null;
 
 	return (
 		<Sidebar collapsible='icon' {...props}>
@@ -70,10 +76,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				<TeamSwitcher teams={adminNavHead} />
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain items={navItems} title='General' />
+				<NavMain items={filteredNavItems} title='General' />
 			</SidebarContent>
 			<SidebarFooter>
-				<NavUser user={user} />
+				<NavUser user={navUser as any} />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>

@@ -75,7 +75,9 @@
 - `/contacts`
 - contact management list with real backend data and status updates
 - `/divisions`
-- division management dashboard for the 3 fixed club divisions: academic, volunteer, and event
+- division management dashboard for the 3 fixed club divisions: academic, volunteer, and communication
+- `/organization/upload`
+- academic structure import history and upload flow for faculty, major, and class files
 - `/club-informations`
 - club information list backed by `GET /club-informations` with search, sort, and pagination
 - `/requests`
@@ -236,9 +238,22 @@
 - status update is live against backend `PATCH /contacts/{contact}/status`
 - Club information management:
 - route `/club-informations`
-- server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
+- route `/club-informations/:id`
+- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
+- detail uses `clubInformationService.getClubInformation(id, params)`; the nested value table supports API-driven search/sort and local pagination.
+- image and banner rows render the thumbnail preview and URL in the same value cell, matching the user list pattern; there is no separate image column.
+- the nested value table supports sorting by `alt` for image rows and `link`/`position` for banner rows in addition to the existing value/date/status keys.
+- backend `show()` whitelists `alt`, `link`, and `position` for nested value sorting so those headers sort server-side instead of falling back to `created_at`.
+- detail can switch the parent information card into an inline edit form and submit through `clubInformationService.updateClubInformation`.
+- detail value rows can be deleted after confirmation through `clubInformationService.deleteClubInformationValue`.
+- detail can create nested values from a modal through `clubInformationService.createClubInformationValue`, then refreshes the value table.
+- detail value popup can switch from read-only view to edit mode and submit through `clubInformationService.updateClubInformationValue`.
 - date fields are displayed directly from the API, which formats them as `d/m/Y`
 - current admin UI is list-only because no create/update/detail route is wired yet
+- Academic structure import:
+- route `/organization/upload`
+- imports faculty/major/class data through `POST /academic-structure/import`
+- wrong file formats are shown as failed history rows after backend stores them as `file_type = Other`
 
 ## Environment Variables
 
@@ -305,5 +320,6 @@ npm run dev
 - `2026-04-20`: Added reusable shadcn-style `ui/combobox` component (Command + Popover) with optional search and multiple select support, and migrated CreateUser faculty/major/class fields to searchable comboboxes.
 - `2026-04-20`: Wired `/users/create` route in router, connected User list "Thêm" button to navigate there, and implemented full shadcn CreateUser form UI with avatar preview and dependent faculty-major-class selectors.
 - `2026-04-23`: Added admin contact management route `/contacts`, sidebar entry, `contact.service.ts`, and live status updates backed by the Laravel API.
-- `2026-05-12`: Added admin route `/divisions` with a local-data management dashboard for the 3 fixed club divisions (academic, volunteer, event).
+- `2026-05-20`: Updated admin division management so the third fixed division is Communication instead of Event.
+- `2026-05-12`: Added admin route `/divisions` with a local-data management dashboard for the 3 fixed club divisions (academic, volunteer, communication).
 - `2026-04-08`: Replaced scaffold with full admin frontend audit. Added route surface, auth/session model, service conventions, UI system notes, env requirements, and known gap inventory.

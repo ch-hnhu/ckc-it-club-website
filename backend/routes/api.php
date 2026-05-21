@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Admin\ClubInformationController;
@@ -17,6 +18,8 @@ use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
 
 Route::prefix('v1')->group(function () {
+
+    // public
     Route::get('/health', function () {
         return response()->json([
             'success' => true,
@@ -29,36 +32,119 @@ Route::prefix('v1')->group(function () {
     Route::get('/auth/verify-token', [AuthController::class, 'verifyToken']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
 
+    // auth
     Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     });
 
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::middleware('role:admin')->group(function () {
-            Route::get('/', [DashboardController::class, 'index']);
+    // admin routes
+    Route::middleware(['auth:sanctum', 'permission:admin_panel.access'])->group(function () {
 
-            Route::apiResource('users', UserController::class);
-            Route::apiResource('roles', RoleController::class);
-            Route::apiResource('club-informations', ClubInformationController::class);
+        // dashboard
+        Route::middleware('permission:dashboard.view')
+            ->get('/', [DashboardController::class, 'index']);
+
+        // notifications
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [NotificationController::class, 'index']);
+            Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
+            Route::patch('/read-all', [NotificationController::class, 'markAllAsRead']);
+            Route::patch('/{id}/read', [NotificationController::class, 'markAsRead']);
+        });
+
+        // users
+        Route::middleware('permission:users.view')->group(function () {
+            Route::get('users', [UserController::class, 'index']);
+            Route::get('users/{user}', [UserController::class, 'show']);
+        });
+        Route::middleware('permission:users.create')
+            ->post('users', [UserController::class, 'store']);
+        Route::middleware('permission:users.update')->group(function () {
+            Route::put('users/{user}', [UserController::class, 'update']);
+            Route::patch('users/{user}', [UserController::class, 'update']);
+        });
+        Route::middleware('permission:users.delete')
+            ->delete('users/{user}', [UserController::class, 'destroy']);
+
+        // roles
+        Route::middleware('permission:roles.view')->group(function () {
+            Route::get('roles', [RoleController::class, 'index']);
+            Route::get('roles/{role}', [RoleController::class, 'show']);
+        });
+        Route::middleware('permission:roles.manage')->group(function () {
+            Route::post('roles', [RoleController::class, 'store']);
+            Route::put('roles/{role}', [RoleController::class, 'update']);
+            Route::patch('roles/{role}', [RoleController::class, 'update']);
+            Route::delete('roles/{role}', [RoleController::class, 'destroy']);
+            Route::post('roles/{role}/permissions', [RoleController::class, 'syncPermissions']);
+        });
+
+        // permissions
+        Route::middleware('permission:permissions.view')
+            ->get('permissions', [PermissionController::class, 'index']);
+
+        // club-informations
+        Route::middleware('permission:club_info.view')->group(function () {
+            Route::get('club-informations', [ClubInformationController::class, 'index']);
+            Route::get('club-informations/{clubInformation}', [ClubInformationController::class, 'show']);
+        });
+        Route::middleware('permission:club_info.manage')->group(function () {
+            Route::post('club-informations', [ClubInformationController::class, 'store']);
+            Route::put('club-informations/{clubInformation}', [ClubInformationController::class, 'update']);
+            Route::patch('club-informations/{clubInformation}', [ClubInformationController::class, 'update']);
+            Route::delete('club-informations/{clubInformation}', [ClubInformationController::class, 'destroy']);
+
+            Route::post('club-informations/{clubInformation}/values', [ClubInformationController::class, 'storeValue']);
+            Route::put('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
+            Route::patch('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
+            Route::delete('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'destroyValue']);
+        });
+
+        // contacts
+        Route::middleware('permission:contacts.view')->group(function () {
+            Route::get('contacts/stats', [AdminContactController::class, 'stats']);
+            Route::get('contacts', [AdminContactController::class, 'index']);
+        });
+        Route::middleware('permission:contacts.manage')
+            ->patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+
+        // club applications
+        Route::middleware('permission:applications.view')
+            ->get('club-applications', [ClubApplicationController::class, 'index']);
+        Route::middleware('permission:applications.manage')
+            ->patch('club-applications/{clubApplication}/status', [ClubApplicationController::class, 'updateStatus']);
+
+        // application questions
+        Route::middleware('permission:application_questions.view')->group(function () {
+            Route::get('application-questions', [ApplicationQuestionController::class, 'index']);
+            Route::get('application-questions/{applicationQuestion}', [ApplicationQuestionController::class, 'show']);
+        });
+        Route::middleware('permission:application_questions.manage')->group(function () {
+            Route::patch('application-questions/reorder', [ApplicationQuestionController::class, 'reorder']);
+            Route::post('application-questions', [ApplicationQuestionController::class, 'store']);
+            Route::put('application-questions/{applicationQuestion}', [ApplicationQuestionController::class, 'update']);
+            Route::patch('application-questions/{applicationQuestion}', [ApplicationQuestionController::class, 'update']);
+            Route::delete('application-questions/{applicationQuestion}', [ApplicationQuestionController::class, 'destroy']);
+        });
+
+        // academic structure
+        Route::middleware('permission:academic_structure.import')->group(function () {
             Route::post('academic-structure/import', [AcademicStructureController::class, 'import']);
+        });
+        Route::middleware('permission:academic_data.view')->group(function () {
             Route::get('academic-structure/imports/stats', [AcademicStructureController::class, 'stats']);
             Route::get('academic-structure/imports', [AcademicStructureController::class, 'index']);
             Route::get('academic-structure/imports/{academicStructureImport}/download', [AcademicStructureController::class, 'download']);
-            Route::apiResource('permissions', PermissionController::class);
-            Route::apiResource('faculties', FacultyController::class)->except(['create', 'edit']);
-            Route::apiResource('majors', MajorController::class)->except(['create', 'edit']);
-            Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit']);
-            Route::get('contacts/stats', [AdminContactController::class, 'stats']);
-            Route::get('contacts', [AdminContactController::class, 'index']);
-            Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
-
-            // Club applications
-            Route::get('club-applications', [ClubApplicationController::class, 'index']);
-            Route::patch('club-applications/{clubApplication}/status', [ClubApplicationController::class, 'updateStatus']);
-            Route::patch('application-questions/reorder', [ApplicationQuestionController::class, 'reorder']);
-            Route::apiResource('application-questions', ApplicationQuestionController::class);
+            Route::apiResource('faculties', FacultyController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
+            Route::apiResource('majors', MajorController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
+            Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
+        });
+        Route::middleware('permission:academic_structure.import')->group(function () {
+            Route::apiResource('faculties', FacultyController::class)->only(['store', 'update', 'destroy']);
+            Route::apiResource('majors', MajorController::class)->only(['store', 'update', 'destroy']);
+            Route::apiResource('school-classes', SchoolClassController::class)->only(['store', 'update', 'destroy']);
         });
     });
 });

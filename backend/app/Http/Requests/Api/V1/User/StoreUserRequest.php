@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Api\V1\User;
 
+use App\Enums\RolesEnum;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -70,6 +72,30 @@ class StoreUserRequest extends FormRequest
             'avatar.mimes' => 'Ảnh đại diện phải có định dạng png, jpg hoặc webp.',
             'avatar.max' => 'Ảnh đại diện không được lớn hơn 2MB.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $roles = $this->input('roles', []);
+            $uniqueRoles = RolesEnum::adminRoles();
+
+            foreach ($roles as $role) {
+                if (in_array($role, $uniqueRoles)) {
+                    $exists = User::whereHas('roles', function ($q) use ($role) {
+                        $q->where('name', $role);
+                    })->exists();
+
+                    if ($exists) {
+                        $label = RolesEnum::from($role)->label();
+                        $validator->errors()->add(
+                            'roles',
+                            "Đã tồn tại người dùng với vai trò '{$label}'."
+                        );
+                    }
+                }
+            }
+        });
     }
 
     /**

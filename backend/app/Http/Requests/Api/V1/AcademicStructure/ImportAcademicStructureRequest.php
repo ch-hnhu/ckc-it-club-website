@@ -17,7 +17,7 @@ class ImportAcademicStructureRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:5120', 'mimes:xlsx,csv,txt'],
+            'file' => ['required', 'file', 'max:5120'],
         ];
     }
 
@@ -30,7 +30,6 @@ class ImportAcademicStructureRequest extends FormRequest
             'file.required' => 'Vui lòng chọn file để import.',
             'file.file' => 'Tệp tải lên không hợp lệ.',
             'file.max' => 'Dung lượng file không được vượt quá 5MB.',
-            'file.mimes' => 'Chỉ hỗ trợ file .xlsx hoặc .csv.',
         ];
     }
 }

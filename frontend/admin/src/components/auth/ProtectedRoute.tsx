@@ -1,42 +1,45 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { authService } from "@/services/auth.service";
 import { Loader2 } from "lucide-react";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import type { CurrentUser } from "@/types/user.type";
 
-interface ProtectedRouteProps {
-	children: React.ReactNode;
-}
+// ─── Inner component (bên trong AuthProvider) ────────────────────────────────
 
-function ProtectedRoute({ children }: ProtectedRouteProps) {
-	const [isLoading, setIsLoading] = useState(true);
-	const [isAuthenticated, setIsAuthenticated] = useState(false);
+function AuthChecker({ children }: { children: React.ReactNode }) {
+	const { user, isLoading, setCurrentUser, setIsLoading } = useAuth();
 	const location = useLocation();
 
 	useEffect(() => {
 		const checkAuth = async () => {
 			const token = localStorage.getItem("access_token");
-			
+
 			if (!token) {
 				setIsLoading(false);
 				return;
 			}
 
 			try {
-				// Verify token with backend
 				const response = await authService.getMe();
-				setIsAuthenticated(response.success);
-			} catch (error) {
-				console.error("Auth check failed:", error);
-				// Clear invalid token
+				if (response.success) {
+					setCurrentUser(response.data as CurrentUser);
+				} else {
+					localStorage.removeItem("access_token");
+					localStorage.removeItem("user");
+					setCurrentUser(null);
+				}
+			} catch {
 				localStorage.removeItem("access_token");
 				localStorage.removeItem("user");
-				setIsAuthenticated(false);
+				setCurrentUser(null);
 			} finally {
 				setIsLoading(false);
 			}
 		};
 
 		checkAuth();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	if (isLoading) {
@@ -50,12 +53,21 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
 		);
 	}
 
-	if (!isAuthenticated) {
-		// Redirect to login with return url
+	if (!user) {
 		return <Navigate to="/login" state={{ from: location }} replace />;
 	}
 
 	return <>{children}</>;
+}
+
+// ─── ProtectedRoute — bọc AuthProvider bên ngoài ─────────────────────────────
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+	return (
+		<AuthProvider>
+			<AuthChecker>{children}</AuthChecker>
+		</AuthProvider>
+	);
 }
 
 export default ProtectedRoute;

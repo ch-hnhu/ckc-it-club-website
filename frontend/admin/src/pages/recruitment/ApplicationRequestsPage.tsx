@@ -7,7 +7,9 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	Eye,
 	MoreHorizontal,
+	RefreshCw,
 	Settings2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -61,7 +63,6 @@ import {
 	getStatusBadge,
 	getStatusConfig,
 } from "./application-detail-shared";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
@@ -103,7 +104,13 @@ function getSortValue(application: ClubApplicationRecord, key: SortKey) {
 }
 
 function ApplicationRequestsPage() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/requests"), []);
+	const breadcrumb = useMemo(
+		() => [
+			{ title: "Dashboard", link: "/" },
+			{ title: "Quản lý Yêu cầu tham gia" },
+		],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 
@@ -385,7 +392,6 @@ function ApplicationRequestsPage() {
 										{getSortIcon("updated_at")}
 									</Button>
 								</TableHead>
-								<TableHead className='w-[80px] text-right'>Hành động</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -462,6 +468,7 @@ function ApplicationRequestsPage() {
 																	`/requests/${application.id}`,
 																)
 															}>
+															<Eye className='h-4 w-4' />
 															Xem chi tiết
 														</DropdownMenuItem>
 														<DropdownMenuItem
@@ -471,6 +478,7 @@ function ApplicationRequestsPage() {
 															disabled={
 																availableStatuses.length === 0
 															}>
+															<RefreshCw className='h-4 w-4' />
 															Cập nhật trạng thái
 														</DropdownMenuItem>
 													</DropdownMenuContent>

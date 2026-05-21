@@ -21,7 +21,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { cn } from "@/lib/utils";
 import applicationService from "@/services/application.service";
@@ -101,7 +100,13 @@ function MetricCard({
 }
 
 function ApplicationAnswersPage() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/answers"), []);
+	const breadcrumb = useMemo(
+		() => [
+			{ title: "Dashboard", link: "/" },
+			{ title: "Quản lý Câu trả lời" },
+		],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 

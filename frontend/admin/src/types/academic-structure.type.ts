@@ -19,7 +19,7 @@ export interface AcademicStructureImportSummary {
 }
 
 export type AcademicStructureImportStatus = "completed" | "failed";
-export type AcademicStructureImportFileType = "Excel" | "CSV" | "ZIP";
+export type AcademicStructureImportFileType = "Excel" | "CSV" | "ZIP" | "Other";
 
 export interface AcademicStructureImportRecord {
 	id: number;
@@ -33,6 +33,13 @@ export interface AcademicStructureImportRecord {
 	processed_rows: number;
 	errors_count: number;
 	error_message: string | null;
+	created_faculties: number;
+	created_majors: number;
+	created_school_classes: number;
+	existing_faculties: number;
+	existing_majors: number;
+	existing_school_classes: number;
+	error_details: AcademicStructureImportError[] | null;
 }
 
 export interface AcademicStructureImportStats {
