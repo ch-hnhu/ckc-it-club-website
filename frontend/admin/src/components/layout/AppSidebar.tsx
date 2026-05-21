@@ -52,7 +52,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			return { ...withBadge, items: visibleChildren };
 		})
 		.filter((item) => {
-			if (!item.items || item.items.length === 0) return false;
+			if (!item.items || item.items.length === 0) {
+				return !item.permission || hasPermission(item.permission);
+			}
+
 			return (
 				!item.permission ||
 				hasPermission(item.permission) ||
