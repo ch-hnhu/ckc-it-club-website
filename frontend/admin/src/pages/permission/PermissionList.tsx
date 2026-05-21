@@ -38,11 +38,11 @@ import {
 } from "lucide-react";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import permissionService from "@/services/permission.service";
+import roleService from "@/services/role.service";
 import type { Permission } from "@/types/permission.type";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Combobox } from "@/components/ui/combobox";
-import type { RoleEnum } from "@/types/role.type";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { CompactBadgeList } from "@/components/ui/compact-badge-list";
 
 function PermissionList() {
@@ -55,10 +55,8 @@ function PermissionList() {
 	});
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
-	const [roleFilter, setRoleFilter] = useState<RoleEnum | string>("");
-	const [roleOptions] = useState<Array<{ value: string; label: string }>>([
-		{ value: "", label: "Tất cả vai trò" },
-	]);
+	const [roleFilters, setRoleFilters] = useState<string[]>([]);
+	const [roleOptions, setRoleOptions] = useState<ComboboxOption[]>([]);
 	const [sortConfig, setSortConfig] = useState<{
 		key: string | null;
 		order: "asc" | "desc" | null;
@@ -74,6 +72,23 @@ function PermissionList() {
 
 	useBreadcrumb(breadcrumb);
 
+	useEffect(() => {
+		const loadRoles = async () => {
+			try {
+				const response = await roleService.getRoles({ per_page: 100 });
+				setRoleOptions(
+					response.data.map((role) => ({
+						value: role.value,
+						label: role.label,
+					})),
+				);
+			} catch (error) {
+				console.error("Không thể tải danh sách vai trò:", error);
+			}
+		};
+		loadRoles();
+	}, []);
+
 	// Debounce search
 	useEffect(() => {
 		const handler = setTimeout(() => {
@@ -84,11 +99,11 @@ function PermissionList() {
 
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
-	}, [debouncedSearch, sortConfig]);
+	}, [debouncedSearch, sortConfig, roleFilters]);
 
 	useEffect(() => {
 		fetchPermissions();
-	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
+	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig, roleFilters]);
 
 	const fetchPermissions = async () => {
 		try {
@@ -98,6 +113,7 @@ function PermissionList() {
 				search: debouncedSearch,
 				sort: sortConfig.key || undefined,
 				order: sortConfig.order || undefined,
+				roles: roleFilters.length > 0 ? roleFilters : undefined,
 			});
 			setPermissions(response.data);
 			setMeta({
@@ -156,26 +172,15 @@ function PermissionList() {
 					</div>
 					<div className='flex items-center gap-2'>
 						<Combobox
-							value={(roleFilter as string) || ""}
-							onValueChange={(value) => setRoleFilter(value)}
+							multiple
+							value={roleFilters}
+							onValueChange={setRoleFilters}
 							options={roleOptions}
 							placeholder='Lọc theo vai trò'
 							searchPlaceholder='Tìm vai trò...'
 							triggerClassName='h-8 w-full sm:max-w-sm flex-1
 							min-w-[250px]'
-							h-8
-							w-full
-							sm:max-w-sm
-							flex-1
-							min-w-0
 						/>
-						<Button
-							size='sm'
-							onClick={() => "TODO: Open create permission modal"}
-							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
-							<Plus className='h-4 w-4' />
-							Thêm
-						</Button>
 					</div>
 				</div>
 				<div className='overflow-hidden rounded-md border'>

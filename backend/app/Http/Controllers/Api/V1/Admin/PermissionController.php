@@ -16,6 +16,7 @@ class PermissionController extends BaseApiController
         $order = $request->query('order', 'desc');
         $perPage = $request->query('per_page', 10);
         $search = $request->query('search');
+        $roles = $request->input('roles', []);
 
         $permission = Permission::query()
             ->with('roles:id,name,label')
@@ -23,6 +24,11 @@ class PermissionController extends BaseApiController
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
                         ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
+            ->when(!empty($roles), function ($query) use ($roles) {
+                $query->whereHas('roles', function ($q) use ($roles) {
+                    $q->whereIn('name', $roles);
                 });
             })
             ->orderBy($sort, $order)

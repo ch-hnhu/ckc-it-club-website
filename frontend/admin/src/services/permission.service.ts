@@ -9,6 +9,7 @@ const permissionService = {
 		search?: string;
 		sort?: string;
 		order?: "asc" | "desc";
+		roles?: string[];
 	}): Promise<PaginatedResponse<Permission>> {
 		return api.get("/permissions", params);
 	},
