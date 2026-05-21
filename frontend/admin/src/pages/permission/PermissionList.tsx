@@ -44,6 +44,7 @@ import { useTableSelection } from "@/hooks/useTableSelection";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { CompactBadgeList } from "@/components/ui/compact-badge-list";
+import PermissionDetailModal from "@/pages/permission/PermissionDetailModal";
 
 function PermissionList() {
 	const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -57,6 +58,8 @@ function PermissionList() {
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [roleFilters, setRoleFilters] = useState<string[]>([]);
 	const [roleOptions, setRoleOptions] = useState<ComboboxOption[]>([]);
+	const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null);
+	const [detailOpen, setDetailOpen] = useState(false);
 	const [sortConfig, setSortConfig] = useState<{
 		key: string | null;
 		order: "asc" | "desc" | null;
@@ -270,7 +273,11 @@ function PermissionList() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
-												<DropdownMenuItem>
+												<DropdownMenuItem
+													onClick={() => {
+														setSelectedPermission(permission);
+														setDetailOpen(true);
+													}}>
 													<Eye className='h-4 w-4' />
 													Chi tiết
 												</DropdownMenuItem>
@@ -396,6 +403,12 @@ function PermissionList() {
 					</Table>
 				</div>
 			</div>
+
+			<PermissionDetailModal
+				permission={selectedPermission}
+				open={detailOpen}
+				onOpenChange={setDetailOpen}
+			/>
 		</div>
 	);
 }
