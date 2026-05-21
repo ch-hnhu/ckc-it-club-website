@@ -14,7 +14,7 @@ function NotificationsPage() {
 	const navigate = useNavigate();
 
 	const [notifications, setNotifications] = useState<Notification[]>([]);
-	const [page, setPage] = useState(1);
+	const [, setPage] = useState(1);
 	const [hasMore, setHasMore] = useState(true);
 	const [loading, setLoading] = useState(false);
 	const [total, setTotal] = useState(0);
