@@ -37,6 +37,15 @@ const facultyService = {
 	async deleteFaculty(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/faculties/${id}`);
 	},
+
+	async bulkDeleteFaculties(
+		ids: number[],
+	): Promise<ApiResponse<{ deleted: number; errors: string[] }>> {
+		return api.post<ApiResponse<{ deleted: number; errors: string[] }>, { ids: number[] }>(
+			"/faculties/bulk-delete",
+			{ ids },
+		);
+	},
 };
 
 export default facultyService;

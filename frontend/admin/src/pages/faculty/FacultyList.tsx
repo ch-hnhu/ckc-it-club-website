@@ -43,6 +43,7 @@ import {
 	ChevronsRight,
 	MoreHorizontal,
 	Plus,
+	Trash2,
 } from "lucide-react";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
@@ -76,7 +77,8 @@ function FacultyList() {
 	});
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
-	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+	const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+	const { allSelected, isSelected, selectedIds, toggleAll, toggleOne } = useTableSelection(
 		faculties.map((faculty) => faculty.id),
 	);
 
@@ -141,6 +143,30 @@ function FacultyList() {
 	const formatDate = (value: string | null) => {
 		if (!value) return "N/A";
 		return new Date(value).toLocaleDateString("vi-VN");
+	};
+
+	const handleBulkDelete = async () => {
+		if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.length} khoa đã chọn?`)) return;
+
+		setIsBulkDeleting(true);
+		try {
+			const res = await facultyService.bulkDeleteFaculties(selectedIds);
+			const { deleted, errors } = res.data;
+
+			if (errors.length === 0) {
+				toast.success(`Đã xóa ${deleted} khoa thành công.`);
+			} else {
+				toast.warning(`Đã xóa ${deleted}/${selectedIds.length} khoa. ${errors.length} khoa không thể xóa.`);
+				errors.forEach((msg) => toast.error(msg, { duration: 6000 }));
+			}
+
+			await fetchFaculties();
+		} catch (error) {
+			const responseData = (error as AxiosError<ApiErrorResponse>).response?.data;
+			toast.error(responseData?.message ?? "Không thể xóa các khoa đã chọn.");
+		} finally {
+			setIsBulkDeleting(false);
+		}
 	};
 
 	const handleDelete = async (faculty: Faculty) => {
@@ -321,12 +347,29 @@ function FacultyList() {
 							<TableRow>
 								<TableCell colSpan={7}>
 									<div className='flex items-center justify-between px-2'>
-										<div className='flex-1 text-sm text-muted-foreground'>
-											{faculties.length} of {meta.total} row(s) displayed.
+										<div className='flex flex-1 items-center gap-3 text-sm text-muted-foreground'>
+											Hiển thị {faculties.length} / {meta.total} khoa.
+											{selectedIds.length > 0 && (
+												<>
+													<span className='text-border'>|</span>
+													<span className='font-medium text-foreground'>
+														{selectedIds.length} khoa được chọn
+													</span>
+													<Button
+														size='sm'
+														variant='destructive'
+														disabled={isBulkDeleting}
+														onClick={() => void handleBulkDelete()}
+														className='h-7'>
+														<Trash2 className='h-3.5 w-3.5' />
+														{isBulkDeleting ? "Đang xóa..." : "Xóa đã chọn"}
+													</Button>
+												</>
+											)}
 										</div>
 										<div className='flex items-center space-x-6 lg:space-x-8'>
 											<div className='flex items-center space-x-2'>
-												<p className='text-sm font-medium'>Rows per page</p>
+												<p className='text-sm font-medium'>Số hàng mỗi trang</p>
 												<Select
 													value={`${meta.per_page}`}
 													onValueChange={(value) =>
@@ -352,8 +395,8 @@ function FacultyList() {
 													</SelectContent>
 												</Select>
 											</div>
-											<div className='flex w-[100px] items-center justify-center text-sm font-medium'>
-												Page {meta.current_page} of {meta.last_page}
+											<div className='flex w-[120px] items-center justify-center text-sm font-medium'>
+												Trang {meta.current_page} / {meta.last_page}
 											</div>
 											<div className='flex items-center space-x-2'>
 												<Button
@@ -366,9 +409,7 @@ function FacultyList() {
 														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>
-														Go to first page
-													</span>
+													<span className='sr-only'>Trang đầu</span>
 													<ChevronsLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -381,9 +422,7 @@ function FacultyList() {
 														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>
-														Go to previous page
-													</span>
+													<span className='sr-only'>Trang trước</span>
 													<ChevronLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -396,7 +435,7 @@ function FacultyList() {
 														}))
 													}
 													disabled={meta.current_page === meta.last_page}>
-													<span className='sr-only'>Go to next page</span>
+													<span className='sr-only'>Trang sau</span>
 													<ChevronRight className='h-4 w-4' />
 												</Button>
 												<Button
@@ -409,7 +448,7 @@ function FacultyList() {
 														}))
 													}
 													disabled={meta.current_page === meta.last_page}>
-													<span className='sr-only'>Go to last page</span>
+													<span className='sr-only'>Trang cuối</span>
 													<ChevronsRight className='h-4 w-4' />
 												</Button>
 											</div>
