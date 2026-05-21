@@ -114,11 +114,15 @@ const getInitialValueForm = (): ValueFormState => ({
 	is_active: true,
 });
 
+const HTML_VALUE_TEXTAREA_CLASS =
+	"min-h-32 max-h-64 resize-y overflow-y-auto [field-sizing:fixed] whitespace-pre-wrap break-words";
+
 const getValueFormFromRecord = (record: ClubInformationValue): ValueFormState => ({
 	value: record.value ?? "",
 	link: record.link ?? "",
 	alt: record.alt ?? "",
-	position: record.position === null || record.position === undefined ? "" : String(record.position),
+	position:
+		record.position === null || record.position === undefined ? "" : String(record.position),
 	is_active: record.is_active !== false,
 });
 
@@ -215,9 +219,7 @@ function ClubInformationDetailPage() {
 	const [valueFieldErrors, setValueFieldErrors] = useState<ValueFieldErrors>({});
 	const [valueSubmitting, setValueSubmitting] = useState(false);
 	const [selectedValue, setSelectedValue] = useState<ClubInformationValue | null>(null);
-	const [valuePendingDelete, setValuePendingDelete] = useState<ClubInformationValue | null>(
-		null,
-	);
+	const [valuePendingDelete, setValuePendingDelete] = useState<ClubInformationValue | null>(null);
 	const [valueDeleting, setValueDeleting] = useState(false);
 	const [isEditingValue, setIsEditingValue] = useState(false);
 	const [detailValueForm, setDetailValueForm] = useState<ValueFormState>(getInitialValueForm);
@@ -299,7 +301,8 @@ function ClubInformationDetailPage() {
 	const isImageType = info?.type === "image" || info?.type === "banner";
 	const isBannerType = info?.type === "banner";
 	const isBooleanType = info?.type === "boolean";
-	const tableColSpan = 7 + (isImageType ? 1 : 0) + (isBannerType ? 2 : 0) - (isBooleanType ? 1 : 0);
+	const tableColSpan =
+		7 + (isImageType ? 1 : 0) + (isBannerType ? 2 : 0) - (isBooleanType ? 1 : 0);
 	const valueColLabel = isImageType
 		? "Ảnh"
 		: info?.type === "url"
@@ -309,9 +312,9 @@ function ClubInformationDetailPage() {
 				: "Nội dung";
 	const selectedValuePreview = isEditingValue
 		? detailValueForm.value
-		: selectedValue?.value ?? "";
-	const selectedAltPreview = isEditingValue ? detailValueForm.alt : selectedValue?.alt ?? "";
-	const selectedLinkPreview = isEditingValue ? detailValueForm.link : selectedValue?.link ?? "";
+		: (selectedValue?.value ?? "");
+	const selectedAltPreview = isEditingValue ? detailValueForm.alt : (selectedValue?.alt ?? "");
+	const selectedLinkPreview = isEditingValue ? detailValueForm.link : (selectedValue?.link ?? "");
 
 	const valLastPage = Math.max(1, Math.ceil(sortedValues.length / valPerPage));
 
@@ -693,7 +696,7 @@ function ClubInformationDetailPage() {
 				<Button asChild variant='outline' className='w-fit'>
 					<Link to='/club-informations'>
 						<ArrowLeft className='h-4 w-4' />
-						Quay lại danh sách
+						Quay lại
 					</Link>
 				</Button>
 				<Card>
@@ -713,7 +716,7 @@ function ClubInformationDetailPage() {
 			<Button asChild variant='outline' className='w-fit'>
 				<Link to='/club-informations'>
 					<ArrowLeft className='h-4 w-4' />
-					Quay lại danh sách
+					Quay lại
 				</Link>
 			</Button>
 
@@ -995,7 +998,11 @@ function ClubInformationDetailPage() {
 									size='sm'
 									onClick={() => handleAddValueDialogOpenChange(true)}
 									disabled={isBooleanType && values.length >= 1}
-									title={isBooleanType && values.length >= 1 ? "Cấu hình boolean chỉ được có 1 giá trị" : undefined}
+									title={
+										isBooleanType && values.length >= 1
+											? "Cấu hình boolean chỉ được có 1 giá trị"
+											: undefined
+									}
 									className='h-8 bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50'>
 									<Plus className='h-4 w-4' />
 									Thêm
@@ -1227,7 +1234,9 @@ function ClubInformationDetailPage() {
 												{!isBooleanType && (
 													<TableCell>
 														<CompactBadgeList
-															items={getStatusBadgeItems(val.is_active)}
+															items={getStatusBadgeItems(
+																val.is_active,
+															)}
 															maxVisibleItems={1}
 														/>
 													</TableCell>
@@ -1253,10 +1262,10 @@ function ClubInformationDetailPage() {
 														<DropdownMenuContent
 															align='end'
 															className='w-[160px]'>
-																<DropdownMenuItem
-																	onClick={() =>
-																		openValueDetail(val)
-																	}>
+															<DropdownMenuItem
+																onClick={() =>
+																	openValueDetail(val)
+																}>
 																<Eye className='h-4 w-4' />
 																Chi tiết
 															</DropdownMenuItem>
@@ -1399,8 +1408,8 @@ function ClubInformationDetailPage() {
 								{valuePendingDelete?.value ?? ""}
 							</span>
 							<span className='block break-words'>
-								sẽ bị xóa khỏi cấu hình "{info.label}". Hành động này không thể
-								hoàn tác.
+								sẽ bị xóa khỏi cấu hình "{info.label}". Hành động này không thể hoàn
+								tác.
 							</span>
 						</AlertDialogDescription>
 					</AlertDialogHeader>
@@ -1419,7 +1428,7 @@ function ClubInformationDetailPage() {
 			</AlertDialog>
 
 			<Dialog open={isAddValueDialogOpen} onOpenChange={handleAddValueDialogOpenChange}>
-				<DialogContent className='sm:max-w-[540px]'>
+				<DialogContent className='max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[540px]'>
 					<DialogHeader>
 						<DialogTitle>
 							Thêm giá trị —{" "}
@@ -1456,9 +1465,9 @@ function ClubInformationDetailPage() {
 									</SelectContent>
 								</Select>
 							) : info.type === "html" ? (
-								<textarea
+								<Textarea
 									id='val_value'
-									className='flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
+									className={HTML_VALUE_TEXTAREA_CLASS}
 									placeholder='Nhập nội dung HTML...'
 									value={valueForm.value}
 									onChange={(e) => {
@@ -1466,6 +1475,7 @@ function ClubInformationDetailPage() {
 										setValueFieldErrors((p) => ({ ...p, value: undefined }));
 									}}
 									disabled={valueSubmitting}
+									rows={6}
 									autoFocus
 								/>
 							) : (
@@ -1543,6 +1553,7 @@ function ClubInformationDetailPage() {
 										id='val_position'
 										type='number'
 										min={0}
+										step={1}
 										placeholder='0'
 										value={valueForm.position}
 										onChange={(e) => {
@@ -1605,7 +1616,7 @@ function ClubInformationDetailPage() {
 				onOpenChange={(open) => {
 					if (!open) closeValueDetail();
 				}}>
-				<DialogContent className='w-[calc(100vw-2rem)] max-w-[540px] overflow-hidden'>
+				<DialogContent className='max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[540px] overflow-y-auto'>
 					{selectedValue ? (
 						<>
 							<DialogHeader>
@@ -1625,52 +1636,150 @@ function ClubInformationDetailPage() {
 											: "Giá trị"}
 									</Label>
 
-										{info.type === "boolean" ? (
-											<Select
-												value={
-													isEditingValue
-														? detailValueForm.value
-														: selectedValue.value
-												}
-												onValueChange={(value) =>
-													setDetailValueField("value", value)
-												}
-												disabled={!isEditingValue || detailValueSubmitting}>
-												<SelectTrigger id='detail_val_value' className='w-full'>
-													<SelectValue placeholder='--' />
-												</SelectTrigger>
+									{info.type === "boolean" ? (
+										<Select
+											value={
+												isEditingValue
+													? detailValueForm.value
+													: selectedValue.value
+											}
+											onValueChange={(value) =>
+												setDetailValueField("value", value)
+											}
+											disabled={!isEditingValue || detailValueSubmitting}>
+											<SelectTrigger id='detail_val_value' className='w-full'>
+												<SelectValue placeholder='--' />
+											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value='true'>True (Bật)</SelectItem>
 												<SelectItem value='false'>False (Tắt)</SelectItem>
 											</SelectContent>
 										</Select>
 									) : info.type === "html" ? (
-											<Textarea
+										<Textarea
+											id='detail_val_value'
+											value={
+												isEditingValue
+													? detailValueForm.value
+													: selectedValue.value
+											}
+											onChange={(event) =>
+												setDetailValueField("value", event.target.value)
+											}
+											readOnly={!isEditingValue}
+											disabled={detailValueSubmitting}
+											rows={5}
+											className={HTML_VALUE_TEXTAREA_CLASS}
+										/>
+									) : info.type === "url" ||
+									  info.type === "image" ||
+									  info.type === "banner" ? (
+										isEditingValue ? (
+											<Input
 												id='detail_val_value'
-												value={
-													isEditingValue
-														? detailValueForm.value
-														: selectedValue.value
-												}
+												type='url'
+												value={detailValueForm.value}
 												onChange={(event) =>
 													setDetailValueField("value", event.target.value)
 												}
-												readOnly={!isEditingValue}
 												disabled={detailValueSubmitting}
-												rows={5}
-												className='max-w-full break-all'
+												className='min-w-0'
 											/>
-										) : info.type === "url" ||
-											info.type === "image" ||
-											info.type === "banner" ? (
-											isEditingValue ? (
+										) : (
+											<div
+												id='detail_val_value'
+												className='flex h-9 w-full min-w-0 items-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs'>
+												<span
+													className='block min-w-0 flex-1 truncate'
+													title={selectedValue.value}>
+													{selectedValue.value}
+												</span>
+											</div>
+										)
+									) : (
+										<Input
+											id='detail_val_value'
+											type='text'
+											value={
+												isEditingValue
+													? detailValueForm.value
+													: selectedValue.value
+											}
+											onChange={(event) =>
+												setDetailValueField("value", event.target.value)
+											}
+											readOnly={!isEditingValue}
+											disabled={detailValueSubmitting}
+											className='min-w-0'
+										/>
+									)}
+									{detailValueFieldErrors.value ? (
+										<p className='text-sm text-destructive'>
+											{detailValueFieldErrors.value}
+										</p>
+									) : null}
+								</div>
+
+								{isImageType ? (
+									<div className='flex min-w-0 items-center gap-3 overflow-hidden rounded-md border bg-muted/30 p-3'>
+										<Avatar className='h-14 w-14 shrink-0 rounded-md'>
+											<AvatarImage
+												src={selectedValuePreview}
+												alt={selectedAltPreview}
+												className='object-cover'
+											/>
+											<AvatarFallback className='rounded-md text-xs'>
+												IMG
+											</AvatarFallback>
+										</Avatar>
+										<a
+											href={selectedValuePreview}
+											target='_blank'
+											rel='noopener noreferrer'
+											className='flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-sm text-blue-600 hover:underline'>
+											<span
+												className='block min-w-0 flex-1 truncate'
+												title={selectedValuePreview}>
+												{selectedValuePreview}
+											</span>
+											<ExternalLink className='h-3.5 w-3.5 shrink-0' />
+										</a>
+									</div>
+								) : null}
+
+								{isImageType ? (
+									<div className='min-w-0 space-y-2'>
+										<Label htmlFor='detail_val_alt'>Alt text</Label>
+										<Input
+											id='detail_val_alt'
+											value={selectedAltPreview}
+											onChange={(event) =>
+												setDetailValueField("alt", event.target.value)
+											}
+											readOnly={!isEditingValue}
+											disabled={detailValueSubmitting}
+											className='min-w-0'
+										/>
+										{detailValueFieldErrors.alt ? (
+											<p className='text-sm text-destructive'>
+												{detailValueFieldErrors.alt}
+											</p>
+										) : null}
+									</div>
+								) : null}
+
+								{isBannerType ? (
+									<div className='grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2'>
+										<div className='min-w-0 space-y-2'>
+											<Label htmlFor='detail_val_link'>Link đích</Label>
+											{isEditingValue ? (
 												<Input
-													id='detail_val_value'
+													id='detail_val_link'
 													type='url'
-													value={detailValueForm.value}
+													value={detailValueForm.link}
 													onChange={(event) =>
 														setDetailValueField(
-															"value",
+															"link",
 															event.target.value,
 														)
 													}
@@ -1679,132 +1788,32 @@ function ClubInformationDetailPage() {
 												/>
 											) : (
 												<div
-													id='detail_val_value'
+													id='detail_val_link'
 													className='flex h-9 w-full min-w-0 items-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs'>
 													<span
 														className='block min-w-0 flex-1 truncate'
-														title={selectedValue.value}>
-														{selectedValue.value}
+														title={selectedLinkPreview}>
+														{selectedLinkPreview || "--"}
 													</span>
 												</div>
-											)
-										) : (
-											<Input
-												id='detail_val_value'
-												type='text'
-												value={
-													isEditingValue
-														? detailValueForm.value
-														: selectedValue.value
-												}
-												onChange={(event) =>
-													setDetailValueField("value", event.target.value)
-												}
-												readOnly={!isEditingValue}
-												disabled={detailValueSubmitting}
-												className='min-w-0'
-											/>
-										)}
-										{detailValueFieldErrors.value ? (
-											<p className='text-sm text-destructive'>
-												{detailValueFieldErrors.value}
-											</p>
-										) : null}
-									</div>
-
-								{isImageType ? (
-									<div className='flex min-w-0 items-center gap-3 overflow-hidden rounded-md border bg-muted/30 p-3'>
-											<Avatar className='h-14 w-14 shrink-0 rounded-md'>
-												<AvatarImage
-													src={selectedValuePreview}
-													alt={selectedAltPreview}
-													className='object-cover'
-												/>
-											<AvatarFallback className='rounded-md text-xs'>
-												IMG
-											</AvatarFallback>
-										</Avatar>
-											<a
-												href={selectedValuePreview}
-												target='_blank'
-												rel='noopener noreferrer'
-											className='flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-sm text-blue-600 hover:underline'>
-												<span
-													className='block min-w-0 flex-1 truncate'
-													title={selectedValuePreview}>
-													{selectedValuePreview}
-												</span>
-											<ExternalLink className='h-3.5 w-3.5 shrink-0' />
-										</a>
-									</div>
-								) : null}
-
-								{isImageType ? (
-										<div className='min-w-0 space-y-2'>
-											<Label htmlFor='detail_val_alt'>Alt text</Label>
-											<Input
-												id='detail_val_alt'
-												value={selectedAltPreview}
-												onChange={(event) =>
-													setDetailValueField("alt", event.target.value)
-												}
-												readOnly={!isEditingValue}
-												disabled={detailValueSubmitting}
-												className='min-w-0'
-											/>
-											{detailValueFieldErrors.alt ? (
+											)}
+											{detailValueFieldErrors.link ? (
 												<p className='text-sm text-destructive'>
-													{detailValueFieldErrors.alt}
+													{detailValueFieldErrors.link}
 												</p>
 											) : null}
 										</div>
-								) : null}
-
-								{isBannerType ? (
-									<div className='grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2'>
-										<div className='min-w-0 space-y-2'>
-											<Label htmlFor='detail_val_link'>Link đích</Label>
-												{isEditingValue ? (
-													<Input
-														id='detail_val_link'
-														type='url'
-														value={detailValueForm.link}
-														onChange={(event) =>
-															setDetailValueField(
-																"link",
-																event.target.value,
-															)
-														}
-														disabled={detailValueSubmitting}
-														className='min-w-0'
-													/>
-												) : (
-													<div
-														id='detail_val_link'
-														className='flex h-9 w-full min-w-0 items-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs'>
-														<span
-															className='block min-w-0 flex-1 truncate'
-															title={selectedLinkPreview}>
-															{selectedLinkPreview || "--"}
-														</span>
-													</div>
-												)}
-												{detailValueFieldErrors.link ? (
-													<p className='text-sm text-destructive'>
-														{detailValueFieldErrors.link}
-													</p>
-												) : null}
-											</div>
 										<div className='min-w-0 space-y-2'>
 											<Label htmlFor='detail_val_position'>Vị trí</Label>
 											<Input
 												id='detail_val_position'
 												type={isEditingValue ? "number" : "text"}
 												min={0}
+												step={1}
 												value={
 													isEditingValue
 														? detailValueForm.position
-														: selectedValue.position ?? ""
+														: (selectedValue.position ?? "")
 												}
 												onChange={(event) =>
 													setDetailValueField(
@@ -1825,35 +1834,39 @@ function ClubInformationDetailPage() {
 									</div>
 								) : null}
 
-									{/* is_active — ẩn cho boolean vì chính value true/false đã là toggle */}
-									{!isBooleanType && (
-										<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
-											<Label htmlFor='detail_val_active' className='cursor-pointer'>
-												{(isEditingValue
+								{/* is_active — ẩn cho boolean vì chính value true/false đã là toggle */}
+								{!isBooleanType && (
+									<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
+										<Label
+											htmlFor='detail_val_active'
+											className='cursor-pointer'>
+											{(
+												isEditingValue
 													? detailValueForm.is_active
-													: selectedValue.is_active !== false)
-													? "Đang dùng"
-													: "Tạm ẩn"}
-											</Label>
-											<Switch
-												id='detail_val_active'
-												checked={
-													isEditingValue
-														? detailValueForm.is_active
-														: selectedValue.is_active !== false
-												}
-												onCheckedChange={(checked) =>
-													setDetailValueField("is_active", checked)
-												}
-												disabled={!isEditingValue || detailValueSubmitting}
-											/>
-										</div>
-									)}
-									{detailValueFieldErrors.is_active ? (
-										<p className='text-sm text-destructive'>
-											{detailValueFieldErrors.is_active}
-										</p>
-									) : null}
+													: selectedValue.is_active !== false
+											)
+												? "Đang dùng"
+												: "Tạm ẩn"}
+										</Label>
+										<Switch
+											id='detail_val_active'
+											checked={
+												isEditingValue
+													? detailValueForm.is_active
+													: selectedValue.is_active !== false
+											}
+											onCheckedChange={(checked) =>
+												setDetailValueField("is_active", checked)
+											}
+											disabled={!isEditingValue || detailValueSubmitting}
+										/>
+									</div>
+								)}
+								{detailValueFieldErrors.is_active ? (
+									<p className='text-sm text-destructive'>
+										{detailValueFieldErrors.is_active}
+									</p>
+								) : null}
 
 								<div className='grid min-w-0 grid-cols-1 gap-4 rounded-md border p-4 sm:grid-cols-2'>
 									<InfoRow
@@ -1868,31 +1881,31 @@ function ClubInformationDetailPage() {
 							</div>
 
 							<DialogFooter>
-									<Button
-										type='button'
-										variant='outline'
-										onClick={closeValueDetail}
-										disabled={detailValueSubmitting}>
-										Đóng
-									</Button>
-									<Button
-										type='button'
-										onClick={() => {
-											if (isEditingValue) {
-												void handleUpdateValueSubmit();
-												return;
-											}
-											setDetailValueForm(getValueFormFromRecord(selectedValue));
-											setDetailValueFieldErrors({});
-											setIsEditingValue(true);
-										}}
-										disabled={detailValueSubmitting}>
-										{detailValueSubmitting ? (
-											<Loader2 className='h-4 w-4 animate-spin' />
-										) : null}
-										{isEditingValue ? "Lưu" : "Chỉnh sửa"}
-									</Button>
-								</DialogFooter>
+								<Button
+									type='button'
+									variant='outline'
+									onClick={closeValueDetail}
+									disabled={detailValueSubmitting}>
+									Đóng
+								</Button>
+								<Button
+									type='button'
+									onClick={() => {
+										if (isEditingValue) {
+											void handleUpdateValueSubmit();
+											return;
+										}
+										setDetailValueForm(getValueFormFromRecord(selectedValue));
+										setDetailValueFieldErrors({});
+										setIsEditingValue(true);
+									}}
+									disabled={detailValueSubmitting}>
+									{detailValueSubmitting ? (
+										<Loader2 className='h-4 w-4 animate-spin' />
+									) : null}
+									{isEditingValue ? "Lưu" : "Chỉnh sửa"}
+								</Button>
+							</DialogFooter>
 						</>
 					) : null}
 				</DialogContent>

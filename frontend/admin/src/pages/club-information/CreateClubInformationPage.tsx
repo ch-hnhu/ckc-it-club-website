@@ -136,7 +136,7 @@ function CreateClubInformationPage() {
 			<Button asChild variant='outline' className='w-fit'>
 				<Link to='/club-informations'>
 					<ArrowLeft className='h-4 w-4' />
-					Quay lại danh sách
+					Quay lại
 				</Link>
 			</Button>
 
@@ -211,7 +211,7 @@ function CreateClubInformationPage() {
 								value={form.type}
 								onValueChange={(v) => setField("type", v)}
 								disabled={submitting}>
-									<SelectTrigger id='type' className='w-full'>
+								<SelectTrigger id='type' className='w-full'>
 									<SelectValue placeholder='Chọn kiểu dữ liệu' />
 								</SelectTrigger>
 								<SelectContent>

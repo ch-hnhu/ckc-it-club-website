@@ -201,8 +201,9 @@
 - admin can list club information records through `GET /api/v1/club-informations` with pagination, search, and sort.
 - admin can create and update parent club information records through the resource `store` and `update` actions.
 - admin can fetch one club information record through `GET /api/v1/club-informations/{id}`; nested `club_information_values` accept `search`, `sort`, and `order` query params for the detail table, including `alt`, `link`, and `position` sorting for media/banner values.
-- admin can create, update, and delete nested values through `/club-informations/{clubInformation}/values`; value payloads support `value`, `link`, `alt`, `position`, and `is_active`.
+- admin can create, update, and delete nested values through `/club-informations/{clubInformation}/values`; value payloads support long-text `value`, `link`, `alt`, integer/null `position`, and `is_active`; HTML values are not capped at 1000 characters.
 - creating/updating club information records and creating/updating nested values dispatch database notifications to admin roles.
+- `DatabaseSeeder` seeds demo club information keys and values for club name, slogan, email, about text, logo, home banners, Facebook page, and recruitment availability.
 - list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
 - create/update/delete flows are still incomplete.
 - `academic_structure_imports`

@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('club_information_values', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('club_information_id');
-            $table->string('value');
+            $table->longText('value');
             $table->string('link')->nullable();
-            $table->string('position')->nullable();
+            $table->integer('position')->nullable();
             $table->string('alt')->nullable();
             $table->boolean('is_active')->default(true);
 

@@ -102,7 +102,7 @@ function RoleDetailPage() {
 				<Button asChild variant='outline' className='w-fit'>
 					<Link to='/roles'>
 						<ArrowLeft className='h-4 w-4' />
-						Quay lại danh sách
+						Quay lại
 					</Link>
 				</Button>
 				<Card>
@@ -124,7 +124,7 @@ function RoleDetailPage() {
 			<Button asChild variant='outline' className='w-fit'>
 				<Link to='/roles'>
 					<ArrowLeft className='h-4 w-4' />
-					Quay lại danh sách
+					Quay lại
 				</Link>
 			</Button>
 
