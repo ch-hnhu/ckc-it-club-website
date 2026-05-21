@@ -18,6 +18,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { PermissionRoute } from "@/components/auth/PermissionRoute";
 import NotFound from "@/pages/NotFound";
 import RoleList from "@/pages/role/RoleList";
+import RoleDetailPage from "@/pages/role/RoleDetailPage";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
 import PermissionList from "@/pages/permission/PermissionList";
 import ClubInformationList from "@/pages/club-information/ClubInformationList";
@@ -77,6 +78,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='roles.view'>
 						<RoleList />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "roles/:id",
+				element: (
+					<PermissionRoute permission='roles.view'>
+						<RoleDetailPage />
 					</PermissionRoute>
 				),
 			},
