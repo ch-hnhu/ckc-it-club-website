@@ -58,6 +58,7 @@ function PermissionList() {
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [roleFilters, setRoleFilters] = useState<string[]>([]);
 	const [roleOptions, setRoleOptions] = useState<ComboboxOption[]>([]);
+	const [allRoles, setAllRoles] = useState<Array<{ id: number; value: string; label: string }>>([]);
 	const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null);
 	const [detailOpen, setDetailOpen] = useState(false);
 	const [sortConfig, setSortConfig] = useState<{
@@ -79,12 +80,13 @@ function PermissionList() {
 		const loadRoles = async () => {
 			try {
 				const response = await roleService.getRoles({ per_page: 100 });
-				setRoleOptions(
-					response.data.map((role) => ({
-						value: role.value,
-						label: role.label,
-					})),
-				);
+				const roles = response.data.map((role) => ({
+					id: role.id,
+					value: role.value,
+					label: role.label,
+				}));
+				setAllRoles(roles);
+				setRoleOptions(roles.map((r) => ({ value: r.value, label: r.label })));
 			} catch (error) {
 				console.error("Không thể tải danh sách vai trò:", error);
 			}
@@ -149,6 +151,11 @@ function PermissionList() {
 		if (sortConfig.order === "asc") return <ArrowUp className='ml-2 h-4 w-4' />;
 		if (sortConfig.order === "desc") return <ArrowDown className='ml-2 h-4 w-4' />;
 		return <ArrowUpDown className='ml-2 h-4 w-4' />;
+	};
+
+	const handlePermissionUpdate = (updated: Permission) => {
+		setSelectedPermission(updated);
+		fetchPermissions();
 	};
 
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
@@ -408,6 +415,8 @@ function PermissionList() {
 				permission={selectedPermission}
 				open={detailOpen}
 				onOpenChange={setDetailOpen}
+				allRoles={allRoles}
+				onUpdate={handlePermissionUpdate}
 			/>
 		</div>
 	);

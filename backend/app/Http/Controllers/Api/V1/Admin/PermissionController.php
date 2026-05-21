@@ -6,7 +6,9 @@ use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Enums\RolesEnum;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class PermissionController extends BaseApiController
 {
@@ -35,5 +37,36 @@ class PermissionController extends BaseApiController
             ->paginate($perPage);
 
         return $this->paginatedResponse($permission, ApiMessage::RETRIEVED);
+    }
+
+    public function syncRoles(Request $request, Permission $permission): JsonResponse
+    {
+        $validated = $request->validate([
+            'roles'   => ['present', 'array'],
+            'roles.*' => ['string', 'exists:roles,name'],
+        ]);
+
+        if (! in_array(RolesEnum::ADMIN->value, $validated['roles'], true)) {
+            return $this->errorResponse(false, 'Không thể xóa vai trò Quản trị viên khỏi bất kỳ quyền nào.', 422);
+        }
+
+        $roleIds = Role::whereIn('name', $validated['roles'])->pluck('id');
+        $permission->roles()->sync($roleIds);
+
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $permission->load('roles:id,name,label');
+
+        return $this->successResponse(true, [
+            'id'          => $permission->id,
+            'name'        => $permission->name,
+            'description' => $permission->description,
+            'roles'       => $permission->roles->map(fn ($r) => [
+                'id'    => $r->id,
+                'name'  => $r->name,
+                'label' => $r->label,
+            ])->values(),
+            'created_at'  => $permission->created_at,
+        ], ApiMessage::PERMISSIONS_UPDATED);
     }
 }

@@ -13,30 +13,30 @@ class PermissionSeeder extends Seeder
      * Tất cả permissions của hệ thống kèm mô tả tiếng Việt.
      */
     private array $definitions = [
-        'admin_panel.access'           => 'Truy cập trang quản trị',
-        'dashboard.view'               => 'Xem dashboard tổng quan',
-        'users.view'                   => 'Xem danh sách và chi tiết người dùng',
-        'users.create'                 => 'Thêm người dùng mới',
-        'users.update'                 => 'Cập nhật thông tin người dùng',
-        'users.delete'                 => 'Xóa người dùng',
-        'roles.view'                   => 'Xem danh sách vai trò',
-        'roles.manage'                 => 'Thêm, sửa, xóa vai trò và gán quyền',
-        'permissions.view'             => 'Xem danh sách quyền hạn',
-        'club_info.view'               => 'Xem thông tin CLB',
-        'club_info.manage'             => 'Thêm, sửa, xóa thông tin CLB',
-        'contacts.view'                => 'Xem liên hệ và thống kê',
-        'contacts.manage'              => 'Cập nhật trạng thái liên hệ',
-        'applications.view'            => 'Xem đơn xét tuyển',
-        'applications.manage'          => 'Cập nhật trạng thái đơn xét tuyển',
-        'application_questions.view'   => 'Xem câu hỏi xét tuyển',
+        'admin_panel.access' => 'Truy cập trang quản trị',
+        'dashboard.view' => 'Xem dashboard tổng quan',
+        'users.view' => 'Xem danh sách và chi tiết người dùng',
+        'users.create' => 'Thêm người dùng mới',
+        'users.update' => 'Cập nhật thông tin người dùng',
+        'users.delete' => 'Xóa người dùng',
+        'roles.view' => 'Xem danh sách vai trò',
+        'roles.manage' => 'Thêm, sửa, xóa vai trò và gán quyền',
+        'permissions.view' => 'Xem danh sách quyền hạn',
+        'permissions.manage' => 'Gán và thu hồi vai trò trên quyền hạn',
+        'club_info.view' => 'Xem thông tin CLB',
+        'club_info.manage' => 'Thêm, sửa, xóa thông tin CLB',
+        'contacts.view' => 'Xem liên hệ và thống kê',
+        'contacts.manage' => 'Cập nhật trạng thái liên hệ',
+        'applications.view' => 'Xem đơn xét tuyển',
+        'applications.manage' => 'Cập nhật trạng thái đơn xét tuyển',
+        'application_questions.view' => 'Xem câu hỏi xét tuyển',
         'application_questions.manage' => 'Thêm, sửa, xóa, sắp xếp câu hỏi xét tuyển',
-        'academic_structure.import'    => 'Import cơ cấu học thuật',
-        'academic_data.view'           => 'Xem dữ liệu khoa, ngành, lớp',
+        'academic_structure.import' => 'Import cơ cấu học thuật',
+        'academic_data.view' => 'Xem dữ liệu khoa, ngành, lớp',
     ];
 
     /**
      * Ma trận phân quyền: role name (string) → danh sách permissions được gán.
-     * Dùng string key vì PHP không cho phép enum case làm key trong property declaration.
      */
     private array $matrix = [
         // Quản trị viên — toàn quyền
@@ -45,7 +45,7 @@ class PermissionSeeder extends Seeder
             'dashboard.view',
             'users.view', 'users.create', 'users.update', 'users.delete',
             'roles.view', 'roles.manage',
-            'permissions.view',
+            'permissions.view', 'permissions.manage',
             'club_info.view', 'club_info.manage',
             'contacts.view', 'contacts.manage',
             'applications.view', 'applications.manage',

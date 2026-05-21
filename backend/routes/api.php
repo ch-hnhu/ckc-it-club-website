@@ -84,6 +84,8 @@ Route::prefix('v1')->group(function () {
         // permissions
         Route::middleware('permission:permissions.view')
             ->get('permissions', [PermissionController::class, 'index']);
+        Route::middleware('permission:permissions.manage')
+            ->put('permissions/{permission}/roles', [PermissionController::class, 'syncRoles']);
 
         // club-informations
         Route::middleware('permission:club_info.view')->group(function () {

@@ -1,5 +1,5 @@
 ﻿import { api } from "@/services/api.service";
-import type { PaginatedResponse } from "@/types/api.types";
+import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type { Permission } from "@/types/permission.type";
 
 const permissionService = {
@@ -12,6 +12,10 @@ const permissionService = {
 		roles?: string[];
 	}): Promise<PaginatedResponse<Permission>> {
 		return api.get("/permissions", params);
+	},
+
+	async syncPermissionRoles(id: number | string, roles: string[]): Promise<ApiResponse<Permission>> {
+		return api.put<ApiResponse<Permission>, { roles: string[] }>(`/permissions/${id}/roles`, { roles });
 	},
 };
 
