@@ -19,6 +19,8 @@ class ClubInformation extends Model
         'type',
         'description',
         'is_active',
+        'created_by',
+        'updated_by',
     ];
 
     protected function casts(): array

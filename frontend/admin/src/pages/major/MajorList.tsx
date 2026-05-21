@@ -44,7 +44,9 @@ import {
 	ChevronsRight,
 	FolderTree,
 	MoreHorizontal,
+	Pencil,
 	Plus,
+	Trash2,
 } from "lucide-react";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
@@ -54,10 +56,7 @@ const getDisplayName = (item?: { label?: string | null; value?: string | null } 
 
 function MajorList() {
 	const breadcrumb = useMemo(
-		() => [
-			{ title: "Dashboard", link: "/" },
-			{ title: "Quản lý Ngành" },
-		],
+		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý Ngành" }],
 		[],
 	);
 
@@ -322,12 +321,14 @@ function MajorList() {
 														setSelectedMajor(major);
 														setIsFormOpen(true);
 													}}>
+													<Pencil className='h-4 w-4' />
 													Sửa
 												</DropdownMenuItem>
 												<DropdownMenuSeparator />
 												<DropdownMenuItem
 													className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 													onClick={() => void handleDelete(major)}>
+													<Trash2 className='h-4 w-4 text-destructive' />
 													Xóa
 												</DropdownMenuItem>
 											</DropdownMenuContent>
@@ -366,11 +367,15 @@ function MajorList() {
 														<SelectValue placeholder={meta.per_page} />
 													</SelectTrigger>
 													<SelectContent side='top'>
-														{[10, 20, 25, 30, 40, 50].map((pageSize) => (
-															<SelectItem key={pageSize} value={`${pageSize}`}>
-																{pageSize}
-															</SelectItem>
-														))}
+														{[10, 20, 25, 30, 40, 50].map(
+															(pageSize) => (
+																<SelectItem
+																	key={pageSize}
+																	value={`${pageSize}`}>
+																	{pageSize}
+																</SelectItem>
+															),
+														)}
 													</SelectContent>
 												</Select>
 											</div>
@@ -382,10 +387,15 @@ function MajorList() {
 													variant='outline'
 													className='hidden h-8 w-8 p-0 lg:flex'
 													onClick={() =>
-														setMeta((prev) => ({ ...prev, current_page: 1 }))
+														setMeta((prev) => ({
+															...prev,
+															current_page: 1,
+														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to first page</span>
+													<span className='sr-only'>
+														Go to first page
+													</span>
 													<ChevronsLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -398,7 +408,9 @@ function MajorList() {
 														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to previous page</span>
+													<span className='sr-only'>
+														Go to previous page
+													</span>
 													<ChevronLeft className='h-4 w-4' />
 												</Button>
 												<Button

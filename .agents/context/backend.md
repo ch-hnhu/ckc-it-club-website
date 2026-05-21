@@ -74,6 +74,11 @@
 - `GET /api/v1/contacts`
 - `PATCH /api/v1/contacts/{contact}/status`
 - `GET /api/v1/club-informations`
+- `POST /api/v1/club-informations`
+- `PUT/PATCH /api/v1/club-informations/{clubInformation}`
+- `POST /api/v1/club-informations/{clubInformation}/values`
+- `PUT/PATCH /api/v1/club-informations/{clubInformation}/values/{clubInformationValue}`
+- `DELETE /api/v1/club-informations/{clubInformation}/values/{clubInformationValue}`
 - `GET /api/v1/club-applications`
 - `PATCH /api/v1/club-applications/{clubApplication}/status`
 - `PATCH /api/v1/application-questions/reorder`
@@ -93,7 +98,7 @@
 - Some files are scaffolding leftovers and not part of the current domain:
 - `app/Http/Requests/Api/V1/Product/*`
 - `app/Http/Resources/Api/V1/ProductResource.php`
-- Club information admin listing exists, but create/update/delete flows are not complete yet.
+- Club information admin listing/detail exists, but create/update/delete flows are not complete yet.
 
 ## Backend Layout
 
@@ -194,6 +199,10 @@
 - admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`
 - admin can list club information records through `GET /api/v1/club-informations` with pagination, search, and sort.
+- admin can create and update parent club information records through the resource `store` and `update` actions.
+- admin can fetch one club information record through `GET /api/v1/club-informations/{id}`; nested `club_information_values` accept `search`, `sort`, and `order` query params for the detail table, including `alt`, `link`, and `position` sorting for media/banner values.
+- admin can create, update, and delete nested values through `/club-informations/{clubInformation}/values`; value payloads support `value`, `link`, `alt`, `position`, and `is_active`.
+- creating/updating club information records and creating/updating nested values dispatch database notifications to admin roles.
 - list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
 - create/update/delete flows are still incomplete.
 - `academic_structure_imports`

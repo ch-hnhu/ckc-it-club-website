@@ -42,6 +42,7 @@ import {
 	ChevronsLeft,
 	ChevronsRight,
 	MoreHorizontal,
+	Pencil,
 	Plus,
 	Trash2,
 } from "lucide-react";
@@ -50,10 +51,7 @@ import { useTableSelection } from "@/hooks/useTableSelection";
 
 function FacultyList() {
 	const breadcrumb = useMemo(
-		() => [
-			{ title: "Dashboard", link: "/" },
-			{ title: "Quản lý Khoa" },
-		],
+		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý Khoa" }],
 		[],
 	);
 
@@ -156,7 +154,9 @@ function FacultyList() {
 			if (errors.length === 0) {
 				toast.success(`Đã xóa ${deleted} khoa thành công.`);
 			} else {
-				toast.warning(`Đã xóa ${deleted}/${selectedIds.length} khoa. ${errors.length} khoa không thể xóa.`);
+				toast.warning(
+					`Đã xóa ${deleted}/${selectedIds.length} khoa. ${errors.length} khoa không thể xóa.`,
+				);
 				errors.forEach((msg) => toast.error(msg, { duration: 6000 }));
 			}
 
@@ -322,12 +322,14 @@ function FacultyList() {
 														setSelectedFaculty(faculty);
 														setIsFormOpen(true);
 													}}>
-													Sửa<a href=''></a>
+													<Pencil className='h-4 w-4' />
+													Sửa
 												</DropdownMenuItem>
 												<DropdownMenuSeparator />
 												<DropdownMenuItem
 													className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 													onClick={() => void handleDelete(faculty)}>
+													<Trash2 className='h-4 w-4 text-destructive' />
 													Xóa
 												</DropdownMenuItem>
 											</DropdownMenuContent>
@@ -362,14 +364,18 @@ function FacultyList() {
 														onClick={() => void handleBulkDelete()}
 														className='h-7'>
 														<Trash2 className='h-3.5 w-3.5' />
-														{isBulkDeleting ? "Đang xóa..." : "Xóa đã chọn"}
+														{isBulkDeleting
+															? "Đang xóa..."
+															: "Xóa đã chọn"}
 													</Button>
 												</>
 											)}
 										</div>
 										<div className='flex items-center space-x-6 lg:space-x-8'>
 											<div className='flex items-center space-x-2'>
-												<p className='text-sm font-medium'>Số hàng mỗi trang</p>
+												<p className='text-sm font-medium'>
+													Số hàng mỗi trang
+												</p>
 												<Select
 													value={`${meta.per_page}`}
 													onValueChange={(value) =>

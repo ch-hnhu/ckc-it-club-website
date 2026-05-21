@@ -2,25 +2,16 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Contact\UpdateContactStatusRequest;
 use App\Models\Contact;
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ContactController extends BaseApiController
 {
-    private const ADMIN_ROLES = [
-        RolesEnum::ADMIN,
-        RolesEnum::PRESIDENT,
-        RolesEnum::VICE_PRESIDENT,
-        RolesEnum::ACADEMIC_HEAD,
-        RolesEnum::COMMUNICATIONS_HEAD,
-        RolesEnum::VOLUNTEER_HEAD,
-    ];
-
     private const ALLOWED_SORTS = [
         'id',
         'email',
@@ -39,10 +30,6 @@ class ContactController extends BaseApiController
 
     public function index(Request $request): JsonResponse
     {
-        if ($response = $this->ensureAdminAccess($request)) {
-            return $response;
-        }
-
         $search = trim((string) $request->query('search', ''));
         $status = (string) $request->query('status', '');
         $sort = (string) $request->query('sort', 'created_at');
@@ -80,10 +67,6 @@ class ContactController extends BaseApiController
 
     public function stats(Request $request): JsonResponse
     {
-        if ($response = $this->ensureAdminAccess($request)) {
-            return $response;
-        }
-
         $stats = [
             'total' => Contact::query()->count(),
             'pending' => Contact::query()->where('status', 'pending')->count(),
@@ -102,10 +85,6 @@ class ContactController extends BaseApiController
         UpdateContactStatusRequest $request,
         Contact $contact
     ): JsonResponse {
-        if ($response = $this->ensureAdminAccess($request)) {
-            return $response;
-        }
-
         $nextStatus = $request->validated('status');
         $allowedTransitions = $this->getAllowedTransitions($contact->status);
 
@@ -125,6 +104,18 @@ class ContactController extends BaseApiController
         $contact->updated_by = $request->user()?->id;
         $contact->updated_at = now();
         $contact->save();
+
+        $admin = $request->user();
+        $statusLabels = ['pending' => 'chờ xử lý', 'processing' => 'đang xử lý', 'done' => 'đã xong'];
+        NotificationService::dispatch(
+            'Cập nhật trạng thái liên hệ',
+            ($admin?->full_name ?? 'Admin').' đã cập nhật liên hệ #'.$contact->id.' sang "'.($statusLabels[$nextStatus] ?? $nextStatus).'"',
+            'status_changed',
+            'contact',
+            $contact->id,
+            $admin?->full_name ?? 'Admin',
+            '/contacts',
+        );
 
         return $this->successResponse(
             true,

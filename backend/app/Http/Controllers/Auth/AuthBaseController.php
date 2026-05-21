@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\PermissionsEnum;
 use App\Enums\RolesEnum;
 use App\Http\Controllers\Controller;
 use GuzzleHttp\Client;
@@ -210,20 +211,53 @@ abstract class AuthBaseController extends Controller
         $user = User::where('email', $oauthUser->getEmail())->first();
 
         try {
-            $ADMIN_ROLES = [
-                RolesEnum::ADMIN,
-                RolesEnum::PRESIDENT,
-                RolesEnum::VICE_PRESIDENT,
-                RolesEnum::ACADEMIC_HEAD,
-                RolesEnum::COMMUNICATIONS_HEAD,
-                RolesEnum::VOLUNTEER_HEAD,
-            ];
-
-            if (! $user || ! $user->hasAnyRole($ADMIN_ROLES)) {
+            if (! $user || ! $user->hasPermissionTo(PermissionsEnum::ADMIN_PANEL_ACCESS->value)) {
                 $frontendUrl = rtrim(env('ADMIN_FRONTEND_URL', 'http://localhost:5173'), '/');
                 $payload = json_encode([
                     'type' => 'OAUTH_AUTH_ERROR',
                     'message' => 'Bạn không có quyền truy cập vào trang quản trị!',
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+                return response(
+                    sprintf(
+                        <<<'HTML'
+                        <!doctype html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="utf-8">
+                            <title>Login Error</title>
+                        </head>
+                        <body>
+                            <script>
+                                (function () {
+                                    var payload = %s;
+                                    var targetOrigin = "%s";
+
+                                    if (window.opener) {
+                                        window.opener.postMessage(payload, targetOrigin);
+                                        window.close();
+                                        return;
+                                    }
+
+                                    window.location.href = targetOrigin + '/login?error=' + encodeURIComponent(payload.message);
+                                })();
+                            </script>
+                        </body>
+                        </html>
+                        HTML,
+                        $payload,
+                        $frontendUrl
+                    ),
+                    200,
+                    ['Content-Type' => 'text/html; charset=UTF-8']
+                );
+            }
+
+            if ($user->is_active === false) {
+                $frontendUrl = rtrim(env('ADMIN_FRONTEND_URL', 'http://localhost:5173'), '/');
+                $payload = json_encode([
+                    'type' => 'OAUTH_AUTH_ERROR',
+                    'message' => 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.',
                 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
                 return response(
@@ -358,6 +392,50 @@ abstract class AuthBaseController extends Controller
 
     protected function handleUser($oauthUser, $provider)
     {
+        $existingUser = User::where('email', $oauthUser->getEmail())->first();
+
+        if ($existingUser && $existingUser->is_active === false) {
+            $frontendUrl = rtrim(env('USER_FRONTEND_URL', 'http://localhost:5173'), '/');
+            $payload = json_encode([
+                'type' => 'OAUTH_AUTH_ERROR',
+                'message' => 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.',
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+            return response(
+                sprintf(
+                    <<<'HTML'
+                    <!doctype html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Login Error</title>
+                    </head>
+                    <body>
+                        <script>
+                            (function () {
+                                var payload = %s;
+                                var targetOrigin = "%s";
+
+                                if (window.opener) {
+                                    window.opener.postMessage(payload, targetOrigin);
+                                    window.close();
+                                    return;
+                                }
+
+                                window.location.href = targetOrigin + '/login?error=' + encodeURIComponent(payload.message);
+                            })();
+                        </script>
+                    </body>
+                    </html>
+                    HTML,
+                    $payload,
+                    $frontendUrl
+                ),
+                200,
+                ['Content-Type' => 'text/html; charset=UTF-8']
+            );
+        }
+
         // Find or create user
         $user = $this->findOrCreateUser($oauthUser, $provider);
 
@@ -503,17 +581,24 @@ abstract class AuthBaseController extends Controller
                 ], HttpStatus::UNAUTHORIZED->value);
             }
 
+            $user->load('roles:id,name,label');
+
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'id' => $user->id,
-                    'full_name' => $user->full_name,
-                    'email' => $user->email,
-                    'avatar' => $user->avatar,
-                    'provider' => $user->provider,
+                    'id'                => $user->id,
+                    'full_name'         => $user->full_name,
+                    'email'             => $user->email,
+                    'avatar'            => $user->avatar,
+                    'provider'          => $user->provider,
                     'email_verified_at' => $user->email_verified_at,
-                    'created_at' => $user->created_at?->format('d/m/Y'),
-                ]
+                    'created_at'        => $user->created_at?->format('d/m/Y'),
+                    'roles'             => $user->roles->map(fn ($r) => [
+                        'name'  => $r->name,
+                        'label' => $r->label,
+                    ])->values(),
+                    'permissions'       => $user->getAllPermissions()->pluck('name')->values(),
+                ],
             ], HttpStatus::OK->value);
 
         } catch (\Exception $e) {

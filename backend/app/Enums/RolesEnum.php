@@ -23,12 +23,24 @@ enum RolesEnum: string
         return array_column(self::cases(), 'value');
     }
 
+    public static function adminRoles(): array
+    {
+        return [
+            self::ADMIN->value,
+            self::PRESIDENT->value,
+            self::VICE_PRESIDENT->value,
+            self::ACADEMIC_HEAD->value,
+            self::COMMUNICATIONS_HEAD->value,
+            self::VOLUNTEER_HEAD->value,
+        ];
+    }
+
     public function label(): string
     {
         return match ($this) {
             self::ADMIN => 'Quản trị viên',
-            self::PRESIDENT => 'Chủ nhiệm',
-            self::VICE_PRESIDENT => 'Phó Chủ nhiệm',
+            self::PRESIDENT => 'Chủ nhiệm CLB',
+            self::VICE_PRESIDENT => 'Phó Chủ nhiệm CLB',
             self::ACADEMIC_HEAD => 'Trưởng ban Học thuật',
             self::COMMUNICATIONS_HEAD => 'Trưởng ban Truyền thông',
             self::VOLUNTEER_HEAD => 'Trưởng ban Tình nguyện',

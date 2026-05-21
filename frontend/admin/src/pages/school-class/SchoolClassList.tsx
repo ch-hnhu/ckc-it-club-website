@@ -44,7 +44,9 @@ import {
 	ChevronsLeft,
 	ChevronsRight,
 	MoreHorizontal,
+	Pencil,
 	Plus,
+	Trash2,
 } from "lucide-react";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
@@ -54,10 +56,7 @@ const getDisplayName = (item?: { label?: string | null; value?: string | null } 
 
 function SchoolClassList() {
 	const breadcrumb = useMemo(
-		() => [
-			{ title: "Dashboard", link: "/" },
-			{ title: "Quản lý Lớp" },
-		],
+		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý Lớp" }],
 		[],
 	);
 
@@ -283,14 +282,18 @@ function SchoolClassList() {
 											}
 										/>
 									</TableCell>
-									<TableCell className='font-medium'>CLS-{schoolClass.id}</TableCell>
+									<TableCell className='font-medium'>
+										CLS-{schoolClass.id}
+									</TableCell>
 									<TableCell>
 										<div className='flex items-center gap-3'>
 											<div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'>
 												<BookOpen className='h-4 w-4' />
 											</div>
 											<div className='flex flex-col'>
-												<span className='font-medium'>{schoolClass.label}</span>
+												<span className='font-medium'>
+													{schoolClass.label}
+												</span>
 												<span className='text-xs text-muted-foreground'>
 													{schoolClass.value}
 												</span>
@@ -298,7 +301,9 @@ function SchoolClassList() {
 										</div>
 									</TableCell>
 									<TableCell>{getDisplayName(schoolClass.major)}</TableCell>
-									<TableCell>{getDisplayName(schoolClass.major?.faculty)}</TableCell>
+									<TableCell>
+										{getDisplayName(schoolClass.major?.faculty)}
+									</TableCell>
 									<TableCell>{formatDate(schoolClass.created_at)}</TableCell>
 									<TableCell>{formatDate(schoolClass.updated_at)}</TableCell>
 									<TableCell>
@@ -317,12 +322,14 @@ function SchoolClassList() {
 														setSelectedSchoolClass(schoolClass);
 														setIsFormOpen(true);
 													}}>
+													<Pencil className='h-4 w-4' />
 													Sửa
 												</DropdownMenuItem>
 												<DropdownMenuSeparator />
 												<DropdownMenuItem
 													className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 													onClick={() => void handleDelete(schoolClass)}>
+													<Trash2 className='h-4 w-4 text-destructive' />
 													Xóa
 												</DropdownMenuItem>
 											</DropdownMenuContent>
@@ -361,11 +368,15 @@ function SchoolClassList() {
 														<SelectValue placeholder={meta.per_page} />
 													</SelectTrigger>
 													<SelectContent side='top'>
-														{[10, 20, 25, 30, 40, 50].map((pageSize) => (
-															<SelectItem key={pageSize} value={`${pageSize}`}>
-																{pageSize}
-															</SelectItem>
-														))}
+														{[10, 20, 25, 30, 40, 50].map(
+															(pageSize) => (
+																<SelectItem
+																	key={pageSize}
+																	value={`${pageSize}`}>
+																	{pageSize}
+																</SelectItem>
+															),
+														)}
 													</SelectContent>
 												</Select>
 											</div>
@@ -377,10 +388,15 @@ function SchoolClassList() {
 													variant='outline'
 													className='hidden h-8 w-8 p-0 lg:flex'
 													onClick={() =>
-														setMeta((prev) => ({ ...prev, current_page: 1 }))
+														setMeta((prev) => ({
+															...prev,
+															current_page: 1,
+														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to first page</span>
+													<span className='sr-only'>
+														Go to first page
+													</span>
 													<ChevronsLeft className='h-4 w-4' />
 												</Button>
 												<Button
@@ -393,7 +409,9 @@ function SchoolClassList() {
 														}))
 													}
 													disabled={meta.current_page === 1}>
-													<span className='sr-only'>Go to previous page</span>
+													<span className='sr-only'>
+														Go to previous page
+													</span>
 													<ChevronLeft className='h-4 w-4' />
 												</Button>
 												<Button

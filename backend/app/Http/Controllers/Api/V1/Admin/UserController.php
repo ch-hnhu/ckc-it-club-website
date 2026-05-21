@@ -62,9 +62,9 @@ class UserController extends BaseApiController
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'is_active' => $validated['is_active'],
-            'faculty_id' => $validated['faculty_id'],
-            'major_id' => $validated['major_id'],
-            'class_id' => $validated['class_id'],
+            'faculty_id' => $validated['faculty_id'] ?? null,
+            'major_id' => $validated['major_id'] ?? null,
+            'class_id' => $validated['class_id'] ?? null,
             'avatar' => $avatarPath,
         ]);
 

@@ -32,6 +32,7 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	Eye,
 	MoreHorizontal,
 	Plus,
 } from "lucide-react";
@@ -264,7 +265,10 @@ function PermissionList() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
-												<DropdownMenuItem>Chi tiết</DropdownMenuItem>
+												<DropdownMenuItem>
+													<Eye className='h-4 w-4' />
+													Chi tiết
+												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>
 									</TableCell>
