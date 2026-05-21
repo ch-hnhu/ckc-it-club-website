@@ -75,7 +75,9 @@
 - `/contacts`
 - contact management list with real backend data and status updates
 - `/divisions`
-- division management dashboard for the 3 fixed club divisions: academic, volunteer, and event
+- division management dashboard for the 3 fixed club divisions: academic, volunteer, and communication
+- `/organization/upload`
+- academic structure import history and upload flow for faculty, major, and class files
 - `/club-informations`
 - club information list backed by `GET /club-informations` with search, sort, and pagination
 - `/requests`
@@ -239,6 +241,10 @@
 - server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
 - date fields are displayed directly from the API, which formats them as `d/m/Y`
 - current admin UI is list-only because no create/update/detail route is wired yet
+- Academic structure import:
+- route `/organization/upload`
+- imports faculty/major/class data through `POST /academic-structure/import`
+- wrong file formats are shown as failed history rows after backend stores them as `file_type = Other`
 
 ## Environment Variables
 
@@ -305,5 +311,6 @@ npm run dev
 - `2026-04-20`: Added reusable shadcn-style `ui/combobox` component (Command + Popover) with optional search and multiple select support, and migrated CreateUser faculty/major/class fields to searchable comboboxes.
 - `2026-04-20`: Wired `/users/create` route in router, connected User list "Thêm" button to navigate there, and implemented full shadcn CreateUser form UI with avatar preview and dependent faculty-major-class selectors.
 - `2026-04-23`: Added admin contact management route `/contacts`, sidebar entry, `contact.service.ts`, and live status updates backed by the Laravel API.
-- `2026-05-12`: Added admin route `/divisions` with a local-data management dashboard for the 3 fixed club divisions (academic, volunteer, event).
+- `2026-05-20`: Updated admin division management so the third fixed division is Communication instead of Event.
+- `2026-05-12`: Added admin route `/divisions` with a local-data management dashboard for the 3 fixed club divisions (academic, volunteer, communication).
 - `2026-04-08`: Replaced scaffold with full admin frontend audit. Added route surface, auth/session model, service conventions, UI system notes, env requirements, and known gap inventory.

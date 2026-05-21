@@ -9,6 +9,7 @@ const majorService = {
 		search?: string;
 		sort?: string;
 		order?: "asc" | "desc";
+		faculty_id?: number;
 	}): Promise<PaginatedResponse<Major>> {
 		return api.get("/majors", params);
 	},

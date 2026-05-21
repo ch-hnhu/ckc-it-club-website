@@ -4,7 +4,9 @@ import { toast } from "sonner";
 
 import SchoolClassFormModal from "@/pages/school-class/SchoolClassFormModal";
 import schoolClassService from "@/services/school-class.service";
+import majorService from "@/services/major.service";
 import type { ApiErrorResponse } from "@/types/api.types";
+import type { Major } from "@/types/major.type";
 import type { SchoolClass } from "@/types/school-class.type";
 import {
 	Table,
@@ -43,9 +45,7 @@ import {
 	ChevronsRight,
 	MoreHorizontal,
 	Plus,
-	Settings2,
 } from "lucide-react";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
@@ -53,7 +53,13 @@ const getDisplayName = (item?: { label?: string | null; value?: string | null } 
 	item?.label?.trim() || item?.value?.trim() || "N/A";
 
 function SchoolClassList() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/classes"), []);
+	const breadcrumb = useMemo(
+		() => [
+			{ title: "Dashboard", link: "/" },
+			{ title: "Quản lý Lớp" },
+		],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 
@@ -69,6 +75,8 @@ function SchoolClassList() {
 		key: string | null;
 		order: "asc" | "desc" | null;
 	}>({ key: "created_at", order: "desc" });
+	const [majorFilter, setMajorFilter] = useState<string>("all");
+	const [majors, setMajors] = useState<Major[]>([]);
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [selectedSchoolClass, setSelectedSchoolClass] = useState<SchoolClass | null>(null);
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
@@ -78,7 +86,14 @@ function SchoolClassList() {
 
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
-	}, [normalizedSearch, sortConfig]);
+	}, [normalizedSearch, majorFilter, sortConfig]);
+
+	useEffect(() => {
+		void majorService
+			.getMajors({ per_page: 200, sort: "label", order: "asc" })
+			.then((res) => setMajors(res.data))
+			.catch(() => {});
+	}, []);
 
 	const fetchClasses = async () => {
 		try {
@@ -88,6 +103,7 @@ function SchoolClassList() {
 				search: normalizedSearch,
 				sort: sortConfig.key || undefined,
 				order: sortConfig.order || undefined,
+				major_id: majorFilter !== "all" ? Number(majorFilter) : undefined,
 			});
 			setClasses(response.data);
 			setMeta({
@@ -104,7 +120,7 @@ function SchoolClassList() {
 
 	useEffect(() => {
 		void fetchClasses();
-	}, [meta.current_page, meta.per_page, normalizedSearch, sortConfig]);
+	}, [meta.current_page, meta.per_page, normalizedSearch, majorFilter, sortConfig]);
 
 	const handleSort = (key: string) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -162,10 +178,19 @@ function SchoolClassList() {
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
-						<Button variant='outline' size='sm' className='h-8 lg:flex'>
-							<Settings2 className='h-4 w-4' />
-							Xem
-						</Button>
+						<Select value={majorFilter} onValueChange={setMajorFilter}>
+							<SelectTrigger className='h-8 w-[180px]'>
+								<SelectValue placeholder='Lọc theo ngành' />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value='all'>Tất cả ngành</SelectItem>
+								{majors.map((major) => (
+									<SelectItem key={major.id} value={String(major.id)}>
+										{major.label || major.value}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 						<Button
 							size='sm'
 							onClick={() => {

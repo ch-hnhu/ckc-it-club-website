@@ -47,12 +47,14 @@ Route::prefix('v1')->group(function () {
             Route::get('academic-structure/imports', [AcademicStructureController::class, 'index']);
             Route::get('academic-structure/imports/{academicStructureImport}/download', [AcademicStructureController::class, 'download']);
             Route::apiResource('permissions', PermissionController::class);
+            Route::post('faculties/bulk-delete', [FacultyController::class, 'bulkDestroy']);
             Route::apiResource('faculties', FacultyController::class)->except(['create', 'edit']);
             Route::apiResource('majors', MajorController::class)->except(['create', 'edit']);
             Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit']);
             Route::get('contacts/stats', [AdminContactController::class, 'stats']);
             Route::get('contacts', [AdminContactController::class, 'index']);
             Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+            Route::delete('contacts/{contact}', [AdminContactController::class, 'destroy']);
 
             // Club applications
             Route::get('club-applications', [ClubApplicationController::class, 'index']);

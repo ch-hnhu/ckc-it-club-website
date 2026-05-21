@@ -4,7 +4,9 @@ import { toast } from "sonner";
 
 import MajorFormModal from "@/pages/major/MajorFormModal";
 import majorService from "@/services/major.service";
+import facultyService from "@/services/faculty.service";
 import type { ApiErrorResponse } from "@/types/api.types";
+import type { Faculty } from "@/types/faculty.type";
 import type { Major } from "@/types/major.type";
 import {
 	Table,
@@ -43,9 +45,7 @@ import {
 	FolderTree,
 	MoreHorizontal,
 	Plus,
-	Settings2,
 } from "lucide-react";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
@@ -53,7 +53,13 @@ const getDisplayName = (item?: { label?: string | null; value?: string | null } 
 	item?.label?.trim() || item?.value?.trim() || "N/A";
 
 function MajorList() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/majors"), []);
+	const breadcrumb = useMemo(
+		() => [
+			{ title: "Dashboard", link: "/" },
+			{ title: "Quản lý Ngành" },
+		],
+		[],
+	);
 
 	useBreadcrumb(breadcrumb);
 
@@ -70,6 +76,8 @@ function MajorList() {
 		key: string | null;
 		order: "asc" | "desc" | null;
 	}>({ key: "created_at", order: "desc" });
+	const [facultyFilter, setFacultyFilter] = useState<string>("all");
+	const [faculties, setFaculties] = useState<Faculty[]>([]);
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [selectedMajor, setSelectedMajor] = useState<Major | null>(null);
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
@@ -83,7 +91,14 @@ function MajorList() {
 
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
-	}, [debouncedSearch, sortConfig]);
+	}, [debouncedSearch, facultyFilter, sortConfig]);
+
+	useEffect(() => {
+		void facultyService
+			.getFaculties({ per_page: 100, sort: "label", order: "asc" })
+			.then((res) => setFaculties(res.data))
+			.catch(() => {});
+	}, []);
 
 	const fetchMajors = async () => {
 		try {
@@ -93,6 +108,7 @@ function MajorList() {
 				search: debouncedSearch,
 				sort: sortConfig.key || undefined,
 				order: sortConfig.order || undefined,
+				faculty_id: facultyFilter !== "all" ? Number(facultyFilter) : undefined,
 			});
 			setMajors(response.data);
 			setMeta({
@@ -109,7 +125,7 @@ function MajorList() {
 
 	useEffect(() => {
 		void fetchMajors();
-	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
+	}, [meta.current_page, meta.per_page, debouncedSearch, facultyFilter, sortConfig]);
 
 	const handleSort = (key: string) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -167,10 +183,19 @@ function MajorList() {
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
-						<Button variant='outline' size='sm' className='h-8 lg:flex'>
-							<Settings2 className='h-4 w-4' />
-							Xem
-						</Button>
+						<Select value={facultyFilter} onValueChange={setFacultyFilter}>
+							<SelectTrigger className='h-8 w-[180px]'>
+								<SelectValue placeholder='Lọc theo khoa' />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value='all'>Tất cả khoa</SelectItem>
+								{faculties.map((faculty) => (
+									<SelectItem key={faculty.id} value={String(faculty.id)}>
+										{faculty.label || faculty.value}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 						<Button
 							size='sm'
 							onClick={() => {

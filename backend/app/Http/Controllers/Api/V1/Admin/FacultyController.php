@@ -82,6 +82,39 @@ class FacultyController extends BaseApiController
 		return $this->successResponse(true, $faculty, 'Cập nhật khoa thành công.');
 	}
 
+	public function bulkDestroy(Request $request): JsonResponse
+	{
+		$ids = $request->input('ids', []);
+
+		if (empty($ids) || ! is_array($ids)) {
+			return $this->validationErrorResponse(['ids' => ['Danh sách ID không hợp lệ.']]);
+		}
+
+		$faculties = Faculty::query()->whereIn('id', $ids)->get();
+		$deleted = 0;
+		$errors = [];
+
+		foreach ($faculties as $faculty) {
+			if ($faculty->majors()->exists()) {
+				$errors[] = "Khoa \"{$faculty->label}\" đang có ngành trực thuộc, không thể xóa.";
+				continue;
+			}
+
+			if (User::query()->where('faculty_id', $faculty->id)->exists()) {
+				$errors[] = "Khoa \"{$faculty->label}\" đang được gán cho người dùng, không thể xóa.";
+				continue;
+			}
+
+			$faculty->delete();
+			$deleted++;
+		}
+
+		return $this->successResponse(true, [
+			'deleted' => $deleted,
+			'errors' => $errors,
+		], "Đã xóa {$deleted} khoa.");
+	}
+
 	public function destroy(Request $request, Faculty $faculty): JsonResponse
 	{
 		if ($faculty->majors()->exists()) {

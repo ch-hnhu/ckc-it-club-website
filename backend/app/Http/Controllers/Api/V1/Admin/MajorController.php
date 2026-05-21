@@ -21,6 +21,7 @@ class MajorController extends BaseApiController
 		$order = $request->query('order', 'desc');
 		$perPage = (int) $request->query('per_page', 10);
 		$search = $request->query('search');
+		$facultyId = $request->integer('faculty_id') ?: null;
 
 		if (! in_array($sort, $allowedSorts, true)) {
 			$sort = 'created_at';
@@ -35,6 +36,9 @@ class MajorController extends BaseApiController
 			->select('majors.*')
 			->with(['faculty:id,value,label,slug'])
 			->withCount('schoolClasses')
+			->when($facultyId, function ($query) use ($facultyId) {
+				$query->where('majors.faculty_id', $facultyId);
+			})
 			->when($search, function ($query, $search) {
 				$query->where(function ($subQuery) use ($search) {
 					$subQuery
