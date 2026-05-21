@@ -150,6 +150,7 @@ export const adminNavMain: AdminNavItem[] = [
 		title: "Quản lý liên hệ",
 		url: "/contacts",
 		icon: MailOpen,
+		permission: "contacts.view",
 	},
 ];
 
