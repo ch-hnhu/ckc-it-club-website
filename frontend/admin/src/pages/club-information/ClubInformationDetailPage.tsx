@@ -282,6 +282,11 @@ function ClubInformationDetailPage() {
 	const isImageType = info?.type === "image" || info?.type === "banner";
 	const isBannerType = info?.type === "banner";
 	const tableColSpan = 7 + (isImageType ? 1 : 0) + (isBannerType ? 2 : 0);
+	const valueTableClassName = isBannerType
+		? "min-w-[1040px] table-fixed"
+		: isImageType
+			? "min-w-[920px] table-fixed"
+			: "min-w-[780px] table-fixed";
 	const valueColLabel = isImageType
 		? "Ảnh"
 		: info?.type === "url"
@@ -929,7 +934,7 @@ function ClubInformationDetailPage() {
 					<div className='flex flex-col gap-4'>
 						{/* colSpan: base 7 + alt(image/banner) + link+position(banner) */}
 						<div className='overflow-hidden rounded-md border'>
-							<Table className='table-fixed'>
+							<Table className={valueTableClassName}>
 								<TableHeader>
 									<TableRow>
 										<TableHead className='w-[50px]'>
@@ -1249,13 +1254,13 @@ function ClubInformationDetailPage() {
 								<TableFooter className='bg-transparent'>
 									<TableRow>
 										<TableCell colSpan={tableColSpan}>
-											<div className='flex items-center justify-between px-2'>
-												<div className='flex-1 text-sm text-muted-foreground'>
+											<div className='flex flex-col gap-3 px-2 py-1 sm:flex-row sm:items-center sm:justify-between'>
+												<div className='text-sm text-muted-foreground'>
 													Đang hiện {paginatedValues.length} trên tổng{" "}
 													{sortedValues.length} dòng.
 												</div>
-												<div className='flex items-center space-x-6 lg:space-x-8'>
-													<div className='flex items-center space-x-2'>
+												<div className='flex flex-wrap items-center gap-3 sm:gap-4 lg:gap-6'>
+													<div className='flex items-center gap-2'>
 														<p className='text-sm font-medium'>
 															Rows per page
 														</p>
@@ -1286,7 +1291,7 @@ function ClubInformationDetailPage() {
 													<div className='flex w-[100px] items-center justify-center text-sm font-medium'>
 														Page {valCurrentPage} of {valLastPage}
 													</div>
-													<div className='flex items-center space-x-2'>
+													<div className='flex items-center gap-2'>
 														<Button
 															variant='outline'
 															className='hidden h-8 w-8 p-0 lg:flex'
