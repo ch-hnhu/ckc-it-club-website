@@ -66,6 +66,10 @@
 - `GET /api/v1/faculties`
 - `GET /api/v1/majors`
 - `GET /api/v1/roles`
+- `GET /api/v1/roles/{role}`
+- `POST /api/v1/roles/{role}/permissions`
+- `GET /api/v1/permissions`
+- `PUT /api/v1/permissions/{permission}/roles`
 - `GET /api/v1/school-classes`
 - `POST /api/v1/academic-structure/import`
 - `GET /api/v1/academic-structure/imports`
@@ -154,6 +158,7 @@
 - Default role assignment happens automatically on new `User` creation via model boot hook.
 - Default assigned role: `user`.
 - Role seeding is handled in `database/seeders/RoleSeeder.php`.
+- Role-permission sync accepts an empty `permissions` array so a non-admin role can have all permissions removed; the `admin` role cannot have any currently assigned permission removed.
 - Route-level authorization is currently minimal.
 - If you add sensitive admin endpoints, add explicit role/permission checks. Do not assume `auth:sanctum` is enough.
 

@@ -411,6 +411,7 @@ function PermissionList() {
 			</div>
 
 			<PermissionDetailModal
+				key={selectedPermission?.id ?? "empty"}
 				permission={selectedPermission}
 				open={detailOpen}
 				onOpenChange={setDetailOpen}
