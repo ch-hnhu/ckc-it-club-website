@@ -80,7 +80,6 @@ class ClubInformationSeeder extends Seeder
                 ['slug' => $clubInformation['slug']],
                 [
                     ...$clubInformation,
-                    'is_active' => true,
                     'created_at' => now(),
                     'created_by' => $adminId,
                     'updated_at' => now(),

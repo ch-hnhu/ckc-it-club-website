@@ -18,7 +18,7 @@ class ClubInformationController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $allowedSorts = ['id', 'value', 'label', 'slug', 'type', 'description', 'is_active', 'created_at', 'updated_at'];
+        $allowedSorts = ['id', 'value', 'label', 'slug', 'type', 'description', 'created_at', 'updated_at'];
         $sort = in_array($request->query('sort'), $allowedSorts, true)
             ? $request->query('sort')
             : 'created_at';
@@ -66,7 +66,6 @@ class ClubInformationController extends BaseApiController
                 'slug' => trim($request->string('slug')->value()),
                 'type' => $request->input('type'),
                 'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
-                'is_active' => $request->boolean('is_active', true),
                 'created_by' => $request->user()?->id,
                 'updated_by' => $request->user()?->id,
             ]);
@@ -296,7 +295,6 @@ class ClubInformationController extends BaseApiController
             'slug' => $clubInformation->slug,
             'type' => $clubInformation->type,
             'description' => $clubInformation->description,
-            'is_active' => (bool) $clubInformation->is_active,
             'created_at' => $this->formatDate($clubInformation->created_at),
             'updated_at' => $this->formatDate($clubInformation->updated_at),
             'club_information_values' => $clubInformation

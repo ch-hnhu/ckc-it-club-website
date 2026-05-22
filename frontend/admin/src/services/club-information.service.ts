@@ -8,7 +8,6 @@ export type CreateClubInformationPayload = {
 	slug: string;
 	type: string;
 	description?: string;
-	is_active: boolean;
 };
 
 export type UpdateClubInformationPayload = {

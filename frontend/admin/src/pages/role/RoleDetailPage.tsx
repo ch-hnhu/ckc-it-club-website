@@ -131,7 +131,7 @@ function RoleDetailPage() {
 			<div className='flex flex-col gap-6'>
 				{/* Thông tin vai trò */}
 				<Card className='shadow-sm'>
-					<CardHeader className='pb-4'>
+					<CardHeader className='pb-2'>
 						<div className='flex items-start justify-between gap-2'>
 							<div>
 								<div className='mb-1 flex flex-wrap items-center gap-2'>

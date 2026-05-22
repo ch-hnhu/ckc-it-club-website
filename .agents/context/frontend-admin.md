@@ -239,7 +239,7 @@
 - Club information management:
 - route `/club-informations`
 - route `/club-informations/:id`
-- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`; parent `is_active` is intentionally omitted from the table because parent configs are stable code-facing contracts.
+- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`; parent `club_informations.is_active` has been removed from the database/API because parent configs are stable code-facing contracts.
 - detail uses `clubInformationService.getClubInformation(id, params)`; the nested value table supports API-driven search/sort and local pagination.
 - image and banner rows render the thumbnail preview and URL in the same value cell, matching the user list pattern; there is no separate image column.
 - the nested value table supports sorting by `alt` for image rows and `link`/`position` for banner rows in addition to the existing value/date/status keys.
