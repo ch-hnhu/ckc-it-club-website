@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
-use App\Enums\PermissionsEnum;
 use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Role\StoreRoleRequest;
@@ -192,9 +191,12 @@ class RoleController extends BaseApiController
         $role = Role::findOrFail($id);
         $permNames = $request->validated()['permissions'];
 
-        if ($role->name === RolesEnum::ADMIN->value
-            && ! in_array(PermissionsEnum::ADMIN_PANEL_ACCESS->value, $permNames, true)) {
-            return $this->errorResponse(false, ApiMessage::CANNOT_REMOVE_ADMIN_PANEL_ACCESS, 403);
+        if ($role->name === RolesEnum::ADMIN->value) {
+            $currentPermNames = $role->permissions()->pluck('name')->all();
+
+            if (array_diff($currentPermNames, $permNames) !== []) {
+                return $this->errorResponse(false, ApiMessage::CANNOT_REMOVE_ADMIN_ROLE_PERMISSION, 403);
+            }
         }
 
         $role->syncPermissions($permNames);

@@ -50,6 +50,7 @@ enum ApiMessage: string
     // Permission Specific
     case PERMISSIONS_UPDATED = 'Permissions updated successfully';
     case CANNOT_REMOVE_ADMIN_PANEL_ACCESS = 'Cannot remove admin_panel.access from the admin role';
+    case CANNOT_REMOVE_ADMIN_ROLE_PERMISSION = 'Cannot remove permissions from the admin role';
 
     // Database & Server Errors
     case DATABASE_ERROR = 'Database error occurred';

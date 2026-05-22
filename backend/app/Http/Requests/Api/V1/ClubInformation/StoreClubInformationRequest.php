@@ -23,7 +23,6 @@ class StoreClubInformationRequest extends FormRequest
             'slug'        => 'required|string|max:255|unique:club_informations,slug',
             'type'        => ['required', Rule::in(ClubInformationType::values())],
             'description' => 'nullable|string|max:1000',
-            'is_active'   => 'sometimes|boolean',
         ];
     }
 
@@ -40,7 +39,6 @@ class StoreClubInformationRequest extends FormRequest
             'type.required'    => 'Vui lòng chọn kiểu dữ liệu.',
             'type.in'          => 'Kiểu dữ liệu không hợp lệ.',
             'description.max'  => 'Mô tả không được vượt quá 1000 ký tự.',
-            'is_active.boolean' => 'Trạng thái không hợp lệ.',
         ];
     }
 

@@ -18,7 +18,6 @@ class ClubInformation extends Model
         'slug',
         'type',
         'description',
-        'is_active',
         'created_by',
         'updated_by',
     ];
@@ -26,7 +25,6 @@ class ClubInformation extends Model
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
             'created_at' => 'datetime:d/m/Y',
             'updated_at' => 'datetime:d/m/Y',
         ];

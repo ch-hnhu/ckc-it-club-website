@@ -236,20 +236,26 @@
 - route `/contacts`
 - server-driven pagination, search, sort, and status filtering
 - status update is live against backend `PATCH /contacts/{contact}/status`
+- Role management:
+- route `/roles`
+- route `/roles/:id`
+- role detail can add one or more existing permissions from a modal multi-select combobox and remove assigned permissions directly from permission badges after confirmation. Permission removal is disabled for the `admin` role. The add option list is loaded from `GET /permissions` and filters out permissions already assigned to the role; add/remove both persist via `POST /roles/{role}/permissions` with the full permission name list. Permission detail also confirms before removing a role from a permission.
 - Club information management:
 - route `/club-informations`
 - route `/club-informations/:id`
-- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
+- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`; parent `club_informations.is_active` has been removed from the database/API because parent configs are stable code-facing contracts.
 - detail uses `clubInformationService.getClubInformation(id, params)`; the nested value table supports API-driven search/sort and local pagination.
 - image and banner rows render the thumbnail preview and URL in the same value cell, matching the user list pattern; there is no separate image column.
 - the nested value table supports sorting by `alt` for image rows and `link`/`position` for banner rows in addition to the existing value/date/status keys.
 - backend `show()` whitelists `alt`, `link`, and `position` for nested value sorting so those headers sort server-side instead of falling back to `created_at`.
-- detail can switch the parent information card into an inline edit form and submit through `clubInformationService.updateClubInformation`.
-- detail value rows can be deleted after confirmation through `clubInformationService.deleteClubInformationValue`.
+- detail can switch the parent information card into an inline edit form and submit through `clubInformationService.updateClubInformation`; parent label, key, and type are read-only there, and only slug/description are editable.
+- parent club information records are stable config keys and are not deletable in the admin UI.
+- detail value rows can be deleted after confirmation through `clubInformationService.deleteClubInformationValue`, except active values and the final remaining value of a config.
 - detail can create nested values from a modal through `clubInformationService.createClubInformationValue`, then refreshes the value table.
 - detail value popup can switch from read-only view to edit mode and submit through `clubInformationService.updateClubInformationValue`.
+- non-banner detail value rows expose a quick dropdown action backed by `clubInformationService.setDefaultClubInformationValue`; clicking it sets that row as the default without opening the edit form.
+- active values are labelled as `Mặc định` in the value table. For non-banner configs, setting one value active makes it the only active/default value; banner configs can keep multiple active values ordered by position.
 - date fields are displayed directly from the API, which formats them as `d/m/Y`
-- current admin UI is list-only because no create/update/detail route is wired yet
 - Academic structure import:
 - route `/organization/upload`
 - imports faculty/major/class data through `POST /academic-structure/import`

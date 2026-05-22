@@ -12,6 +12,8 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             PermissionSeeder::class,
             UserSeeder::class,
+            ClubInformationSeeder::class,
+            ClubInformationValueSeeder::class,
             FacultySeeder::class,
             MajorSeeder::class,
             SchoolClassSeeder::class,

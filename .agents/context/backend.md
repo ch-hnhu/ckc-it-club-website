@@ -66,6 +66,10 @@
 - `GET /api/v1/faculties`
 - `GET /api/v1/majors`
 - `GET /api/v1/roles`
+- `GET /api/v1/roles/{role}`
+- `POST /api/v1/roles/{role}/permissions`
+- `GET /api/v1/permissions`
+- `PUT /api/v1/permissions/{permission}/roles`
 - `GET /api/v1/school-classes`
 - `POST /api/v1/academic-structure/import`
 - `GET /api/v1/academic-structure/imports`
@@ -77,6 +81,7 @@
 - `POST /api/v1/club-informations`
 - `PUT/PATCH /api/v1/club-informations/{clubInformation}`
 - `POST /api/v1/club-informations/{clubInformation}/values`
+- `PATCH /api/v1/club-informations/{clubInformation}/values/{clubInformationValue}/default`
 - `PUT/PATCH /api/v1/club-informations/{clubInformation}/values/{clubInformationValue}`
 - `DELETE /api/v1/club-informations/{clubInformation}/values/{clubInformationValue}`
 - `GET /api/v1/club-applications`
@@ -154,6 +159,7 @@
 - Default role assignment happens automatically on new `User` creation via model boot hook.
 - Default assigned role: `user`.
 - Role seeding is handled in `database/seeders/RoleSeeder.php`.
+- Role-permission sync accepts an empty `permissions` array so a non-admin role can have all permissions removed; the `admin` role cannot have any currently assigned permission removed.
 - Route-level authorization is currently minimal.
 - If you add sensitive admin endpoints, add explicit role/permission checks. Do not assume `auth:sanctum` is enough.
 
@@ -199,12 +205,14 @@
 - admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`
 - admin can list club information records through `GET /api/v1/club-informations` with pagination, search, and sort.
-- admin can create and update parent club information records through the resource `store` and `update` actions.
+- admin can create parent club information records through the resource `store` action; parent update is limited to `slug` and `description` because label, key, and type are treated as stable code contracts. Parent records are not deletable through the API, and `club_informations` no longer has a parent-level `is_active` column.
 - admin can fetch one club information record through `GET /api/v1/club-informations/{id}`; nested `club_information_values` accept `search`, `sort`, and `order` query params for the detail table, including `alt`, `link`, and `position` sorting for media/banner values.
-- admin can create, update, and delete nested values through `/club-informations/{clubInformation}/values`; value payloads support `value`, `link`, `alt`, `position`, and `is_active`.
+- admin can create, update, set a non-banner value as the default, and delete nested values through `/club-informations/{clubInformation}/values`; value payloads support long-text `value`, `link`, `alt`, integer/null `position`, and `is_active`; HTML values are not capped at 1000 characters.
+- every parent club information record must keep at least one nested value, and active nested values are treated as the current/default values for that config. Active values cannot be deleted, and the final remaining value of a config cannot be deleted.
+- for non-banner config types, activating one value or calling the default endpoint automatically deactivates sibling values. Banner configs can have multiple active values and are resolved by active values ordered by `position` then `id`; the default endpoint rejects banner configs.
 - creating/updating club information records and creating/updating nested values dispatch database notifications to admin roles.
+- `DatabaseSeeder` seeds demo club information keys and values for club name, slogan, email, about text, logo, home banners, Facebook page, and recruitment availability.
 - list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
-- create/update/delete flows are still incomplete.
 - `academic_structure_imports`
 - admin academic structure import history for uploaded faculty/major/class files.
 - valid imports support `.xlsx` and `.csv`; unsupported uploaded file extensions are stored as `file_type = Other`, `status = failed`, and returned as validation errors so the admin UI can show failed upload history.

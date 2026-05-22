@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('slug');
             $table->string('type')->nullable();
             $table->string('description')->nullable();
-            $table->boolean('is_active')->default(true);
 
             $table->dateTime('created_at')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();

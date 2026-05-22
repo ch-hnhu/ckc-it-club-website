@@ -44,7 +44,11 @@ function ApplicationDetailPage() {
 		() => [
 			{ title: "Dashboard", link: "/" },
 			{ title: "Quản lý yêu cầu tham gia", link: "/requests" },
-			{ title: application ? getApplicantName(application) : `Hồ sơ #${applicationId ?? "--"}` },
+			{
+				title: application
+					? getApplicantName(application)
+					: `Hồ sơ #${applicationId ?? "--"}`,
+			},
 		],
 		[application, applicationId],
 	);
@@ -68,13 +72,15 @@ function ApplicationDetailPage() {
 				<Button asChild variant='outline' className='w-fit'>
 					<Link to='/requests'>
 						<ArrowLeft className='h-4 w-4' />
-						Quay lại danh sách
+						Quay lại
 					</Link>
 				</Button>
 				<Card>
 					<CardHeader>
 						<CardTitle>Không tìm thấy hồ sơ</CardTitle>
-						<CardDescription>Đơn ứng tuyển này không tồn tại hoặc đã bị xóa.</CardDescription>
+						<CardDescription>
+							Đơn ứng tuyển này không tồn tại hoặc đã bị xóa.
+						</CardDescription>
 					</CardHeader>
 				</Card>
 			</div>
@@ -86,19 +92,15 @@ function ApplicationDetailPage() {
 			<Button asChild variant='outline' className='w-fit'>
 				<Link to='/requests'>
 					<ArrowLeft className='h-4 w-4' />
-					Quay lại danh sách
+					Quay lại
 				</Link>
 			</Button>
 
 			<div className='overflow-hidden rounded-3xl border border-border bg-card shadow-sm'>
 				<div className='border-b border-border bg-background/60 px-6 py-6 md:px-8 md:py-7'>
 					<div className='mb-3 flex flex-wrap items-center gap-2'>
-						<Badge variant='secondary'>
-							Hồ sơ #{application.id}
-						</Badge>
-						<div>
-							{getStatusBadge(application.status)}
-						</div>
+						<Badge variant='secondary'>Hồ sơ #{application.id}</Badge>
+						<div>{getStatusBadge(application.status)}</div>
 					</div>
 					<h1 className='text-2xl font-semibold leading-tight text-foreground md:text-4xl'>
 						Hồ sơ #{application.id} - {getApplicantName(application)}
@@ -140,18 +142,84 @@ function ApplicationDetailPage() {
 						<CardContent className='px-6'>
 							<div className='grid gap-4 xl:grid-cols-2'>
 								<div className='space-y-4 rounded-2xl border border-border bg-muted/40 p-5'>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>ID hồ sơ</p><p className='font-semibold'>{application.id}</p></div>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>Người tạo</p><p className='font-semibold'>{application.created_by}</p></div>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>Người cập nhật</p><p className='font-semibold'>{application.updated_by || "--"}</p></div>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>Ngày nộp</p><p className='font-semibold'>{formatDate(application.created_at)}</p></div>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>Lần cập nhật cuối</p><p className='font-semibold'>{formatDate(application.updated_at)}</p></div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											ID hồ sơ
+										</p>
+										<p className='font-semibold'>{application.id}</p>
+									</div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											Người tạo
+										</p>
+										<p className='font-semibold'>{application.created_by}</p>
+									</div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											Người cập nhật
+										</p>
+										<p className='font-semibold'>
+											{application.updated_by || "--"}
+										</p>
+									</div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											Ngày nộp
+										</p>
+										<p className='font-semibold'>
+											{formatDate(application.created_at)}
+										</p>
+									</div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											Lần cập nhật cuối
+										</p>
+										<p className='font-semibold'>
+											{formatDate(application.updated_at)}
+										</p>
+									</div>
 								</div>
 								<div className='space-y-4 rounded-2xl border border-border bg-muted/40 p-5'>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>Họ tên</p><p className='font-semibold'>{getApplicantName(application)}</p></div>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>Mã sinh viên</p><p className='font-semibold'>{application.applicant?.student_code || "--"}</p></div>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>Khoa</p><p className='font-semibold'>{application.applicant?.faculty || "--"}</p></div>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>Ngành</p><p className='font-semibold'>{application.applicant?.major || "--"}</p></div>
-									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'><p className='text-sm font-medium text-muted-foreground'>Lớp</p><p className='font-semibold'>{application.applicant?.class_name || "--"}</p></div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											Họ tên
+										</p>
+										<p className='font-semibold'>
+											{getApplicantName(application)}
+										</p>
+									</div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											Mã sinh viên
+										</p>
+										<p className='font-semibold'>
+											{application.applicant?.student_code || "--"}
+										</p>
+									</div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											Khoa
+										</p>
+										<p className='font-semibold'>
+											{application.applicant?.faculty || "--"}
+										</p>
+									</div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											Ngành
+										</p>
+										<p className='font-semibold'>
+											{application.applicant?.major || "--"}
+										</p>
+									</div>
+									<div className='grid gap-2 sm:grid-cols-[160px_minmax(0,1fr)]'>
+										<p className='text-sm font-medium text-muted-foreground'>
+											Lớp
+										</p>
+										<p className='font-semibold'>
+											{application.applicant?.class_name || "--"}
+										</p>
+									</div>
 								</div>
 							</div>
 						</CardContent>
@@ -175,7 +243,9 @@ function ApplicationDetailPage() {
 												<p className='text-primary text-xs font-semibold uppercase tracking-[0.16em]'>
 													Câu {index + 1}
 												</p>
-												<Badge variant='secondary'>{answer.question_type}</Badge>
+												<Badge variant='secondary'>
+													{answer.question_type}
+												</Badge>
 											</div>
 											<p className='text-lg font-semibold leading-8 text-foreground'>
 												{answer.question_label}
@@ -186,7 +256,8 @@ function ApplicationDetailPage() {
 												Trả lời
 											</p>
 											<p className='mt-2 break-words text-base leading-8 text-foreground'>
-												{answer.answer_value || "Ứng viên chưa trả lời câu hỏi này."}
+												{answer.answer_value ||
+													"Ứng viên chưa trả lời câu hỏi này."}
 											</p>
 										</div>
 									</div>
