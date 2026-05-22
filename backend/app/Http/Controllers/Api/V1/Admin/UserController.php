@@ -125,8 +125,17 @@ class UserController extends BaseApiController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(string $id): JsonResponse
     {
-        //
+        $user = User::findOrFail($id);
+
+        $rawAvatarPath = $user->getRawOriginal('avatar');
+        if ($rawAvatarPath) {
+            Storage::disk('public')->delete($rawAvatarPath);
+        }
+
+        $user->delete();
+
+        return $this->successResponse(true, null, ApiMessage::USER_DELETED);
     }
 }

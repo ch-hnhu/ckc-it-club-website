@@ -61,8 +61,7 @@ function Sidebar({ isOpen = true }: SidebarProps) {
 			icon: UserRoundPlus,
 			subItems: [
 				{ label: "Câu hỏi ứng tuyển", href: "/questions" },
-				{ label: "Câu trả lời", href: "/answers" },
-				{ label: "Yêu cầu tham gia", href: "/requests" },
+{ label: "Yêu cầu tham gia", href: "/requests" },
 			],
 		},
 	];

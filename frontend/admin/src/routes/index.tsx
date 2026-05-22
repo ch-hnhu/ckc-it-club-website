@@ -12,7 +12,6 @@ import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage
 import ApplicationDetailPage from "@/pages/recruitment/ApplicationDetailPage";
 import ApplicationQuestionsPage from "@/pages/recruitment/ApplicationQuestionsPage";
 import ApplicationQuestionDetailPage from "@/pages/recruitment/ApplicationQuestionDetailPage";
-import ApplicationAnswersPage from "@/pages/recruitment/ApplicationAnswersPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { PermissionRoute } from "@/components/auth/PermissionRoute";
@@ -189,14 +188,6 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='application_questions.view'>
 						<ApplicationQuestionDetailPage />
-					</PermissionRoute>
-				),
-			},
-			{
-				path: "answers",
-				element: (
-					<PermissionRoute permission='applications.view'>
-						<ApplicationAnswersPage />
 					</PermissionRoute>
 				),
 			},

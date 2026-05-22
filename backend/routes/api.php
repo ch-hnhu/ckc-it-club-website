@@ -107,8 +107,10 @@ Route::prefix('v1')->group(function () {
             Route::get('contacts/stats', [AdminContactController::class, 'stats']);
             Route::get('contacts', [AdminContactController::class, 'index']);
         });
-        Route::middleware('permission:contacts.manage')
-            ->patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+        Route::middleware('permission:contacts.manage')->group(function () {
+            Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+            Route::delete('contacts/{contact}', [AdminContactController::class, 'destroy']);
+        });
 
         // club applications
         Route::middleware('permission:applications.view')
@@ -142,6 +144,7 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
         });
         Route::middleware('permission:academic_structure.import')->group(function () {
+            Route::post('faculties/bulk-delete', [FacultyController::class, 'bulkDestroy']);
             Route::apiResource('faculties', FacultyController::class)->only(['store', 'update', 'destroy']);
             Route::apiResource('majors', MajorController::class)->only(['store', 'update', 'destroy']);
             Route::apiResource('school-classes', SchoolClassController::class)->only(['store', 'update', 'destroy']);

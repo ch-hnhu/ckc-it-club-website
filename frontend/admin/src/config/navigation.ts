@@ -134,12 +134,7 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/questions",
 				permission: "application_questions.view",
 			},
-			{
-				title: "Câu trả lời",
-				url: "/answers",
-				permission: "applications.view",
-			},
-			{
+{
 				title: "Yêu cầu tham gia",
 				url: "/requests",
 				permission: "applications.view",
