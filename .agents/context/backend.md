@@ -199,13 +199,14 @@
 - admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`
 - admin can list club information records through `GET /api/v1/club-informations` with pagination, search, and sort.
-- admin can create and update parent club information records through the resource `store` and `update` actions.
+- admin can create and update parent club information records through the resource `store` and `update` actions, but parent records are treated as stable code contracts and are not deletable through the API.
 - admin can fetch one club information record through `GET /api/v1/club-informations/{id}`; nested `club_information_values` accept `search`, `sort`, and `order` query params for the detail table, including `alt`, `link`, and `position` sorting for media/banner values.
 - admin can create, update, and delete nested values through `/club-informations/{clubInformation}/values`; value payloads support long-text `value`, `link`, `alt`, integer/null `position`, and `is_active`; HTML values are not capped at 1000 characters.
+- every parent club information record must keep at least one nested value, and active nested values are treated as the current/default values for that config. Active values cannot be deleted, and the final remaining value of a config cannot be deleted.
+- for non-banner config types, activating one value automatically deactivates sibling values. Banner configs can have multiple active values and are resolved by active values ordered by `position` then `id`.
 - creating/updating club information records and creating/updating nested values dispatch database notifications to admin roles.
 - `DatabaseSeeder` seeds demo club information keys and values for club name, slogan, email, about text, logo, home banners, Facebook page, and recruitment availability.
 - list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
-- create/update/delete flows are still incomplete.
 - `academic_structure_imports`
 - admin academic structure import history for uploaded faculty/major/class files.
 - valid imports support `.xlsx` and `.csv`; unsupported uploaded file extensions are stored as `file_type = Other`, `status = failed`, and returned as validation errors so the admin UI can show failed upload history.

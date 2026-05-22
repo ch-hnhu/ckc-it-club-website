@@ -96,7 +96,6 @@ Route::prefix('v1')->group(function () {
             Route::post('club-informations', [ClubInformationController::class, 'store']);
             Route::put('club-informations/{clubInformation}', [ClubInformationController::class, 'update']);
             Route::patch('club-informations/{clubInformation}', [ClubInformationController::class, 'update']);
-            Route::delete('club-informations/{clubInformation}', [ClubInformationController::class, 'destroy']);
 
             Route::post('club-informations/{clubInformation}/values', [ClubInformationController::class, 'storeValue']);
             Route::put('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);

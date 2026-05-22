@@ -85,6 +85,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ValSortKey =
 	| "id"
@@ -168,11 +169,11 @@ function InfoRow({ label, value }: { label: React.ReactNode; value: React.ReactN
 	);
 }
 
-function getStatusBadgeItems(isActive?: boolean): CompactBadgeItem[] {
+function getStatusBadgeItems(isActive?: boolean, activeLabel = "Đang dùng"): CompactBadgeItem[] {
 	return [
 		{
 			key: isActive === false ? "inactive" : "active",
-			label: isActive === false ? "Tạm ẩn" : "Đang dùng",
+			label: isActive === false ? "Tạm ẩn" : activeLabel,
 			className:
 				isActive === false
 					? "border-muted-foreground/20 bg-muted text-muted-foreground hover:bg-muted"
@@ -300,9 +301,7 @@ function ClubInformationDetailPage() {
 
 	const isImageType = info?.type === "image" || info?.type === "banner";
 	const isBannerType = info?.type === "banner";
-	const isBooleanType = info?.type === "boolean";
-	const tableColSpan =
-		7 + (isImageType ? 1 : 0) + (isBannerType ? 2 : 0) - (isBooleanType ? 1 : 0);
+	const tableColSpan = 7 + (isImageType ? 1 : 0) + (isBannerType ? 2 : 0);
 	const valueColLabel = isImageType
 		? "Ảnh"
 		: info?.type === "url"
@@ -315,8 +314,17 @@ function ClubInformationDetailPage() {
 		: (selectedValue?.value ?? "");
 	const selectedAltPreview = isEditingValue ? detailValueForm.alt : (selectedValue?.alt ?? "");
 	const selectedLinkPreview = isEditingValue ? detailValueForm.link : (selectedValue?.link ?? "");
+	const selectedValueIsActive = isEditingValue
+		? detailValueForm.is_active
+		: selectedValue?.is_active !== false;
 
 	const valLastPage = Math.max(1, Math.ceil(sortedValues.length / valPerPage));
+
+	const getValueDeleteDisabledReason = (value: ClubInformationValue) => {
+		if (value.is_active) return "Không thể xoá giá trị đang được sử dụng.";
+		if (values.length <= 1) return "Không thể xoá giá trị cuối cùng của cấu hình.";
+		return null;
+	};
 
 	const paginatedValues = useMemo(() => {
 		const start = (valCurrentPage - 1) * valPerPage;
@@ -456,6 +464,22 @@ function ClubInformationDetailPage() {
 
 	const handleDeleteValueSubmit = async () => {
 		if (!valuePendingDelete) return;
+
+		if (valuePendingDelete.is_active) {
+			toast.error("Không thể xóa giá trị đang là mặc định của cấu hình.", {
+				position: "top-right",
+			});
+			setValuePendingDelete(null);
+			return;
+		}
+
+		if (values.length <= 1) {
+			toast.error("Cấu hình phải có ít nhất một giá trị.", {
+				position: "top-right",
+			});
+			setValuePendingDelete(null);
+			return;
+		}
 
 		const clubInformationId = Number(id);
 		if (!Number.isFinite(clubInformationId)) {
@@ -723,7 +747,7 @@ function ClubInformationDetailPage() {
 			<div className='flex flex-col gap-6'>
 				<div>
 					<Card className='shadow-sm'>
-						<CardHeader className='pb-4'>
+						<CardHeader className='pb-2'>
 							<div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
 								<div>
 									<div className='mb-1 flex flex-wrap items-center gap-2'>
@@ -997,12 +1021,6 @@ function ClubInformationDetailPage() {
 								<Button
 									size='sm'
 									onClick={() => handleAddValueDialogOpenChange(true)}
-									disabled={isBooleanType && values.length >= 1}
-									title={
-										isBooleanType && values.length >= 1
-											? "Cấu hình boolean chỉ được có 1 giá trị"
-											: undefined
-									}
 									className='h-8 bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50'>
 									<Plus className='h-4 w-4' />
 									Thêm
@@ -1073,16 +1091,14 @@ function ClubInformationDetailPage() {
 												</TableHead>
 											</>
 										)}
-										{!isBooleanType && (
-											<TableHead className='w-[110px]'>
-												<Button
-													variant='ghost'
-													onClick={() => handleValSort("is_active")}
-													className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-													Trạng thái{getValSortIcon("is_active")}
-												</Button>
-											</TableHead>
-										)}
+										<TableHead className='w-[110px]'>
+											<Button
+												variant='ghost'
+												onClick={() => handleValSort("is_active")}
+												className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+												Trạng thái{getValSortIcon("is_active")}
+											</Button>
+										</TableHead>
 										<TableHead className='w-[105px]'>
 											<Button
 												variant='ghost'
@@ -1104,185 +1120,225 @@ function ClubInformationDetailPage() {
 								</TableHeader>
 								<TableBody>
 									{paginatedValues.length > 0 ? (
-										paginatedValues.map((val) => (
-											<TableRow key={val.id}>
-												<TableCell>
-													<Checkbox
-														aria-label={`Select value ${val.id}`}
-														checked={isSelected(val.id)}
-														onCheckedChange={(checked) =>
-															toggleOne(val.id, checked === true)
-														}
-													/>
-												</TableCell>
-												<TableCell className='font-medium'>
-													{val.id}
-												</TableCell>
+										paginatedValues.map((val) => {
+											const deleteDisabledReason =
+												getValueDeleteDisabledReason(val);
 
-												{/* Value cell — per type */}
-												<TableCell className='overflow-hidden'>
-													{info.type === "boolean" ? (
-														<Badge
-															variant='outline'
-															className={
-																val.value === "true"
-																	? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
-																	: "border-muted-foreground/20 bg-muted text-muted-foreground"
-															}>
-															{val.value === "true"
-																? "True — Bật"
-																: "False — Tắt"}
-														</Badge>
-													) : info.type === "url" ? (
-														<a
-															href={val.value}
-															target='_blank'
-															rel='noopener noreferrer'
-															className='flex items-center gap-1 text-blue-600 hover:underline min-w-0'>
-															<span
-																className='truncate text-sm'
-																title={val.value}>
-																{val.value}
-															</span>
-															<ExternalLink className='h-3 w-3 shrink-0' />
-														</a>
-													) : info.type === "html" ? (
-														<div className='flex min-w-0 items-center gap-2'>
-															<Badge
-																variant='secondary'
-																className='shrink-0 text-xs'>
-																HTML
-															</Badge>
-															<span
-																className='truncate text-xs text-muted-foreground'
-																title={val.value}>
-																{val.value.replace(/<[^>]+>/g, " ")}
-															</span>
-														</div>
-													) : isImageType ? (
-														<a
-															href={val.value}
-															target='_blank'
-															rel='noopener noreferrer'
-															className='flex min-w-0 items-center gap-3 text-blue-600 hover:underline'>
-															<Avatar className='h-10 w-10 rounded-md'>
-																<AvatarImage
-																	src={val.value}
-																	alt={val.alt ?? ""}
-																	className='object-cover'
-																/>
-																<AvatarFallback className='rounded-md text-[10px]'>
-																	IMG
-																</AvatarFallback>
-															</Avatar>
-															<span
-																className='min-w-0 truncate text-xs'
-																title={val.value}>
-																{val.value}
-															</span>
-															<ExternalLink className='h-3 w-3 shrink-0' />
-														</a>
-													) : (
-														<span
-															className='truncate'
-															title={val.value}>
-															{val.value}
-														</span>
-													)}
-												</TableCell>
-
-												{/* Alt — image / banner */}
-												{isImageType && (
-													<TableCell className='overflow-hidden text-sm text-muted-foreground'>
-														<span
-															className='truncate'
-															title={val.alt ?? ""}>
-															{val.alt || "--"}
-														</span>
+											return (
+												<TableRow key={val.id}>
+													<TableCell>
+														<Checkbox
+															aria-label={`Select value ${val.id}`}
+															checked={isSelected(val.id)}
+															onCheckedChange={(checked) =>
+																toggleOne(val.id, checked === true)
+															}
+														/>
 													</TableCell>
-												)}
+													<TableCell className='font-medium'>
+														<div className='flex flex-col gap-1'>
+															<span>{val.id}</span>
+														</div>
+													</TableCell>
 
-												{/* Link + Position — banner */}
-												{isBannerType && (
-													<>
-														<TableCell className='overflow-hidden'>
-															{val.link ? (
-																<a
-																	href={val.link}
-																	target='_blank'
-																	rel='noopener noreferrer'
-																	className='flex items-center gap-1 text-blue-600 hover:underline min-w-0'>
-																	<span
-																		className='truncate text-xs'
-																		title={val.link}>
-																		{val.link}
-																	</span>
-																	<ExternalLink className='h-3 w-3 shrink-0' />
-																</a>
-															) : (
-																<span className='text-muted-foreground'>
-																	--
+													{/* Value cell — per type */}
+													<TableCell className='overflow-hidden'>
+														{info.type === "boolean" ? (
+															<Badge
+																variant='outline'
+																className={
+																	val.value === "true"
+																		? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+																		: "border-muted-foreground/20 bg-muted text-muted-foreground"
+																}>
+																{val.value === "true"
+																	? "True — Bật"
+																	: "False — Tắt"}
+															</Badge>
+														) : info.type === "url" ? (
+															<a
+																href={val.value}
+																target='_blank'
+																rel='noopener noreferrer'
+																className='flex items-center gap-1 text-blue-600 hover:underline min-w-0'>
+																<span
+																	className='truncate text-sm'
+																	title={val.value}>
+																	{val.value}
 																</span>
-															)}
-														</TableCell>
-														<TableCell className='text-center font-medium'>
-															{val.position ?? "--"}
-														</TableCell>
-													</>
-												)}
+																<ExternalLink className='h-3 w-3 shrink-0' />
+															</a>
+														) : info.type === "html" ? (
+															<div className='flex min-w-0 items-center gap-2'>
+																<Badge
+																	variant='secondary'
+																	className='shrink-0 text-xs'>
+																	HTML
+																</Badge>
+																<span
+																	className='truncate text-xs text-muted-foreground'
+																	title={val.value}>
+																	{val.value.replace(
+																		/<[^>]+>/g,
+																		" ",
+																	)}
+																</span>
+															</div>
+														) : isImageType ? (
+															<a
+																href={val.value}
+																target='_blank'
+																rel='noopener noreferrer'
+																className='flex min-w-0 items-center gap-3 text-blue-600 hover:underline'>
+																<Avatar className='h-10 w-10 rounded-md'>
+																	<AvatarImage
+																		src={val.value}
+																		alt={val.alt ?? ""}
+																		className='object-cover'
+																	/>
+																	<AvatarFallback className='rounded-md text-[10px]'>
+																		IMG
+																	</AvatarFallback>
+																</Avatar>
+																<span
+																	className='min-w-0 truncate text-xs'
+																	title={val.value}>
+																	{val.value}
+																</span>
+																<ExternalLink className='h-3 w-3 shrink-0' />
+															</a>
+														) : (
+															<span
+																className='truncate'
+																title={val.value}>
+																{val.value}
+															</span>
+														)}
+													</TableCell>
 
-												{!isBooleanType && (
+													{/* Alt — image / banner */}
+													{isImageType && (
+														<TableCell className='overflow-hidden text-sm text-muted-foreground'>
+															<span
+																className='truncate'
+																title={val.alt ?? ""}>
+																{val.alt || "--"}
+															</span>
+														</TableCell>
+													)}
+
+													{/* Link + Position — banner */}
+													{isBannerType && (
+														<>
+															<TableCell className='overflow-hidden'>
+																{val.link ? (
+																	<a
+																		href={val.link}
+																		target='_blank'
+																		rel='noopener noreferrer'
+																		className='flex items-center gap-1 text-blue-600 hover:underline min-w-0'>
+																		<span
+																			className='truncate text-xs'
+																			title={val.link}>
+																			{val.link}
+																		</span>
+																		<ExternalLink className='h-3 w-3 shrink-0' />
+																	</a>
+																) : (
+																	<span className='text-muted-foreground'>
+																		--
+																	</span>
+																)}
+															</TableCell>
+															<TableCell className='text-center font-medium'>
+																{val.position ?? "--"}
+															</TableCell>
+														</>
+													)}
+
 													<TableCell>
 														<CompactBadgeList
 															items={getStatusBadgeItems(
 																val.is_active,
+																isBannerType
+																	? "Đang dùng"
+																	: "Mặc định",
 															)}
 															maxVisibleItems={1}
 														/>
 													</TableCell>
-												)}
-												<TableCell className='text-sm text-muted-foreground'>
-													{formatDate(val.created_at)}
-												</TableCell>
-												<TableCell className='text-sm text-muted-foreground'>
-													{formatDate(val.updated_at)}
-												</TableCell>
-												<TableCell>
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<Button
-																variant='ghost'
-																className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'>
-																<MoreHorizontal className='h-4 w-4' />
-																<span className='sr-only'>
-																	Open menu
-																</span>
-															</Button>
-														</DropdownMenuTrigger>
-														<DropdownMenuContent
-															align='end'
-															className='w-[160px]'>
-															<DropdownMenuItem
-																onClick={() =>
-																	openValueDetail(val)
-																}>
-																<Eye className='h-4 w-4' />
-																Chi tiết
-															</DropdownMenuItem>
-															<DropdownMenuSeparator />
-															<DropdownMenuItem
-																className='text-destructive focus:bg-destructive/10 focus:text-destructive'
-																onClick={() =>
-																	setValuePendingDelete(val)
-																}>
-																<Trash2 className='h-4 w-4 text-destructive' />
-																Xóa
-															</DropdownMenuItem>
-														</DropdownMenuContent>
-													</DropdownMenu>
-												</TableCell>
-											</TableRow>
-										))
+													<TableCell className='text-sm text-muted-foreground'>
+														{formatDate(val.created_at)}
+													</TableCell>
+													<TableCell className='text-sm text-muted-foreground'>
+														{formatDate(val.updated_at)}
+													</TableCell>
+													<TableCell>
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	variant='ghost'
+																	className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'>
+																	<MoreHorizontal className='h-4 w-4' />
+																	<span className='sr-only'>
+																		Open menu
+																	</span>
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent
+																align='end'
+																className='w-[160px]'>
+																<DropdownMenuItem
+																	onClick={() =>
+																		openValueDetail(val)
+																	}>
+																	<Eye className='h-4 w-4' />
+																	Chi tiết
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																{deleteDisabledReason ? (
+																	<TooltipProvider>
+																		<Tooltip>
+																			<TooltipTrigger asChild>
+																				<DropdownMenuItem
+																					aria-disabled='true'
+																					className='text-destructive opacity-50 focus:bg-destructive/10 focus:text-destructive'
+																					onSelect={(
+																						event,
+																					) =>
+																						event.preventDefault()
+																					}>
+																					<Trash2 className='h-4 w-4 text-destructive' />
+																					Xóa
+																				</DropdownMenuItem>
+																			</TooltipTrigger>
+																			<TooltipContent
+																				side='left'
+																				className='max-w-38'>
+																				{
+																					deleteDisabledReason
+																				}
+																			</TooltipContent>
+																		</Tooltip>
+																	</TooltipProvider>
+																) : (
+																	<DropdownMenuItem
+																		className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+																		onClick={() =>
+																			setValuePendingDelete(
+																				val,
+																			)
+																		}>
+																		<Trash2 className='h-4 w-4 text-destructive' />
+																		Xóa
+																	</DropdownMenuItem>
+																)}
+															</DropdownMenuContent>
+														</DropdownMenu>
+													</TableCell>
+												</TableRow>
+											);
+										})
 									) : (
 										<TableRow>
 											<TableCell
@@ -1577,22 +1633,19 @@ function ClubInformationDetailPage() {
 							</div>
 						)}
 
-						{/* is_active — ẩn cho boolean vì chính value true/false đã là toggle */}
-						{!isBooleanType && (
-							<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
-								<Label htmlFor='val_active' className='cursor-pointer'>
-									{valueForm.is_active ? "Đang dùng" : "Tạm ẩn"}
-								</Label>
-								<Switch
-									id='val_active'
-									checked={valueForm.is_active}
-									onCheckedChange={(checked) =>
-										setValueForm((p) => ({ ...p, is_active: checked }))
-									}
-									disabled={valueSubmitting}
-								/>
-							</div>
-						)}
+						<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
+							<Label htmlFor='val_active' className='cursor-pointer'>
+								{valueForm.is_active ? "Đang dùng" : "Tạm ẩn"}
+							</Label>
+							<Switch
+								id='val_active'
+								checked={valueForm.is_active}
+								onCheckedChange={(checked) =>
+									setValueForm((p) => ({ ...p, is_active: checked }))
+								}
+								disabled={valueSubmitting}
+							/>
+						</div>
 
 						<DialogFooter>
 							<Button
@@ -1834,34 +1887,23 @@ function ClubInformationDetailPage() {
 									</div>
 								) : null}
 
-								{/* is_active — ẩn cho boolean vì chính value true/false đã là toggle */}
-								{!isBooleanType && (
-									<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
-										<Label
-											htmlFor='detail_val_active'
-											className='cursor-pointer'>
-											{(
-												isEditingValue
-													? detailValueForm.is_active
-													: selectedValue.is_active !== false
-											)
+								<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
+									<Label htmlFor='detail_val_active' className='cursor-pointer'>
+										{selectedValueIsActive
+											? isBannerType
 												? "Đang dùng"
-												: "Tạm ẩn"}
-										</Label>
-										<Switch
-											id='detail_val_active'
-											checked={
-												isEditingValue
-													? detailValueForm.is_active
-													: selectedValue.is_active !== false
-											}
-											onCheckedChange={(checked) =>
-												setDetailValueField("is_active", checked)
-											}
-											disabled={!isEditingValue || detailValueSubmitting}
-										/>
-									</div>
-								)}
+												: "Mặc định"
+											: "Tạm ẩn"}
+									</Label>
+									<Switch
+										id='detail_val_active'
+										checked={selectedValueIsActive}
+										onCheckedChange={(checked) =>
+											setDetailValueField("is_active", checked)
+										}
+										disabled={!isEditingValue || detailValueSubmitting}
+									/>
+								</div>
 								{detailValueFieldErrors.is_active ? (
 									<p className='text-sm text-destructive'>
 										{detailValueFieldErrors.is_active}

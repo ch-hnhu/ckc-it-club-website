@@ -245,11 +245,12 @@
 - the nested value table supports sorting by `alt` for image rows and `link`/`position` for banner rows in addition to the existing value/date/status keys.
 - backend `show()` whitelists `alt`, `link`, and `position` for nested value sorting so those headers sort server-side instead of falling back to `created_at`.
 - detail can switch the parent information card into an inline edit form and submit through `clubInformationService.updateClubInformation`.
-- detail value rows can be deleted after confirmation through `clubInformationService.deleteClubInformationValue`.
+- parent club information records are stable config keys and are not deletable in the admin UI.
+- detail value rows can be deleted after confirmation through `clubInformationService.deleteClubInformationValue`, except active values and the final remaining value of a config.
 - detail can create nested values from a modal through `clubInformationService.createClubInformationValue`, then refreshes the value table.
 - detail value popup can switch from read-only view to edit mode and submit through `clubInformationService.updateClubInformationValue`.
+- active values are labelled as `Mặc định` in the value table. For non-banner configs, setting one value active makes it the only active/default value; banner configs can keep multiple active values ordered by position.
 - date fields are displayed directly from the API, which formats them as `d/m/Y`
-- current admin UI is list-only because no create/update/detail route is wired yet
 - Academic structure import:
 - route `/organization/upload`
 - imports faculty/major/class data through `POST /academic-structure/import`

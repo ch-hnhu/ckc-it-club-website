@@ -185,15 +185,6 @@ function ClubInformationList() {
 							onChange={(event) => setSearch(event.target.value)}
 							className='h-8 w-full sm:max-w-sm'
 						/>
-						<div className='flex items-center gap-2'>
-							<Button
-								size='sm'
-								onClick={() => navigate("/club-informations/create")}
-								className='h-8 bg-foreground text-background hover:bg-foreground/90'>
-								<Plus className='h-4 w-4' />
-								Thêm
-							</Button>
-						</div>
 					</div>
 				</div>
 

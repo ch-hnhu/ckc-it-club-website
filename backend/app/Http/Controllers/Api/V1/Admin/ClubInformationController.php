@@ -12,6 +12,7 @@ use App\Models\ClubInformationValue;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ClubInformationController extends BaseApiController
 {
@@ -58,16 +59,30 @@ class ClubInformationController extends BaseApiController
 
     public function store(StoreClubInformationRequest $request): JsonResponse
     {
-        $clubInformation = ClubInformation::create([
-            'label' => trim($request->string('label')->value()),
-            'value' => trim($request->string('value')->value()),
-            'slug' => trim($request->string('slug')->value()),
-            'type' => $request->input('type'),
-            'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
-            'is_active' => $request->boolean('is_active', true),
-            'created_by' => $request->user()?->id,
-            'updated_by' => $request->user()?->id,
-        ]);
+        $clubInformation = DB::transaction(function () use ($request) {
+            $clubInformation = ClubInformation::create([
+                'label' => trim($request->string('label')->value()),
+                'value' => trim($request->string('value')->value()),
+                'slug' => trim($request->string('slug')->value()),
+                'type' => $request->input('type'),
+                'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
+                'is_active' => $request->boolean('is_active', true),
+                'created_by' => $request->user()?->id,
+                'updated_by' => $request->user()?->id,
+            ]);
+
+            $clubInformation->clubInformationValues()->create([
+                'value' => $this->defaultValueForType($clubInformation->type),
+                'link' => null,
+                'alt' => null,
+                'position' => null,
+                'is_active' => true,
+                'created_by' => $request->user()?->id,
+                'updated_by' => $request->user()?->id,
+            ]);
+
+            return $clubInformation->load('clubInformationValues');
+        });
 
         $admin = $request->user();
         NotificationService::dispatch(
@@ -155,19 +170,29 @@ class ClubInformationController extends BaseApiController
         StoreClubInformationValueRequest $request,
         ClubInformation $clubInformation
     ): JsonResponse {
-        if ($clubInformation->type === 'boolean' && $clubInformation->clubInformationValues()->exists()) {
-            return $this->errorResponse(false, 'Cấu hình kiểu boolean chỉ được có đúng 1 giá trị.', 422);
+        $isActive = $request->boolean('is_active', true);
+
+        if (! $isActive && ! $this->hasActiveValue($clubInformation)) {
+            return $this->validationErrorResponse([
+                'is_active' => ['Cấu hình phải có ít nhất một giá trị mặc định.'],
+            ]);
         }
 
-        $value = $clubInformation->clubInformationValues()->create([
-            'value' => trim($request->string('value')->value()),
-            'link' => $request->filled('link') ? trim($request->string('link')->value()) : null,
-            'alt' => $request->filled('alt') ? trim($request->string('alt')->value()) : null,
-            'position' => $request->filled('position') ? (int) $request->input('position') : null,
-            'is_active' => $clubInformation->type === 'boolean' ? true : $request->boolean('is_active', true),
-            'created_by' => $request->user()?->id,
-            'updated_by' => $request->user()?->id,
-        ]);
+        $value = DB::transaction(function () use ($request, $clubInformation, $isActive) {
+            if ($isActive) {
+                $this->deactivateSiblingValues($clubInformation);
+            }
+
+            return $clubInformation->clubInformationValues()->create([
+                'value' => trim($request->string('value')->value()),
+                'link' => $request->filled('link') ? trim($request->string('link')->value()) : null,
+                'alt' => $request->filled('alt') ? trim($request->string('alt')->value()) : null,
+                'position' => $request->filled('position') ? (int) $request->input('position') : null,
+                'is_active' => $isActive,
+                'created_by' => $request->user()?->id,
+                'updated_by' => $request->user()?->id,
+            ]);
+        });
 
         $admin = $request->user();
         NotificationService::dispatch(
@@ -195,14 +220,28 @@ class ClubInformationController extends BaseApiController
             return $this->notFoundResponse('Giá trị cấu hình không tồn tại.');
         }
 
-        $clubInformationValue->update([
-            'value' => trim($request->string('value')->value()),
-            'link' => $request->filled('link') ? trim($request->string('link')->value()) : null,
-            'alt' => $request->filled('alt') ? trim($request->string('alt')->value()) : null,
-            'position' => $request->filled('position') ? (int) $request->input('position') : null,
-            'is_active' => $clubInformation->type === 'boolean' ? true : $request->boolean('is_active', true),
-            'updated_by' => $request->user()?->id,
-        ]);
+        $isActive = $request->boolean('is_active', true);
+
+        if (! $isActive && ! $this->hasOtherActiveValue($clubInformation, $clubInformationValue->id)) {
+            return $this->validationErrorResponse([
+                'is_active' => ['Cấu hình phải có ít nhất một giá trị mặc định.'],
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $clubInformation, $clubInformationValue, $isActive) {
+            if ($isActive) {
+                $this->deactivateSiblingValues($clubInformation, $clubInformationValue->id);
+            }
+
+            $clubInformationValue->update([
+                'value' => trim($request->string('value')->value()),
+                'link' => $request->filled('link') ? trim($request->string('link')->value()) : null,
+                'alt' => $request->filled('alt') ? trim($request->string('alt')->value()) : null,
+                'position' => $request->filled('position') ? (int) $request->input('position') : null,
+                'is_active' => $isActive,
+                'updated_by' => $request->user()?->id,
+            ]);
+        });
 
         $admin = $request->user();
         NotificationService::dispatch(
@@ -228,6 +267,18 @@ class ClubInformationController extends BaseApiController
     ): JsonResponse {
         if ($clubInformationValue->club_information_id !== $clubInformation->id) {
             return $this->notFoundResponse('Giá trị cấu hình không tồn tại.');
+        }
+
+        if ($clubInformationValue->is_active) {
+            return $this->validationErrorResponse([
+                'club_information_value' => ['Không thể xóa giá trị đang là mặc định của cấu hình.'],
+            ]);
+        }
+
+        if ($clubInformation->clubInformationValues()->count() <= 1) {
+            return $this->validationErrorResponse([
+                'club_information_value' => ['Cấu hình phải có ít nhất một giá trị.'],
+            ]);
         }
 
         $deletedId = $clubInformationValue->id;
@@ -256,6 +307,9 @@ class ClubInformationController extends BaseApiController
                 ->clubInformationValues
                 ->map(fn (ClubInformationValue $value) => $this->formatClubInformationValue($value))
                 ->values(),
+            'resolved_club_information_values' => $this->resolveClubInformationValues($clubInformation)
+                ->map(fn (ClubInformationValue $value) => $this->formatClubInformationValue($value))
+                ->values(),
         ];
     }
 
@@ -272,6 +326,49 @@ class ClubInformationController extends BaseApiController
             'created_at' => $this->formatDate($value->created_at),
             'updated_at' => $this->formatDate($value->updated_at),
         ];
+    }
+
+    private function deactivateSiblingValues(ClubInformation $clubInformation, ?int $exceptId = null): void
+    {
+        if ($clubInformation->type === 'banner') {
+            return;
+        }
+
+        $clubInformation->clubInformationValues()
+            ->when($exceptId, fn ($query) => $query->where('id', '!=', $exceptId))
+            ->update(['is_active' => false]);
+    }
+
+    private function resolveClubInformationValues(ClubInformation $clubInformation)
+    {
+        $values = $clubInformation->clubInformationValues()
+            ->orderBy('position')
+            ->orderBy('id')
+            ->get();
+
+        return $values
+            ->where('is_active', true)
+            ->values();
+    }
+
+    private function hasActiveValue(ClubInformation $clubInformation): bool
+    {
+        return $clubInformation->clubInformationValues()
+            ->where('is_active', true)
+            ->exists();
+    }
+
+    private function hasOtherActiveValue(ClubInformation $clubInformation, int $exceptId): bool
+    {
+        return $clubInformation->clubInformationValues()
+            ->where('id', '!=', $exceptId)
+            ->where('is_active', true)
+            ->exists();
+    }
+
+    private function defaultValueForType(?string $type): string
+    {
+        return $type === 'boolean' ? 'false' : '';
     }
 
     private function formatDate($value): ?string

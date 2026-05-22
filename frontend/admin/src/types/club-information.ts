@@ -17,6 +17,7 @@ export interface ClubInformation {
 	type: ClubInformationType | null;
 	description: string | null;
 	club_information_values?: Array<ClubInformationValue>;
+	resolved_club_information_values?: Array<ClubInformationValue>;
 	is_active?: boolean;
 	created_at: string | null;
 	updated_at: string | null;
