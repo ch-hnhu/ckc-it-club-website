@@ -11,7 +11,10 @@ export type CreateClubInformationPayload = {
 	is_active: boolean;
 };
 
-export type UpdateClubInformationPayload = CreateClubInformationPayload;
+export type UpdateClubInformationPayload = {
+	slug: string;
+	description?: string;
+};
 
 export type CreateClubInformationValuePayload = {
 	value: string;

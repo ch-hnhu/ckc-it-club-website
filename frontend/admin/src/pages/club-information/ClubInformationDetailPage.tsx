@@ -20,19 +20,13 @@ import {
 	Plus,
 	SquarePen,
 	Tag,
-	ToggleLeft,
 	Trash2,
-	Type,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import clubInformationService from "@/services/club-information.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import {
-	CLUB_INFORMATION_TYPES,
-	type ClubInformation,
-	type ClubInformationValue,
-} from "@/types/club-information";
+import { type ClubInformation, type ClubInformationValue } from "@/types/club-information";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -133,7 +127,6 @@ type InfoFormState = {
 	slug: string;
 	type: string;
 	description: string;
-	is_active: boolean;
 };
 
 type InfoFieldErrors = Partial<Record<keyof InfoFormState, string>>;
@@ -144,7 +137,6 @@ const getInfoFormFromRecord = (record: ClubInformation): InfoFormState => ({
 	slug: record.slug ?? "",
 	type: record.type ?? "",
 	description: record.description ?? "",
-	is_active: record.is_active !== false,
 });
 
 function formatDate(dateString: string | null) {
@@ -178,18 +170,6 @@ function getStatusBadgeItems(isActive?: boolean, activeLabel = "Đang dùng"): C
 				isActive === false
 					? "border-muted-foreground/20 bg-muted text-muted-foreground hover:bg-muted"
 					: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
-		},
-	];
-}
-
-function getTypeBadgeItems(type: string | null): CompactBadgeItem[] {
-	if (!type) return [];
-
-	return [
-		{
-			key: type,
-			label: type,
-			className: "border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
 		},
 	];
 }
@@ -554,10 +534,7 @@ function ClubInformationDetailPage() {
 
 	const validateInfoForm = (form: InfoFormState) => {
 		const errors: InfoFieldErrors = {};
-		if (!form.label.trim()) errors.label = "Vui lòng nhập tên cấu hình.";
-		if (!form.value.trim()) errors.value = "Vui lòng nhập giá trị key.";
 		if (!form.slug.trim()) errors.slug = "Vui lòng nhập slug.";
-		if (!form.type) errors.type = "Vui lòng chọn kiểu dữ liệu.";
 		setInfoFieldErrors(errors);
 		return Object.keys(errors).length === 0;
 	};
@@ -577,12 +554,8 @@ function ClubInformationDetailPage() {
 		try {
 			setInfoSubmitting(true);
 			const response = await clubInformationService.updateClubInformation(clubInformationId, {
-				label: infoForm.label.trim(),
-				value: infoForm.value.trim(),
 				slug: infoForm.slug.trim(),
-				type: infoForm.type,
 				description: infoForm.description.trim() || undefined,
-				is_active: infoForm.is_active,
 			});
 
 			setInfo(response.data);
@@ -759,9 +732,15 @@ function ClubInformationDetailPage() {
 													className:
 														"border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
 												},
-												...getStatusBadgeItems(info.is_active),
+												{
+													key: "type",
+													label: info.type
+														? `${info.type}`
+														: "Unknown type",
+													className:
+														"border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
+												},
 											]}
-											maxVisibleItems={2}
 										/>
 									</div>
 									<CardTitle className='text-lg leading-snug'>
@@ -786,17 +765,8 @@ function ClubInformationDetailPage() {
 							<form onSubmit={(event) => void handleUpdateInfoSubmit(event)}>
 								<CardContent className='grid gap-6 sm:grid-cols-2'>
 									<div className='flex flex-col gap-2'>
-										<Label htmlFor='info_label'>
-											Tên cấu hình <span className='text-destructive'>*</span>
-										</Label>
-										<Input
-											id='info_label'
-											value={infoForm.label}
-											onChange={(event) =>
-												setInfoField("label", event.target.value)
-											}
-											disabled={infoSubmitting}
-										/>
+										<Label htmlFor='info_label'>Tên cấu hình</Label>
+										<Input id='info_label' value={infoForm.label} disabled />
 										{infoFieldErrors.label ? (
 											<p className='text-sm text-destructive'>
 												{infoFieldErrors.label}
@@ -805,17 +775,8 @@ function ClubInformationDetailPage() {
 									</div>
 
 									<div className='flex flex-col gap-2'>
-										<Label htmlFor='info_value'>
-											Giá trị key <span className='text-destructive'>*</span>
-										</Label>
-										<Input
-											id='info_value'
-											value={infoForm.value}
-											onChange={(event) =>
-												setInfoField("value", event.target.value)
-											}
-											disabled={infoSubmitting}
-										/>
+										<Label htmlFor='info_value'>Giá trị key</Label>
+										<Input id='info_value' value={infoForm.value} disabled />
 										{infoFieldErrors.value ? (
 											<p className='text-sm text-destructive'>
 												{infoFieldErrors.value}
@@ -842,32 +803,6 @@ function ClubInformationDetailPage() {
 										) : null}
 									</div>
 
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='info_type'>
-											Kiểu dữ liệu <span className='text-destructive'>*</span>
-										</Label>
-										<Select
-											value={infoForm.type}
-											onValueChange={(value) => setInfoField("type", value)}
-											disabled={infoSubmitting}>
-											<SelectTrigger id='info_type' className='w-full'>
-												<SelectValue placeholder='Chọn kiểu dữ liệu' />
-											</SelectTrigger>
-											<SelectContent>
-												{CLUB_INFORMATION_TYPES.map((type) => (
-													<SelectItem key={type.value} value={type.value}>
-														{type.label}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										{infoFieldErrors.type ? (
-											<p className='text-sm text-destructive'>
-												{infoFieldErrors.type}
-											</p>
-										) : null}
-									</div>
-
 									<div className='flex flex-col gap-2 sm:col-span-2'>
 										<Label htmlFor='info_description'>Mô tả</Label>
 										<Textarea
@@ -884,20 +819,6 @@ function ClubInformationDetailPage() {
 												{infoFieldErrors.description}
 											</p>
 										) : null}
-									</div>
-
-									<div className='flex items-center gap-3 sm:col-span-2'>
-										<Switch
-											id='info_is_active'
-											checked={infoForm.is_active}
-											onCheckedChange={(checked) =>
-												setInfoField("is_active", checked)
-											}
-											disabled={infoSubmitting}
-										/>
-										<Label htmlFor='info_is_active' className='cursor-pointer'>
-											{infoForm.is_active ? "Đang dùng" : "Tạm ẩn"}
-										</Label>
 									</div>
 
 									<div className='flex justify-end gap-3 border-t pt-6 sm:col-span-2'>
@@ -918,7 +839,7 @@ function ClubInformationDetailPage() {
 								</CardContent>
 							</form>
 						) : (
-							<CardContent className='grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-4'>
+							<CardContent className='grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-3'>
 								<InfoRow
 									label={
 										<span className='flex items-center gap-1.5'>
@@ -955,35 +876,11 @@ function ClubInformationDetailPage() {
 								<InfoRow
 									label={
 										<span className='flex items-center gap-1.5'>
-											<Type className='h-3.5 w-3.5' />
-											Kiểu dữ liệu
-										</span>
-									}
-									value={
-										<CompactBadgeList
-											items={getTypeBadgeItems(info.type)}
-											maxVisibleItems={1}
-											emptyLabel='--'
-										/>
-									}
-								/>
-								<InfoRow
-									label={
-										<span className='flex items-center gap-1.5'>
 											<FileText className='h-3.5 w-3.5' />
 											Mô tả
 										</span>
 									}
 									value={info.description || "--"}
-								/>
-								<InfoRow
-									label={
-										<span className='flex items-center gap-1.5'>
-											<ToggleLeft className='h-3.5 w-3.5' />
-											Trạng thái
-										</span>
-									}
-									value={info.is_active === false ? "Tạm ẩn" : "Đang dùng"}
 								/>
 								<InfoRow
 									label={

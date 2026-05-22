@@ -34,7 +34,6 @@ import {
 	ChevronsRight,
 	Eye,
 	MoreHorizontal,
-	Plus,
 } from "lucide-react";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import permissionService from "@/services/permission.service";

@@ -137,12 +137,8 @@ class ClubInformationController extends BaseApiController
         ClubInformation $clubInformation
     ): JsonResponse {
         $clubInformation->update([
-            'label' => trim($request->string('label')->value()),
-            'value' => trim($request->string('value')->value()),
             'slug' => trim($request->string('slug')->value()),
-            'type' => $request->input('type'),
             'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
-            'is_active' => $request->boolean('is_active', true),
             'updated_by' => $request->user()?->id,
         ]);
 

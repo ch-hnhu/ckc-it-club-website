@@ -199,7 +199,7 @@
 - admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`
 - admin can list club information records through `GET /api/v1/club-informations` with pagination, search, and sort.
-- admin can create and update parent club information records through the resource `store` and `update` actions, but parent records are treated as stable code contracts and are not deletable through the API.
+- admin can create parent club information records through the resource `store` action; parent update is limited to `slug` and `description` because label, key, type, and active state are treated as stable code contracts. Parent records are not deletable through the API.
 - admin can fetch one club information record through `GET /api/v1/club-informations/{id}`; nested `club_information_values` accept `search`, `sort`, and `order` query params for the detail table, including `alt`, `link`, and `position` sorting for media/banner values.
 - admin can create, update, and delete nested values through `/club-informations/{clubInformation}/values`; value payloads support long-text `value`, `link`, `alt`, integer/null `position`, and `is_active`; HTML values are not capped at 1000 characters.
 - every parent club information record must keep at least one nested value, and active nested values are treated as the current/default values for that config. Active values cannot be deleted, and the final remaining value of a config cannot be deleted.

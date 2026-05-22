@@ -9,7 +9,6 @@ import {
 	ChevronsRight,
 	Eye,
 	MoreHorizontal,
-	Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type SortKey = "id" | "label" | "type" | "is_active" | "description" | "created_at";
+type SortKey = "id" | "label" | "type" | "description" | "created_at";
 
 function formatText(value?: string | null) {
 	return value?.trim() || "--";
@@ -238,15 +237,6 @@ function ClubInformationList() {
 								<TableHead>
 									<Button
 										variant='ghost'
-										onClick={() => handleSort("description")}
-										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Trạng thái
-										{getSortIcon("is_active")}
-									</Button>
-								</TableHead>
-								<TableHead>
-									<Button
-										variant='ghost'
 										onClick={() => handleSort("created_at")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
 										Ngày tạo
@@ -268,17 +258,17 @@ function ClubInformationList() {
 												}
 											/>
 										</TableCell>
-											<TableCell className='font-medium'>{item.id}</TableCell>
-											<TableCell>
-												<Link
-													to={`/club-informations/${item.id}`}
-													className='flex w-fit flex-col rounded-sm outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'>
-													<span className='font-medium'>{item.label}</span>
-													<span className='text-xs text-muted-foreground'>
-														{formatText(item.value)}
-													</span>
-												</Link>
-											</TableCell>
+										<TableCell className='font-medium'>{item.id}</TableCell>
+										<TableCell>
+											<Link
+												to={`/club-informations/${item.id}`}
+												className='flex w-fit flex-col rounded-sm outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'>
+												<span className='font-medium'>{item.label}</span>
+												<span className='text-xs text-muted-foreground'>
+													{formatText(item.value)}
+												</span>
+											</Link>
+										</TableCell>
 										<TableCell>
 											<CompactBadgeList
 												items={toBadgeItems(item.type)}
@@ -289,27 +279,6 @@ function ClubInformationList() {
 										</TableCell>
 										<TableCell className='max-w-[360px] truncate'>
 											{formatText(item.description)}
-										</TableCell>
-										<TableCell>
-											<CompactBadgeList
-												items={[
-													{
-														key:
-															item.is_active === false
-																? "inactive"
-																: "active",
-														label:
-															item.is_active === false
-																? "Tạm ẩn"
-																: "Đang dùng",
-														className:
-															item.is_active === false
-																? "border-muted-foreground/20 bg-muted text-muted-foreground hover:bg-muted"
-																: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
-													},
-												]}
-												maxVisibleItems={1}
-											/>
 										</TableCell>
 										<TableCell>{formatText(item.created_at)}</TableCell>
 										<TableCell>
@@ -341,7 +310,7 @@ function ClubInformationList() {
 								))
 							) : (
 								<TableRow>
-									<TableCell colSpan={8} className='h-24 text-center'>
+									<TableCell colSpan={7} className='h-24 text-center'>
 										Không tìm thấy kết quả phù hợp.
 									</TableCell>
 								</TableRow>
@@ -349,7 +318,7 @@ function ClubInformationList() {
 						</TableBody>
 						<TableFooter className='bg-transparent'>
 							<TableRow>
-								<TableCell colSpan={8}>
+								<TableCell colSpan={7}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex-1 text-sm text-muted-foreground'>
 											Đang hiện {clubInformations.length} trên tổng{" "}

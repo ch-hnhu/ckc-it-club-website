@@ -239,12 +239,12 @@
 - Club information management:
 - route `/club-informations`
 - route `/club-informations/:id`
-- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
+- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`; parent `is_active` is intentionally omitted from the table because parent configs are stable code-facing contracts.
 - detail uses `clubInformationService.getClubInformation(id, params)`; the nested value table supports API-driven search/sort and local pagination.
 - image and banner rows render the thumbnail preview and URL in the same value cell, matching the user list pattern; there is no separate image column.
 - the nested value table supports sorting by `alt` for image rows and `link`/`position` for banner rows in addition to the existing value/date/status keys.
 - backend `show()` whitelists `alt`, `link`, and `position` for nested value sorting so those headers sort server-side instead of falling back to `created_at`.
-- detail can switch the parent information card into an inline edit form and submit through `clubInformationService.updateClubInformation`.
+- detail can switch the parent information card into an inline edit form and submit through `clubInformationService.updateClubInformation`; parent label, key, and type are read-only there, and only slug/description are editable.
 - parent club information records are stable config keys and are not deletable in the admin UI.
 - detail value rows can be deleted after confirmation through `clubInformationService.deleteClubInformationValue`, except active values and the final remaining value of a config.
 - detail can create nested values from a modal through `clubInformationService.createClubInformationValue`, then refreshes the value table.
