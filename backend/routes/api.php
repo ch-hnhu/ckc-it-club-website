@@ -98,6 +98,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('club-informations/{clubInformation}', [ClubInformationController::class, 'update']);
 
             Route::post('club-informations/{clubInformation}/values', [ClubInformationController::class, 'storeValue']);
+            Route::patch('club-informations/{clubInformation}/values/{clubInformationValue}/default', [ClubInformationController::class, 'setDefaultValue']);
             Route::put('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
             Route::patch('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
             Route::delete('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'destroyValue']);

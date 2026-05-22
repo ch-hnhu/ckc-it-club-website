@@ -256,6 +256,48 @@ class ClubInformationController extends BaseApiController
         );
     }
 
+    public function setDefaultValue(
+        Request $request,
+        ClubInformation $clubInformation,
+        ClubInformationValue $clubInformationValue
+    ): JsonResponse {
+        if ($clubInformationValue->club_information_id !== $clubInformation->id) {
+            return $this->notFoundResponse('Giá trị cấu hình không tồn tại.');
+        }
+
+        if ($clubInformation->type === 'banner') {
+            return $this->validationErrorResponse([
+                'club_information_value' => ['Cấu hình banner không hỗ trợ đặt một giá trị mặc định.'],
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $clubInformation, $clubInformationValue) {
+            $this->deactivateSiblingValues($clubInformation, $clubInformationValue->id);
+
+            $clubInformationValue->update([
+                'is_active' => true,
+                'updated_by' => $request->user()?->id,
+            ]);
+        });
+
+        $admin = $request->user();
+        NotificationService::dispatch(
+            'Đặt giá trị mặc định cấu hình CLB',
+            ($admin?->full_name ?? 'Admin').' đã đặt giá trị mặc định cho cấu hình "'.$clubInformation->label.'"',
+            'updated',
+            'club_information_value',
+            $clubInformationValue->id,
+            $admin?->full_name ?? 'Admin',
+            '/club-informations/'.$clubInformation->id,
+        );
+
+        return $this->successResponse(
+            true,
+            $this->formatClubInformationValue($clubInformationValue->refresh()),
+            'Đặt giá trị mặc định thành công.'
+        );
+    }
+
     public function destroyValue(
         ClubInformation $clubInformation,
         ClubInformationValue $clubInformationValue

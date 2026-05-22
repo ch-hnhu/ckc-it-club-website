@@ -253,6 +253,7 @@
 - detail value rows can be deleted after confirmation through `clubInformationService.deleteClubInformationValue`, except active values and the final remaining value of a config.
 - detail can create nested values from a modal through `clubInformationService.createClubInformationValue`, then refreshes the value table.
 - detail value popup can switch from read-only view to edit mode and submit through `clubInformationService.updateClubInformationValue`.
+- non-banner detail value rows expose a quick dropdown action backed by `clubInformationService.setDefaultClubInformationValue`; clicking it sets that row as the default without opening the edit form.
 - active values are labelled as `Mặc định` in the value table. For non-banner configs, setting one value active makes it the only active/default value; banner configs can keep multiple active values ordered by position.
 - date fields are displayed directly from the API, which formats them as `d/m/Y`
 - Academic structure import:

@@ -6,6 +6,7 @@ import {
 	ArrowUp,
 	ArrowUpDown,
 	CalendarDays,
+	CheckCircle2,
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
@@ -202,6 +203,7 @@ function ClubInformationDetailPage() {
 	const [selectedValue, setSelectedValue] = useState<ClubInformationValue | null>(null);
 	const [valuePendingDelete, setValuePendingDelete] = useState<ClubInformationValue | null>(null);
 	const [valueDeleting, setValueDeleting] = useState(false);
+	const [defaultingValueId, setDefaultingValueId] = useState<number | null>(null);
 	const [isEditingValue, setIsEditingValue] = useState(false);
 	const [detailValueForm, setDetailValueForm] = useState<ValueFormState>(getInitialValueForm);
 	const [detailValueFieldErrors, setDetailValueFieldErrors] = useState<ValueFieldErrors>({});
@@ -439,6 +441,70 @@ function ClubInformationDetailPage() {
 			});
 		} finally {
 			setDetailValueSubmitting(false);
+		}
+	};
+
+	const handleSetDefaultValue = async (value: ClubInformationValue) => {
+		if (isBannerType || value.is_active || defaultingValueId !== null) return;
+
+		const clubInformationId = Number(id);
+		if (!Number.isFinite(clubInformationId)) {
+			toast.error("Thiếu mã cấu hình.", { position: "top-right" });
+			return;
+		}
+
+		try {
+			setDefaultingValueId(value.id);
+			const response = await clubInformationService.setDefaultClubInformationValue(
+				clubInformationId,
+				value.id,
+			);
+
+			setInfo((prev) =>
+				prev
+					? {
+							...prev,
+							club_information_values: (prev.club_information_values ?? []).map(
+								(item) =>
+									item.id === response.data.id
+										? response.data
+										: { ...item, is_active: false },
+							),
+							resolved_club_information_values: [response.data],
+						}
+					: prev,
+			);
+			setSelectedValue((prev) =>
+				prev
+					? prev.id === response.data.id
+						? response.data
+						: { ...prev, is_active: false }
+					: prev,
+			);
+			setDetailValueForm((prev) =>
+				selectedValue?.id === response.data.id ? getValueFormFromRecord(response.data) : prev,
+			);
+			setRefreshKey((prev) => prev + 1);
+			toast.success(response.message ?? "Đặt giá trị mặc định thành công.", {
+				position: "top-right",
+			});
+		} catch (defaultError) {
+			if (axios.isAxiosError<ApiErrorResponse>(defaultError)) {
+				const responseData = defaultError.response?.data;
+				const serverMessage =
+					Object.values(responseData?.errors ?? {}).flat()[0] ??
+					responseData?.message ??
+					"Không thể đặt giá trị mặc định.";
+
+				toast.error(serverMessage, { position: "top-right" });
+				return;
+			}
+
+			toast.error(getErrorMessage(defaultError, "Không thể đặt giá trị mặc định."), {
+				position: "top-right",
+			});
+		} finally {
+			setDefaultingValueId(null);
 		}
 	};
 
@@ -1189,7 +1255,7 @@ function ClubInformationDetailPage() {
 															</DropdownMenuTrigger>
 															<DropdownMenuContent
 																align='end'
-																className='w-[160px]'>
+																className='w-[190px]'>
 																<DropdownMenuItem
 																	onClick={() =>
 																		openValueDetail(val)
@@ -1197,6 +1263,26 @@ function ClubInformationDetailPage() {
 																	<Eye className='h-4 w-4' />
 																	Chi tiết
 																</DropdownMenuItem>
+																{!isBannerType && !val.is_active ? (
+																	<DropdownMenuItem
+																		disabled={
+																			defaultingValueId !==
+																			null
+																		}
+																		onClick={() =>
+																			void handleSetDefaultValue(
+																				val,
+																			)
+																		}>
+																		{defaultingValueId ===
+																		val.id ? (
+																			<Loader2 className='h-4 w-4 animate-spin' />
+																		) : (
+																			<CheckCircle2 className='h-4 w-4' />
+																		)}
+																		Đặt làm mặc định
+																	</DropdownMenuItem>
+																) : null}
 																<DropdownMenuSeparator />
 																{deleteDisabledReason ? (
 																	<TooltipProvider>

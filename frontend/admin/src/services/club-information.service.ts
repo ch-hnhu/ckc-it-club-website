@@ -87,6 +87,15 @@ const clubInformationService = {
 		);
 	},
 
+	async setDefaultClubInformationValue(
+		clubInformationId: number,
+		valueId: number,
+	): Promise<ApiResponse<ClubInformationValue>> {
+		return api.patch<ApiResponse<ClubInformationValue>>(
+			`/club-informations/${clubInformationId}/values/${valueId}/default`,
+		);
+	},
+
 	async deleteClubInformationValue(
 		clubInformationId: number,
 		valueId: number,
