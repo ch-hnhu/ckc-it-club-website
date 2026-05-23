@@ -73,14 +73,19 @@ export default function LoginPage() {
 	};
 
 	return (
-		<div className='flex min-h-screen items-center justify-center p-4' style={{ background: "var(--color-surface)" }}>
+		<div
+			className='flex min-h-screen items-center justify-center p-4'
+			style={{ background: "var(--color-surface)" }}>
 			<div className='w-full max-w-md'>
 				{/* Logo / Branding */}
 				<div className='mb-8 flex flex-col items-center gap-2 text-center'>
 					<Link to='/' className='flex items-center gap-2 no-underline'>
 						<div
 							className='flex h-10 w-10 items-center justify-center overflow-hidden rounded-full'
-							style={{ border: "2px solid #111", background: "var(--color-primary)" }}>
+							style={{
+								border: "2px solid #111",
+								background: "var(--color-primary)",
+							}}>
 							<img
 								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
 								className='h-full w-full rounded-full object-cover'
@@ -89,12 +94,16 @@ export default function LoginPage() {
 						</div>
 						<span
 							className='text-2xl font-extrabold tracking-tight'
-							style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
+							style={{
+								fontFamily: "var(--font-heading)",
+								color: "var(--color-text)",
+							}}>
 							CKC IT CLUB
 						</span>
 					</Link>
 					<p className='text-sm' style={{ color: "var(--color-text-muted)" }}>
-						Đăng nhập để tiếp tục
+						Tham gia cùng chúng mình để khám phá, học hỏi và kết nối với cộng đồng IT
+						năng động tại trường Cao đẳng Kỹ thuật Cao Thắng!
 					</p>
 				</div>
 
@@ -106,11 +115,14 @@ export default function LoginPage() {
 					<div className='p-6 sm:p-8'>
 						<h1
 							className='mb-1 text-xl font-bold'
-							style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
+							style={{
+								fontFamily: "var(--font-heading)",
+								color: "var(--color-text)",
+							}}>
 							Đăng nhập
 						</h1>
 						<p className='mb-6 text-sm' style={{ color: "var(--color-text-muted)" }}>
-							Nhập email / tên người dùng và mật khẩu của bạn.
+							Nhập email / username và mật khẩu của bạn.
 						</p>
 
 						{error && (
@@ -127,17 +139,17 @@ export default function LoginPage() {
 									htmlFor='identifier'
 									className='block text-sm font-semibold'
 									style={{ color: "var(--color-text)" }}>
-									Email hoặc tên người dùng
+									Email hoặc username
 								</label>
 								<input
 									id='identifier'
 									type='text'
 									autoComplete='username'
-									placeholder='abc@caothang.edu.vn hoặc ten_nguoi_dung'
+									placeholder='abc@caothang.edu.vn'
 									required
 									value={identifier}
 									onChange={(e) => setIdentifier(e.target.value)}
-									className='w-full rounded-[10px] border-2 border-black bg-white px-4 py-2.5 text-sm font-medium outline-none transition-shadow placeholder:text-gray-400 focus:shadow-[3px_3px_0px_#111]'
+									className='w-full rounded-[10px] border-2 border-black bg-white px-4 py-2.5 text-sm font-medium outline-none transition-all placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
 									style={{ fontFamily: "var(--font-body)" }}
 								/>
 							</div>
@@ -166,7 +178,7 @@ export default function LoginPage() {
 										required
 										value={password}
 										onChange={(e) => setPassword(e.target.value)}
-										className='w-full rounded-[10px] border-2 border-black bg-white py-2.5 pl-4 pr-12 text-sm font-medium outline-none transition-shadow placeholder:text-gray-400 focus:shadow-[3px_3px_0px_#111]'
+										className='w-full rounded-[10px] border-2 border-black bg-white py-2.5 pl-4 pr-12 text-sm font-medium outline-none transition-all placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
 										style={{ fontFamily: "var(--font-body)" }}
 									/>
 									<button
@@ -210,7 +222,9 @@ export default function LoginPage() {
 					</div>
 
 					{/* OAuth Buttons */}
-					<div className='grid grid-cols-2 gap-3 p-6 sm:p-8' style={{ paddingTop: "1.25rem" }}>
+					<div
+						className='grid grid-cols-2 gap-3 p-6 sm:p-8'
+						style={{ paddingTop: "1.25rem" }}>
 						<button
 							type='button'
 							onClick={handleGoogleLogin}
@@ -258,13 +272,15 @@ export default function LoginPage() {
 					</div>
 				</div>
 
-				<p className='mt-5 text-center text-sm' style={{ color: "var(--color-text-muted)" }}>
+				<p
+					className='mt-5 text-center text-sm'
+					style={{ color: "var(--color-text-muted)" }}>
 					Chưa có tài khoản?{" "}
 					<Link
 						to='/'
 						className='font-semibold underline-offset-2 hover:underline'
 						style={{ color: "var(--color-text)" }}>
-						Về trang chủ
+						Đăng ký ngay
 					</Link>
 				</p>
 			</div>
