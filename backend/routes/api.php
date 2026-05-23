@@ -31,6 +31,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/auth/verify-token', [AuthController::class, 'verifyToken']);
+    Route::post('/auth/register', [CredentialAuthController::class, 'registerUser']);
     Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);

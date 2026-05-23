@@ -56,6 +56,9 @@
 - Public API routes:
 - `GET /api/v1/health`
 - `GET /api/v1/auth/verify-token`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/admin/login`
 - `POST /api/v1/contacts`
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
@@ -148,6 +151,7 @@
 - `communications-head`
 - `volunteer-head`
 - User login can create a new `users` record automatically.
+- Credential user signup is available at `POST /api/v1/auth/register` and requires only `full_name`, `username`, `email`, `password`, and `password_confirmation`; new users are active by default and receive the default `user` role.
 - New tokens are Sanctum personal access tokens.
 - Token TTL is manually written to `personal_access_tokens.expires_at`:
 - admin: 8 hours

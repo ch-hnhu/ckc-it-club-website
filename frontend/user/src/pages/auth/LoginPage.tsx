@@ -277,7 +277,7 @@ export default function LoginPage() {
 					style={{ color: "var(--color-text-muted)" }}>
 					Chưa có tài khoản?{" "}
 					<Link
-						to='/'
+						to='/register'
 						className='font-semibold underline-offset-2 hover:underline'
 						style={{ color: "var(--color-text)" }}>
 						Đăng ký ngay
