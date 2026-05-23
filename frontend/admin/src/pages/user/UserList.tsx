@@ -41,15 +41,16 @@ import {
 	Pencil,
 	Plus,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import type { RoleEnum } from "@/types/role.type";
 import { CompactBadgeList } from "../../components/ui/compact-badge-list";
 import { Combobox } from "@/components/ui/combobox";
+import { useGuardedNavigate } from "@/hooks/usePermissionNavigationGuard";
 
 function UserList() {
-	const navigate = useNavigate();
+	const navigate = useGuardedNavigate();
 	const [users, setUsers] = useState<User[]>([]);
 	const [meta, setMeta] = useState({
 		current_page: 1,

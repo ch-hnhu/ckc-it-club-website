@@ -159,6 +159,7 @@
 - Default role assignment happens automatically on new `User` creation via model boot hook.
 - Default assigned role: `user`.
 - Role seeding is handled in `database/seeders/RoleSeeder.php`.
+- All admin-capable roles (`admin`, `president`, `vice-president`, `academic-head`, `communications-head`, `volunteer-head`) have `roles.view` so they can view the role list. Only roles explicitly granted `roles.manage` can create/update/delete roles or sync role permissions.
 - Role-permission sync accepts an empty `permissions` array so a non-admin role can have all permissions removed; the `admin` role cannot have any currently assigned permission removed.
 - Route-level authorization is currently minimal.
 - If you add sensitive admin endpoints, add explicit role/permission checks. Do not assume `auth:sanctum` is enough.

@@ -121,6 +121,9 @@
 - removes `user`
 - stores intended return path in `sessionStorage.redirectPath`
 - redirects browser to `/login`
+- Axios response interceptor on `403` shows a `sonner` toast: `Tài khoản không có quyền thực hiện chức năng này`.
+- `PermissionRoute` no longer redirects unauthorized admin route access to the dashboard by default. It shows the same access-denied toast and replaces the URL with the last authorized route stored in `sessionStorage.admin:lastAuthorizedPath`, falling back to the first navigation route allowed by the current user's permissions.
+- `MainLayout` uses `usePermissionNavigationGuard` to intercept unauthorized internal `<Link>` clicks before React Router changes route, keeping the current page mounted and showing the access-denied toast. Imperative `navigate(...)` calls that can target protected routes should use `useGuardedNavigate` for the same no-route-change behavior.
 - Logout is token-based and goes through backend `/auth/logout`.
 
 ## Auth Risks and Assumptions
