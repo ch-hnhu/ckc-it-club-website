@@ -1,6 +1,7 @@
 export interface User {
 	id: number;
 	full_name: string;
+	username: string | null;
 	roles: Array<{
 		id: number;
 		name: string;
@@ -17,6 +18,7 @@ export interface User {
 export interface CurrentUser {
 	id: number;
 	full_name: string;
+	username: string | null;
 	email: string;
 	avatar: string;
 	provider: string;

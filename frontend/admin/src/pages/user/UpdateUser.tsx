@@ -32,6 +32,7 @@ import type { User } from "@/types/user.type";
 
 type CreateUserFormState = {
 	full_name: string;
+	username: string;
 	gender: string;
 	email: string;
 	password: string;
@@ -74,6 +75,7 @@ const STATUS_OPTIONS: ComboboxOption[] = [
 
 const getInitialFormState = (): CreateUserFormState => ({
 	full_name: "",
+	username: "",
 	gender: "",
 	email: "",
 	password: "",
@@ -190,6 +192,7 @@ function UpdateUser() {
 
 				const mappedForm: CreateUserFormState = {
 					full_name: user.full_name ?? "",
+					username: user.username ?? "",
 					gender: user.gender ?? "",
 					email: user.email ?? "",
 					password: "",
@@ -289,7 +292,7 @@ function UpdateUser() {
 	);
 
 	const updateField =
-		(field: "full_name" | "email" | "password" | "student_code") =>
+		(field: "full_name" | "username" | "email" | "password" | "student_code") =>
 		(event: ChangeEvent<HTMLInputElement>) => {
 			setFieldErrors((prev) => {
 				if (!prev[field]) {
@@ -381,6 +384,7 @@ function UpdateUser() {
 
 		const clientValidationErrors: CreateUserFieldErrors = {};
 		if (!form.full_name.trim()) clientValidationErrors.full_name = "Vui lòng nhập họ và tên.";
+		if (!form.username.trim()) clientValidationErrors.username = "Vui lòng nhập username.";
 		if (!form.email.trim()) clientValidationErrors.email = "Vui lòng nhập email.";
 		if (form.roles.length === 0) clientValidationErrors.roles = "Vui lòng chọn vai trò.";
 
@@ -395,6 +399,7 @@ function UpdateUser() {
 		try {
 			const payload = new FormData();
 			payload.append("full_name", form.full_name.trim());
+			payload.append("username", form.username.trim());
 			payload.append("gender", form.gender);
 			payload.append("email", form.email.trim());
 			if (form.password.trim()) {
@@ -594,6 +599,24 @@ function UpdateUser() {
 											{fieldErrors.student_code ? (
 												<p className='text-sm text-destructive'>
 													{fieldErrors.student_code}
+												</p>
+											) : null}
+										</div>
+
+										<div className='space-y-2'>
+											<Label htmlFor='username'>
+												Username <span className='text-red-500'>*</span>
+											</Label>
+											<Input
+												id='username'
+												placeholder='nguyenvana'
+												value={form.username}
+												onChange={updateField("username")}
+												required
+											/>
+											{fieldErrors.username ? (
+												<p className='text-sm text-destructive'>
+													{fieldErrors.username}
 												</p>
 											) : null}
 										</div>

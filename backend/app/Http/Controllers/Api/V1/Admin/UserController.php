@@ -29,6 +29,7 @@ class UserController extends BaseApiController
             ->with('roles:id,name,label')
             ->when($search, function ($query, $search) {
                 $query->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             })
             ->when($role, function ($query, $role) {
@@ -57,6 +58,7 @@ class UserController extends BaseApiController
 
         $user = User::create([
             'full_name' => $validated['full_name'],
+            'username' => $validated['username'],
             'gender' => $validated['gender'],
             'student_code' => $validated['student_code'],
             'email' => $validated['email'],
@@ -92,6 +94,7 @@ class UserController extends BaseApiController
 
         $payload = [
             'full_name' => $validated['full_name'],
+            'username' => $validated['username'],
             'gender' => $validated['gender'] ?? null,
             'student_code' => $validated['student_code'] ?? null,
             'email' => $validated['email'],

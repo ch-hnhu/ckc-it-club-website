@@ -189,7 +189,7 @@ function UserList() {
 				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2'>
 					<div className='flex flex-1 items-center gap-2 w-full'>
 						<Input
-							placeholder='Tìm kiếm...'
+							placeholder='Tìm theo tên, username, email...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 w-full sm:max-w-sm flex-1 min-w-0'
