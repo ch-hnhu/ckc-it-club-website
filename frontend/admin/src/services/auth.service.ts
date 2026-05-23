@@ -11,6 +11,14 @@ export const authService = {
 		window.location.href = redirectUrl;
 	},
 
+	// Login with email/username and password
+	async loginWithCredentials(
+		identifier: string,
+		password: string,
+	): Promise<{ success: boolean; token?: string; message?: string; user?: unknown }> {
+		return api.post("/auth/admin/login", { identifier, password });
+	},
+
 	// Verify token from OAuth callback
 	async verifyToken(token: string): Promise<{
 		success: boolean;

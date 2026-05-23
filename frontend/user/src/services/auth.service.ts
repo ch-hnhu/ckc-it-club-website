@@ -45,6 +45,22 @@ export async function getGoogleAuthUrl(): Promise<string> {
 	return `${AUTH_SERVER_URL}/user/auth/google`;
 }
 
+export function getGithubAuthUrl(): string {
+	return `${AUTH_SERVER_URL}/user/auth/github`;
+}
+
+export async function loginWithCredentials(
+	identifier: string,
+	password: string,
+): Promise<{ success: boolean; token?: string; message?: string }> {
+	const response = await fetch(`${API_URL}/auth/login`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify({ identifier, password }),
+	});
+	return response.json();
+}
+
 export function getAuthServerOrigin(): string | null {
 	try {
 		return new URL(AUTH_SERVER_URL).origin;

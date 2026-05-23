@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\CredentialAuthController;
 
 Route::prefix('v1')->group(function () {
 
@@ -30,6 +31,8 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/auth/verify-token', [AuthController::class, 'verifyToken']);
+    Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
+    Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
 
     // auth

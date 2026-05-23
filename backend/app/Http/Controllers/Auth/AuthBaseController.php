@@ -21,9 +21,7 @@ abstract class AuthBaseController extends Controller
      */
     protected array $supportedProviders = [
         'google' => 'google',
-        // 'github' => 'github',
-        // 'facebook' => 'facebook',
-        // 'twitter' => 'twitter',
+        'github' => 'github',
     ];
 
     /**
@@ -58,22 +56,18 @@ abstract class AuthBaseController extends Controller
         $provider = $provider ?: 'google';
 
         try {
-            // Dynamic redirect URI based on current request
-            $redirectUri = url('/auth/google/callback');
-            \Log::info("OAuth Redirect URI: ".$redirectUri);
-            \Log::info("Full URL: ".request()->fullUrl());
+            $redirectUri = url('/auth/'.$provider.'/callback');
             return $this->getDriver($provider)
                 ->redirectUrl($redirectUri)
                 ->with(['prompt' => 'select_account'])
                 ->redirect();
         } catch (\Exception $e) {
             \Log::error("OAuth Redirect Error [{$provider}]: ".$e->getMessage());
-            // Debug: Return error message instead of redirect
             return response()->json([
                 'error' => 'OAuth Redirect Error',
                 'message' => $e->getMessage(),
                 'provider' => $provider,
-                'redirect_uri' => url('/auth/google/callback')
+                'redirect_uri' => url('/auth/'.$provider.'/callback'),
             ], 500);
         }
     }
@@ -85,7 +79,7 @@ abstract class AuthBaseController extends Controller
         $provider = $provider ?: 'google';
 
         try {
-            $redirectUri = url('/auth/google/callback');
+            $redirectUri = url('/auth/'.$provider.'/callback');
             \Log::info("OAuth Redirect URI: ".$redirectUri);
             \Log::info("Full URL: ".request()->fullUrl());
 
@@ -177,16 +171,21 @@ abstract class AuthBaseController extends Controller
      */
     protected function findOrCreateUser($oauthUser, string $provider): User
     {
-        // Find existing user by email
-        $user = User::where('email', $oauthUser->getEmail())->first();
+        $email = $oauthUser->getEmail();
+
+        if (! $email) {
+            throw new \RuntimeException('Tài khoản '.ucfirst($provider).' của bạn chưa cung cấp email công khai. Vui lòng bật email công khai trong cài đặt tài khoản '.ucfirst($provider).' và thử lại.');
+        }
+
+        $user = User::where('email', $email)->first();
 
         if (! $user) {
-            // Create new user
             $user = User::create([
-                'full_name' => $oauthUser->getName(),
-                'email' => $oauthUser->getEmail(),
+                'full_name' => $oauthUser->getName() ?: $oauthUser->getNickname(),
+                'email' => $email,
+                'username' => User::generateUniqueUsername($email),
                 'email_verified_at' => now(),
-                'password' => bcrypt(Str::random(16)), // Random password
+                'password' => bcrypt(Str::random(16)),
                 'provider' => $provider,
                 'provider_id' => $oauthUser->getId(),
                 'avatar' => $oauthUser->getAvatar(),
@@ -195,10 +194,10 @@ abstract class AuthBaseController extends Controller
             $user->assignRole(RolesEnum::USER->value);
         }
 
-        // Update existing user's OAuth info
+        // Update OAuth info on every login
         $user->update([
-            'full_name' => $oauthUser->getName(),
-            'avatar' => $oauthUser->getAvatar(),
+            'full_name' => $oauthUser->getName() ?: $oauthUser->getNickname() ?: $user->full_name,
+            'avatar' => $oauthUser->getAvatar() ?: $user->avatar,
             'provider' => $provider,
             'provider_id' => $oauthUser->getId(),
         ]);
@@ -306,7 +305,7 @@ abstract class AuthBaseController extends Controller
             $user->tokens()->delete();
 
             // Create Sanctum token
-            $token = $this->createToken($user);
+            $token = $this->createToken($user, 'admin');
 
             $frontendUrl = env('ADMIN_FRONTEND_URL', 'http://localhost:5173');
 
@@ -442,7 +441,7 @@ abstract class AuthBaseController extends Controller
         $user->tokens()->delete();
 
         // Create Sanctum token
-        $token = $this->createToken($user);
+        $token = $this->createToken($user, 'user');
 
         $frontendUrl = env('USER_FRONTEND_URL', 'http://localhost:5173');
 
@@ -483,11 +482,9 @@ abstract class AuthBaseController extends Controller
         );
     }
 
-    private function createToken($user)
+    protected function createToken($user, string $loginType = 'user'): string
     {
         $token = $user->createToken('access_token');
-
-        $loginType = session('login_type');
 
         $token->accessToken->forceFill([
             'expires_at' => $loginType === 'admin' ? now()->addHours(8) : now()->addHours(24),
@@ -586,18 +583,19 @@ abstract class AuthBaseController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'id'                => $user->id,
-                    'full_name'         => $user->full_name,
-                    'email'             => $user->email,
-                    'avatar'            => $user->avatar,
-                    'provider'          => $user->provider,
+                    'id' => $user->id,
+                    'full_name' => $user->full_name,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'avatar' => $user->avatar,
+                    'provider' => $user->provider,
                     'email_verified_at' => $user->email_verified_at,
-                    'created_at'        => $user->created_at?->format('d/m/Y'),
-                    'roles'             => $user->roles->map(fn ($r) => [
-                        'name'  => $r->name,
+                    'created_at' => $user->created_at?->format('d/m/Y'),
+                    'roles' => $user->roles->map(fn ($r) => [
+                        'name' => $r->name,
                         'label' => $r->label,
                     ])->values(),
-                    'permissions'       => $user->getAllPermissions()->pluck('name')->values(),
+                    'permissions' => $user->getAllPermissions()->pluck('name')->values(),
                 ],
             ], HttpStatus::OK->value);
 
