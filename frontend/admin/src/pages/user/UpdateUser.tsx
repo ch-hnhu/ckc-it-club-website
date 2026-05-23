@@ -676,7 +676,7 @@ function UpdateUser() {
 											<Label htmlFor='password'>Mật khẩu mới</Label>
 											<Input
 												id='password'
-												type='password'
+												type='text'
 												placeholder='Để trống nếu không đổi mật khẩu'
 												value={form.password}
 												onChange={updateField("password")}

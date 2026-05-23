@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authService, listenOAuthAuthMessage } from "@/services/auth.service";
 import { toast } from "sonner";
+import axios from "axios";
+import type { ApiErrorResponse } from "@/types/api.types";
+import { Eye, EyeOff } from "lucide-react";
 
 function openOAuthPopup(url: string, name: string) {
 	const width = 520,
@@ -15,12 +18,21 @@ function openOAuthPopup(url: string, name: string) {
 	window.open(url, name, `width=${width},height=${height},left=${left},top=${top}`);
 }
 
+function getLoginErrorMessage(error: unknown) {
+	if (axios.isAxiosError<ApiErrorResponse>(error)) {
+		return error.response?.data?.message || "Thông tin đăng nhập không chính xác!";
+	}
+
+	return "Đã xảy ra lỗi, vui lòng thử lại.";
+}
+
 export function LoginForm() {
 	const navigate = useNavigate();
 	const location = useLocation();
 
 	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
 
 	const getRedirectPath = () => {
@@ -73,8 +85,7 @@ export function LoginForm() {
 				});
 			}
 		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : "Đã xảy ra lỗi, vui lòng thử lại.";
-			toast.error(msg, { position: "top-right" });
+			toast.error(getLoginErrorMessage(err), { position: "top-right" });
 		} finally {
 			setLoading(false);
 		}
@@ -130,15 +141,28 @@ export function LoginForm() {
 										Quên mật khẩu?
 									</a>
 								</div>
-								<Input
-									id='password'
-									type='password'
-									placeholder='••••••••••'
-									required
-									className='h-10 border border-gray-300 dark:border-gray-800'
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-								/>
+								<div className='relative'>
+									<Input
+										id='password'
+										type={showPassword ? "text" : "password"}
+										placeholder='••••••••••'
+										required
+										className='h-10 border border-gray-300 pr-10 dark:border-gray-800'
+										value={password}
+										onChange={(e) => setPassword(e.target.value)}
+									/>
+									<button
+										type='button'
+										className='absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
+										aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+										onClick={() => setShowPassword((current) => !current)}>
+										{showPassword ? (
+											<EyeOff className='h-4 w-4' />
+										) : (
+											<Eye className='h-4 w-4' />
+										)}
+									</button>
+								</div>
 							</div>
 							<Button
 								type='submit'

@@ -14,32 +14,41 @@ class UserSeeder extends Seeder
     {
         User::firstOrCreate(
             [
-                'email' => 'hnhu07012004@gmail.com',
+                'email' => 'admin@gmail.com',
+                'username' => 'admin',
                 'full_name' => 'Quản trị viên',
+                'password' => bcrypt('Admin@123'),
                 'is_active' => true,
             ],
         )->assignRole(RolesEnum::ADMIN->value);
+        User::firstOrCreate(
+            [
+                'email' => 'hnhu07012004@gmail.com',
+                'full_name' => 'Thành viên',
+                'is_active' => true,
+            ],
+        )->assignRole(RolesEnum::USER->value);
         User::firstOrCreate(
             [
                 'email' => '0306231334@caothang.edu.vn',
-                'full_name' => 'Quản trị viên',
+                'full_name' => 'Thành viên',
                 'is_active' => true,
             ],
-        )->assignRole(RolesEnum::ADMIN->value);
+        )->assignRole(RolesEnum::USER->value);
         User::firstOrCreate(
             [
                 'email' => '0306231295@caothang.edu.vn',
-                'full_name' => 'Quản trị viên',
+                'full_name' => 'Thành viên',
                 'is_active' => true,
             ],
-        )->assignRole(RolesEnum::ADMIN->value);
+        )->assignRole(RolesEnum::USER->value);
         User::firstOrCreate(
             [
                 'email' => '0306231289@caothang.edu.vn',
-                'full_name' => 'Quản trị viên',
+                'full_name' => 'Thành viên',
                 'is_active' => true,
             ],
-        )->assignRole(RolesEnum::ADMIN->value);
+        )->assignRole(RolesEnum::USER->value);
 
         $students = [
             ['full_name' => 'Nguyễn Minh Anh', 'email' => 'student1@gmail.com', 'student_code' => 'CD220001', 'class' => 'CD22PM1'],

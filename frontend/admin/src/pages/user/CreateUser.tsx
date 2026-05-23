@@ -560,8 +560,8 @@ function CreateUser() {
 									</Label>
 									<Input
 										id='password'
-										type='password'
-										placeholder='••••••••'
+										type='text'
+										placeholder='Nhập mật khẩu'
 										value={form.password}
 										onChange={updateField("password")}
 										required

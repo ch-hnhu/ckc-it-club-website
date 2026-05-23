@@ -7,6 +7,7 @@ import {
 	loginWithCredentials,
 	setAccessToken,
 } from "@/services/auth.service";
+import { Eye, EyeOff } from "lucide-react";
 
 function openOAuthPopup(url: string, name: string) {
 	const width = 520,
@@ -21,6 +22,7 @@ export default function LoginPage() {
 
 	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -155,17 +157,30 @@ export default function LoginPage() {
 										Quên mật khẩu?
 									</a>
 								</div>
-								<input
-									id='password'
-									type='password'
-									autoComplete='current-password'
-									placeholder='••••••••••'
-									required
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-									className='w-full rounded-[10px] border-2 border-black bg-white px-4 py-2.5 text-sm font-medium outline-none transition-shadow placeholder:text-gray-400 focus:shadow-[3px_3px_0px_#111]'
-									style={{ fontFamily: "var(--font-body)" }}
-								/>
+								<div className='relative'>
+									<input
+										id='password'
+										type={showPassword ? "text" : "password"}
+										autoComplete='current-password'
+										placeholder='••••••••••'
+										required
+										value={password}
+										onChange={(e) => setPassword(e.target.value)}
+										className='w-full rounded-[10px] border-2 border-black bg-white py-2.5 pl-4 pr-12 text-sm font-medium outline-none transition-shadow placeholder:text-gray-400 focus:shadow-[3px_3px_0px_#111]'
+										style={{ fontFamily: "var(--font-body)" }}
+									/>
+									<button
+										type='button'
+										aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+										onClick={() => setShowPassword((current) => !current)}
+										className='absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-black transition-colors hover:bg-black/5'>
+										{showPassword ? (
+											<EyeOff className='h-4 w-4' />
+										) : (
+											<Eye className='h-4 w-4' />
+										)}
+									</button>
+								</div>
 							</div>
 
 							<button
