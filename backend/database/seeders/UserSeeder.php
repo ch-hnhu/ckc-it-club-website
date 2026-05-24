@@ -59,7 +59,7 @@ class UserSeeder extends Seeder
                 'password' => bcrypt('Test@123456'),
                 'is_active' => true,
             ],
-        )->syncRoles([RolesEnum::USER->value, 'test-role-in-use']);
+        )->syncRoles([RolesEnum::USER->value]);
 
         // Locked user: tài khoản bị khóa (is_active = false), dùng cho test đăng nhập bị khóa
         User::firstOrCreate(
