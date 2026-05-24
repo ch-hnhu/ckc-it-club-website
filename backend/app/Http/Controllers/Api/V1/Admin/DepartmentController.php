@@ -225,17 +225,17 @@ class DepartmentController extends BaseApiController
                     ->where('users.id', '<>', $user->id)
                     ->whereHas('roles', fn ($query) => $query->where('roles.id', $headRole->id))
                     ->get()
-                    ->each(fn (User $member) => $member->removeRole($headRole->name));
+                    ->each(fn (User $member) => $member->removeRole($headRole));
 
-                if (! $user->hasRole($headRole->name)) {
-                    $user->assignRole($headRole->name);
+                if (! $user->hasRole($headRole)) {
+                    $user->assignRole($headRole);
                 }
 
                 return;
             }
 
-            if ($user->hasRole($headRole->name)) {
-                $user->removeRole($headRole->name);
+            if ($user->hasRole($headRole)) {
+                $user->removeRole($headRole);
             }
         });
 

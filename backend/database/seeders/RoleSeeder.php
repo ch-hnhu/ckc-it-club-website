@@ -25,6 +25,7 @@ class RoleSeeder extends Seeder
             ['name' => RolesEnum::VOLUNTEER_HEAD->value, 'label' => 'Trưởng ban Tình nguyện', 'is_system' => true],
             ['name' => RolesEnum::CLUB_MEMBER->value, 'label' => 'Thành viên CLB', 'is_system' => true],
             ['name' => RolesEnum::USER->value, 'label' => 'Người dùng', 'is_system' => true],
+            ['name' => 'test-role-in-use', 'label' => 'Vai trò test đang sử dụng', 'is_system' => false],
         ];
 
         foreach ($roles as $role) {

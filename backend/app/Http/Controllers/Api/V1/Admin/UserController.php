@@ -58,19 +58,20 @@ class UserController extends BaseApiController
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
         }
 
-        $user = User::create([
-            'full_name' => $validated['full_name'],
-            'username' => $validated['username'],
-            'gender' => $validated['gender'],
-            'student_code' => $validated['student_code'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'is_active' => $validated['is_active'],
-            'faculty_id' => $validated['faculty_id'] ?? null,
-            'major_id' => $validated['major_id'] ?? null,
-            'class_id' => $validated['class_id'] ?? null,
-            'avatar' => $avatarPath,
-        ]);
+        DB::transaction(function () use ($validated, $avatarPath, &$user) {
+            $user = User::create([
+                'full_name' => $validated['full_name'],
+                'username' => $validated['username'],
+                'gender' => $validated['gender'],
+                'student_code' => $validated['student_code'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'is_active' => $validated['is_active'],
+                'faculty_id' => $validated['faculty_id'] ?? null,
+                'major_id' => $validated['major_id'] ?? null,
+                'class_id' => $validated['class_id'] ?? null,
+                'avatar' => $avatarPath,
+            ]);
 
             $user->syncRoles($validated['roles']);
             $this->syncDepartmentHeadAssignments($user, $validated['roles']);
@@ -154,7 +155,7 @@ class UserController extends BaseApiController
         $selectedRoles = collect($roleNames);
 
         Department::query()
-            ->with('headRole:id,name,label')
+            ->with('headRole:id,name,label,guard_name')
             ->whereNotNull('head_role_id')
             ->get()
             ->each(function (Department $department) use ($user, $selectedRoles) {
@@ -168,10 +169,10 @@ class UserController extends BaseApiController
                     $department->members()->attach($user->id, ['joined_at' => now()]);
                 }
 
-                User::role($headRole->name)
+                User::role($headRole)
                     ->whereKeyNot($user->id)
                     ->get()
-                    ->each(fn (User $otherUser) => $otherUser->removeRole($headRole->name));
+                    ->each(fn (User $otherUser) => $otherUser->removeRole($headRole));
             });
     }
 }

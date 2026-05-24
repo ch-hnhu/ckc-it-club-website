@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends FormRequest
 {
@@ -40,7 +41,7 @@ class UpdateUserRequest extends FormRequest
             'major_id' => 'nullable|exists:majors,id',
             'class_id' => 'nullable|exists:school_classes,id',
             'roles' => 'required|array|min:1',
-            'roles.*' => 'string|exists:roles,name,guard_name,web',
+            'roles.*' => ['string', Rule::exists('roles', 'name')->where('guard_name', 'web')],
             'avatar' => 'nullable|image|mimes:png,jpg,webp|max:2048',
         ];
     }
