@@ -720,12 +720,12 @@ function ApplicationRequestsPage() {
 									<TableCell colSpan={9}>
 										<div className='flex items-center justify-between px-2'>
 											<div className='flex-1 text-sm text-muted-foreground'>
-												{paginatedApplications.length} of{" "}
-												{sortedApplications.length} row(s) displayed.
+												Hiển thị {paginatedApplications.length} /{" "}
+												{sortedApplications.length} hồ sơ.
 											</div>
 											<div className='flex items-center space-x-6 lg:space-x-8'>
 												<div className='flex items-center space-x-2'>
-													<p className='text-sm font-medium'>Rows per page</p>
+													<p className='text-sm font-medium'>Số hồ sơ mỗi trang</p>
 													<Select
 														value={`${pagination.perPage}`}
 														onValueChange={(value) =>
@@ -747,7 +747,7 @@ function ApplicationRequestsPage() {
 													</Select>
 												</div>
 												<div className='flex w-[110px] items-center justify-center text-sm font-medium'>
-													Page {currentPage} of {totalPages}
+													Trang {currentPage} / {totalPages}
 												</div>
 												<div className='flex items-center space-x-2'>
 													<Button
@@ -760,7 +760,7 @@ function ApplicationRequestsPage() {
 															}))
 														}
 														disabled={currentPage === 1}>
-														<span className='sr-only'>Go to first page</span>
+														<span className='sr-only'>Đi đến trang đầu</span>
 														<ChevronsLeft className='h-4 w-4' />
 													</Button>
 													<Button
