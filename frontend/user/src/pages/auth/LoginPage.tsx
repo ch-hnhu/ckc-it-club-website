@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
 	getGoogleAuthUrl,
 	getGithubAuthUrl,
@@ -19,6 +19,8 @@ function openOAuthPopup(url: string, name: string) {
 
 export default function LoginPage() {
 	const navigate = useNavigate();
+	const location = useLocation();
+	const successMessage = (location.state as { successMessage?: string } | null)?.successMessage;
 
 	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
@@ -125,6 +127,14 @@ export default function LoginPage() {
 							Nhập email / username và mật khẩu của bạn.
 						</p>
 
+						{successMessage && (
+							<div
+								className='mb-4 rounded-lg border-2 border-green-500 bg-green-50 px-4 py-3 text-sm font-medium text-green-700'
+								style={{ borderRadius: "var(--neo-radius-sm)" }}>
+								{successMessage}
+							</div>
+						)}
+
 						{error && (
 							<div
 								className='mb-4 rounded-lg border-2 border-red-500 bg-red-50 px-4 py-3 text-sm font-medium text-red-700'
@@ -162,12 +172,12 @@ export default function LoginPage() {
 										style={{ color: "var(--color-text)" }}>
 										Mật khẩu
 									</label>
-									<a
-										href='#'
+									<Link
+										to='/forgot-password'
 										className='text-xs font-semibold underline-offset-2 hover:underline'
 										style={{ color: "var(--color-primary-dark)" }}>
 										Quên mật khẩu?
-									</a>
+									</Link>
 								</div>
 								<div className='relative'>
 									<input
