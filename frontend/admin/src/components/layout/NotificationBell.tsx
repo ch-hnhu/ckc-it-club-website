@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import notificationService from "@/services/notification.service";
 import type { Notification } from "@/types/notification.type";
+import { useGuardedNavigate } from "@/hooks/usePermissionNavigationGuard";
 
 const POLL_INTERVAL_MS = 10_000;
 
@@ -17,7 +18,7 @@ function timeAgo(isoString: string): string {
 }
 
 function NotificationBell() {
-	const navigate = useNavigate();
+	const navigate = useGuardedNavigate();
 	const [open, setOpen] = useState(false);
 	const [notifications, setNotifications] = useState<Notification[]>([]);
 	const [unreadCount, setUnreadCount] = useState(0);

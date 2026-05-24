@@ -202,6 +202,7 @@ const ContactPage: React.FC = () => {
 							style={{ transitionDelay: "0.1s" }}>
 							Gửi tin nhắn cho{" "}
 							<span
+								className='mt-2 inline-block whitespace-nowrap sm:mt-0'
 								style={{
 									background: "var(--color-primary)",
 									padding: "0 0.2em",

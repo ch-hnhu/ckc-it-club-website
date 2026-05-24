@@ -1,15 +1,54 @@
-﻿import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { listenOAuthAuthMessage } from "@/services/auth.service";
+import { authService, listenOAuthAuthMessage } from "@/services/auth.service";
 import { toast } from "sonner";
+import axios from "axios";
+import type { ApiErrorResponse } from "@/types/api.types";
+import { Eye, EyeOff } from "lucide-react";
+
+function openOAuthPopup(url: string, name: string) {
+	const width = 520,
+		height = 640;
+	const left = window.screenX + (window.outerWidth - width) / 2;
+	const top = window.screenY + (window.outerHeight - height) / 2;
+	window.open(url, name, `width=${width},height=${height},left=${left},top=${top}`);
+}
+
+function getLoginErrorMessage(error: unknown) {
+	if (axios.isAxiosError<ApiErrorResponse>(error)) {
+		return error.response?.data?.message || "Thông tin đăng nhập không chính xác!";
+	}
+
+	return "Đã xảy ra lỗi, vui lòng thử lại.";
+}
 
 export function LoginForm() {
 	const navigate = useNavigate();
 	const location = useLocation();
+
+	const [identifier, setIdentifier] = useState("");
+	const [password, setPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
+	const [loading, setLoading] = useState(false);
+
+	const getRedirectPath = () => {
+		const fromPath = (
+			location.state as { from?: { pathname?: string; search?: string } } | null
+		)?.from;
+		const stateRedirectPath = fromPath
+			? `${fromPath.pathname ?? "/"}${fromPath.search ?? ""}`
+			: null;
+		const storedRedirectPath = sessionStorage.getItem("redirectPath");
+		return storedRedirectPath && storedRedirectPath !== "/login"
+			? storedRedirectPath
+			: stateRedirectPath && stateRedirectPath !== "/login"
+				? stateRedirectPath
+				: "/";
+	};
 
 	useEffect(() => {
 		return listenOAuthAuthMessage({
@@ -17,50 +56,51 @@ export function LoginForm() {
 				if (payload.token) {
 					localStorage.setItem("access_token", payload.token);
 				}
-
-				const fromPath = (location.state as { from?: { pathname?: string; search?: string } } | null)
-					?.from;
-				const stateRedirectPath = fromPath
-					? `${fromPath.pathname ?? "/"}${fromPath.search ?? ""}`
-					: null;
-				const storedRedirectPath = sessionStorage.getItem("redirectPath");
-				const redirectPath =
-					storedRedirectPath && storedRedirectPath !== "/login"
-						? storedRedirectPath
-						: stateRedirectPath && stateRedirectPath !== "/login"
-							? stateRedirectPath
-							: "/";
 				sessionStorage.removeItem("redirectPath");
-
 				toast.success(payload.message || "Đăng nhập thành công!", {
 					position: "top-right",
 				});
-				navigate(redirectPath, { replace: true });
+				navigate(getRedirectPath(), { replace: true });
 			},
-
 			onError: (payload) => {
 				toast.error(payload.message || "Đăng nhập thất bại!", { position: "top-right" });
 			},
 		});
 	}, [location.state, navigate]);
 
-	const handleGoogleLogin = (e: React.FormEvent) => {
-		e.preventDefault(); // Prevent form submission
+	const handleCredentialLogin = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!identifier || !password) return;
+		setLoading(true);
 		try {
-			const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-			const url = `${baseUrl}/admin/auth/google`;
-			const width = 520,
-				height = 640;
-			const left = window.screenX + (window.outerWidth - width) / 2;
-			const top = window.screenY + (window.outerHeight - height) / 2;
-			window.open(
-				url,
-				"google_oauth_admin",
-				`width=${width},height=${height},left=${left},top=${top}`,
-			);
-		} catch (error) {
-			console.error("Error redirecting to Google:", error);
+			const res = await authService.loginWithCredentials(identifier, password);
+			if (res.success && res.token) {
+				localStorage.setItem("access_token", res.token);
+				sessionStorage.removeItem("redirectPath");
+				toast.success("Đăng nhập thành công!", { position: "top-right" });
+				navigate(getRedirectPath(), { replace: true });
+			} else {
+				toast.error(res.message || "Thông tin đăng nhập không chính xác!", {
+					position: "top-right",
+				});
+			}
+		} catch (err: unknown) {
+			toast.error(getLoginErrorMessage(err), { position: "top-right" });
+		} finally {
+			setLoading(false);
 		}
+	};
+
+	const handleGoogleLogin = (e: React.MouseEvent) => {
+		e.preventDefault();
+		const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+		openOAuthPopup(`${baseUrl}/admin/auth/google`, "google_oauth_admin");
+	};
+
+	const handleGithubLogin = (e: React.MouseEvent) => {
+		e.preventDefault();
+		const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+		openOAuthPopup(`${baseUrl}/admin/auth/github`, "github_oauth_admin");
 	};
 
 	return (
@@ -77,17 +117,19 @@ export function LoginForm() {
 							</p>
 						</div>
 
-						<form className='space-y-4' onSubmit={(e) => e.preventDefault()}>
+						<form className='space-y-4' onSubmit={handleCredentialLogin}>
 							<div className='space-y-2'>
-								<Label htmlFor='email' className='font-medium text-base'>
-									Email
+								<Label htmlFor='identifier' className='font-medium text-base'>
+									Email hoặc username
 								</Label>
 								<Input
-									id='email'
-									type='email'
+									id='identifier'
+									type='text'
 									placeholder='abc@caothang.edu.vn'
 									required
 									className='h-10'
+									value={identifier}
+									onChange={(e) => setIdentifier(e.target.value)}
 								/>
 							</div>
 							<div className='space-y-2'>
@@ -99,18 +141,34 @@ export function LoginForm() {
 										Quên mật khẩu?
 									</a>
 								</div>
-								<Input
-									id='password'
-									type='password'
-									placeholder='••••••••••'
-									required
-									className='h-10 border border-gray-300 dark:border-gray-800'
-								/>
+								<div className='relative'>
+									<Input
+										id='password'
+										type={showPassword ? "text" : "password"}
+										placeholder='••••••••••'
+										required
+										className='h-10 border border-gray-300 pr-10 dark:border-gray-800'
+										value={password}
+										onChange={(e) => setPassword(e.target.value)}
+									/>
+									<button
+										type='button'
+										className='absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
+										aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+										onClick={() => setShowPassword((current) => !current)}>
+										{showPassword ? (
+											<EyeOff className='h-4 w-4' />
+										) : (
+											<Eye className='h-4 w-4' />
+										)}
+									</button>
+								</div>
 							</div>
 							<Button
 								type='submit'
+								disabled={loading}
 								className='w-full bg-zinc-950 hover:bg-zinc-800 text-white shadow-sm dark:bg-primary dark:hover:bg-primary/90 dark:text-black'>
-								Đăng nhập
+								{loading ? "Đang đăng nhập..." : "Đăng nhập"}
 							</Button>
 						</form>
 					</div>
@@ -156,7 +214,7 @@ export function LoginForm() {
 							<Button
 								variant='outline'
 								type='button'
-								onClick={handleGoogleLogin}
+								onClick={handleGithubLogin}
 								className='w-full shadow-sm hover:bg-[#f5f5f5] dark:hover:bg-zinc-800 hover:text-dark'>
 								<svg
 									aria-label='GitHub'

@@ -76,7 +76,7 @@ const router = createBrowserRouter([
 			{
 				path: "roles",
 				element: (
-					<PermissionRoute permission='roles.view'>
+					<PermissionRoute permission='roles.manage'>
 						<RoleList />
 					</PermissionRoute>
 				),
@@ -84,7 +84,7 @@ const router = createBrowserRouter([
 			{
 				path: "roles/:id",
 				element: (
-					<PermissionRoute permission='roles.view'>
+					<PermissionRoute permission='roles.manage'>
 						<RoleDetailPage />
 					</PermissionRoute>
 				),
@@ -92,7 +92,7 @@ const router = createBrowserRouter([
 			{
 				path: "permissions",
 				element: (
-					<PermissionRoute permission='permissions.view'>
+					<PermissionRoute permission='permissions.manage'>
 						<PermissionList />
 					</PermissionRoute>
 				),

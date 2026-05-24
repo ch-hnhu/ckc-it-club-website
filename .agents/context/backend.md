@@ -56,6 +56,9 @@
 - Public API routes:
 - `GET /api/v1/health`
 - `GET /api/v1/auth/verify-token`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/admin/login`
 - `POST /api/v1/contacts`
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
@@ -153,6 +156,7 @@
 - `communications-head`
 - `volunteer-head`
 - User login can create a new `users` record automatically.
+- Credential user signup is available at `POST /api/v1/auth/register` and requires only `full_name`, `username`, `email`, `password`, and `password_confirmation`; new users are active by default and receive the default `user` role.
 - New tokens are Sanctum personal access tokens.
 - Token TTL is manually written to `personal_access_tokens.expires_at`:
 - admin: 8 hours
@@ -164,6 +168,7 @@
 - Default role assignment happens automatically on new `User` creation via model boot hook.
 - Default assigned role: `user`.
 - Role seeding is handled in `database/seeders/RoleSeeder.php`.
+- All admin-capable roles (`admin`, `president`, `vice-president`, `academic-head`, `communications-head`, `volunteer-head`) have `roles.view` so they can view the role list. Only roles explicitly granted `roles.manage` can create/update/delete roles or sync role permissions.
 - Role-permission sync accepts an empty `permissions` array so a non-admin role can have all permissions removed; the `admin` role cannot have any currently assigned permission removed.
 - Route-level authorization is currently minimal.
 - If you add sensitive admin endpoints, add explicit role/permission checks. Do not assume `auth:sanctum` is enough.

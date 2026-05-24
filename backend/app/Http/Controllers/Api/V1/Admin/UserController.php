@@ -31,6 +31,7 @@ class UserController extends BaseApiController
             ->with('roles:id,name,label')
             ->when($search, function ($query, $search) {
                 $query->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             })
             ->when($role, function ($query, $role) {
@@ -57,21 +58,19 @@ class UserController extends BaseApiController
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
         }
 
-        $user = null;
-
-        DB::transaction(function () use (&$user, $validated, $avatarPath) {
-            $user = User::create([
-                'full_name' => $validated['full_name'],
-                'gender' => $validated['gender'],
-                'student_code' => $validated['student_code'],
-                'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
-                'is_active' => $validated['is_active'],
-                'faculty_id' => $validated['faculty_id'] ?? null,
-                'major_id' => $validated['major_id'] ?? null,
-                'class_id' => $validated['class_id'] ?? null,
-                'avatar' => $avatarPath,
-            ]);
+        $user = User::create([
+            'full_name' => $validated['full_name'],
+            'username' => $validated['username'],
+            'gender' => $validated['gender'],
+            'student_code' => $validated['student_code'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'is_active' => $validated['is_active'],
+            'faculty_id' => $validated['faculty_id'] ?? null,
+            'major_id' => $validated['major_id'] ?? null,
+            'class_id' => $validated['class_id'] ?? null,
+            'avatar' => $avatarPath,
+        ]);
 
             $user->syncRoles($validated['roles']);
             $this->syncDepartmentHeadAssignments($user, $validated['roles']);
@@ -99,6 +98,7 @@ class UserController extends BaseApiController
 
         $payload = [
             'full_name' => $validated['full_name'],
+            'username' => $validated['username'],
             'gender' => $validated['gender'] ?? null,
             'student_code' => $validated['student_code'] ?? null,
             'email' => $validated['email'],

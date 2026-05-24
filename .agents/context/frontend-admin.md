@@ -101,7 +101,7 @@
 - `/club-info`
 - `/fields`
 - Dashboard contains significant placeholder/demo content rather than fully live backend-driven analytics.
-- `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar), selected `is_active` status, and redirects to `/users` on success.
+- `CreateUser` is now wired at `/users/create` and includes username, avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar), selected `is_active` status, and redirects to `/users` on success.
 - Recruitment application service uses `mockApplications` as a fallback when fetching `/club-applications` fails. This can mask backend outages and make the UI look “healthy” when it is not.
 - Redux Toolkit is installed, but there is no centralized Redux store in the current app. State is local component state plus services.
 - `supabase.config.ts` exists, but `uploadImage` does not appear to be actively used by current features.
@@ -123,6 +123,9 @@
 - removes `user`
 - stores intended return path in `sessionStorage.redirectPath`
 - redirects browser to `/login`
+- Axios response interceptor on `403` shows a `sonner` toast: `Tài khoản không có quyền thực hiện chức năng này`.
+- `PermissionRoute` no longer redirects unauthorized admin route access to the dashboard by default. It shows the same access-denied toast and replaces the URL with the last authorized route stored in `sessionStorage.admin:lastAuthorizedPath`, falling back to the first navigation route allowed by the current user's permissions.
+- `MainLayout` uses `usePermissionNavigationGuard` to intercept unauthorized internal `<Link>` clicks before React Router changes route, keeping the current page mounted and showing the access-denied toast. Imperative `navigate(...)` calls that can target protected routes should use `useGuardedNavigate` for the same no-route-change behavior.
 - Logout is token-based and goes through backend `/auth/logout`.
 
 ## Auth Risks and Assumptions
@@ -210,6 +213,7 @@
 - Current `User` type is minimal:
 - `id`
 - `full_name`
+- `username`
 - `email`
 - `is_active`
 - `avatar`
@@ -225,7 +229,7 @@
 - currently no live delete action implementation
 - Create user:
 - UI exists
-- create-user form loads roles from the backend and submits `gender`, `is_active`, plus selected roles to the API
+- create-user form loads roles from the backend and submits `username`, `gender`, `is_active`, plus selected roles to the API
 - Recruitment applications:
 - list uses client-side filtering/sorting after fetch
 - status update is live against backend
