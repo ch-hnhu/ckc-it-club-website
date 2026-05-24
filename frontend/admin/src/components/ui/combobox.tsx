@@ -32,6 +32,8 @@ type BaseComboboxProps = {
 	clearText?: string;
 	disabled?: boolean;
 	searchable?: boolean;
+	triggerId?: string;
+	autoFocus?: boolean;
 	className?: string;
 	triggerClassName?: string;
 	contentClassName?: string;
@@ -60,6 +62,8 @@ function Combobox({
 	clearText = "Xoá lựa chọn",
 	disabled,
 	searchable = true,
+	triggerId,
+	autoFocus,
 	className,
 	triggerClassName,
 	contentClassName,
@@ -102,10 +106,12 @@ function Combobox({
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
 				<Button
+					id={triggerId}
 					type='button'
 					variant='outline'
 					role='combobox'
 					aria-expanded={open}
+					autoFocus={autoFocus}
 					disabled={disabled}
 					className={cn("w-full justify-between px-3", triggerClassName)}>
 					<span className={cn("truncate", !hasSelection && "text-muted-foreground")}>

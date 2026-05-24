@@ -12,34 +12,22 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::firstOrCreate(
-            [
-                'email' => 'hnhu07012004@gmail.com',
-                'full_name' => 'Quản trị viên',
-                'is_active' => true,
-            ],
-        )->assignRole(RolesEnum::ADMIN->value);
-        User::firstOrCreate(
-            [
-                'email' => '0306231334@caothang.edu.vn',
-                'full_name' => 'Quản trị viên',
-                'is_active' => true,
-            ],
-        )->assignRole(RolesEnum::ADMIN->value);
-        User::firstOrCreate(
-            [
-                'email' => '0306231295@caothang.edu.vn',
-                'full_name' => 'Quản trị viên',
-                'is_active' => true,
-            ],
-        )->assignRole(RolesEnum::ADMIN->value);
-        User::firstOrCreate(
-            [
-                'email' => '0306231289@caothang.edu.vn',
-                'full_name' => 'Quản trị viên',
-                'is_active' => true,
-            ],
-        )->assignRole(RolesEnum::ADMIN->value);
+        $adminEmails = [
+            'hnhu07012004@gmail.com',
+            '0306231334@caothang.edu.vn',
+            '0306231295@caothang.edu.vn',
+            '0306231289@caothang.edu.vn',
+        ];
+
+        foreach ($adminEmails as $email) {
+            User::firstOrCreate(
+                ['email' => $email],
+                [
+                    'full_name' => 'Quản trị viên',
+                    'is_active' => true,
+                ],
+            )->assignRole(RolesEnum::ADMIN->value);
+        }
 
         $students = [
             ['full_name' => 'Nguyễn Minh Anh', 'email' => 'student1@gmail.com', 'student_code' => 'CD220001', 'class' => 'CD22PM1'],

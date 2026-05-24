@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Admin\ApplicationQuestionController;
 use App\Http\Controllers\Api\V1\Admin\AcademicStructureController;
 use App\Http\Controllers\Api\V1\Admin\ClubApplicationController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
+use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\MajorController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
@@ -112,6 +113,20 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:contacts.manage')->group(function () {
             Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
             Route::delete('contacts/{contact}', [AdminContactController::class, 'destroy']);
+        });
+
+        // departments
+        Route::middleware('permission:club_info.view')->group(function () {
+            Route::get('departments', [DepartmentController::class, 'index']);
+            Route::get('departments/{department}', [DepartmentController::class, 'show']);
+        });
+        Route::middleware('permission:club_info.manage')->group(function () {
+            Route::post('departments', [DepartmentController::class, 'store']);
+            Route::put('departments/{department}', [DepartmentController::class, 'update']);
+            Route::patch('departments/{department}', [DepartmentController::class, 'update']);
+            Route::post('departments/{department}/users', [DepartmentController::class, 'storeUser']);
+            Route::patch('departments/{department}/users/{user}', [DepartmentController::class, 'updateUserRole']);
+            Route::delete('departments/{department}/users/{user}', [DepartmentController::class, 'destroyUser']);
         });
 
         // club applications

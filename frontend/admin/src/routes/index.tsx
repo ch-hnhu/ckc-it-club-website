@@ -19,6 +19,7 @@ import NotFound from "@/pages/NotFound";
 import RoleList from "@/pages/role/RoleList";
 import RoleDetailPage from "@/pages/role/RoleDetailPage";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
+import DepartmentDetailPage from "@/pages/division/DepartmentDetailPage";
 import PermissionList from "@/pages/permission/PermissionList";
 import ClubInformationList from "@/pages/club-information/ClubInformationList";
 import ClubInformationDetailPage from "@/pages/club-information/ClubInformationDetailPage";
@@ -141,6 +142,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='club_info.view'>
 						<DivisionManagementPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "divisions/:id",
+				element: (
+					<PermissionRoute permission='club_info.view'>
+						<DepartmentDetailPage />
 					</PermissionRoute>
 				),
 			},

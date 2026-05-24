@@ -155,7 +155,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 function InfoRow({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
 	return (
-		<div className='flex flex-col gap-1'>
+		<div className='flex flex-col gap-1 rounded-lg border bg-muted/20 p-4'>
 			<p className='text-sm font-medium text-muted-foreground'>{label}</p>
 			<div className='text-sm font-semibold break-words'>{value}</div>
 		</div>
