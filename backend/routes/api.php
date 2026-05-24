@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 
 Route::prefix('v1')->group(function () {
 
@@ -35,6 +36,13 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
+
+    // Forgot password (throttled: 5 attempts per minute per IP)
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/auth/forgot-password', [ForgotPasswordController::class, 'sendOtp']);
+        Route::post('/auth/verify-otp', [ForgotPasswordController::class, 'verifyOtp']);
+        Route::post('/auth/reset-password', [ForgotPasswordController::class, 'resetPassword']);
+    });
 
     // auth
     Route::middleware('auth:sanctum')->prefix('auth')->group(function () {

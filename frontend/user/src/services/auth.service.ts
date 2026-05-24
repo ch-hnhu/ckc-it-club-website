@@ -151,6 +151,50 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 	} as AuthUser;
 }
 
+export type ForgotPasswordResponse = { success: boolean; message?: string };
+export type VerifyOtpResponse = { success: boolean; message?: string; reset_token?: string };
+export type ResetPasswordResponse = { success: boolean; message?: string };
+
+export async function sendForgotPasswordOtp(email: string): Promise<ForgotPasswordResponse> {
+	const response = await fetch(`${API_URL}/auth/forgot-password`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify({ email }),
+	});
+	return response.json();
+}
+
+export async function verifyForgotPasswordOtp(
+	email: string,
+	otp: string,
+): Promise<VerifyOtpResponse> {
+	const response = await fetch(`${API_URL}/auth/verify-otp`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify({ email, otp }),
+	});
+	return response.json();
+}
+
+export async function resetPassword(
+	email: string,
+	resetToken: string,
+	password: string,
+	passwordConfirmation: string,
+): Promise<ResetPasswordResponse> {
+	const response = await fetch(`${API_URL}/auth/reset-password`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify({
+			email,
+			reset_token: resetToken,
+			password,
+			password_confirmation: passwordConfirmation,
+		}),
+	});
+	return response.json();
+}
+
 export async function logout(): Promise<void> {
 	const token = getAccessToken();
 	await fetch(`${API_URL}/auth/logout`, {
