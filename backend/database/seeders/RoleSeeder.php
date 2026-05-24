@@ -21,5 +21,9 @@ class RoleSeeder extends Seeder
         Role::create(['name' => RolesEnum::VOLUNTEER_HEAD, 'label' => 'Trưởng ban Tình nguyện', 'is_system' => true]);
         Role::create(['name' => RolesEnum::CLUB_MEMBER, 'label' => 'Thành viên CLB', 'is_system' => true]);
         Role::create(['name' => RolesEnum::USER, 'label' => 'Người dùng', 'is_system' => true]);
+
+        // Non-system roles for manual testing (edit/delete scenarios)
+        Role::create(['name' => 'test-role', 'label' => 'Vai trò test', 'is_system' => false]);
+        Role::create(['name' => 'test-role-in-use', 'label' => 'Vai trò test (đang dùng)', 'is_system' => false]);
     }
 }
