@@ -136,6 +136,7 @@ Route::prefix('v1')->group(function () {
             Route::post('departments', [DepartmentController::class, 'store']);
             Route::put('departments/{department}', [DepartmentController::class, 'update']);
             Route::patch('departments/{department}', [DepartmentController::class, 'update']);
+            Route::delete('departments/{department}', [DepartmentController::class, 'destroy']);
             Route::post('departments/{department}/users', [DepartmentController::class, 'storeUser']);
             Route::patch('departments/{department}/users/{user}', [DepartmentController::class, 'updateUserRole']);
             Route::delete('departments/{department}/users/{user}', [DepartmentController::class, 'destroyUser']);

@@ -171,6 +171,21 @@ class DepartmentController extends BaseApiController
         return $this->successResponse(true, $department, 'Cập nhật ban thành công.');
     }
 
+    public function destroy(Department $department): JsonResponse
+    {
+        $department->loadCount('members');
+
+        if ($department->members_count > 0) {
+            return $this->validationErrorResponse([
+                'department' => ['KhÃ´ng thá»ƒ xÃ³a ban Ä‘ang cÃ³ thÃ nh viÃªn.'],
+            ], 'KhÃ´ng thá»ƒ xÃ³a ban Ä‘ang cÃ³ thÃ nh viÃªn.');
+        }
+
+        $department->delete();
+
+        return $this->successResponse(true, null, 'XÃ³a ban thÃ nh cÃ´ng.');
+    }
+
     public function storeUser(StoreDepartmentUserRequest $request, Department $department): JsonResponse
     {
         $userId = $request->integer('user_id');

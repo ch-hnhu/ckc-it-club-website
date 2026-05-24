@@ -218,6 +218,7 @@
 - stores raw `answer_value`.
 - `contacts`
 - public contact submissions are created through `POST /api/v1/contacts`.
+- public contact submission responses include the newly created contact with default `status` resolved as `pending`.
 - admin can list contacts with pagination, search, sort, and status filtering.
 - admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`

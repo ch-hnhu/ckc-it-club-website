@@ -15,6 +15,7 @@ import {
 	MoreHorizontal,
 	RefreshCw,
 	Settings2,
+	Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -622,6 +623,7 @@ function ContactList() {
 													<DropdownMenuItem
 														className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 														onClick={() => void handleDeleteContact(contact)}>
+														<Trash2 className='h-4 w-4 text-destructive' />
 														Xóa liên hệ
 													</DropdownMenuItem>
 												</DropdownMenuContent>

@@ -38,6 +38,10 @@ const departmentService = {
 		return api.put<ApiResponse<Department>, typeof payload>(`/departments/${id}`, payload);
 	},
 
+	async deleteDepartment(id: number | string): Promise<ApiResponse<null>> {
+		return api.delete(`/departments/${id}`);
+	},
+
 	async addDepartmentUser(
 		id: number | string,
 		payload: {
