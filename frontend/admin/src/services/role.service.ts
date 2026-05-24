@@ -36,6 +36,16 @@ const roleService = {
 	async deleteRole(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/roles/${id}`);
 	},
+
+	async syncRolePermissions(
+		id: number | string,
+		permissions: string[],
+	): Promise<ApiResponse<Role>> {
+		return api.post<ApiResponse<Role>, { permissions: string[] }>(
+			`/roles/${id}/permissions`,
+			{ permissions },
+		);
+	},
 };
 
 export default roleService;

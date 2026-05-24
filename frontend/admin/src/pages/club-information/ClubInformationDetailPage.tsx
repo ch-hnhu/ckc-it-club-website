@@ -6,6 +6,7 @@ import {
 	ArrowUp,
 	ArrowUpDown,
 	CalendarDays,
+	CheckCircle2,
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
@@ -20,19 +21,13 @@ import {
 	Plus,
 	SquarePen,
 	Tag,
-	ToggleLeft,
 	Trash2,
-	Type,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import clubInformationService from "@/services/club-information.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import {
-	CLUB_INFORMATION_TYPES,
-	type ClubInformation,
-	type ClubInformationValue,
-} from "@/types/club-information";
+import { type ClubInformation, type ClubInformationValue } from "@/types/club-information";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -85,6 +80,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ValSortKey =
 	| "id"
@@ -114,11 +110,15 @@ const getInitialValueForm = (): ValueFormState => ({
 	is_active: true,
 });
 
+const HTML_VALUE_TEXTAREA_CLASS =
+	"min-h-32 max-h-64 resize-y overflow-y-auto [field-sizing:fixed] whitespace-pre-wrap break-words";
+
 const getValueFormFromRecord = (record: ClubInformationValue): ValueFormState => ({
 	value: record.value ?? "",
 	link: record.link ?? "",
 	alt: record.alt ?? "",
-	position: record.position === null || record.position === undefined ? "" : String(record.position),
+	position:
+		record.position === null || record.position === undefined ? "" : String(record.position),
 	is_active: record.is_active !== false,
 });
 
@@ -128,7 +128,6 @@ type InfoFormState = {
 	slug: string;
 	type: string;
 	description: string;
-	is_active: boolean;
 };
 
 type InfoFieldErrors = Partial<Record<keyof InfoFormState, string>>;
@@ -139,7 +138,6 @@ const getInfoFormFromRecord = (record: ClubInformation): InfoFormState => ({
 	slug: record.slug ?? "",
 	type: record.type ?? "",
 	description: record.description ?? "",
-	is_active: record.is_active !== false,
 });
 
 function formatDate(dateString: string | null) {
@@ -157,34 +155,22 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 function InfoRow({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
 	return (
-		<div className='flex flex-col gap-1'>
+		<div className='flex flex-col gap-1 rounded-lg border bg-muted/20 p-4'>
 			<p className='text-sm font-medium text-muted-foreground'>{label}</p>
 			<div className='text-sm font-semibold break-words'>{value}</div>
 		</div>
 	);
 }
 
-function getStatusBadgeItems(isActive?: boolean): CompactBadgeItem[] {
+function getStatusBadgeItems(isActive?: boolean, activeLabel = "Đang dùng"): CompactBadgeItem[] {
 	return [
 		{
 			key: isActive === false ? "inactive" : "active",
-			label: isActive === false ? "Tạm ẩn" : "Đang dùng",
+			label: isActive === false ? "Tạm ẩn" : activeLabel,
 			className:
 				isActive === false
 					? "border-muted-foreground/20 bg-muted text-muted-foreground hover:bg-muted"
 					: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
-		},
-	];
-}
-
-function getTypeBadgeItems(type: string | null): CompactBadgeItem[] {
-	if (!type) return [];
-
-	return [
-		{
-			key: type,
-			label: type,
-			className: "border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
 		},
 	];
 }
@@ -215,10 +201,9 @@ function ClubInformationDetailPage() {
 	const [valueFieldErrors, setValueFieldErrors] = useState<ValueFieldErrors>({});
 	const [valueSubmitting, setValueSubmitting] = useState(false);
 	const [selectedValue, setSelectedValue] = useState<ClubInformationValue | null>(null);
-	const [valuePendingDelete, setValuePendingDelete] = useState<ClubInformationValue | null>(
-		null,
-	);
+	const [valuePendingDelete, setValuePendingDelete] = useState<ClubInformationValue | null>(null);
 	const [valueDeleting, setValueDeleting] = useState(false);
+	const [defaultingValueId, setDefaultingValueId] = useState<number | null>(null);
 	const [isEditingValue, setIsEditingValue] = useState(false);
 	const [detailValueForm, setDetailValueForm] = useState<ValueFormState>(getInitialValueForm);
 	const [detailValueFieldErrors, setDetailValueFieldErrors] = useState<ValueFieldErrors>({});
@@ -298,8 +283,12 @@ function ClubInformationDetailPage() {
 
 	const isImageType = info?.type === "image" || info?.type === "banner";
 	const isBannerType = info?.type === "banner";
-	const isBooleanType = info?.type === "boolean";
-	const tableColSpan = 7 + (isImageType ? 1 : 0) + (isBannerType ? 2 : 0) - (isBooleanType ? 1 : 0);
+	const tableColSpan = 7 + (isImageType ? 1 : 0) + (isBannerType ? 2 : 0);
+	const valueTableClassName = isBannerType
+		? "min-w-[1040px] table-fixed"
+		: isImageType
+			? "min-w-[920px] table-fixed"
+			: "min-w-[780px] table-fixed";
 	const valueColLabel = isImageType
 		? "Ảnh"
 		: info?.type === "url"
@@ -309,11 +298,20 @@ function ClubInformationDetailPage() {
 				: "Nội dung";
 	const selectedValuePreview = isEditingValue
 		? detailValueForm.value
-		: selectedValue?.value ?? "";
-	const selectedAltPreview = isEditingValue ? detailValueForm.alt : selectedValue?.alt ?? "";
-	const selectedLinkPreview = isEditingValue ? detailValueForm.link : selectedValue?.link ?? "";
+		: (selectedValue?.value ?? "");
+	const selectedAltPreview = isEditingValue ? detailValueForm.alt : (selectedValue?.alt ?? "");
+	const selectedLinkPreview = isEditingValue ? detailValueForm.link : (selectedValue?.link ?? "");
+	const selectedValueIsActive = isEditingValue
+		? detailValueForm.is_active
+		: selectedValue?.is_active !== false;
 
 	const valLastPage = Math.max(1, Math.ceil(sortedValues.length / valPerPage));
+
+	const getValueDeleteDisabledReason = (value: ClubInformationValue) => {
+		if (value.is_active) return "Không thể xoá giá trị đang được sử dụng.";
+		if (values.length <= 1) return "Không thể xoá giá trị cuối cùng của cấu hình.";
+		return null;
+	};
 
 	const paginatedValues = useMemo(() => {
 		const start = (valCurrentPage - 1) * valPerPage;
@@ -446,6 +444,70 @@ function ClubInformationDetailPage() {
 		}
 	};
 
+	const handleSetDefaultValue = async (value: ClubInformationValue) => {
+		if (isBannerType || value.is_active || defaultingValueId !== null) return;
+
+		const clubInformationId = Number(id);
+		if (!Number.isFinite(clubInformationId)) {
+			toast.error("Thiếu mã cấu hình.", { position: "top-right" });
+			return;
+		}
+
+		try {
+			setDefaultingValueId(value.id);
+			const response = await clubInformationService.setDefaultClubInformationValue(
+				clubInformationId,
+				value.id,
+			);
+
+			setInfo((prev) =>
+				prev
+					? {
+							...prev,
+							club_information_values: (prev.club_information_values ?? []).map(
+								(item) =>
+									item.id === response.data.id
+										? response.data
+										: { ...item, is_active: false },
+							),
+							resolved_club_information_values: [response.data],
+						}
+					: prev,
+			);
+			setSelectedValue((prev) =>
+				prev
+					? prev.id === response.data.id
+						? response.data
+						: { ...prev, is_active: false }
+					: prev,
+			);
+			setDetailValueForm((prev) =>
+				selectedValue?.id === response.data.id ? getValueFormFromRecord(response.data) : prev,
+			);
+			setRefreshKey((prev) => prev + 1);
+			toast.success(response.message ?? "Đặt giá trị mặc định thành công.", {
+				position: "top-right",
+			});
+		} catch (defaultError) {
+			if (axios.isAxiosError<ApiErrorResponse>(defaultError)) {
+				const responseData = defaultError.response?.data;
+				const serverMessage =
+					Object.values(responseData?.errors ?? {}).flat()[0] ??
+					responseData?.message ??
+					"Không thể đặt giá trị mặc định.";
+
+				toast.error(serverMessage, { position: "top-right" });
+				return;
+			}
+
+			toast.error(getErrorMessage(defaultError, "Không thể đặt giá trị mặc định."), {
+				position: "top-right",
+			});
+		} finally {
+			setDefaultingValueId(null);
+		}
+	};
+
 	const handleDeleteValueDialogOpenChange = (open: boolean) => {
 		if (!open && valueDeleting) return;
 		if (!open) setValuePendingDelete(null);
@@ -453,6 +515,22 @@ function ClubInformationDetailPage() {
 
 	const handleDeleteValueSubmit = async () => {
 		if (!valuePendingDelete) return;
+
+		if (valuePendingDelete.is_active) {
+			toast.error("Không thể xóa giá trị đang là mặc định của cấu hình.", {
+				position: "top-right",
+			});
+			setValuePendingDelete(null);
+			return;
+		}
+
+		if (values.length <= 1) {
+			toast.error("Cấu hình phải có ít nhất một giá trị.", {
+				position: "top-right",
+			});
+			setValuePendingDelete(null);
+			return;
+		}
 
 		const clubInformationId = Number(id);
 		if (!Number.isFinite(clubInformationId)) {
@@ -527,10 +605,7 @@ function ClubInformationDetailPage() {
 
 	const validateInfoForm = (form: InfoFormState) => {
 		const errors: InfoFieldErrors = {};
-		if (!form.label.trim()) errors.label = "Vui lòng nhập tên cấu hình.";
-		if (!form.value.trim()) errors.value = "Vui lòng nhập giá trị key.";
 		if (!form.slug.trim()) errors.slug = "Vui lòng nhập slug.";
-		if (!form.type) errors.type = "Vui lòng chọn kiểu dữ liệu.";
 		setInfoFieldErrors(errors);
 		return Object.keys(errors).length === 0;
 	};
@@ -550,12 +625,8 @@ function ClubInformationDetailPage() {
 		try {
 			setInfoSubmitting(true);
 			const response = await clubInformationService.updateClubInformation(clubInformationId, {
-				label: infoForm.label.trim(),
-				value: infoForm.value.trim(),
 				slug: infoForm.slug.trim(),
-				type: infoForm.type,
 				description: infoForm.description.trim() || undefined,
-				is_active: infoForm.is_active,
 			});
 
 			setInfo(response.data);
@@ -693,7 +764,7 @@ function ClubInformationDetailPage() {
 				<Button asChild variant='outline' className='w-fit'>
 					<Link to='/club-informations'>
 						<ArrowLeft className='h-4 w-4' />
-						Quay lại danh sách
+						Quay lại
 					</Link>
 				</Button>
 				<Card>
@@ -713,14 +784,14 @@ function ClubInformationDetailPage() {
 			<Button asChild variant='outline' className='w-fit'>
 				<Link to='/club-informations'>
 					<ArrowLeft className='h-4 w-4' />
-					Quay lại danh sách
+					Quay lại
 				</Link>
 			</Button>
 
 			<div className='flex flex-col gap-6'>
 				<div>
 					<Card className='shadow-sm'>
-						<CardHeader className='pb-4'>
+						<CardHeader className='pb-2'>
 							<div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
 								<div>
 									<div className='mb-1 flex flex-wrap items-center gap-2'>
@@ -732,9 +803,15 @@ function ClubInformationDetailPage() {
 													className:
 														"border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
 												},
-												...getStatusBadgeItems(info.is_active),
+												{
+													key: "type",
+													label: info.type
+														? `${info.type}`
+														: "Unknown type",
+													className:
+														"border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
+												},
 											]}
-											maxVisibleItems={2}
 										/>
 									</div>
 									<CardTitle className='text-lg leading-snug'>
@@ -759,17 +836,8 @@ function ClubInformationDetailPage() {
 							<form onSubmit={(event) => void handleUpdateInfoSubmit(event)}>
 								<CardContent className='grid gap-6 sm:grid-cols-2'>
 									<div className='flex flex-col gap-2'>
-										<Label htmlFor='info_label'>
-											Tên cấu hình <span className='text-destructive'>*</span>
-										</Label>
-										<Input
-											id='info_label'
-											value={infoForm.label}
-											onChange={(event) =>
-												setInfoField("label", event.target.value)
-											}
-											disabled={infoSubmitting}
-										/>
+										<Label htmlFor='info_label'>Tên cấu hình</Label>
+										<Input id='info_label' value={infoForm.label} disabled />
 										{infoFieldErrors.label ? (
 											<p className='text-sm text-destructive'>
 												{infoFieldErrors.label}
@@ -778,17 +846,8 @@ function ClubInformationDetailPage() {
 									</div>
 
 									<div className='flex flex-col gap-2'>
-										<Label htmlFor='info_value'>
-											Giá trị key <span className='text-destructive'>*</span>
-										</Label>
-										<Input
-											id='info_value'
-											value={infoForm.value}
-											onChange={(event) =>
-												setInfoField("value", event.target.value)
-											}
-											disabled={infoSubmitting}
-										/>
+										<Label htmlFor='info_value'>Giá trị key</Label>
+										<Input id='info_value' value={infoForm.value} disabled />
 										{infoFieldErrors.value ? (
 											<p className='text-sm text-destructive'>
 												{infoFieldErrors.value}
@@ -815,32 +874,6 @@ function ClubInformationDetailPage() {
 										) : null}
 									</div>
 
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='info_type'>
-											Kiểu dữ liệu <span className='text-destructive'>*</span>
-										</Label>
-										<Select
-											value={infoForm.type}
-											onValueChange={(value) => setInfoField("type", value)}
-											disabled={infoSubmitting}>
-											<SelectTrigger id='info_type' className='w-full'>
-												<SelectValue placeholder='Chọn kiểu dữ liệu' />
-											</SelectTrigger>
-											<SelectContent>
-												{CLUB_INFORMATION_TYPES.map((type) => (
-													<SelectItem key={type.value} value={type.value}>
-														{type.label}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										{infoFieldErrors.type ? (
-											<p className='text-sm text-destructive'>
-												{infoFieldErrors.type}
-											</p>
-										) : null}
-									</div>
-
 									<div className='flex flex-col gap-2 sm:col-span-2'>
 										<Label htmlFor='info_description'>Mô tả</Label>
 										<Textarea
@@ -857,20 +890,6 @@ function ClubInformationDetailPage() {
 												{infoFieldErrors.description}
 											</p>
 										) : null}
-									</div>
-
-									<div className='flex items-center gap-3 sm:col-span-2'>
-										<Switch
-											id='info_is_active'
-											checked={infoForm.is_active}
-											onCheckedChange={(checked) =>
-												setInfoField("is_active", checked)
-											}
-											disabled={infoSubmitting}
-										/>
-										<Label htmlFor='info_is_active' className='cursor-pointer'>
-											{infoForm.is_active ? "Đang dùng" : "Tạm ẩn"}
-										</Label>
 									</div>
 
 									<div className='flex justify-end gap-3 border-t pt-6 sm:col-span-2'>
@@ -891,7 +910,7 @@ function ClubInformationDetailPage() {
 								</CardContent>
 							</form>
 						) : (
-							<CardContent className='grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-4'>
+							<CardContent className='grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-3'>
 								<InfoRow
 									label={
 										<span className='flex items-center gap-1.5'>
@@ -928,35 +947,11 @@ function ClubInformationDetailPage() {
 								<InfoRow
 									label={
 										<span className='flex items-center gap-1.5'>
-											<Type className='h-3.5 w-3.5' />
-											Kiểu dữ liệu
-										</span>
-									}
-									value={
-										<CompactBadgeList
-											items={getTypeBadgeItems(info.type)}
-											maxVisibleItems={1}
-											emptyLabel='--'
-										/>
-									}
-								/>
-								<InfoRow
-									label={
-										<span className='flex items-center gap-1.5'>
 											<FileText className='h-3.5 w-3.5' />
 											Mô tả
 										</span>
 									}
 									value={info.description || "--"}
-								/>
-								<InfoRow
-									label={
-										<span className='flex items-center gap-1.5'>
-											<ToggleLeft className='h-3.5 w-3.5' />
-											Trạng thái
-										</span>
-									}
-									value={info.is_active === false ? "Tạm ẩn" : "Đang dùng"}
 								/>
 								<InfoRow
 									label={
@@ -994,8 +989,6 @@ function ClubInformationDetailPage() {
 								<Button
 									size='sm'
 									onClick={() => handleAddValueDialogOpenChange(true)}
-									disabled={isBooleanType && values.length >= 1}
-									title={isBooleanType && values.length >= 1 ? "Cấu hình boolean chỉ được có 1 giá trị" : undefined}
 									className='h-8 bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50'>
 									<Plus className='h-4 w-4' />
 									Thêm
@@ -1007,7 +1000,7 @@ function ClubInformationDetailPage() {
 					<div className='flex flex-col gap-4'>
 						{/* colSpan: base 7 + alt(image/banner) + link+position(banner) */}
 						<div className='overflow-hidden rounded-md border'>
-							<Table className='table-fixed'>
+							<Table className={valueTableClassName}>
 								<TableHeader>
 									<TableRow>
 										<TableHead className='w-[50px]'>
@@ -1066,16 +1059,14 @@ function ClubInformationDetailPage() {
 												</TableHead>
 											</>
 										)}
-										{!isBooleanType && (
-											<TableHead className='w-[110px]'>
-												<Button
-													variant='ghost'
-													onClick={() => handleValSort("is_active")}
-													className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-													Trạng thái{getValSortIcon("is_active")}
-												</Button>
-											</TableHead>
-										)}
+										<TableHead className='w-[110px]'>
+											<Button
+												variant='ghost'
+												onClick={() => handleValSort("is_active")}
+												className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+												Trạng thái{getValSortIcon("is_active")}
+											</Button>
+										</TableHead>
 										<TableHead className='w-[105px]'>
 											<Button
 												variant='ghost'
@@ -1097,183 +1088,245 @@ function ClubInformationDetailPage() {
 								</TableHeader>
 								<TableBody>
 									{paginatedValues.length > 0 ? (
-										paginatedValues.map((val) => (
-											<TableRow key={val.id}>
-												<TableCell>
-													<Checkbox
-														aria-label={`Select value ${val.id}`}
-														checked={isSelected(val.id)}
-														onCheckedChange={(checked) =>
-															toggleOne(val.id, checked === true)
-														}
-													/>
-												</TableCell>
-												<TableCell className='font-medium'>
-													{val.id}
-												</TableCell>
+										paginatedValues.map((val) => {
+											const deleteDisabledReason =
+												getValueDeleteDisabledReason(val);
 
-												{/* Value cell — per type */}
-												<TableCell className='overflow-hidden'>
-													{info.type === "boolean" ? (
-														<Badge
-															variant='outline'
-															className={
-																val.value === "true"
-																	? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
-																	: "border-muted-foreground/20 bg-muted text-muted-foreground"
-															}>
-															{val.value === "true"
-																? "True — Bật"
-																: "False — Tắt"}
-														</Badge>
-													) : info.type === "url" ? (
-														<a
-															href={val.value}
-															target='_blank'
-															rel='noopener noreferrer'
-															className='flex items-center gap-1 text-blue-600 hover:underline min-w-0'>
-															<span
-																className='truncate text-sm'
-																title={val.value}>
-																{val.value}
-															</span>
-															<ExternalLink className='h-3 w-3 shrink-0' />
-														</a>
-													) : info.type === "html" ? (
-														<div className='flex min-w-0 items-center gap-2'>
-															<Badge
-																variant='secondary'
-																className='shrink-0 text-xs'>
-																HTML
-															</Badge>
-															<span
-																className='truncate text-xs text-muted-foreground'
-																title={val.value}>
-																{val.value.replace(/<[^>]+>/g, " ")}
-															</span>
-														</div>
-													) : isImageType ? (
-														<a
-															href={val.value}
-															target='_blank'
-															rel='noopener noreferrer'
-															className='flex min-w-0 items-center gap-3 text-blue-600 hover:underline'>
-															<Avatar className='h-10 w-10 rounded-md'>
-																<AvatarImage
-																	src={val.value}
-																	alt={val.alt ?? ""}
-																	className='object-cover'
-																/>
-																<AvatarFallback className='rounded-md text-[10px]'>
-																	IMG
-																</AvatarFallback>
-															</Avatar>
-															<span
-																className='min-w-0 truncate text-xs'
-																title={val.value}>
-																{val.value}
-															</span>
-															<ExternalLink className='h-3 w-3 shrink-0' />
-														</a>
-													) : (
-														<span
-															className='truncate'
-															title={val.value}>
-															{val.value}
-														</span>
-													)}
-												</TableCell>
-
-												{/* Alt — image / banner */}
-												{isImageType && (
-													<TableCell className='overflow-hidden text-sm text-muted-foreground'>
-														<span
-															className='truncate'
-															title={val.alt ?? ""}>
-															{val.alt || "--"}
-														</span>
+											return (
+												<TableRow key={val.id}>
+													<TableCell>
+														<Checkbox
+															aria-label={`Select value ${val.id}`}
+															checked={isSelected(val.id)}
+															onCheckedChange={(checked) =>
+																toggleOne(val.id, checked === true)
+															}
+														/>
 													</TableCell>
-												)}
+													<TableCell className='font-medium'>
+														<div className='flex flex-col gap-1'>
+															<span>{val.id}</span>
+														</div>
+													</TableCell>
 
-												{/* Link + Position — banner */}
-												{isBannerType && (
-													<>
-														<TableCell className='overflow-hidden'>
-															{val.link ? (
-																<a
-																	href={val.link}
-																	target='_blank'
-																	rel='noopener noreferrer'
-																	className='flex items-center gap-1 text-blue-600 hover:underline min-w-0'>
-																	<span
-																		className='truncate text-xs'
-																		title={val.link}>
-																		{val.link}
-																	</span>
-																	<ExternalLink className='h-3 w-3 shrink-0' />
-																</a>
-															) : (
-																<span className='text-muted-foreground'>
-																	--
+													{/* Value cell — per type */}
+													<TableCell className='overflow-hidden'>
+														{info.type === "boolean" ? (
+															<Badge
+																variant='outline'
+																className={
+																	val.value === "true"
+																		? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+																		: "border-muted-foreground/20 bg-muted text-muted-foreground"
+																}>
+																{val.value === "true"
+																	? "True — Bật"
+																	: "False — Tắt"}
+															</Badge>
+														) : info.type === "url" ? (
+															<a
+																href={val.value}
+																target='_blank'
+																rel='noopener noreferrer'
+																className='flex items-center gap-1 text-blue-600 hover:underline min-w-0'>
+																<span
+																	className='truncate text-sm'
+																	title={val.value}>
+																	{val.value}
 																</span>
-															)}
-														</TableCell>
-														<TableCell className='text-center font-medium'>
-															{val.position ?? "--"}
-														</TableCell>
-													</>
-												)}
+																<ExternalLink className='h-3 w-3 shrink-0' />
+															</a>
+														) : info.type === "html" ? (
+															<div className='flex min-w-0 items-center gap-2'>
+																<Badge
+																	variant='secondary'
+																	className='shrink-0 text-xs'>
+																	HTML
+																</Badge>
+																<span
+																	className='truncate text-xs text-muted-foreground'
+																	title={val.value}>
+																	{val.value.replace(
+																		/<[^>]+>/g,
+																		" ",
+																	)}
+																</span>
+															</div>
+														) : isImageType ? (
+															<a
+																href={val.value}
+																target='_blank'
+																rel='noopener noreferrer'
+																className='flex min-w-0 items-center gap-3 text-blue-600 hover:underline'>
+																<Avatar className='h-10 w-10 rounded-md'>
+																	<AvatarImage
+																		src={val.value}
+																		alt={val.alt ?? ""}
+																		className='object-cover'
+																	/>
+																	<AvatarFallback className='rounded-md text-[10px]'>
+																		IMG
+																	</AvatarFallback>
+																</Avatar>
+																<span
+																	className='min-w-0 truncate text-xs'
+																	title={val.value}>
+																	{val.value}
+																</span>
+																<ExternalLink className='h-3 w-3 shrink-0' />
+															</a>
+														) : (
+															<span
+																className='truncate'
+																title={val.value}>
+																{val.value}
+															</span>
+														)}
+													</TableCell>
 
-												{!isBooleanType && (
+													{/* Alt — image / banner */}
+													{isImageType && (
+														<TableCell className='overflow-hidden text-sm text-muted-foreground'>
+															<span
+																className='truncate'
+																title={val.alt ?? ""}>
+																{val.alt || "--"}
+															</span>
+														</TableCell>
+													)}
+
+													{/* Link + Position — banner */}
+													{isBannerType && (
+														<>
+															<TableCell className='overflow-hidden'>
+																{val.link ? (
+																	<a
+																		href={val.link}
+																		target='_blank'
+																		rel='noopener noreferrer'
+																		className='flex items-center gap-1 text-blue-600 hover:underline min-w-0'>
+																		<span
+																			className='truncate text-xs'
+																			title={val.link}>
+																			{val.link}
+																		</span>
+																		<ExternalLink className='h-3 w-3 shrink-0' />
+																	</a>
+																) : (
+																	<span className='text-muted-foreground'>
+																		--
+																	</span>
+																)}
+															</TableCell>
+															<TableCell className='text-center font-medium'>
+																{val.position ?? "--"}
+															</TableCell>
+														</>
+													)}
+
 													<TableCell>
 														<CompactBadgeList
-															items={getStatusBadgeItems(val.is_active)}
+															items={getStatusBadgeItems(
+																val.is_active,
+																isBannerType
+																	? "Đang dùng"
+																	: "Mặc định",
+															)}
 															maxVisibleItems={1}
 														/>
 													</TableCell>
-												)}
-												<TableCell className='text-sm text-muted-foreground'>
-													{formatDate(val.created_at)}
-												</TableCell>
-												<TableCell className='text-sm text-muted-foreground'>
-													{formatDate(val.updated_at)}
-												</TableCell>
-												<TableCell>
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<Button
-																variant='ghost'
-																className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'>
-																<MoreHorizontal className='h-4 w-4' />
-																<span className='sr-only'>
-																	Open menu
-																</span>
-															</Button>
-														</DropdownMenuTrigger>
-														<DropdownMenuContent
-															align='end'
-															className='w-[160px]'>
+													<TableCell className='text-sm text-muted-foreground'>
+														{formatDate(val.created_at)}
+													</TableCell>
+													<TableCell className='text-sm text-muted-foreground'>
+														{formatDate(val.updated_at)}
+													</TableCell>
+													<TableCell>
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	variant='ghost'
+																	className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'>
+																	<MoreHorizontal className='h-4 w-4' />
+																	<span className='sr-only'>
+																		Open menu
+																	</span>
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent
+																align='end'
+																className='w-[190px]'>
 																<DropdownMenuItem
 																	onClick={() =>
 																		openValueDetail(val)
 																	}>
-																<Eye className='h-4 w-4' />
-																Chi tiết
-															</DropdownMenuItem>
-															<DropdownMenuSeparator />
-															<DropdownMenuItem
-																className='text-destructive focus:bg-destructive/10 focus:text-destructive'
-																onClick={() =>
-																	setValuePendingDelete(val)
-																}>
-																<Trash2 className='h-4 w-4 text-destructive' />
-																Xóa
-															</DropdownMenuItem>
-														</DropdownMenuContent>
-													</DropdownMenu>
-												</TableCell>
-											</TableRow>
-										))
+																	<Eye className='h-4 w-4' />
+																	Chi tiết
+																</DropdownMenuItem>
+																{!isBannerType && !val.is_active ? (
+																	<DropdownMenuItem
+																		disabled={
+																			defaultingValueId !==
+																			null
+																		}
+																		onClick={() =>
+																			void handleSetDefaultValue(
+																				val,
+																			)
+																		}>
+																		{defaultingValueId ===
+																		val.id ? (
+																			<Loader2 className='h-4 w-4 animate-spin' />
+																		) : (
+																			<CheckCircle2 className='h-4 w-4' />
+																		)}
+																		Đặt làm mặc định
+																	</DropdownMenuItem>
+																) : null}
+																<DropdownMenuSeparator />
+																{deleteDisabledReason ? (
+																	<TooltipProvider>
+																		<Tooltip>
+																			<TooltipTrigger asChild>
+																				<DropdownMenuItem
+																					aria-disabled='true'
+																					className='text-destructive opacity-50 focus:bg-destructive/10 focus:text-destructive'
+																					onSelect={(
+																						event,
+																					) =>
+																						event.preventDefault()
+																					}>
+																					<Trash2 className='h-4 w-4 text-destructive' />
+																					Xóa
+																				</DropdownMenuItem>
+																			</TooltipTrigger>
+																			<TooltipContent
+																				side='left'
+																				className='max-w-38'>
+																				{
+																					deleteDisabledReason
+																				}
+																			</TooltipContent>
+																		</Tooltip>
+																	</TooltipProvider>
+																) : (
+																	<DropdownMenuItem
+																		className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+																		onClick={() =>
+																			setValuePendingDelete(
+																				val,
+																			)
+																		}>
+																		<Trash2 className='h-4 w-4 text-destructive' />
+																		Xóa
+																	</DropdownMenuItem>
+																)}
+															</DropdownMenuContent>
+														</DropdownMenu>
+													</TableCell>
+												</TableRow>
+											);
+										})
 									) : (
 										<TableRow>
 											<TableCell
@@ -1287,13 +1340,13 @@ function ClubInformationDetailPage() {
 								<TableFooter className='bg-transparent'>
 									<TableRow>
 										<TableCell colSpan={tableColSpan}>
-											<div className='flex items-center justify-between px-2'>
-												<div className='flex-1 text-sm text-muted-foreground'>
+											<div className='flex flex-col gap-3 px-2 py-1 sm:flex-row sm:items-center sm:justify-between'>
+												<div className='text-sm text-muted-foreground'>
 													Đang hiện {paginatedValues.length} trên tổng{" "}
 													{sortedValues.length} dòng.
 												</div>
-												<div className='flex items-center space-x-6 lg:space-x-8'>
-													<div className='flex items-center space-x-2'>
+												<div className='flex flex-wrap items-center gap-3 sm:gap-4 lg:gap-6'>
+													<div className='flex items-center gap-2'>
 														<p className='text-sm font-medium'>
 															Rows per page
 														</p>
@@ -1324,7 +1377,7 @@ function ClubInformationDetailPage() {
 													<div className='flex w-[100px] items-center justify-center text-sm font-medium'>
 														Page {valCurrentPage} of {valLastPage}
 													</div>
-													<div className='flex items-center space-x-2'>
+													<div className='flex items-center gap-2'>
 														<Button
 															variant='outline'
 															className='hidden h-8 w-8 p-0 lg:flex'
@@ -1399,8 +1452,8 @@ function ClubInformationDetailPage() {
 								{valuePendingDelete?.value ?? ""}
 							</span>
 							<span className='block break-words'>
-								sẽ bị xóa khỏi cấu hình "{info.label}". Hành động này không thể
-								hoàn tác.
+								sẽ bị xóa khỏi cấu hình "{info.label}". Hành động này không thể hoàn
+								tác.
 							</span>
 						</AlertDialogDescription>
 					</AlertDialogHeader>
@@ -1419,7 +1472,7 @@ function ClubInformationDetailPage() {
 			</AlertDialog>
 
 			<Dialog open={isAddValueDialogOpen} onOpenChange={handleAddValueDialogOpenChange}>
-				<DialogContent className='sm:max-w-[540px]'>
+				<DialogContent className='max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[540px]'>
 					<DialogHeader>
 						<DialogTitle>
 							Thêm giá trị —{" "}
@@ -1456,9 +1509,9 @@ function ClubInformationDetailPage() {
 									</SelectContent>
 								</Select>
 							) : info.type === "html" ? (
-								<textarea
+								<Textarea
 									id='val_value'
-									className='flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
+									className={HTML_VALUE_TEXTAREA_CLASS}
 									placeholder='Nhập nội dung HTML...'
 									value={valueForm.value}
 									onChange={(e) => {
@@ -1466,6 +1519,7 @@ function ClubInformationDetailPage() {
 										setValueFieldErrors((p) => ({ ...p, value: undefined }));
 									}}
 									disabled={valueSubmitting}
+									rows={6}
 									autoFocus
 								/>
 							) : (
@@ -1543,6 +1597,7 @@ function ClubInformationDetailPage() {
 										id='val_position'
 										type='number'
 										min={0}
+										step={1}
 										placeholder='0'
 										value={valueForm.position}
 										onChange={(e) => {
@@ -1566,22 +1621,19 @@ function ClubInformationDetailPage() {
 							</div>
 						)}
 
-						{/* is_active — ẩn cho boolean vì chính value true/false đã là toggle */}
-						{!isBooleanType && (
-							<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
-								<Label htmlFor='val_active' className='cursor-pointer'>
-									{valueForm.is_active ? "Đang dùng" : "Tạm ẩn"}
-								</Label>
-								<Switch
-									id='val_active'
-									checked={valueForm.is_active}
-									onCheckedChange={(checked) =>
-										setValueForm((p) => ({ ...p, is_active: checked }))
-									}
-									disabled={valueSubmitting}
-								/>
-							</div>
-						)}
+						<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
+							<Label htmlFor='val_active' className='cursor-pointer'>
+								{valueForm.is_active ? "Đang dùng" : "Tạm ẩn"}
+							</Label>
+							<Switch
+								id='val_active'
+								checked={valueForm.is_active}
+								onCheckedChange={(checked) =>
+									setValueForm((p) => ({ ...p, is_active: checked }))
+								}
+								disabled={valueSubmitting}
+							/>
+						</div>
 
 						<DialogFooter>
 							<Button
@@ -1605,7 +1657,7 @@ function ClubInformationDetailPage() {
 				onOpenChange={(open) => {
 					if (!open) closeValueDetail();
 				}}>
-				<DialogContent className='w-[calc(100vw-2rem)] max-w-[540px] overflow-hidden'>
+				<DialogContent className='max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[540px] overflow-y-auto'>
 					{selectedValue ? (
 						<>
 							<DialogHeader>
@@ -1625,52 +1677,150 @@ function ClubInformationDetailPage() {
 											: "Giá trị"}
 									</Label>
 
-										{info.type === "boolean" ? (
-											<Select
-												value={
-													isEditingValue
-														? detailValueForm.value
-														: selectedValue.value
-												}
-												onValueChange={(value) =>
-													setDetailValueField("value", value)
-												}
-												disabled={!isEditingValue || detailValueSubmitting}>
-												<SelectTrigger id='detail_val_value' className='w-full'>
-													<SelectValue placeholder='--' />
-												</SelectTrigger>
+									{info.type === "boolean" ? (
+										<Select
+											value={
+												isEditingValue
+													? detailValueForm.value
+													: selectedValue.value
+											}
+											onValueChange={(value) =>
+												setDetailValueField("value", value)
+											}
+											disabled={!isEditingValue || detailValueSubmitting}>
+											<SelectTrigger id='detail_val_value' className='w-full'>
+												<SelectValue placeholder='--' />
+											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value='true'>True (Bật)</SelectItem>
 												<SelectItem value='false'>False (Tắt)</SelectItem>
 											</SelectContent>
 										</Select>
 									) : info.type === "html" ? (
-											<Textarea
+										<Textarea
+											id='detail_val_value'
+											value={
+												isEditingValue
+													? detailValueForm.value
+													: selectedValue.value
+											}
+											onChange={(event) =>
+												setDetailValueField("value", event.target.value)
+											}
+											readOnly={!isEditingValue}
+											disabled={detailValueSubmitting}
+											rows={5}
+											className={HTML_VALUE_TEXTAREA_CLASS}
+										/>
+									) : info.type === "url" ||
+									  info.type === "image" ||
+									  info.type === "banner" ? (
+										isEditingValue ? (
+											<Input
 												id='detail_val_value'
-												value={
-													isEditingValue
-														? detailValueForm.value
-														: selectedValue.value
-												}
+												type='url'
+												value={detailValueForm.value}
 												onChange={(event) =>
 													setDetailValueField("value", event.target.value)
 												}
-												readOnly={!isEditingValue}
 												disabled={detailValueSubmitting}
-												rows={5}
-												className='max-w-full break-all'
+												className='min-w-0'
 											/>
-										) : info.type === "url" ||
-											info.type === "image" ||
-											info.type === "banner" ? (
-											isEditingValue ? (
+										) : (
+											<div
+												id='detail_val_value'
+												className='flex h-9 w-full min-w-0 items-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs'>
+												<span
+													className='block min-w-0 flex-1 truncate'
+													title={selectedValue.value}>
+													{selectedValue.value}
+												</span>
+											</div>
+										)
+									) : (
+										<Input
+											id='detail_val_value'
+											type='text'
+											value={
+												isEditingValue
+													? detailValueForm.value
+													: selectedValue.value
+											}
+											onChange={(event) =>
+												setDetailValueField("value", event.target.value)
+											}
+											readOnly={!isEditingValue}
+											disabled={detailValueSubmitting}
+											className='min-w-0'
+										/>
+									)}
+									{detailValueFieldErrors.value ? (
+										<p className='text-sm text-destructive'>
+											{detailValueFieldErrors.value}
+										</p>
+									) : null}
+								</div>
+
+								{isImageType ? (
+									<div className='flex min-w-0 items-center gap-3 overflow-hidden rounded-md border bg-muted/30 p-3'>
+										<Avatar className='h-14 w-14 shrink-0 rounded-md'>
+											<AvatarImage
+												src={selectedValuePreview}
+												alt={selectedAltPreview}
+												className='object-cover'
+											/>
+											<AvatarFallback className='rounded-md text-xs'>
+												IMG
+											</AvatarFallback>
+										</Avatar>
+										<a
+											href={selectedValuePreview}
+											target='_blank'
+											rel='noopener noreferrer'
+											className='flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-sm text-blue-600 hover:underline'>
+											<span
+												className='block min-w-0 flex-1 truncate'
+												title={selectedValuePreview}>
+												{selectedValuePreview}
+											</span>
+											<ExternalLink className='h-3.5 w-3.5 shrink-0' />
+										</a>
+									</div>
+								) : null}
+
+								{isImageType ? (
+									<div className='min-w-0 space-y-2'>
+										<Label htmlFor='detail_val_alt'>Alt text</Label>
+										<Input
+											id='detail_val_alt'
+											value={selectedAltPreview}
+											onChange={(event) =>
+												setDetailValueField("alt", event.target.value)
+											}
+											readOnly={!isEditingValue}
+											disabled={detailValueSubmitting}
+											className='min-w-0'
+										/>
+										{detailValueFieldErrors.alt ? (
+											<p className='text-sm text-destructive'>
+												{detailValueFieldErrors.alt}
+											</p>
+										) : null}
+									</div>
+								) : null}
+
+								{isBannerType ? (
+									<div className='grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2'>
+										<div className='min-w-0 space-y-2'>
+											<Label htmlFor='detail_val_link'>Link đích</Label>
+											{isEditingValue ? (
 												<Input
-													id='detail_val_value'
+													id='detail_val_link'
 													type='url'
-													value={detailValueForm.value}
+													value={detailValueForm.link}
 													onChange={(event) =>
 														setDetailValueField(
-															"value",
+															"link",
 															event.target.value,
 														)
 													}
@@ -1679,132 +1829,32 @@ function ClubInformationDetailPage() {
 												/>
 											) : (
 												<div
-													id='detail_val_value'
+													id='detail_val_link'
 													className='flex h-9 w-full min-w-0 items-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs'>
 													<span
 														className='block min-w-0 flex-1 truncate'
-														title={selectedValue.value}>
-														{selectedValue.value}
+														title={selectedLinkPreview}>
+														{selectedLinkPreview || "--"}
 													</span>
 												</div>
-											)
-										) : (
-											<Input
-												id='detail_val_value'
-												type='text'
-												value={
-													isEditingValue
-														? detailValueForm.value
-														: selectedValue.value
-												}
-												onChange={(event) =>
-													setDetailValueField("value", event.target.value)
-												}
-												readOnly={!isEditingValue}
-												disabled={detailValueSubmitting}
-												className='min-w-0'
-											/>
-										)}
-										{detailValueFieldErrors.value ? (
-											<p className='text-sm text-destructive'>
-												{detailValueFieldErrors.value}
-											</p>
-										) : null}
-									</div>
-
-								{isImageType ? (
-									<div className='flex min-w-0 items-center gap-3 overflow-hidden rounded-md border bg-muted/30 p-3'>
-											<Avatar className='h-14 w-14 shrink-0 rounded-md'>
-												<AvatarImage
-													src={selectedValuePreview}
-													alt={selectedAltPreview}
-													className='object-cover'
-												/>
-											<AvatarFallback className='rounded-md text-xs'>
-												IMG
-											</AvatarFallback>
-										</Avatar>
-											<a
-												href={selectedValuePreview}
-												target='_blank'
-												rel='noopener noreferrer'
-											className='flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-sm text-blue-600 hover:underline'>
-												<span
-													className='block min-w-0 flex-1 truncate'
-													title={selectedValuePreview}>
-													{selectedValuePreview}
-												</span>
-											<ExternalLink className='h-3.5 w-3.5 shrink-0' />
-										</a>
-									</div>
-								) : null}
-
-								{isImageType ? (
-										<div className='min-w-0 space-y-2'>
-											<Label htmlFor='detail_val_alt'>Alt text</Label>
-											<Input
-												id='detail_val_alt'
-												value={selectedAltPreview}
-												onChange={(event) =>
-													setDetailValueField("alt", event.target.value)
-												}
-												readOnly={!isEditingValue}
-												disabled={detailValueSubmitting}
-												className='min-w-0'
-											/>
-											{detailValueFieldErrors.alt ? (
+											)}
+											{detailValueFieldErrors.link ? (
 												<p className='text-sm text-destructive'>
-													{detailValueFieldErrors.alt}
+													{detailValueFieldErrors.link}
 												</p>
 											) : null}
 										</div>
-								) : null}
-
-								{isBannerType ? (
-									<div className='grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2'>
-										<div className='min-w-0 space-y-2'>
-											<Label htmlFor='detail_val_link'>Link đích</Label>
-												{isEditingValue ? (
-													<Input
-														id='detail_val_link'
-														type='url'
-														value={detailValueForm.link}
-														onChange={(event) =>
-															setDetailValueField(
-																"link",
-																event.target.value,
-															)
-														}
-														disabled={detailValueSubmitting}
-														className='min-w-0'
-													/>
-												) : (
-													<div
-														id='detail_val_link'
-														className='flex h-9 w-full min-w-0 items-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs'>
-														<span
-															className='block min-w-0 flex-1 truncate'
-															title={selectedLinkPreview}>
-															{selectedLinkPreview || "--"}
-														</span>
-													</div>
-												)}
-												{detailValueFieldErrors.link ? (
-													<p className='text-sm text-destructive'>
-														{detailValueFieldErrors.link}
-													</p>
-												) : null}
-											</div>
 										<div className='min-w-0 space-y-2'>
 											<Label htmlFor='detail_val_position'>Vị trí</Label>
 											<Input
 												id='detail_val_position'
 												type={isEditingValue ? "number" : "text"}
 												min={0}
+												step={1}
 												value={
 													isEditingValue
 														? detailValueForm.position
-														: selectedValue.position ?? ""
+														: (selectedValue.position ?? "")
 												}
 												onChange={(event) =>
 													setDetailValueField(
@@ -1825,35 +1875,28 @@ function ClubInformationDetailPage() {
 									</div>
 								) : null}
 
-									{/* is_active — ẩn cho boolean vì chính value true/false đã là toggle */}
-									{!isBooleanType && (
-										<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
-											<Label htmlFor='detail_val_active' className='cursor-pointer'>
-												{(isEditingValue
-													? detailValueForm.is_active
-													: selectedValue.is_active !== false)
-													? "Đang dùng"
-													: "Tạm ẩn"}
-											</Label>
-											<Switch
-												id='detail_val_active'
-												checked={
-													isEditingValue
-														? detailValueForm.is_active
-														: selectedValue.is_active !== false
-												}
-												onCheckedChange={(checked) =>
-													setDetailValueField("is_active", checked)
-												}
-												disabled={!isEditingValue || detailValueSubmitting}
-											/>
-										</div>
-									)}
-									{detailValueFieldErrors.is_active ? (
-										<p className='text-sm text-destructive'>
-											{detailValueFieldErrors.is_active}
-										</p>
-									) : null}
+								<div className='flex items-center justify-between rounded-md border bg-muted/30 p-4'>
+									<Label htmlFor='detail_val_active' className='cursor-pointer'>
+										{selectedValueIsActive
+											? isBannerType
+												? "Đang dùng"
+												: "Mặc định"
+											: "Tạm ẩn"}
+									</Label>
+									<Switch
+										id='detail_val_active'
+										checked={selectedValueIsActive}
+										onCheckedChange={(checked) =>
+											setDetailValueField("is_active", checked)
+										}
+										disabled={!isEditingValue || detailValueSubmitting}
+									/>
+								</div>
+								{detailValueFieldErrors.is_active ? (
+									<p className='text-sm text-destructive'>
+										{detailValueFieldErrors.is_active}
+									</p>
+								) : null}
 
 								<div className='grid min-w-0 grid-cols-1 gap-4 rounded-md border p-4 sm:grid-cols-2'>
 									<InfoRow
@@ -1868,31 +1911,31 @@ function ClubInformationDetailPage() {
 							</div>
 
 							<DialogFooter>
-									<Button
-										type='button'
-										variant='outline'
-										onClick={closeValueDetail}
-										disabled={detailValueSubmitting}>
-										Đóng
-									</Button>
-									<Button
-										type='button'
-										onClick={() => {
-											if (isEditingValue) {
-												void handleUpdateValueSubmit();
-												return;
-											}
-											setDetailValueForm(getValueFormFromRecord(selectedValue));
-											setDetailValueFieldErrors({});
-											setIsEditingValue(true);
-										}}
-										disabled={detailValueSubmitting}>
-										{detailValueSubmitting ? (
-											<Loader2 className='h-4 w-4 animate-spin' />
-										) : null}
-										{isEditingValue ? "Lưu" : "Chỉnh sửa"}
-									</Button>
-								</DialogFooter>
+								<Button
+									type='button'
+									variant='outline'
+									onClick={closeValueDetail}
+									disabled={detailValueSubmitting}>
+									Đóng
+								</Button>
+								<Button
+									type='button'
+									onClick={() => {
+										if (isEditingValue) {
+											void handleUpdateValueSubmit();
+											return;
+										}
+										setDetailValueForm(getValueFormFromRecord(selectedValue));
+										setDetailValueFieldErrors({});
+										setIsEditingValue(true);
+									}}
+									disabled={detailValueSubmitting}>
+									{detailValueSubmitting ? (
+										<Loader2 className='h-4 w-4 animate-spin' />
+									) : null}
+									{isEditingValue ? "Lưu" : "Chỉnh sửa"}
+								</Button>
+							</DialogFooter>
 						</>
 					) : null}
 				</DialogContent>

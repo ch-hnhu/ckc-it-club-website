@@ -30,6 +30,7 @@ class UpdateUserRequest extends FormRequest
 
         return [
             'full_name' => 'required|string|max:255',
+            'username' => "required|string|max:30|regex:/^[A-Za-z0-9_.]+$/|unique:users,username,{$userId}",
             'gender' => 'nullable|string',
             'student_code' => "nullable|string|max:255|unique:users,student_code,{$userId}",
             'email' => "required|email|max:255|unique:users,email,{$userId}",
@@ -53,6 +54,10 @@ class UpdateUserRequest extends FormRequest
     {
         return [
             'full_name.required' => 'Vui lòng nhập họ và tên.',
+            'username.required' => 'Vui lòng nhập username.',
+            'username.max' => 'Username không được vượt quá 30 ký tự.',
+            'username.regex' => 'Username chỉ được chứa chữ cái, số, dấu chấm và dấu gạch dưới.',
+            'username.unique' => 'Username đã tồn tại.',
             'student_code.unique' => 'Mã sinh viên đã tồn tại.',
             'email.required' => 'Vui lòng nhập email.',
             'email.email' => 'Email không hợp lệ.',

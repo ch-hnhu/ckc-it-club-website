@@ -10,12 +10,15 @@ use App\Http\Controllers\Api\V1\Admin\ApplicationQuestionController;
 use App\Http\Controllers\Api\V1\Admin\AcademicStructureController;
 use App\Http\Controllers\Api\V1\Admin\ClubApplicationController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
+use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\MajorController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\CredentialAuthController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 
 Route::prefix('v1')->group(function () {
 
@@ -30,7 +33,17 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/auth/verify-token', [AuthController::class, 'verifyToken']);
+    Route::post('/auth/register', [CredentialAuthController::class, 'registerUser']);
+    Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
+    Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
+
+    // Forgot password (throttled: 5 attempts per minute per IP)
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/auth/forgot-password', [ForgotPasswordController::class, 'sendOtp']);
+        Route::post('/auth/verify-otp', [ForgotPasswordController::class, 'verifyOtp']);
+        Route::post('/auth/reset-password', [ForgotPasswordController::class, 'resetPassword']);
+    });
 
     // auth
     Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
@@ -84,6 +97,8 @@ Route::prefix('v1')->group(function () {
         // permissions
         Route::middleware('permission:permissions.view')
             ->get('permissions', [PermissionController::class, 'index']);
+        Route::middleware('permission:permissions.manage')
+            ->put('permissions/{permission}/roles', [PermissionController::class, 'syncRoles']);
 
         // club-informations
         Route::middleware('permission:club_info.view')->group(function () {
@@ -94,9 +109,9 @@ Route::prefix('v1')->group(function () {
             Route::post('club-informations', [ClubInformationController::class, 'store']);
             Route::put('club-informations/{clubInformation}', [ClubInformationController::class, 'update']);
             Route::patch('club-informations/{clubInformation}', [ClubInformationController::class, 'update']);
-            Route::delete('club-informations/{clubInformation}', [ClubInformationController::class, 'destroy']);
 
             Route::post('club-informations/{clubInformation}/values', [ClubInformationController::class, 'storeValue']);
+            Route::patch('club-informations/{clubInformation}/values/{clubInformationValue}/default', [ClubInformationController::class, 'setDefaultValue']);
             Route::put('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
             Route::patch('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
             Route::delete('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'destroyValue']);
@@ -107,8 +122,24 @@ Route::prefix('v1')->group(function () {
             Route::get('contacts/stats', [AdminContactController::class, 'stats']);
             Route::get('contacts', [AdminContactController::class, 'index']);
         });
-        Route::middleware('permission:contacts.manage')
-            ->patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+        Route::middleware('permission:contacts.manage')->group(function () {
+            Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+            Route::delete('contacts/{contact}', [AdminContactController::class, 'destroy']);
+        });
+
+        // departments
+        Route::middleware('permission:club_info.view')->group(function () {
+            Route::get('departments', [DepartmentController::class, 'index']);
+            Route::get('departments/{department}', [DepartmentController::class, 'show']);
+        });
+        Route::middleware('permission:club_info.manage')->group(function () {
+            Route::post('departments', [DepartmentController::class, 'store']);
+            Route::put('departments/{department}', [DepartmentController::class, 'update']);
+            Route::patch('departments/{department}', [DepartmentController::class, 'update']);
+            Route::post('departments/{department}/users', [DepartmentController::class, 'storeUser']);
+            Route::patch('departments/{department}/users/{user}', [DepartmentController::class, 'updateUserRole']);
+            Route::delete('departments/{department}/users/{user}', [DepartmentController::class, 'destroyUser']);
+        });
 
         // club applications
         Route::middleware('permission:applications.view')
@@ -142,6 +173,7 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
         });
         Route::middleware('permission:academic_structure.import')->group(function () {
+            Route::post('faculties/bulk-delete', [FacultyController::class, 'bulkDestroy']);
             Route::apiResource('faculties', FacultyController::class)->only(['store', 'update', 'destroy']);
             Route::apiResource('majors', MajorController::class)->only(['store', 'update', 'destroy']);
             Route::apiResource('school-classes', SchoolClassController::class)->only(['store', 'update', 'destroy']);

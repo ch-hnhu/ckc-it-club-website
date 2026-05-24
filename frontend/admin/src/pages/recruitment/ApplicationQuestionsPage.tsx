@@ -52,6 +52,8 @@ type FieldTemplate = {
 	label: string;
 	description: string;
 	icon: ReactNode;
+	iconBg: string;
+	iconColor: string;
 };
 
 type DraftQuestion = ApplicationQuestionRecord;
@@ -61,25 +63,33 @@ const fieldTemplates: FieldTemplate[] = [
 		type: "text",
 		label: "Trả lời ngắn",
 		description: "Một dòng văn bản ngắn như họ tên hoặc liên hệ.",
-		icon: <TextCursorInput className='h-4 w-4' />,
+		icon: <TextCursorInput className='h-5 w-5' />,
+		iconBg: "bg-[#EAE6FF]",
+		iconColor: "text-[#5B45D4]",
 	},
 	{
 		type: "textarea",
 		label: "Đoạn văn",
 		description: "Phù hợp cho mục tiêu, mô tả hoặc câu hỏi tự luận.",
-		icon: <SquarePen className='h-4 w-4' />,
+		icon: <SquarePen className='h-5 w-5' />,
+		iconBg: "bg-[#EDE8D8]",
+		iconColor: "text-[#92700A]",
 	},
 	{
 		type: "radio",
 		label: "Chọn một",
 		description: "Ứng viên chọn một đáp án duy nhất.",
-		icon: <ListFilter className='h-4 w-4' />,
+		icon: <ListFilter className='h-5 w-5' />,
+		iconBg: "bg-[#D8F0E4]",
+		iconColor: "text-[#2E7D52]",
 	},
 	{
 		type: "select",
 		label: "Danh sách chọn",
 		description: "Dùng khi muốn thu gọn nhiều lựa chọn vào menu thả xuống.",
-		icon: <Type className='h-4 w-4' />,
+		icon: <Type className='h-5 w-5' />,
+		iconBg: "bg-[#EDE4F5]",
+		iconColor: "text-[#7B48C4]",
 	},
 ];
 
@@ -275,7 +285,7 @@ function ApplicationQuestionsPage() {
 	const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
 	const [draftQuestion, setDraftQuestion] = useState<DraftQuestion | null>(null);
 	const [editorOpen, setEditorOpen] = useState(false);
-	const [toolRailCollapsed, setToolRailCollapsed] = useState(false);
+	const [toolRailCollapsed, setToolRailCollapsed] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 	const [creatingType, setCreatingType] = useState<ApplicationQuestionType | null>(null);
@@ -682,14 +692,11 @@ function ApplicationQuestionsPage() {
 								}}
 								className={cn(
 									"group relative overflow-hidden rounded-[24px] border bg-background/95 shadow-sm transition-all",
-									isSelected
-										? "border-primary/40 ring-1 ring-primary/20"
-										: "border-border/70 hover:border-primary/20",
+									"border-border/70 hover:border-border",
 									draggingQuestionId === question.id && "opacity-70",
 									dragOverQuestionId === question.id && "border-primary bg-primary/5",
 									!question.is_active && "opacity-70",
 								)}>
-								<div className='absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500/55 via-lime-400/45 to-sky-200/35' />
 
 								<div className='flex gap-3 px-4 py-4 md:px-5 md:py-5'>
 									<button
@@ -1076,48 +1083,77 @@ function ApplicationQuestionsPage() {
 			<div className='grid min-h-[calc(100vh-10rem)] items-start gap-4 p-4 md:p-6 lg:grid-cols-[auto_minmax(0,1fr)] lg:px-8'>
 				<Card
 					className={cn(
-						"h-fit rounded-[24px] border-border/70 bg-background/90 shadow-lg backdrop-blur lg:sticky lg:top-4",
-						toolRailCollapsed ? "w-full lg:w-[88px]" : "w-full lg:w-[280px]",
+						"h-fit rounded-[24px] border-border/40 bg-background/80 shadow-sm backdrop-blur lg:sticky lg:top-4",
+						toolRailCollapsed ? "w-full lg:w-[76px]" : "w-full lg:w-[260px]",
 					)}>
 					<CardContent className='p-3'>
-						<div className='mb-3 flex items-center justify-between gap-2 px-2 pt-2'>
-							<div className={cn("space-y-1", toolRailCollapsed && "hidden")}>
-								<p className='text-sm font-semibold text-foreground'>Loại trường</p>
-								<p className='text-xs leading-5 text-muted-foreground'>Thêm câu hỏi mới trực tiếp từ thư viện.</p>
-							</div>
+						<div className={cn("mb-3 flex items-center gap-2 px-1 pt-1", toolRailCollapsed ? "justify-center" : "justify-between")}>
+							{!toolRailCollapsed && (
+								<div className='space-y-0.5'>
+									<p className='text-sm font-semibold text-foreground'>Loại trường</p>
+									<p className='text-xs leading-5 text-muted-foreground'>Thêm câu hỏi mới từ thư viện.</p>
+								</div>
+							)}
 							<Button
 								variant='ghost'
 								size='icon'
-								className='hidden h-8 w-8 rounded-xl lg:inline-flex'
+								className={cn(
+									"hidden lg:inline-flex",
+									toolRailCollapsed ? "h-12 w-12 rounded-2xl" : "h-8 w-8 rounded-xl",
+								)}
 								onClick={() => setToolRailCollapsed((prev) => !prev)}>
 								{toolRailCollapsed ? <PanelRightOpen className='h-4 w-4' /> : <PanelRightClose className='h-4 w-4' />}
 							</Button>
 						</div>
 
-						<div className='space-y-2'>
-							{fieldTemplates.map((template) => (
-								<button
-									key={template.type}
-									type='button'
-									title={template.label}
-									onClick={() => void handleAddField(template)}
-									disabled={creatingType !== null}
-									className={cn(
-										"group flex w-full items-start gap-3 rounded-[18px] border border-border bg-background px-3 py-2.5 text-left shadow-sm transition hover:border-primary/30 hover:bg-primary/5 disabled:opacity-60",
-										toolRailCollapsed && "justify-center px-0",
-									)}>
-									<div className='rounded-xl border border-border bg-muted/60 p-2.5 text-primary shadow-sm'>
-										{template.icon}
-									</div>
-									<div className={cn("min-w-0 flex-1", toolRailCollapsed && "hidden")}>
-										<p className='text-sm font-semibold text-foreground'>{template.label}</p>
-										<p className='mt-1 text-xs leading-5 text-muted-foreground'>
-											{creatingType === template.type ? "Đang tạo câu hỏi..." : template.description}
-										</p>
-									</div>
-									{toolRailCollapsed ? null : <Plus className='mt-1 h-4 w-4 text-muted-foreground' />}
-								</button>
-							))}
+						<div className={cn("space-y-2", toolRailCollapsed && "flex flex-col items-center")}>
+							{fieldTemplates.map((template) =>
+								toolRailCollapsed ? (
+									<button
+										key={template.type}
+										type='button'
+										title={template.label}
+										onClick={() => void handleAddField(template)}
+										disabled={creatingType !== null}
+										className='group relative flex items-center justify-center p-1 disabled:opacity-60'>
+										<div
+											className={cn(
+												"relative flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm transition-transform group-hover:scale-105 group-active:scale-95",
+												template.iconBg,
+												template.iconColor,
+											)}>
+											{template.icon}
+											<span className='absolute bottom-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background/75 text-[9px] font-bold text-current'>
+												+
+											</span>
+										</div>
+									</button>
+								) : (
+									<button
+										key={template.type}
+										type='button'
+										title={template.label}
+										onClick={() => void handleAddField(template)}
+										disabled={creatingType !== null}
+										className='group flex w-full items-center gap-3 rounded-[18px] border border-border bg-background px-3 py-2.5 text-left shadow-sm transition hover:border-primary/30 hover:bg-primary/5 disabled:opacity-60'>
+										<div
+											className={cn(
+												"flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm",
+												template.iconBg,
+												template.iconColor,
+											)}>
+											{template.icon}
+										</div>
+										<div className='min-w-0 flex-1'>
+											<p className='text-sm font-semibold text-foreground'>{template.label}</p>
+											<p className='mt-0.5 text-xs leading-4 text-muted-foreground'>
+												{creatingType === template.type ? "Đang tạo câu hỏi..." : template.description}
+											</p>
+										</div>
+										<Plus className='h-4 w-4 shrink-0 text-muted-foreground' />
+									</button>
+								),
+							)}
 						</div>
 					</CardContent>
 				</Card>

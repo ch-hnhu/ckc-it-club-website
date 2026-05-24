@@ -75,7 +75,9 @@
 - `/contacts`
 - contact management list with real backend data and status updates
 - `/divisions`
-- division management dashboard for the 3 fixed club divisions: academic, volunteer, and communication
+- department management table backed by `GET /departments`, listing the seeded club departments with search, sorting, pagination, status, and member counts
+- `/divisions/:id`
+- department detail page with the department info card and member management table
 - `/organization/upload`
 - academic structure import history and upload flow for faculty, major, and class files
 - `/club-informations`
@@ -99,7 +101,7 @@
 - `/club-info`
 - `/fields`
 - Dashboard contains significant placeholder/demo content rather than fully live backend-driven analytics.
-- `CreateUser` is now wired at `/users/create` and includes avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar), selected `is_active` status, and redirects to `/users` on success.
+- `CreateUser` is now wired at `/users/create` and includes username, avatar upload preview plus faculty -> major -> class dependent searchable comboboxes. A reusable `ui/combobox` now supports search and optional multiple select mode. Avatar clear now resets preview to default avatar image (`/img/default-avatar.jpg`) while keeping other form state intact. Submit now calls backend `POST /users` with `multipart/form-data` (including optional avatar), selected `is_active` status, and redirects to `/users` on success.
 - Recruitment application service uses `mockApplications` as a fallback when fetching `/club-applications` fails. This can mask backend outages and make the UI look “healthy” when it is not.
 - Redux Toolkit is installed, but there is no centralized Redux store in the current app. State is local component state plus services.
 - `supabase.config.ts` exists, but `uploadImage` does not appear to be actively used by current features.
@@ -121,6 +123,9 @@
 - removes `user`
 - stores intended return path in `sessionStorage.redirectPath`
 - redirects browser to `/login`
+- Axios response interceptor on `403` shows a `sonner` toast: `Tài khoản không có quyền thực hiện chức năng này`.
+- `PermissionRoute` no longer redirects unauthorized admin route access to the dashboard by default. It shows the same access-denied toast and replaces the URL with the last authorized route stored in `sessionStorage.admin:lastAuthorizedPath`, falling back to the first navigation route allowed by the current user's permissions.
+- `MainLayout` uses `usePermissionNavigationGuard` to intercept unauthorized internal `<Link>` clicks before React Router changes route, keeping the current page mounted and showing the access-denied toast. Imperative `navigate(...)` calls that can target protected routes should use `useGuardedNavigate` for the same no-route-change behavior.
 - Logout is token-based and goes through backend `/auth/logout`.
 
 ## Auth Risks and Assumptions
@@ -172,7 +177,7 @@
 - `src/pages/contact/`
 - contact management list/detail/status flows
 - `src/pages/division/`
-- division management dashboard pages
+- department management table page
 - `src/services/`
 - thin API client wrappers
 - `src/types/`
@@ -208,6 +213,7 @@
 - Current `User` type is minimal:
 - `id`
 - `full_name`
+- `username`
 - `email`
 - `is_active`
 - `avatar`
@@ -223,7 +229,7 @@
 - currently no live delete action implementation
 - Create user:
 - UI exists
-- create-user form loads roles from the backend and submits `gender`, `is_active`, plus selected roles to the API
+- create-user form loads roles from the backend and submits `username`, `gender`, `is_active`, plus selected roles to the API
 - Recruitment applications:
 - list uses client-side filtering/sorting after fetch
 - status update is live against backend
@@ -236,20 +242,34 @@
 - route `/contacts`
 - server-driven pagination, search, sort, and status filtering
 - status update is live against backend `PATCH /contacts/{contact}/status`
+- Department management:
+- route `/divisions`
+- server-driven pagination, search, sort, status display through `CompactBadgeList`, row selection, member counts, create/update modal, and row actions backed by backend department endpoints.
+- route `/divisions/:id`
+- detail page fetches `GET /departments/{department}`, renders the department info card, warns when no head exists, and manages members with client-side search, role filter, pagination, add-member modal, role-change modal, and remove confirmation.
+- add-member modal is intentionally minimal: member combobox, cancel/add actions, submit loading, close-and-refresh on success, and no primary-department toggle.
+- department detail displays whether a member is the department head based on the user's configured Spatie head role for that department; changing a member's chức vụ calls the department member PATCH endpoint.
+- member update/remove actions require `club_info.manage` and are disabled in the UI otherwise.
+- Role management:
+- route `/roles`
+- route `/roles/:id`
+- role detail can add one or more existing permissions from a modal multi-select combobox and remove assigned permissions directly from permission badges after confirmation. Permission removal is disabled for the `admin` role. The add option list is loaded from `GET /permissions` and filters out permissions already assigned to the role; add/remove both persist via `POST /roles/{role}/permissions` with the full permission name list. Permission detail also confirms before removing a role from a permission.
 - Club information management:
 - route `/club-informations`
 - route `/club-informations/:id`
-- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`
+- list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`; parent `club_informations.is_active` has been removed from the database/API because parent configs are stable code-facing contracts.
 - detail uses `clubInformationService.getClubInformation(id, params)`; the nested value table supports API-driven search/sort and local pagination.
 - image and banner rows render the thumbnail preview and URL in the same value cell, matching the user list pattern; there is no separate image column.
 - the nested value table supports sorting by `alt` for image rows and `link`/`position` for banner rows in addition to the existing value/date/status keys.
 - backend `show()` whitelists `alt`, `link`, and `position` for nested value sorting so those headers sort server-side instead of falling back to `created_at`.
-- detail can switch the parent information card into an inline edit form and submit through `clubInformationService.updateClubInformation`.
-- detail value rows can be deleted after confirmation through `clubInformationService.deleteClubInformationValue`.
+- detail can switch the parent information card into an inline edit form and submit through `clubInformationService.updateClubInformation`; parent label, key, and type are read-only there, and only slug/description are editable.
+- parent club information records are stable config keys and are not deletable in the admin UI.
+- detail value rows can be deleted after confirmation through `clubInformationService.deleteClubInformationValue`, except active values and the final remaining value of a config.
 - detail can create nested values from a modal through `clubInformationService.createClubInformationValue`, then refreshes the value table.
 - detail value popup can switch from read-only view to edit mode and submit through `clubInformationService.updateClubInformationValue`.
+- non-banner detail value rows expose a quick dropdown action backed by `clubInformationService.setDefaultClubInformationValue`; clicking it sets that row as the default without opening the edit form.
+- active values are labelled as `Mặc định` in the value table. For non-banner configs, setting one value active makes it the only active/default value; banner configs can keep multiple active values ordered by position.
 - date fields are displayed directly from the API, which formats them as `d/m/Y`
-- current admin UI is list-only because no create/update/detail route is wired yet
 - Academic structure import:
 - route `/organization/upload`
 - imports faculty/major/class data through `POST /academic-structure/import`
@@ -316,10 +336,15 @@ npm run dev
 
 ## Change Log
 
+- `2026-05-24`: Wired department member chức vụ changes from the detail table to `PATCH /departments/{department}/users/{user}`; the backend maps head/member changes to the user's configured head role for that department.
+- `2026-05-24`: User create/update role forms can affect department head display because backend maps selected head roles to the corresponding department ownership.
 - `2026-04-20`: Updated CreateUser avatar behavior so clearing selected image restores default avatar preview (`/img/default-avatar.jpg`) while preserving all other form field state.
 - `2026-04-20`: Added reusable shadcn-style `ui/combobox` component (Command + Popover) with optional search and multiple select support, and migrated CreateUser faculty/major/class fields to searchable comboboxes.
 - `2026-04-20`: Wired `/users/create` route in router, connected User list "Thêm" button to navigate there, and implemented full shadcn CreateUser form UI with avatar preview and dependent faculty-major-class selectors.
 - `2026-04-23`: Added admin contact management route `/contacts`, sidebar entry, `contact.service.ts`, and live status updates backed by the Laravel API.
+- `2026-05-23`: Reworked `/divisions` from a local-data dashboard into a backend-backed department table for the seeded Học thuật, Truyền thông, and Tình nguyện departments, with create/update, detail, add-member, and member chức vụ actions.
+- `2026-05-23`: Simplified the division add-member modal to the quick-add flow only and added shared combobox trigger focus support for dialog autofocus.
+- `2026-05-23`: Added `/divisions/:id` as a full department detail and member management page with search, role filtering, pagination, role update, and member removal.
 - `2026-05-20`: Updated admin division management so the third fixed division is Communication instead of Event.
 - `2026-05-12`: Added admin route `/divisions` with a local-data management dashboard for the 3 fixed club divisions (academic, volunteer, communication).
 - `2026-04-08`: Replaced scaffold with full admin frontend audit. Added route surface, auth/session model, service conventions, UI system notes, env requirements, and known gap inventory.

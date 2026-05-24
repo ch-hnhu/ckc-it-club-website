@@ -16,7 +16,7 @@ class SyncRolePermissionsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'permissions'   => 'required|array',
+            'permissions'   => 'present|array',
             'permissions.*' => 'string|exists:permissions,name',
         ];
     }
@@ -24,7 +24,7 @@ class SyncRolePermissionsRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'permissions.required' => 'Danh sách quyền không được để trống.',
+            'permissions.present'  => 'Danh sách quyền là bắt buộc.',
             'permissions.array'    => 'Danh sách quyền phải là mảng.',
             'permissions.*.exists' => 'Quyền ":input" không tồn tại trong hệ thống.',
         ];

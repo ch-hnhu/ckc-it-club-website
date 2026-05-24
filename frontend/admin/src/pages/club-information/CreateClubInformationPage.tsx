@@ -21,7 +21,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
@@ -35,7 +34,6 @@ type FormState = {
 	slug: string;
 	type: string;
 	description: string;
-	is_active: boolean;
 };
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
@@ -46,7 +44,6 @@ const getInitialForm = (): FormState => ({
 	slug: "",
 	type: "",
 	description: "",
-	is_active: true,
 });
 
 function slugify(text: string): string {
@@ -105,7 +102,6 @@ function CreateClubInformationPage() {
 				slug: form.slug.trim(),
 				type: form.type,
 				description: form.description.trim() || undefined,
-				is_active: form.is_active,
 			});
 			toast.success("Tạo cấu hình thành công.", { position: "top-right" });
 			navigate("/club-informations");
@@ -136,7 +132,7 @@ function CreateClubInformationPage() {
 			<Button asChild variant='outline' className='w-fit'>
 				<Link to='/club-informations'>
 					<ArrowLeft className='h-4 w-4' />
-					Quay lại danh sách
+					Quay lại
 				</Link>
 			</Button>
 
@@ -211,7 +207,7 @@ function CreateClubInformationPage() {
 								value={form.type}
 								onValueChange={(v) => setField("type", v)}
 								disabled={submitting}>
-									<SelectTrigger id='type' className='w-full'>
+								<SelectTrigger id='type' className='w-full'>
 									<SelectValue placeholder='Chọn kiểu dữ liệu' />
 								</SelectTrigger>
 								<SelectContent>
@@ -254,19 +250,6 @@ function CreateClubInformationPage() {
 									{fieldErrors.description}
 								</p>
 							)}
-						</div>
-
-						{/* is_active */}
-						<div className='flex items-center gap-3 sm:col-span-2'>
-							<Switch
-								id='is_active'
-								checked={form.is_active}
-								onCheckedChange={(v) => setField("is_active", v)}
-								disabled={submitting}
-							/>
-							<Label htmlFor='is_active' className='cursor-pointer'>
-								{form.is_active ? "Đang dùng" : "Tạm ẩn"}
-							</Label>
 						</div>
 					</CardContent>
 

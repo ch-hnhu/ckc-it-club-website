@@ -27,7 +27,8 @@ enum PermissionsEnum: string
     case ROLES_MANAGE = 'roles.manage';
 
     // Phân quyền
-    case PERMISSIONS_VIEW = 'permissions.view';
+    case PERMISSIONS_VIEW   = 'permissions.view';
+    case PERMISSIONS_MANAGE = 'permissions.manage';
 
     // Thông tin CLB
     case CLUB_INFO_VIEW   = 'club_info.view';

@@ -1,5 +1,7 @@
 import axios from "axios";
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from "axios";
+import { toast } from "sonner";
+import { ACCESS_DENIED_MESSAGE } from "@/constants/auth";
 
 // Create axios instance
 const clientApi: AxiosInstance = axios.create({
@@ -53,6 +55,10 @@ clientApi.interceptors.response.use(
 
 				case 403:
 					console.error("Forbidden! You don't have permission");
+					toast.error(ACCESS_DENIED_MESSAGE, {
+						id: "api-forbidden",
+						position: "top-right",
+					});
 					break;
 
 				case 404:

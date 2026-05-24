@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCheck, Bell } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import notificationService from "@/services/notification.service";
 import type { Notification } from "@/types/notification.type";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { timeAgo } from "@/lib/utils";
+import { useGuardedNavigate } from "@/hooks/usePermissionNavigationGuard";
 
 const PER_PAGE = 20;
 
 function NotificationsPage() {
 	useBreadcrumb([{ title: "Thông báo" }]);
-	const navigate = useNavigate();
+	const navigate = useGuardedNavigate();
 
 	const [notifications, setNotifications] = useState<Notification[]>([]);
 	const [, setPage] = useState(1);

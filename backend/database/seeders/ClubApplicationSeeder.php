@@ -10,13 +10,7 @@ class ClubApplicationSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@gmail.com'],
-            [
-                'full_name' => 'Quản trị viên',
-                'is_active' => true,
-            ]
-        );
+        $admin = User::where('email', 'admin@gmail.com')->first();
 
         $studentIds = User::where('email', 'like', 'student%@gmail.com')
             ->orderBy('id')

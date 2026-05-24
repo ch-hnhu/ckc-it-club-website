@@ -49,15 +49,19 @@
 - landing page composed from multiple section components
 - `/lien-he`
 - contact page
-- There is currently no `/login` route in the router.
+- `/login`
+- credential login page with Google/GitHub OAuth popup buttons.
+- `/register`
+- credential signup page requiring only full name, username, email, password, and password confirmation.
 
 ## Important Reality Checks
-- User login exists as a popup-based Google OAuth flow triggered from the navbar, not as a dedicated login page.
+- User login supports a dedicated credential `/login` page and popup-based Google/GitHub OAuth.
+- User credential signup is available at `/register` and posts to `POST /api/v1/auth/register`.
 - `ContactPage` posts real data to `POST /api/v1/contacts`, shows backend success or error feedback, and resets the form on success.
 - `Navbar` and auth service use `localStorage` for the access token.
 - `src/config/axios.config.ts` tries to read the token from `sessionStorage`, not `localStorage`.
-- The same Axios interceptor redirects `401` responses to `/login`, but this app has no `/login` route.
-- Conclusion: token storage and unauthorized redirect behavior are internally inconsistent. Agents must treat auth/session handling carefully.
+- The same Axios interceptor redirects `401` responses to `/login`.
+- Conclusion: token storage is internally inconsistent between the shared Axios client and the auth service. Agents must treat auth/session handling carefully.
 - Several public links inside landing sections still point to `#` placeholders.
 
 ## Layout and Visual System
@@ -126,6 +130,7 @@
 - Auth URL is derived from `VITE_BACKEND_URL` and points to `/user/auth/google`.
 - OAuth completion is communicated back through `postMessage`.
 - Successful auth stores `access_token` in `localStorage`.
+- Successful credential register also stores `access_token` in `localStorage`.
 - `MainLayout` refreshes user state by calling `getCurrentUser()` on mount.
 - `getCurrentUser()`:
 - uses `fetch`, not Axios
@@ -135,10 +140,9 @@
 
 ## Auth Risks and Assumptions
 - Since `getCurrentUser()` uses `fetch` and not the shared Axios client, changing one auth path may not update the other.
-- `axios.config.ts` currently has behavior that does not match the router:
+- `axios.config.ts` currently has token storage behavior that does not match the auth service:
 - clears `localStorage`
 - redirects to `/login`
-- There is no `/login` page in this app.
 - If you standardize auth, update:
 - `src/services/auth.service.ts`
 - `src/config/axios.config.ts`

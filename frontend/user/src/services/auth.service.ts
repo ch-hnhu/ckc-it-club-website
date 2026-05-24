@@ -18,6 +18,21 @@ export type OAuthAuthErrorPayload = {
 
 export type OAuthAuthPayload = OAuthAuthSuccessPayload | OAuthAuthErrorPayload;
 
+export type AuthCredentialResponse = {
+	success?: boolean;
+	token?: string;
+	message?: string;
+	errors?: Record<string, string[]>;
+};
+
+export type RegisterCredentials = {
+	full_name: string;
+	username: string;
+	email: string;
+	password: string;
+	password_confirmation: string;
+};
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 const AUTH_SERVER_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
@@ -43,6 +58,33 @@ async function parseJsonSafe(response: Response) {
 
 export async function getGoogleAuthUrl(): Promise<string> {
 	return `${AUTH_SERVER_URL}/user/auth/google`;
+}
+
+export function getGithubAuthUrl(): string {
+	return `${AUTH_SERVER_URL}/user/auth/github`;
+}
+
+export async function loginWithCredentials(
+	identifier: string,
+	password: string,
+): Promise<AuthCredentialResponse> {
+	const response = await fetch(`${API_URL}/auth/login`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify({ identifier, password }),
+	});
+	return response.json();
+}
+
+export async function registerWithCredentials(
+	credentials: RegisterCredentials,
+): Promise<AuthCredentialResponse> {
+	const response = await fetch(`${API_URL}/auth/register`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify(credentials),
+	});
+	return response.json();
 }
 
 export function getAuthServerOrigin(): string | null {
@@ -107,6 +149,50 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 		name: user.full_name,
 		picture: user.avatar,
 	} as AuthUser;
+}
+
+export type ForgotPasswordResponse = { success: boolean; message?: string };
+export type VerifyOtpResponse = { success: boolean; message?: string; reset_token?: string };
+export type ResetPasswordResponse = { success: boolean; message?: string };
+
+export async function sendForgotPasswordOtp(email: string): Promise<ForgotPasswordResponse> {
+	const response = await fetch(`${API_URL}/auth/forgot-password`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify({ email }),
+	});
+	return response.json();
+}
+
+export async function verifyForgotPasswordOtp(
+	email: string,
+	otp: string,
+): Promise<VerifyOtpResponse> {
+	const response = await fetch(`${API_URL}/auth/verify-otp`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify({ email, otp }),
+	});
+	return response.json();
+}
+
+export async function resetPassword(
+	email: string,
+	resetToken: string,
+	password: string,
+	passwordConfirmation: string,
+): Promise<ResetPasswordResponse> {
+	const response = await fetch(`${API_URL}/auth/reset-password`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify({
+			email,
+			reset_token: resetToken,
+			password,
+			password_confirmation: passwordConfirmation,
+		}),
+	});
+	return response.json();
 }
 
 export async function logout(): Promise<void> {

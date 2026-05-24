@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
 
             $table->string('email')->unique();
+            $table->string('username', 30)->nullable()->unique();
             $table->string('password')->nullable();
             $table->timestamp('email_verified_at')->nullable();
 
@@ -26,7 +27,7 @@ return new class extends Migration
             $table->string('avatar')->nullable();
             $table->date('dob')->nullable();
 
-            $table->char('student_code')->unique()->nullable();
+            $table->char('student_code', 15)->unique()->nullable();
 
             $table->foreignId('faculty_id')->nullable();
             $table->foreignId('major_id')->nullable();

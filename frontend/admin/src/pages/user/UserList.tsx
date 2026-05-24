@@ -41,15 +41,16 @@ import {
 	Pencil,
 	Plus,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import type { RoleEnum } from "@/types/role.type";
 import { CompactBadgeList } from "../../components/ui/compact-badge-list";
 import { Combobox } from "@/components/ui/combobox";
+import { useGuardedNavigate } from "@/hooks/usePermissionNavigationGuard";
 
 function UserList() {
-	const navigate = useNavigate();
+	const navigate = useGuardedNavigate();
 	const [users, setUsers] = useState<User[]>([]);
 	const [meta, setMeta] = useState({
 		current_page: 1,
@@ -188,7 +189,7 @@ function UserList() {
 				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2'>
 					<div className='flex flex-1 items-center gap-2 w-full'>
 						<Input
-							placeholder='Tìm kiếm...'
+							placeholder='Tìm theo tên, username, email...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 w-full sm:max-w-sm flex-1 min-w-0'

@@ -8,7 +8,9 @@ use App\Http\Requests\Api\V1\User\StoreUserRequest;
 use App\Http\Requests\Api\V1\User\UpdateUserRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Models\Department;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
@@ -29,6 +31,7 @@ class UserController extends BaseApiController
             ->with('roles:id,name,label')
             ->when($search, function ($query, $search) {
                 $query->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             })
             ->when($role, function ($query, $role) {
@@ -57,6 +60,7 @@ class UserController extends BaseApiController
 
         $user = User::create([
             'full_name' => $validated['full_name'],
+            'username' => $validated['username'],
             'gender' => $validated['gender'],
             'student_code' => $validated['student_code'],
             'email' => $validated['email'],
@@ -68,7 +72,9 @@ class UserController extends BaseApiController
             'avatar' => $avatarPath,
         ]);
 
-        $user->syncRoles($validated['roles']);
+            $user->syncRoles($validated['roles']);
+            $this->syncDepartmentHeadAssignments($user, $validated['roles']);
+        });
 
         return $this->successResponse(true, $user, ApiMessage::USER_CREATED);
     }
@@ -92,6 +98,7 @@ class UserController extends BaseApiController
 
         $payload = [
             'full_name' => $validated['full_name'],
+            'username' => $validated['username'],
             'gender' => $validated['gender'] ?? null,
             'student_code' => $validated['student_code'] ?? null,
             'email' => $validated['email'],
@@ -114,9 +121,12 @@ class UserController extends BaseApiController
             $payload['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
 
-        $user->update($payload);
+        DB::transaction(function () use ($user, $payload, $validated) {
+            $user->update($payload);
+            $user->syncRoles($validated['roles']);
+            $this->syncDepartmentHeadAssignments($user, $validated['roles']);
+        });
 
-        $user->syncRoles($validated['roles']);
         $user->load('roles:id,name');
 
         return $this->successResponse(true, $user, ApiMessage::USER_UPDATED);
@@ -125,8 +135,43 @@ class UserController extends BaseApiController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(string $id): JsonResponse
     {
-        //
+        $user = User::findOrFail($id);
+
+        $rawAvatarPath = $user->getRawOriginal('avatar');
+        if ($rawAvatarPath) {
+            Storage::disk('public')->delete($rawAvatarPath);
+        }
+
+        $user->delete();
+
+        return $this->successResponse(true, null, ApiMessage::USER_DELETED);
+    }
+
+    private function syncDepartmentHeadAssignments(User $user, array $roleNames): void
+    {
+        $selectedRoles = collect($roleNames);
+
+        Department::query()
+            ->with('headRole:id,name,label')
+            ->whereNotNull('head_role_id')
+            ->get()
+            ->each(function (Department $department) use ($user, $selectedRoles) {
+                $headRole = $department->headRole;
+
+                if (! $headRole || ! $selectedRoles->contains($headRole->name)) {
+                    return;
+                }
+
+                if (! $department->members()->where('users.id', $user->id)->exists()) {
+                    $department->members()->attach($user->id, ['joined_at' => now()]);
+                }
+
+                User::role($headRole->name)
+                    ->whereKeyNot($user->id)
+                    ->get()
+                    ->each(fn (User $otherUser) => $otherUser->removeRole($headRole->name));
+            });
     }
 }

@@ -11,12 +11,14 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Enums\RolesEnum;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property int $id
  * @property string $full_name
  * @property string|null $gender
  * @property string $email
+ * @property string|null $username
  * @property string|null $avatar
  * @property string|null $provider
  * @property string|null $provider_id
@@ -35,6 +37,7 @@ class User extends Authenticatable
     protected $fillable = [
         'full_name',
         'email',
+        'username',
         'email_verified_at',
         'password',
         'student_code',
@@ -70,6 +73,47 @@ class User extends Authenticatable
     public function class()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    public function departments(): BelongsToMany
+    {
+        return $this->belongsToMany(Department::class, 'department_user')
+            ->using(UserDepartment::class)
+            ->withPivot('joined_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * Kiểm tra user có phải trưởng ban của một department hay không.
+     *
+     * Điều kiện: user thuộc department VÀ có role trùng với department.head_role_id.
+     */
+    public function isHeadOf(Department $department): bool
+    {
+        if (! $department->head_role_id) {
+            return false;
+        }
+
+        return $this->departments()->where('departments.id', $department->id)->exists()
+            && $this->roles()->where('roles.id', $department->head_role_id)->exists();
+    }
+
+    /**
+     * Generate a unique username from an email address.
+     * Extracts the prefix, sanitizes it, and appends a suffix if already taken.
+     */
+    public static function generateUniqueUsername(string $email): string
+    {
+        $base = strtolower(Str::before($email, '@'));
+        $base = preg_replace('/[^a-z0-9_]/', '_', $base);
+        $base = trim(substr($base, 0, 25), '_');
+
+        $username = $base;
+        while (static::where('username', $username)->exists()) {
+            $username = $base . '_' . rand(1000, 9999);
+        }
+
+        return $username;
     }
 
     /**
