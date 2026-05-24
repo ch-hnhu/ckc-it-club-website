@@ -13,7 +13,11 @@ return [
         // Local development URLs
         env('ADMIN_FRONTEND_URL', 'http://localhost:5173'),
         env('USER_FRONTEND_URL', 'http://localhost:5174'),
-        // Production URLs
+        // Production URLs (custom domain)
+        'https://admin.ckcitclub.tech',
+        'https://ckcitclub.tech',
+        'https://www.ckcitclub.tech',
+        // Vercel deployment URLs (keep until DNS fully propagated)
         'https://admin-ckcitclub.vercel.app',
         'https://ckcitclub.vercel.app',
     ],

@@ -58,6 +58,8 @@ class UserController extends BaseApiController
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
         }
 
+        $user = null;
+
         DB::transaction(function () use ($validated, $avatarPath, &$user) {
             $user = User::create([
                 'full_name' => $validated['full_name'],
