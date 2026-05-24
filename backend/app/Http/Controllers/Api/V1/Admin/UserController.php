@@ -58,19 +58,22 @@ class UserController extends BaseApiController
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
         }
 
-        $user = User::create([
-            'full_name' => $validated['full_name'],
-            'username' => $validated['username'],
-            'gender' => $validated['gender'],
-            'student_code' => $validated['student_code'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'is_active' => $validated['is_active'],
-            'faculty_id' => $validated['faculty_id'] ?? null,
-            'major_id' => $validated['major_id'] ?? null,
-            'class_id' => $validated['class_id'] ?? null,
-            'avatar' => $avatarPath,
-        ]);
+        $user = null;
+
+        DB::transaction(function () use ($validated, $avatarPath, &$user) {
+            $user = User::create([
+                'full_name' => $validated['full_name'],
+                'username' => $validated['username'],
+                'gender' => $validated['gender'],
+                'student_code' => $validated['student_code'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'is_active' => $validated['is_active'],
+                'faculty_id' => $validated['faculty_id'] ?? null,
+                'major_id' => $validated['major_id'] ?? null,
+                'class_id' => $validated['class_id'] ?? null,
+                'avatar' => $avatarPath,
+            ]);
 
             $user->syncRoles($validated['roles']);
             $this->syncDepartmentHeadAssignments($user, $validated['roles']);
