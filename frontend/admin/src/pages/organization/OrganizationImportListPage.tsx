@@ -445,8 +445,8 @@ function OrganizationImportListPage() {
 					</Card>
 				</div>
 
-				<Card className='min-w-0 border-border/70'>
-					<CardHeader className='gap-4 border-b pb-4'>
+				<Card className='min-w-0 gap-0 overflow-hidden border-border/70 py-0'>
+					<CardHeader className='gap-3 border-b px-4 py-4 md:px-6'>
 						<div className='flex min-w-0 flex-col gap-4'>
 							<div className='min-w-0 space-y-1.5'>
 								<CardTitle className='text-xl'>Danh sách file import đơn vị</CardTitle>
@@ -644,7 +644,7 @@ function OrganizationImportListPage() {
 
 									{!isLoading && records.length === 0 ? (
 										<TableRow>
-											<TableCell colSpan={7} className='h-32 text-center'>
+											<TableCell colSpan={7} className='h-24 text-center'>
 												<div className='space-y-2'>
 													<p className='font-medium'>
 														Chưa có file import phù hợp.
@@ -659,7 +659,7 @@ function OrganizationImportListPage() {
 
 									{isLoading ? (
 										<TableRow>
-											<TableCell colSpan={7} className='h-24 text-center text-muted-foreground'>
+											<TableCell colSpan={7} className='h-20 text-center text-muted-foreground'>
 												Đang tải dữ liệu...
 											</TableCell>
 										</TableRow>
@@ -668,7 +668,7 @@ function OrganizationImportListPage() {
 
 								<TableFooter className='bg-transparent'>
 									<TableRow>
-										<TableCell colSpan={7}>
+										<TableCell colSpan={7} className='py-3'>
 											<div className='flex flex-col gap-4 px-2 py-1 md:flex-row md:items-center md:justify-between'>
 												<div className='text-sm text-muted-foreground'>
 													Hiển thị {records.length} trên tổng {meta.total} file.

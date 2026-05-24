@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Admin\ApplicationQuestionController;
 use App\Http\Controllers\Api\V1\Admin\AcademicStructureController;
 use App\Http\Controllers\Api\V1\Admin\ClubApplicationController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
+use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\MajorController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
@@ -121,8 +122,24 @@ Route::prefix('v1')->group(function () {
             Route::get('contacts/stats', [AdminContactController::class, 'stats']);
             Route::get('contacts', [AdminContactController::class, 'index']);
         });
-        Route::middleware('permission:contacts.manage')
-            ->patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+        Route::middleware('permission:contacts.manage')->group(function () {
+            Route::patch('contacts/{contact}/status', [AdminContactController::class, 'updateStatus']);
+            Route::delete('contacts/{contact}', [AdminContactController::class, 'destroy']);
+        });
+
+        // departments
+        Route::middleware('permission:club_info.view')->group(function () {
+            Route::get('departments', [DepartmentController::class, 'index']);
+            Route::get('departments/{department}', [DepartmentController::class, 'show']);
+        });
+        Route::middleware('permission:club_info.manage')->group(function () {
+            Route::post('departments', [DepartmentController::class, 'store']);
+            Route::put('departments/{department}', [DepartmentController::class, 'update']);
+            Route::patch('departments/{department}', [DepartmentController::class, 'update']);
+            Route::post('departments/{department}/users', [DepartmentController::class, 'storeUser']);
+            Route::patch('departments/{department}/users/{user}', [DepartmentController::class, 'updateUserRole']);
+            Route::delete('departments/{department}/users/{user}', [DepartmentController::class, 'destroyUser']);
+        });
 
         // club applications
         Route::middleware('permission:applications.view')
@@ -156,6 +173,7 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
         });
         Route::middleware('permission:academic_structure.import')->group(function () {
+            Route::post('faculties/bulk-delete', [FacultyController::class, 'bulkDestroy']);
             Route::apiResource('faculties', FacultyController::class)->only(['store', 'update', 'destroy']);
             Route::apiResource('majors', MajorController::class)->only(['store', 'update', 'destroy']);
             Route::apiResource('school-classes', SchoolClassController::class)->only(['store', 'update', 'destroy']);

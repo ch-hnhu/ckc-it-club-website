@@ -46,7 +46,7 @@ function InfoRow({
 	value: React.ReactNode;
 }) {
 	return (
-		<div className='flex flex-col gap-1'>
+		<div className='flex flex-col gap-1 rounded-lg border bg-muted/20 p-4'>
 			<p className='flex items-center gap-1.5 text-sm font-medium text-muted-foreground'>
 				{icon}
 				{label}

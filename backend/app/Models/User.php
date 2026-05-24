@@ -11,6 +11,7 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Enums\RolesEnum;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property int $id
@@ -72,6 +73,29 @@ class User extends Authenticatable
     public function class()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    public function departments(): BelongsToMany
+    {
+        return $this->belongsToMany(Department::class, 'department_user')
+            ->using(UserDepartment::class)
+            ->withPivot('joined_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * Kiểm tra user có phải trưởng ban của một department hay không.
+     *
+     * Điều kiện: user thuộc department VÀ có role trùng với department.head_role_id.
+     */
+    public function isHeadOf(Department $department): bool
+    {
+        if (! $department->head_role_id) {
+            return false;
+        }
+
+        return $this->departments()->where('departments.id', $department->id)->exists()
+            && $this->roles()->where('roles.id', $department->head_role_id)->exists();
     }
 
     /**

@@ -12,7 +12,6 @@ import ApplicationRequestsPage from "@/pages/recruitment/ApplicationRequestsPage
 import ApplicationDetailPage from "@/pages/recruitment/ApplicationDetailPage";
 import ApplicationQuestionsPage from "@/pages/recruitment/ApplicationQuestionsPage";
 import ApplicationQuestionDetailPage from "@/pages/recruitment/ApplicationQuestionDetailPage";
-import ApplicationAnswersPage from "@/pages/recruitment/ApplicationAnswersPage";
 import { LoginForm } from "@/pages/auth/LoginForm";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { PermissionRoute } from "@/components/auth/PermissionRoute";
@@ -20,6 +19,7 @@ import NotFound from "@/pages/NotFound";
 import RoleList from "@/pages/role/RoleList";
 import RoleDetailPage from "@/pages/role/RoleDetailPage";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
+import DepartmentDetailPage from "@/pages/division/DepartmentDetailPage";
 import PermissionList from "@/pages/permission/PermissionList";
 import ClubInformationList from "@/pages/club-information/ClubInformationList";
 import ClubInformationDetailPage from "@/pages/club-information/ClubInformationDetailPage";
@@ -146,6 +146,14 @@ const router = createBrowserRouter([
 				),
 			},
 			{
+				path: "divisions/:id",
+				element: (
+					<PermissionRoute permission='club_info.view'>
+						<DepartmentDetailPage />
+					</PermissionRoute>
+				),
+			},
+			{
 				path: "club-informations",
 				element: (
 					<PermissionRoute permission='club_info.view'>
@@ -198,14 +206,6 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='application_questions.view'>
 						<ApplicationQuestionDetailPage />
-					</PermissionRoute>
-				),
-			},
-			{
-				path: "answers",
-				element: (
-					<PermissionRoute permission='applications.view'>
-						<ApplicationAnswersPage />
 					</PermissionRoute>
 				),
 			},

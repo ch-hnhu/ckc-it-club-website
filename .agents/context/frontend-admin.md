@@ -75,7 +75,9 @@
 - `/contacts`
 - contact management list with real backend data and status updates
 - `/divisions`
-- division management dashboard for the 3 fixed club divisions: academic, volunteer, and communication
+- department management table backed by `GET /departments`, listing the seeded club departments with search, sorting, pagination, status, and member counts
+- `/divisions/:id`
+- department detail page with the department info card and member management table
 - `/organization/upload`
 - academic structure import history and upload flow for faculty, major, and class files
 - `/club-informations`
@@ -175,7 +177,7 @@
 - `src/pages/contact/`
 - contact management list/detail/status flows
 - `src/pages/division/`
-- division management dashboard pages
+- department management table page
 - `src/services/`
 - thin API client wrappers
 - `src/types/`
@@ -240,6 +242,14 @@
 - route `/contacts`
 - server-driven pagination, search, sort, and status filtering
 - status update is live against backend `PATCH /contacts/{contact}/status`
+- Department management:
+- route `/divisions`
+- server-driven pagination, search, sort, status display through `CompactBadgeList`, row selection, member counts, create/update modal, and row actions backed by backend department endpoints.
+- route `/divisions/:id`
+- detail page fetches `GET /departments/{department}`, renders the department info card, warns when no head exists, and manages members with client-side search, role filter, pagination, add-member modal, role-change modal, and remove confirmation.
+- add-member modal is intentionally minimal: member combobox, cancel/add actions, submit loading, close-and-refresh on success, and no primary-department toggle.
+- department detail displays whether a member is the department head based on the user's configured Spatie head role for that department; changing a member's chức vụ calls the department member PATCH endpoint.
+- member update/remove actions require `club_info.manage` and are disabled in the UI otherwise.
 - Role management:
 - route `/roles`
 - route `/roles/:id`
@@ -326,10 +336,15 @@ npm run dev
 
 ## Change Log
 
+- `2026-05-24`: Wired department member chức vụ changes from the detail table to `PATCH /departments/{department}/users/{user}`; the backend maps head/member changes to the user's configured head role for that department.
+- `2026-05-24`: User create/update role forms can affect department head display because backend maps selected head roles to the corresponding department ownership.
 - `2026-04-20`: Updated CreateUser avatar behavior so clearing selected image restores default avatar preview (`/img/default-avatar.jpg`) while preserving all other form field state.
 - `2026-04-20`: Added reusable shadcn-style `ui/combobox` component (Command + Popover) with optional search and multiple select support, and migrated CreateUser faculty/major/class fields to searchable comboboxes.
 - `2026-04-20`: Wired `/users/create` route in router, connected User list "Thêm" button to navigate there, and implemented full shadcn CreateUser form UI with avatar preview and dependent faculty-major-class selectors.
 - `2026-04-23`: Added admin contact management route `/contacts`, sidebar entry, `contact.service.ts`, and live status updates backed by the Laravel API.
+- `2026-05-23`: Reworked `/divisions` from a local-data dashboard into a backend-backed department table for the seeded Học thuật, Truyền thông, and Tình nguyện departments, with create/update, detail, add-member, and member chức vụ actions.
+- `2026-05-23`: Simplified the division add-member modal to the quick-add flow only and added shared combobox trigger focus support for dialog autofocus.
+- `2026-05-23`: Added `/divisions/:id` as a full department detail and member management page with search, role filtering, pagination, role update, and member removal.
 - `2026-05-20`: Updated admin division management so the third fixed division is Communication instead of Event.
 - `2026-05-12`: Added admin route `/divisions` with a local-data management dashboard for the 3 fixed club divisions (academic, volunteer, communication).
 - `2026-04-08`: Replaced scaffold with full admin frontend audit. Added route surface, auth/session model, service conventions, UI system notes, env requirements, and known gap inventory.

@@ -80,6 +80,11 @@
 - `GET /api/v1/academic-structure/imports/{academicStructureImport}/download`
 - `GET /api/v1/contacts`
 - `PATCH /api/v1/contacts/{contact}/status`
+- `GET /api/v1/departments`
+- `POST /api/v1/departments`
+- `GET /api/v1/departments/{department}`
+- `PUT/PATCH /api/v1/departments/{department}`
+- `POST /api/v1/departments/{department}/users`
 - `GET /api/v1/club-informations`
 - `POST /api/v1/club-informations`
 - `PUT/PATCH /api/v1/club-informations/{clubInformation}`
@@ -173,7 +178,8 @@
 - `users`
 - identity, OAuth provider data, profile fields, academic references, active flag.
 - admin-created avatars are stored on Laravel `public` disk under `avatars/`, and the relative path is persisted in `users.avatar`.
-- admin create/update user flow requires and persists unique `username`, `gender`, and `is_active` directly on the `users` table and assigns the selected Spatie roles from the submitted `roles` array.
+- admin create/update user flow persists `gender` and `is_active` directly on the `users` table and assigns the selected Spatie roles from the submitted `roles` array.
+- when create/update user assigns a department head role (`academic-head`, `communications-head`, or `volunteer-head`), backend also attaches that user to the matching department if needed and removes that same head role from any other user; unrelated roles are preserved.
 - `User` API serialization formats `created_at` and `updated_at` as `d/m/Y` for frontend direct display.
 - `roles`
 - admin role create payload uses `label` for the display name, `name` for the internal value, and `is_system` as a boolean flag.
@@ -187,6 +193,12 @@
 - has many `school_classes`.
 - `school_classes`
 - belongs to one `major`.
+- `departments`
+- club operating departments/ban records seeded for Học thuật, Truyền thông, and Tình nguyện.
+- admins can list, fetch detail, create, and update departments; users attach to departments through `department_user`.
+- department member management endpoints support adding members, changing whether a member is head of that department, and removing a member through `POST /departments/{department}/users`, `PATCH /departments/{department}/users/{user}`, and `DELETE /departments/{department}/users/{user}`; removing a head member also removes only that department's head role from the user.
+- department heads are resolved from the member's normal Spatie user roles against `departments.head_role_id`; the seeded head roles are `academic-head`, `communications-head`, and `volunteer-head`.
+- updating a department head assigns/removes only that department's configured head role on the user and does not sync or overwrite unrelated user roles, so one user can head multiple departments by holding multiple head roles.
 - `club_applications`
 - one application per applicant in current seeded/dev usage.
 - applicant is stored in `created_by`.
@@ -217,6 +229,8 @@
 - for non-banner config types, activating one value or calling the default endpoint automatically deactivates sibling values. Banner configs can have multiple active values and are resolved by active values ordered by `position` then `id`; the default endpoint rejects banner configs.
 - creating/updating club information records and creating/updating nested values dispatch database notifications to admin roles.
 - `DatabaseSeeder` seeds demo club information keys and values for club name, slogan, email, about text, logo, home banners, Facebook page, and recruitment availability.
+- `DatabaseSeeder` seeds the three default club departments: Ban Học thuật, Ban Truyền thông, and Ban Tình nguyện.
+- `RoleSeeder` seeds the system/user roles, including the three department head roles referenced by `departments.head_role_id`.
 - list responses serialize `created_at` and `updated_at` as `d/m/Y` for direct frontend display.
 - `academic_structure_imports`
 - admin academic structure import history for uploaded faculty/major/class files.
@@ -251,6 +265,7 @@
 - `FacultySeeder`
 - `MajorSeeder`
 - `SchoolClassSeeder`
+- `DepartmentSeeder`
 - `ContactSeeder`
 - `ApplicationQuestionSeeder`
 - `ApplicationQuestionOptionSeeder`
@@ -379,4 +394,8 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-05-24`: Department member leadership is tied to each department's configured Spatie head role (`head_role_id`); updating a head only assigns/removes that one user role, so the same user can hold multiple department-head roles.
+- `2026-05-24`: User create/update role sync now also propagates department head roles into department membership/head ownership, so editing user roles and editing department chức vụ stay consistent.
+- `2026-05-24`: Removing a member from a department now also removes that department's configured head role from the user when applicable.
+- `2026-05-23`: Added department member role update and remove endpoints; department detail member payload now includes user active status for the admin detail table.
 - `2026-04-07`: Initial backend context created after full backend audit. Captured actual route surface, auth model, recruitment rules, setup flow, known gaps, and agent editing rules.

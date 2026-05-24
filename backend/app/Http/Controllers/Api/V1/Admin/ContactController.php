@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Contact\UpdateContactStatusRequest;
 use App\Models\Contact;
@@ -147,12 +148,7 @@ class ContactController extends BaseApiController
             return $this->unauthorizedResponse();
         }
 
-        $roles = array_map(
-            static fn (RolesEnum $role) => $role->value,
-            self::ADMIN_ROLES
-        );
-
-        if (! $user->hasAnyRole($roles)) {
+        if (! $user->hasAnyRole(RolesEnum::adminRoles())) {
             return $this->forbiddenResponse();
         }
 
