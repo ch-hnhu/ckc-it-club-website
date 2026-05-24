@@ -39,13 +39,14 @@ const HeroSection: React.FC = () => {
 
 							{/* Main headline */}
 							<div
-								className='fade-in-up text-center'
+								className='fade-in-up text-center max-w-xl'
 								style={{ transitionDelay: "0.1s" }}>
 								<h1
 									className='text-[2.75rem] sm:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.3] tracking-tight text-black'
 									style={{ fontFamily: "var(--font-heading)" }}>
 									CKC IT CLUB
 									<br />
+									Kết nối công nghệ, kiến tạo{" "}
 									<span
 										className='text-[2.75rem] sm:text-5xl lg:text-[3.5rem] font-extrabold'
 										style={{
@@ -55,11 +56,9 @@ const HeroSection: React.FC = () => {
 											borderRadius: "8px",
 											boxShadow: "3px 3px 0px #111",
 										}}>
-										Học IT
-									</span>{" "}
-									dễ hơn khi bạn
-									<br />
-									không học một mình
+										tương lai
+									</span>
+									{"."}
 								</h1>
 							</div>
 

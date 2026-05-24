@@ -1,13 +1,18 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\GitHubAuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use Illuminate\Support\Facades\Route;
 
-// OAuth Routes (use web middleware for session)
+// Google OAuth
 Route::get('/admin/auth/google', [GoogleAuthController::class, 'redirectAdmin']);
+Route::get('/user/auth/google', [GoogleAuthController::class, 'redirectUser']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 
-Route::get('/user/auth/google', [GoogleAuthController::class, 'redirectUser']);
+// GitHub OAuth
+Route::get('/admin/auth/github', [GitHubAuthController::class, 'redirectAdmin']);
+Route::get('/user/auth/github', [GitHubAuthController::class, 'redirectUser']);
+Route::get('/auth/github/callback', [GitHubAuthController::class, 'callback']);
 
 Route::get('/', function () {
     return view('welcome');

@@ -132,7 +132,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 					<div className='ml-auto hidden items-center gap-3 xl:flex'>
 						{user ? (
 							<div className='flex items-center gap-3'>
-								<div className='flex items-center gap-2 rounded-lg border-2 border-black px-3 py-1.5 text-sm font-medium'>
+								<div className='flex h-10 items-center gap-2 neo-btn neo-btn-secondary px-4 py-0 text-sm disabled:opacity-50'>
 									{user.picture && (
 										<img
 											src={user.picture}
@@ -147,19 +147,18 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 								<button
 									onClick={handleLogout}
 									disabled={loading}
-									className='neo-btn neo-btn-secondary px-4 py-2 text-sm disabled:opacity-50'>
+									className='h-10 neo-btn neo-btn-secondary px-4 py-0 text-sm disabled:opacity-50'>
 									Đăng xuất
 								</button>
 							</div>
 						) : (
 							<>
-								<button
-									onClick={handleLogin}
-									disabled={loading}
-									className='neo-btn neo-btn-secondary px-4 py-2 text-sm disabled:opacity-50'>
+								<Link
+									to='/login'
+									className='neo-btn neo-btn-secondary px-4 py-2 text-sm'>
 									<LogIn className='h-4 w-4' />
 									Đăng nhập
-								</button>
+								</Link>
 								<button
 									onClick={handleLogin}
 									disabled={loading}
@@ -205,7 +204,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 						<div className='mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4'>
 							{user ? (
 								<div className='flex flex-col gap-3'>
-									<div className='flex items-center justify-center gap-2 rounded-lg border-2 border-black px-3 py-2 text-sm font-medium'>
+									<div className='flex items-center justify-center gap-2 neo-btn neo-btn-secondary w-full disabled:opacity-50'>
 										{user.picture && (
 											<img
 												src={user.picture}
@@ -224,12 +223,12 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 								</div>
 							) : (
 								<>
-									<button
-										onClick={handleLogin}
-										disabled={loading}
-										className='neo-btn neo-btn-secondary w-full justify-center disabled:opacity-50'>
+									<Link
+										to='/login'
+										onClick={() => setIsMobileOpen(false)}
+										className='neo-btn neo-btn-secondary w-full justify-center'>
 										<LogIn className='h-4 w-4' /> Đăng nhập
-									</button>
+									</Link>
 									<button
 										onClick={handleLogin}
 										disabled={loading}

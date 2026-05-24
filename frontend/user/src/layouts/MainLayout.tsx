@@ -15,8 +15,18 @@ const MainLayout: React.FC = () => {
 	}, []);
 
 	useEffect(() => {
-		refreshUser();
-	}, [refreshUser]);
+		let isMounted = true;
+
+		getCurrentUser().then((currentUser) => {
+			if (isMounted) {
+				setUser(currentUser);
+			}
+		});
+
+		return () => {
+			isMounted = false;
+		};
+	}, []);
 
 	useEffect(() => {
 		window.scrollTo({ top: 0, left: 0, behavior: "auto" });

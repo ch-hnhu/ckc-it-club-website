@@ -68,12 +68,12 @@ export const adminNavMain: AdminNavItem[] = [
 			{
 				title: "Vai trò",
 				url: "/roles",
-				permission: "roles.view",
+				permission: "roles.manage",
 			},
 			{
 				title: "Quyền hạn",
 				url: "/permissions",
-				permission: "permissions.view",
+				permission: "permissions.manage",
 			},
 		],
 	},
@@ -134,12 +134,7 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/questions",
 				permission: "application_questions.view",
 			},
-			{
-				title: "Câu trả lời",
-				url: "/answers",
-				permission: "applications.view",
-			},
-			{
+{
 				title: "Yêu cầu tham gia",
 				url: "/requests",
 				permission: "applications.view",
@@ -160,6 +155,38 @@ function normalizePath(path: string) {
 	if (!path) return "/";
 	if (path === "/") return path;
 	return path.replace(/\/+$/, "");
+}
+
+const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> = [
+	{ pattern: /^\/$/, permission: "dashboard.view" },
+	{ pattern: /^\/users$/, permission: "users.view" },
+	{ pattern: /^\/users\/create$/, permission: "users.create" },
+	{ pattern: /^\/users\/[^/]+$/, permission: "users.update" },
+	{ pattern: /^\/roles$/, permission: "roles.view" },
+	{ pattern: /^\/roles\/[^/]+$/, permission: "roles.view" },
+	{ pattern: /^\/permissions$/, permission: "permissions.view" },
+	{ pattern: /^\/organization\/upload$/, permission: "academic_structure.import" },
+	{ pattern: /^\/departments$/, permission: "academic_data.view" },
+	{ pattern: /^\/majors$/, permission: "academic_data.view" },
+	{ pattern: /^\/classes$/, permission: "academic_data.view" },
+	{ pattern: /^\/contacts$/, permission: "contacts.view" },
+	{ pattern: /^\/divisions$/, permission: "club_info.view" },
+	{ pattern: /^\/club-informations$/, permission: "club_info.view" },
+	{ pattern: /^\/club-informations\/create$/, permission: "club_info.manage" },
+	{ pattern: /^\/club-informations\/[^/]+$/, permission: "club_info.view" },
+	{ pattern: /^\/requests$/, permission: "applications.view" },
+	{ pattern: /^\/requests\/[^/]+$/, permission: "applications.view" },
+	{ pattern: /^\/questions$/, permission: "application_questions.view" },
+	{ pattern: /^\/questions\/[^/]+$/, permission: "application_questions.view" },
+	{ pattern: /^\/answers$/, permission: "applications.view" },
+];
+
+export function getRequiredPermissionForPath(pathname: string): string | null {
+	const normalizedPath = normalizePath(pathname);
+	return (
+		adminRoutePermissionRules.find((rule) => rule.pattern.test(normalizedPath))?.permission ??
+		null
+	);
 }
 
 export function getBreadcrumbsFromNavigation(
@@ -191,4 +218,22 @@ export function getBreadcrumbsFromNavigation(
 	}
 
 	return extraItems.length ? [rootBreadcrumb, ...extraItems] : [rootBreadcrumb];
+}
+
+export function getFirstAuthorizedNavPath(permissions: string[]): string | null {
+	const hasPermission = (permission?: string) => !permission || permissions.includes(permission);
+
+	for (const item of adminNavMain) {
+		const firstAuthorizedChild = item.items?.find((child) => hasPermission(child.permission));
+
+		if (firstAuthorizedChild) {
+			return firstAuthorizedChild.url;
+		}
+
+		if (hasPermission(item.permission)) {
+			return item.url;
+		}
+	}
+
+	return null;
 }

@@ -5,6 +5,11 @@ export interface Role {
 	is_system: boolean;
 	created_at: string | null;
 	total_users?: number;
+	permissions?: Array<{
+		id: number;
+		name: string;
+		description: string;
+	}>;
 }
 
 export type RoleEnum =

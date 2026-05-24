@@ -1,246 +1,62 @@
-import type { LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
-	ArrowRight,
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
 	BookOpen,
-	CalendarRange,
-	Clock3,
-	HeartHandshake,
+	ChevronLeft,
+	ChevronRight,
+	ChevronsLeft,
+	ChevronsRight,
+	Eye,
 	Megaphone,
-	ShieldCheck,
-	Target,
+	MoreHorizontal,
+	Pencil,
+	Plus,
+	UserPlus,
 	Users,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 
+import DepartmentFormModal from "@/pages/division/DepartmentFormModal";
+import DepartmentMemberModal from "@/pages/division/DepartmentMemberModal";
+import departmentService from "@/services/department.service";
+import type { Department, DepartmentDetail } from "@/types/department.type";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
-import { Badge } from "@/components/ui/badge";
+import { useTableSelection } from "@/hooks/useTableSelection";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CompactBadgeList } from "@/components/ui/compact-badge-list";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
-
-type DivisionId = "academic" | "volunteer" | "communication";
-
-	type DivisionTheme = {
-		accent: string;
-		soft: string;
-		panel: string;
-		tabActive: string;
-		tabIconActive: string;
-	};
-
-type DivisionMetric = {
-	label: string;
-	value: string;
-};
-
-type DivisionKpi = {
-	label: string;
-	value: number;
-	helper: string;
-};
-
-type DivisionData = {
-	id: DivisionId;
-	name: string;
-	shortLabel: string;
-	icon: LucideIcon;
-	description: string;
-	status: string;
-	theme: DivisionTheme;
-	memberCount: number;
-	openPositions: number;
-	projectsRunning: number;
-	meetingSchedule: string;
-	responseTime: string;
-	lead: string;
-	viceLead: string;
-	focusAreas: string[];
-	currentProjects: string[];
-	metrics: DivisionMetric[];
-	kpis: DivisionKpi[];
-};
-
-const divisions: DivisionData[] = [
-	{
-		id: "academic",
-		name: "Ban Học thuật",
-		shortLabel: "Học thuật",
-		icon: BookOpen,
-		description:
-			"Phụ trách học liệu, workshop chuyên môn, mentoring nội bộ và chuẩn hóa đầu ra kỹ thuật cho thành viên.",
-		status: "Ổn định, cần bổ sung mentor",
-		theme: {
-			accent: "bg-amber-500",
-			soft: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-			panel: "from-amber-500/20 via-background to-background",
-			tabActive:
-				"data-[state=active]:border-amber-300/80 data-[state=active]:bg-amber-500/10",
-			tabIconActive:
-				"group-data-[state=active]:border-amber-500 group-data-[state=active]:bg-amber-500 group-data-[state=active]:text-white",
-		},
-		memberCount: 14,
-		openPositions: 2,
-		projectsRunning: 4,
-		meetingSchedule: "19:00 Thứ 3 hàng tuần",
-		responseTime: "Cập nhật học liệu mỗi 48h",
-		lead: "Nguyễn Minh Nhật",
-		viceLead: "Trần Khánh Ly",
-		focusAreas: [
-			"Lộ trình frontend và backend cho tân thành viên",
-			"Workshop Git, Laravel, React theo từng giai đoạn",
-			"Review bài tập và theo dõi năng lực theo sprint",
-		],
-		currentProjects: [
-			"Bootcamp React cho khóa mới",
-			"Chuẩn hóa ngân hàng bài tập thuật toán",
-			"Mentor 1-1 cho nhóm học viên thử việc",
-		],
-		metrics: [
-			{ label: "Tỷ lệ hoàn thành lộ trình", value: "82%" },
-			{ label: "Workshop tháng này", value: "06 buổi" },
-			{ label: "Mentor đang hoạt động", value: "08 người" },
-		],
-		kpis: [
-			{
-				label: "Đào tạo nội bộ",
-				value: 82,
-				helper: "Đạt 82/100 tiến độ chương trình quý này",
-			},
-			{
-				label: "Tài liệu hóa",
-				value: 74,
-				helper: "Cần hoàn thiện thêm guideline review dự án",
-			},
-			{
-				label: "Phản hồi thành viên",
-				value: 91,
-				helper: "Thời gian hỗ trợ đang giữ ở mức tốt",
-			},
-		],
-	},
-	{
-		id: "volunteer",
-		name: "Ban Tình nguyện",
-		shortLabel: "Tình nguyện",
-		icon: HeartHandshake,
-		description:
-			"Điều phối hoạt động cộng đồng, kết nối đối tác xã hội và vận hành các chiến dịch hỗ trợ sinh viên.",
-		status: "Cao điểm chiến dịch hè",
-		theme: {
-			accent: "bg-emerald-500",
-			soft: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-			panel: "from-emerald-500/20 via-background to-background",
-			tabActive:
-				"data-[state=active]:border-emerald-300/80 data-[state=active]:bg-emerald-500/10",
-			tabIconActive:
-				"group-data-[state=active]:border-emerald-500 group-data-[state=active]:bg-emerald-500 group-data-[state=active]:text-white",
-		},
-		memberCount: 18,
-		openPositions: 3,
-		projectsRunning: 5,
-		meetingSchedule: "17:30 Thứ 5 hàng tuần",
-		responseTime: "Xác nhận tình nguyện viên trong 24h",
-		lead: "Lê Thu Hà",
-		viceLead: "Phạm Gia Hưng",
-		focusAreas: [
-			"Tổ chức chiến dịch thiện nguyện theo học kỳ",
-			"Quản lý đăng ký, phân ca và hậu cần hiện trường",
-			"Chăm sóc đối tác và tổng hợp báo cáo tác động",
-		],
-		currentProjects: [
-			"Chương trình Tiếp sức mùa thi",
-			"Quỹ học cụ cho học sinh vùng ven",
-			"Ngày hội hiến máu phối hợp Đoàn trường",
-		],
-		metrics: [
-			{ label: "Tình nguyện viên hoạt động", value: "42 người" },
-			{ label: "Chiến dịch đang mở", value: "03 chiến dịch" },
-			{ label: "Đối tác xã hội", value: "09 đơn vị" },
-		],
-		kpis: [
-			{
-				label: "Phủ lịch tình nguyện",
-				value: 88,
-				helper: "Hầu hết ca trực đã đủ người, còn thiếu cuối tuần",
-			},
-			{
-				label: "Điều phối hậu cần",
-				value: 79,
-				helper: "Cần chốt thêm kho vật phẩm cho chiến dịch hè",
-			},
-			{
-				label: "Báo cáo tác động",
-				value: 93,
-				helper: "Báo cáo sau sự kiện được nộp đúng hạn",
-			},
-		],
-	},
-	{
-		id: "communication",
-		name: "Ban Truyền thông",
-		shortLabel: "Truyền thông",
-		icon: Megaphone,
-		description:
-			"Chịu trách nhiệm nội dung, hình ảnh, kênh truyền thông và phối hợp lan tỏa các hoạt động lớn của CLB.",
-		status: "Đang chuẩn bị chiến dịch demo day",
-		theme: {
-			accent: "bg-sky-500",
-			soft: "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-			panel: "from-sky-500/20 via-background to-background",
-			tabActive:
-				"data-[state=active]:border-sky-300/80 data-[state=active]:bg-sky-500/10",
-			tabIconActive:
-				"group-data-[state=active]:border-sky-500 group-data-[state=active]:bg-sky-500 group-data-[state=active]:text-white",
-		},
-		memberCount: 16,
-		openPositions: 1,
-		projectsRunning: 6,
-		meetingSchedule: "19:30 Thứ 6 hàng tuần",
-		responseTime: "Chốt kế hoạch nội dung trước chiến dịch 7 ngày",
-		lead: "Võ Quốc Đạt",
-		viceLead: "Đặng Bảo Nghi",
-		focusAreas: [
-			"Xây dựng lịch nội dung cho fanpage, website và email",
-			"Thiết kế key visual, poster và bộ nhận diện cho từng chiến dịch",
-			"Quản lý truyền thông trước, trong và sau hoạt động của CLB",
-		],
-		currentProjects: [
-			"Chiến dịch truyền thông Demo Day dự án thành viên",
-			"Bộ nội dung talkshow định hướng nghề nghiệp ngành IT",
-			"Mini game onboarding trên fanpage cho tân thành viên",
-		],
-		metrics: [
-			{ label: "Chiến dịch quý này", value: "08 chiến dịch" },
-			{ label: "Nội dung đang mở", value: "19 đầu việc" },
-			{ label: "Mốc deadline gần nhất", value: "5 ngày" },
-		],
-		kpis: [
-			{
-				label: "Bám lịch nội dung",
-				value: 86,
-				helper: "Tiến độ ổn, cần chốt media kit và lịch đăng",
-			},
-			{
-				label: "Phối hợp liên ban",
-				value: 90,
-				helper: "Nhịp phối hợp với học thuật và tình nguyện tốt",
-			},
-			{
-				label: "Mức sẵn sàng hình ảnh",
-				value: 68,
-				helper: "Còn thiếu bộ ảnh dự phòng và template recap",
-			},
-		],
-	},
-];
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableFooter,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 
 const breadcrumbItems = [
 	{ title: "Dashboard", link: "/" },
@@ -250,417 +66,513 @@ const breadcrumbItems = [
 
 function DivisionManagementPage() {
 	useBreadcrumb(breadcrumbItems);
+	const navigate = useNavigate();
 
-	const totalMembers = divisions.reduce((sum, division) => sum + division.memberCount, 0);
-	const totalOpenPositions = divisions.reduce(
-		(sum, division) => sum + division.openPositions,
-		0,
+	const [departments, setDepartments] = useState<Department[]>([]);
+	const [meta, setMeta] = useState({
+		current_page: 1,
+		last_page: 1,
+		per_page: 10,
+		total: 0,
+	});
+	const [search, setSearch] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const [isFormOpen, setIsFormOpen] = useState(false);
+	const [isMemberFormOpen, setIsMemberFormOpen] = useState(false);
+	const [detailDepartment, setDetailDepartment] = useState<DepartmentDetail | null>(null);
+	const [isDetailLoading] = useState(false);
+	const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+	const [sortConfig, setSortConfig] = useState<{
+		key: string | null;
+		order: "asc" | "desc" | null;
+	}>({
+		key: "created_at",
+		order: "desc",
+	});
+
+	const { allSelected, isSelected, selectedIds, toggleAll, toggleOne } = useTableSelection(
+		departments.map((department) => department.id),
 	);
-	const totalProjects = divisions.reduce(
-		(sum, division) => sum + division.projectsRunning,
-		0,
+
+	useEffect(() => {
+		const handler = setTimeout(() => {
+			setDebouncedSearch(search);
+		}, 500);
+
+		return () => clearTimeout(handler);
+	}, [search]);
+
+	useEffect(() => {
+		setMeta((prev) => ({ ...prev, current_page: 1 }));
+	}, [debouncedSearch, sortConfig]);
+
+	const fetchDepartments = async () => {
+		try {
+			const response = await departmentService.getDepartments({
+				page: meta.current_page,
+				per_page: meta.per_page,
+				search: debouncedSearch,
+				sort: sortConfig.key || undefined,
+				order: sortConfig.order || undefined,
+			});
+
+			setDepartments(response.data);
+			setMeta({
+				current_page: response.meta.current_page,
+				last_page: response.meta.last_page,
+				per_page: response.meta.per_page,
+				total: response.meta.total,
+			});
+		} catch (error) {
+			console.error("Không thể tải danh sách ban:", error);
+			toast.error("Không thể tải danh sách ban.", { position: "top-right" });
+		}
+	};
+
+	useEffect(() => {
+		void fetchDepartments();
+	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
+
+	const handleSort = (key: string) => {
+		let order: "asc" | "desc" | null = "asc";
+
+		if (sortConfig.key === key) {
+			if (sortConfig.order === "asc") {
+				order = "desc";
+			} else if (sortConfig.order === "desc") {
+				order = null;
+			}
+		}
+
+		setSortConfig({ key: order ? key : null, order });
+	};
+
+	const getSortIcon = (key: string) => {
+		if (sortConfig.key !== key) return <ArrowUpDown className='ml-2 h-4 w-4' />;
+		if (sortConfig.order === "asc") return <ArrowUp className='ml-2 h-4 w-4' />;
+		if (sortConfig.order === "desc") return <ArrowDown className='ml-2 h-4 w-4' />;
+		return <ArrowUpDown className='ml-2 h-4 w-4' />;
+	};
+
+	const getDepartmentIcon = (slug: string) => {
+		if (slug === "truyen-thong") return <Megaphone className='h-4 w-4' />;
+		if (slug === "hoc-thuat") return <BookOpen className='h-4 w-4' />;
+		return <Users className='h-4 w-4' />;
+	};
+
+	const getStatusBadge = (isActive: boolean) => (
+		<CompactBadgeList
+			items={[
+				{
+					key: isActive ? "active" : "inactive",
+					label: isActive ? "Đang hoạt động" : "Tạm ngưng",
+					className: isActive
+						? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10"
+						: "border-slate-500/30 bg-slate-500/10 text-slate-700 hover:bg-slate-500/10",
+				},
+			]}
+			maxVisibleItems={1}
+		/>
 	);
+
+	const handleShowDetail = (department: Department) => {
+		navigate(`/divisions/${department.id}`);
+	};
 
 	return (
-		<div className='min-h-full bg-muted/30'>
-			<div className='space-y-6 p-4 md:p-6 lg:p-8'>
-				<Card className='overflow-hidden border-none bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white shadow-xl'>
-					<CardContent className='grid gap-6 p-6 md:p-8 xl:grid-cols-[1.5fr_0.8fr]'>
-						<div className='space-y-5'>
-							<Badge className='bg-white/10 text-white hover:bg-white/10'>
-								Quản lý vận hành các ban
-							</Badge>
-							<div className='space-y-3'>
-								<h1 className='max-w-3xl text-3xl font-semibold tracking-tight md:text-4xl'>
-									Trang điều phối 3 ban trọng tâm của CKC IT Club
-								</h1>
-								<p className='max-w-2xl text-sm leading-6 text-slate-300 md:text-base'>
-									Theo dõi nhanh nhân sự, tiến độ và trọng tâm hoạt động của
-									ba ban: học thuật, tình nguyện và truyền thông trong cùng một màn
-									hình quản trị.
-								</p>
-							</div>
-							<div className='flex flex-wrap gap-3'>
-								<Button asChild variant='secondary' size='lg'>
-									<Link to='/requests'>
-										Xem hồ sơ ứng tuyển
-										<ArrowRight />
-									</Link>
-								</Button>
-								<Button
-									asChild
-									variant='outline'
-									size='lg'
-									className='border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white'>
-									<Link to='/questions'>Quản lý câu hỏi tuyển thành viên</Link>
-								</Button>
-							</div>
-						</div>
+		<div className='h-full flex-1 flex-col'>
+			<div className='flex items-center p-4 md:p-6 lg:p-8'>
+				<div className='flex flex-col gap-1'>
+					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý ban</h2>
+					<p className='text-muted-foreground'>
+						Danh sách các ban vận hành chính của CKC IT Club.
+					</p>
+				</div>
+			</div>
 
-						<div className='grid gap-3 sm:grid-cols-3 xl:grid-cols-1'>
-							<div className='rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur'>
-								<div className='text-sm text-slate-300'>Tổng thành viên nòng cốt</div>
-								<div className='mt-2 text-3xl font-semibold'>{totalMembers}</div>
-								<div className='mt-1 text-xs text-slate-400'>
-									Phân bổ đều giữa 3 ban vận hành chính
-								</div>
-							</div>
-							<div className='rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur'>
-								<div className='text-sm text-slate-300'>Vị trí đang cần bổ sung</div>
-								<div className='mt-2 text-3xl font-semibold'>
-									{totalOpenPositions}
-								</div>
-								<div className='mt-1 text-xs text-slate-400'>
-									Ưu tiên mentor học thuật và điều phối tình nguyện
-								</div>
-							</div>
-							<div className='rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur'>
-								<div className='text-sm text-slate-300'>Đầu việc đang chạy</div>
-								<div className='mt-2 text-3xl font-semibold'>{totalProjects}</div>
-								<div className='mt-1 text-xs text-slate-400'>
-									Bao gồm chương trình nội bộ và hoạt động cộng đồng
-								</div>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+			<div className='flex flex-col gap-4 p-4 pt-0 md:p-6 md:pt-0 lg:p-8 lg:pt-0'>
+				<div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+					<div className='flex flex-1 items-center gap-2'>
+						<Input
+							placeholder='Tìm kiếm theo tên ban...'
+							value={search}
+							onChange={(event) => setSearch(event.target.value)}
+							className='h-8 w-full sm:w-64 md:w-72 lg:w-80'
+						/>
+					</div>
+					<div className='flex flex-wrap items-center gap-2'>
+						<Button
+							size='sm'
+							onClick={() => {
+								setSelectedDepartment(null);
+								setIsFormOpen(true);
+							}}
+							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
+							<Plus className='h-4 w-4' />
+							Thêm ban mới
+						</Button>
+					</div>
+				</div>
 
-				<div className='grid gap-4 xl:grid-cols-3'>
-					{divisions.map((division) => {
-						const Icon = division.icon;
-
-						return (
-							<Card
-								key={division.id}
-								className={`overflow-hidden border-border/70 bg-gradient-to-br ${division.theme.panel}`}>
-								<CardHeader className='space-y-4'>
-									<div className='flex items-start justify-between gap-3'>
-										<div className='space-y-2'>
-											<Badge className={division.theme.soft}>{division.status}</Badge>
-											<CardTitle className='text-xl'>{division.name}</CardTitle>
+				<div className='overflow-hidden rounded-md border'>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead className='w-[50px]'>
+									<Checkbox
+										aria-label='Chọn tất cả ban'
+										checked={allSelected}
+										onCheckedChange={(checked) => toggleAll(checked === true)}
+									/>
+								</TableHead>
+								<TableHead className='w-[100px]'>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("id")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										ID
+										{getSortIcon("id")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("name")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Tên ban
+										{getSortIcon("name")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<span className='text-sm'>Mô tả</span>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("users_count")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Thành viên
+										{getSortIcon("users_count")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("is_active")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Trạng thái
+										{getSortIcon("is_active")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("created_at")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Ngày tạo
+										{getSortIcon("created_at")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("updated_at")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Ngày cập nhật
+										{getSortIcon("updated_at")}
+									</Button>
+								</TableHead>
+								<TableHead className='w-[50px]'></TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{departments.map((department) => (
+								<TableRow key={department.id}>
+									<TableCell>
+										<Checkbox
+											aria-label={`Chọn ban ${department.id}`}
+											checked={isSelected(department.id)}
+											onCheckedChange={(checked) =>
+												toggleOne(department.id, checked === true)
+											}
+										/>
+									</TableCell>
+									<TableCell className='font-medium'>BAN-{department.id}</TableCell>
+									<TableCell>
+										<div className='flex items-center gap-3'>
+											<div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'>
+												{getDepartmentIcon(department.slug)}
+											</div>
+											<div className='flex min-w-0 flex-col'>
+												<span className='font-medium'>{department.name}</span>
+												<span className='text-xs text-muted-foreground'>
+													{department.slug}
+												</span>
+											</div>
 										</div>
-										<div
-											className={`flex h-11 w-11 items-center justify-center rounded-2xl ${division.theme.accent} text-white shadow-lg`}>
-											<Icon className='h-5 w-5' />
+									</TableCell>
+									<TableCell className='max-w-[360px]'>
+										<p className='line-clamp-2 text-sm text-muted-foreground'>
+											{department.description ?? "Chưa có mô tả"}
+										</p>
+									</TableCell>
+									<TableCell>{department.users_count}</TableCell>
+									<TableCell>{getStatusBadge(department.is_active)}</TableCell>
+									<TableCell>{department.created_at ?? "N/A"}</TableCell>
+									<TableCell>{department.updated_at ?? "N/A"}</TableCell>
+									<TableCell>
+										<DropdownMenu>
+											<DropdownMenuTrigger asChild>
+												<Button
+													variant='ghost'
+													className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'>
+													<MoreHorizontal className='h-4 w-4' />
+													<span className='sr-only'>Mở thao tác</span>
+												</Button>
+											</DropdownMenuTrigger>
+											<DropdownMenuContent align='end' className='w-[180px]'>
+												<DropdownMenuItem
+													onClick={() => void handleShowDetail(department)}>
+													<Eye className='h-4 w-4' />
+													Xem chi tiết
+												</DropdownMenuItem>
+												<DropdownMenuItem
+													onClick={() => {
+														setSelectedDepartment(department);
+														setIsMemberFormOpen(true);
+													}}>
+													<UserPlus className='h-4 w-4' />
+													Thêm thành viên
+												</DropdownMenuItem>
+												<DropdownMenuItem
+													onClick={() => {
+														setSelectedDepartment(department);
+														setIsFormOpen(true);
+													}}>
+													<Pencil className='h-4 w-4' />
+													Cập nhật
+												</DropdownMenuItem>
+											</DropdownMenuContent>
+										</DropdownMenu>
+									</TableCell>
+								</TableRow>
+							))}
+							{departments.length === 0 && (
+								<TableRow>
+									<TableCell colSpan={9} className='h-24 text-center'>
+										Không tìm thấy ban phù hợp.
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+						<TableFooter className='bg-transparent'>
+							<TableRow>
+								<TableCell colSpan={9}>
+									<div className='flex items-center justify-between px-2'>
+										<div className='flex flex-1 items-center gap-3 text-sm text-muted-foreground'>
+											Hiển thị {departments.length} / {meta.total} ban.
+											{selectedIds.length > 0 && (
+												<>
+													<span className='text-border'>|</span>
+													<span className='font-medium text-foreground'>
+														{selectedIds.length} ban được chọn
+													</span>
+												</>
+											)}
+										</div>
+										<div className='flex items-center space-x-6 lg:space-x-8'>
+											<div className='flex items-center space-x-2'>
+												<p className='text-sm font-medium'>Số hàng mỗi trang</p>
+												<Select
+													value={`${meta.per_page}`}
+													onValueChange={(value) =>
+														setMeta((prev) => ({
+															...prev,
+															per_page: Number(value),
+															current_page: 1,
+														}))
+													}>
+													<SelectTrigger className='h-8 w-[70px]'>
+														<SelectValue placeholder={meta.per_page} />
+													</SelectTrigger>
+													<SelectContent side='top'>
+														{[10, 20, 25, 30, 40, 50].map((pageSize) => (
+															<SelectItem key={pageSize} value={`${pageSize}`}>
+																{pageSize}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</div>
+											<div className='flex w-[120px] items-center justify-center text-sm font-medium'>
+												Trang {meta.current_page} / {meta.last_page}
+											</div>
+											<div className='flex items-center space-x-2'>
+												<Button
+													variant='outline'
+													className='hidden h-8 w-8 p-0 lg:flex'
+													onClick={() =>
+														setMeta((prev) => ({ ...prev, current_page: 1 }))
+													}
+													disabled={meta.current_page === 1}>
+													<span className='sr-only'>Trang đầu</span>
+													<ChevronsLeft className='h-4 w-4' />
+												</Button>
+												<Button
+													variant='outline'
+													className='h-8 w-8 p-0'
+													onClick={() =>
+														setMeta((prev) => ({
+															...prev,
+															current_page: prev.current_page - 1,
+														}))
+													}
+													disabled={meta.current_page === 1}>
+													<span className='sr-only'>Trang trước</span>
+													<ChevronLeft className='h-4 w-4' />
+												</Button>
+												<Button
+													variant='outline'
+													className='h-8 w-8 p-0'
+													onClick={() =>
+														setMeta((prev) => ({
+															...prev,
+															current_page: prev.current_page + 1,
+														}))
+													}
+													disabled={meta.current_page === meta.last_page}>
+													<span className='sr-only'>Trang sau</span>
+													<ChevronRight className='h-4 w-4' />
+												</Button>
+												<Button
+													variant='outline'
+													className='hidden h-8 w-8 p-0 lg:flex'
+													onClick={() =>
+														setMeta((prev) => ({
+															...prev,
+															current_page: meta.last_page,
+														}))
+													}
+													disabled={meta.current_page === meta.last_page}>
+													<span className='sr-only'>Trang cuối</span>
+													<ChevronsRight className='h-4 w-4' />
+												</Button>
+											</div>
 										</div>
 									</div>
-									<CardDescription className='text-sm leading-6 text-foreground/80'>
-										{division.description}
-									</CardDescription>
-								</CardHeader>
-								<CardContent className='space-y-5'>
-									<div className='grid grid-cols-3 gap-3'>
-										{division.metrics.map((metric) => (
+								</TableCell>
+							</TableRow>
+						</TableFooter>
+					</Table>
+				</div>
+			</div>
+
+			<DepartmentFormModal
+				open={isFormOpen}
+				onOpenChange={(open) => {
+					setIsFormOpen(open);
+					if (!open) setSelectedDepartment(null);
+				}}
+				department={selectedDepartment}
+				onSuccess={() => void fetchDepartments()}
+			/>
+
+			<DepartmentMemberModal
+				open={isMemberFormOpen}
+				onOpenChange={(open) => {
+					setIsMemberFormOpen(open);
+					if (!open) setSelectedDepartment(null);
+				}}
+				department={selectedDepartment}
+				onSuccess={() => void fetchDepartments()}
+			/>
+
+			<Dialog open={Boolean(detailDepartment)} onOpenChange={() => setDetailDepartment(null)}>
+				<DialogContent className='max-w-md'>
+					<DialogHeader>
+						<DialogTitle>Chi tiết ban</DialogTitle>
+					</DialogHeader>
+					{detailDepartment ? (
+						<div className='space-y-4 text-sm'>
+							<div className='flex items-center gap-3 rounded-md border p-3'>
+								<div className='flex h-9 w-9 items-center justify-center rounded-full bg-muted'>
+									{getDepartmentIcon(detailDepartment.slug)}
+								</div>
+								<div className='min-w-0'>
+									<div className='font-medium'>{detailDepartment.name}</div>
+									<div className='text-xs text-muted-foreground'>
+										{detailDepartment.slug}
+									</div>
+								</div>
+							</div>
+							<div className='grid grid-cols-[120px_1fr] gap-3'>
+								<span className='text-muted-foreground'>Trạng thái</span>
+								{getStatusBadge(detailDepartment.is_active)}
+								<span className='text-muted-foreground'>Thành viên</span>
+								<span>{detailDepartment.users_count}</span>
+								<span className='text-muted-foreground'>Ngày tạo</span>
+								<span>{detailDepartment.created_at ?? "N/A"}</span>
+								<span className='text-muted-foreground'>Cập nhật</span>
+								<span>{detailDepartment.updated_at ?? "N/A"}</span>
+							</div>
+							<div className='space-y-1.5'>
+								<div className='text-muted-foreground'>Mô tả</div>
+								<p className='rounded-md border bg-muted/20 p-3 leading-6'>
+									{detailDepartment.description ?? "Chưa có mô tả"}
+								</p>
+							</div>
+							<div className='space-y-2'>
+								<div className='text-muted-foreground'>Danh sách thành viên</div>
+								{isDetailLoading ? (
+									<div className='rounded-md border px-3 py-4 text-center text-muted-foreground'>
+										Đang tải thành viên...
+									</div>
+								) : detailDepartment.users.length > 0 ? (
+									<div className='max-h-64 space-y-2 overflow-y-auto pr-1'>
+										{detailDepartment.users.map((user) => (
 											<div
-												key={metric.label}
-												className='rounded-2xl border bg-background/80 p-3 shadow-sm'>
-												<div className='text-xs text-muted-foreground'>
-													{metric.label}
+												key={user.id}
+												className='flex items-start justify-between gap-3 rounded-md border px-3 py-2'>
+												<div className='min-w-0'>
+													<div className='truncate font-medium'>{user.full_name}</div>
+													<div className='truncate text-xs text-muted-foreground'>
+														{user.email}
+													</div>
 												</div>
-												<div className='mt-2 text-lg font-semibold'>
-													{metric.value}
+												<div className='flex shrink-0 flex-col items-end gap-1'>
+													<CompactBadgeList
+														items={[
+															{
+																key: user.department_role.id ?? user.id,
+																label:
+																	user.department_role.label ??
+																	user.position ??
+																	"Chưa có vai trò",
+																className:
+																	"border-primary-500/20 bg-primary-500/10 text-primary-700 hover:bg-primary-500/10",
+															},
+														]}
+														maxVisibleItems={1}
+													/>
+													{user.is_head ? (
+														<span className='text-xs text-muted-foreground'>
+															Trưởng ban
+														</span>
+													) : null}
 												</div>
 											</div>
 										))}
 									</div>
-
-									<div className='space-y-3 rounded-2xl border bg-background/80 p-4 shadow-sm'>
-										<div className='flex items-center justify-between text-sm'>
-											<span className='flex items-center gap-2 text-muted-foreground'>
-												<Users className='h-4 w-4' />
-												Nhân sự hiện tại
-											</span>
-											<span className='font-medium text-foreground'>
-												{division.memberCount} thành viên
-											</span>
-										</div>
-										<div className='flex items-center justify-between text-sm'>
-											<span className='flex items-center gap-2 text-muted-foreground'>
-												<Clock3 className='h-4 w-4' />
-												Lịch họp
-											</span>
-											<span className='font-medium text-foreground'>
-												{division.meetingSchedule}
-											</span>
-										</div>
-										<div className='flex items-center justify-between text-sm'>
-											<span className='flex items-center gap-2 text-muted-foreground'>
-												<Target className='h-4 w-4' />
-												Vị trí mở
-											</span>
-											<span className='font-medium text-foreground'>
-												{division.openPositions} vị trí
-											</span>
-										</div>
+								) : (
+									<div className='rounded-md border px-3 py-4 text-center text-muted-foreground'>
+										Chưa có thành viên.
 									</div>
-								</CardContent>
-							</Card>
-						);
-					})}
-				</div>
-
-				<Tabs defaultValue='academic' className='space-y-4'>
-					<TabsList className='grid h-auto w-full grid-cols-1 gap-2 rounded-3xl border bg-background/90 p-2 shadow-sm md:grid-cols-3'>
-						{divisions.map((division) => {
-							const Icon = division.icon;
-
-							return (
-							<TabsTrigger
-								key={division.id}
-								value={division.id}
-								className={cn(
-									"group h-auto rounded-2xl border border-transparent px-4 py-4 text-left transition-all duration-200",
-									"data-[state=active]:-translate-y-0.5 data-[state=active]:shadow-lg",
-									"data-[state=active]:text-foreground",
-									division.theme.tabActive,
-								)}>
-								<div className='flex items-center gap-3'>
-									<div
-										className={cn(
-											"flex h-11 w-11 items-center justify-center rounded-2xl border bg-muted/60 text-muted-foreground transition-all duration-200",
-											division.theme.tabIconActive,
-										)}>
-										<Icon className='h-5 w-5' />
-									</div>
-									<div className='flex min-w-0 flex-1 flex-col items-start'>
-										<span className='text-base font-semibold'>
-											{division.shortLabel}
-										</span>
-										<span className='text-xs text-muted-foreground group-data-[state=active]:text-foreground/70'>
-											{division.memberCount} thành viên nòng cốt
-										</span>
-									</div>
-									<div className='hidden h-2.5 w-2.5 rounded-full bg-transparent transition-all duration-200 group-data-[state=active]:bg-current md:block' />
-								</div>
-							</TabsTrigger>
-							);
-						})}
-					</TabsList>
-
-					{divisions.map((division) => (
-						<TabsContent key={division.id} value={division.id} className='space-y-4'>
-							<div className='grid gap-4 xl:grid-cols-[1.3fr_0.9fr]'>
-								<Card className='border-border/70'>
-									<CardHeader>
-										<div className='flex flex-wrap items-start justify-between gap-3'>
-											<div className='space-y-2'>
-												<Badge className={division.theme.soft}>
-													Chi tiết vận hành
-												</Badge>
-												<CardTitle className='text-2xl'>
-													{division.name}
-												</CardTitle>
-												<CardDescription className='max-w-2xl text-sm leading-6'>
-													{division.description}
-												</CardDescription>
-											</div>
-											<div className='rounded-2xl border bg-muted/40 px-4 py-3 text-sm'>
-												<div className='text-muted-foreground'>Phản hồi vận hành</div>
-												<div className='mt-1 font-medium'>
-													{division.responseTime}
-												</div>
-											</div>
-										</div>
-									</CardHeader>
-									<CardContent className='grid gap-4 lg:grid-cols-2'>
-										<div className='rounded-2xl border bg-muted/25 p-5'>
-											<div className='flex items-center gap-2 text-sm text-muted-foreground'>
-												<ShieldCheck className='h-4 w-4' />
-												Điều hành
-											</div>
-											<div className='mt-4 space-y-4'>
-												<div>
-													<div className='text-sm text-muted-foreground'>
-														Trưởng ban
-													</div>
-													<div className='text-lg font-semibold'>
-														{division.lead}
-													</div>
-												</div>
-												<div>
-													<div className='text-sm text-muted-foreground'>
-														Phó ban
-													</div>
-													<div className='text-lg font-semibold'>
-														{division.viceLead}
-													</div>
-												</div>
-												<div>
-													<div className='text-sm text-muted-foreground'>
-														Dự án đang chạy
-													</div>
-													<div className='text-lg font-semibold'>
-														{division.projectsRunning} đầu việc trọng tâm
-													</div>
-												</div>
-											</div>
-										</div>
-
-										<div className='rounded-2xl border bg-muted/25 p-5'>
-											<div className='flex items-center gap-2 text-sm text-muted-foreground'>
-												<Target className='h-4 w-4' />
-												Trọng tâm của ban
-											</div>
-											<div className='mt-4 space-y-3'>
-												{division.focusAreas.map((area) => (
-													<div
-														key={area}
-														className='rounded-xl border bg-background px-4 py-3 text-sm leading-6'>
-														{area}
-													</div>
-												))}
-											</div>
-										</div>
-									</CardContent>
-								</Card>
-
-								<div className='space-y-4'>
-									<Card className='border-border/70'>
-										<CardHeader>
-											<CardTitle className='text-lg'>Chỉ số theo dõi</CardTitle>
-											<CardDescription>
-												Theo dõi tiến độ vận hành trong tháng hiện tại.
-											</CardDescription>
-										</CardHeader>
-										<CardContent className='space-y-5'>
-											{division.kpis.map((kpi) => (
-												<div key={kpi.label} className='space-y-2'>
-													<div className='flex items-center justify-between gap-3 text-sm'>
-														<span className='font-medium'>{kpi.label}</span>
-														<span className='text-muted-foreground'>
-															{kpi.value}%
-														</span>
-													</div>
-													<Progress value={kpi.value} />
-													<p className='text-xs leading-5 text-muted-foreground'>
-														{kpi.helper}
-													</p>
-												</div>
-											))}
-										</CardContent>
-									</Card>
-
-									<Card className='border-border/70'>
-										<CardHeader>
-											<CardTitle className='text-lg'>
-												Công việc ưu tiên
-											</CardTitle>
-											<CardDescription>
-												Danh sách đầu việc đang cần theo dõi sát.
-											</CardDescription>
-										</CardHeader>
-										<CardContent className='space-y-3'>
-											{division.currentProjects.map((project, index) => (
-												<div
-													key={project}
-													className='flex items-start gap-3 rounded-2xl border bg-muted/20 px-4 py-3'>
-													<div
-														className={`mt-0.5 h-2.5 w-2.5 rounded-full ${division.theme.accent}`}
-													/>
-													<div className='space-y-1'>
-														<div className='text-sm font-medium'>
-															{index + 1}. {project}
-														</div>
-														<div className='text-xs text-muted-foreground'>
-															Cần cập nhật checkpoint trong buổi họp gần nhất.
-														</div>
-													</div>
-												</div>
-											))}
-										</CardContent>
-									</Card>
-								</div>
+								)}
 							</div>
-						</TabsContent>
-					))}
-				</Tabs>
-
-				<div className='grid gap-4 lg:grid-cols-3'>
-					<Card className='border-border/70'>
-						<CardHeader>
-							<CardTitle className='text-lg'>Nhân sự cần ưu tiên</CardTitle>
-							<CardDescription>
-								Phân bổ tuyển thêm cho từng ban trong đợt tới.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className='space-y-3 text-sm'>
-							<div className='flex items-center justify-between rounded-xl border px-4 py-3'>
-								<span>Ban Học thuật</span>
-								<Badge variant='outline'>02 mentor</Badge>
-							</div>
-							<div className='flex items-center justify-between rounded-xl border px-4 py-3'>
-								<span>Ban Tình nguyện</span>
-								<Badge variant='outline'>03 điều phối viên</Badge>
-							</div>
-							<div className='flex items-center justify-between rounded-xl border px-4 py-3'>
-								<span>Ban Truyền thông</span>
-								<Badge variant='outline'>01 media lead</Badge>
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className='border-border/70'>
-						<CardHeader>
-							<CardTitle className='text-lg'>Lịch phối hợp liên ban</CardTitle>
-							<CardDescription>
-								Các mốc cần đồng bộ giữa ba ban trong tháng này.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className='space-y-3 text-sm'>
-							<div className='rounded-xl border px-4 py-3'>
-								<div className='flex items-center gap-2 font-medium'>
-									<CalendarRange className='h-4 w-4' />
-									Tuần 1
-								</div>
-								<p className='mt-2 text-muted-foreground'>
-									Chốt nhu cầu tuyển bổ sung và cập nhật câu hỏi ứng tuyển.
-								</p>
-							</div>
-							<div className='rounded-xl border px-4 py-3'>
-								<div className='flex items-center gap-2 font-medium'>
-									<CalendarRange className='h-4 w-4' />
-									Tuần 2
-								</div>
-								<p className='mt-2 text-muted-foreground'>
-									Đồng bộ lịch workshop, chiến dịch cộng đồng và kế hoạch truyền thông nội bộ.
-								</p>
-							</div>
-							<div className='rounded-xl border px-4 py-3'>
-								<div className='flex items-center gap-2 font-medium'>
-									<CalendarRange className='h-4 w-4' />
-									Tuần 4
-								</div>
-								<p className='mt-2 text-muted-foreground'>
-									Tổng kết KPI, điều chỉnh nhân sự và khóa kế hoạch tháng sau.
-								</p>
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className='border-border/70'>
-						<CardHeader>
-							<CardTitle className='text-lg'>Gợi ý vận hành</CardTitle>
-							<CardDescription>
-								Những điểm nên theo dõi để giảm nghẽn trong quá trình điều phối.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className='space-y-3 text-sm text-muted-foreground'>
-							<div className='rounded-xl border px-4 py-3 leading-6'>
-								Thiết lập checklist bàn giao sau mỗi chiến dịch để ban học thuật và
-								tình nguyện cùng tái sử dụng tài nguyên truyền thông.
-							</div>
-							<div className='rounded-xl border px-4 py-3 leading-6'>
-								Dùng chung một đầu mối cập nhật tiến độ hàng tuần để hạn chế lệch
-								thông tin giữa trưởng ban.
-							</div>
-							<div className='rounded-xl border px-4 py-3 leading-6'>
-								Gắn nhu cầu tuyển người với đúng dự án đang thiếu thay vì tuyển
-								tràn cho toàn CLB.
-							</div>
-						</CardContent>
-					</Card>
-				</div>
-			</div>
+						</div>
+					) : null}
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

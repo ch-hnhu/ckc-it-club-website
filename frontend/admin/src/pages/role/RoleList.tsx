@@ -34,11 +34,13 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	Eye,
 	MoreHorizontal,
 	Pencil,
 	Plus,
 	Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import roleService from "@/services/role.service";
@@ -67,6 +69,8 @@ function RoleList() {
 		key: "created_at",
 		order: "desc",
 	});
+	const navigate = useNavigate();
+
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
 		roles.map((role) => role.id),
 	);
@@ -201,7 +205,7 @@ function RoleList() {
 										variant='ghost'
 										onClick={() => handleSort("label")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Role
+										Vai trò
 										{getSortIcon("label")}
 									</Button>
 								</TableHead>
@@ -210,7 +214,7 @@ function RoleList() {
 										variant='ghost'
 										onClick={() => handleSort("name")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Value
+										Slug
 										{getSortIcon("name")}
 									</Button>
 								</TableHead>
@@ -219,7 +223,7 @@ function RoleList() {
 										variant='ghost'
 										onClick={() => handleSort("is_system")}
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Is System
+										Vai trò hệ thống
 										{getSortIcon("is_system")}
 									</Button>
 								</TableHead>
@@ -278,6 +282,11 @@ function RoleList() {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align='end' className='w-[160px]'>
+												<DropdownMenuItem
+													onClick={() => navigate(`/roles/${role.id}`)}>
+													<Eye className='h-4 w-4' />
+													Chi tiết
+												</DropdownMenuItem>
 												<DropdownMenuItem
 													onClick={() => {
 														if (role.is_system) {

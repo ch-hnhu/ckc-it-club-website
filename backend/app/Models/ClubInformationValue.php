@@ -25,6 +25,7 @@ class ClubInformationValue extends Model
     {
         return [
             'is_active' => 'boolean',
+            'position' => 'integer',
             'created_at' => 'datetime:d/m/Y',
             'updated_at' => 'datetime:d/m/Y',
         ];

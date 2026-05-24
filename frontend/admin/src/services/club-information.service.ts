@@ -8,10 +8,12 @@ export type CreateClubInformationPayload = {
 	slug: string;
 	type: string;
 	description?: string;
-	is_active: boolean;
 };
 
-export type UpdateClubInformationPayload = CreateClubInformationPayload;
+export type UpdateClubInformationPayload = {
+	slug: string;
+	description?: string;
+};
 
 export type CreateClubInformationValuePayload = {
 	value: string;
@@ -82,6 +84,15 @@ const clubInformationService = {
 		return api.put<ApiResponse<ClubInformationValue>, UpdateClubInformationValuePayload>(
 			`/club-informations/${clubInformationId}/values/${valueId}`,
 			payload,
+		);
+	},
+
+	async setDefaultClubInformationValue(
+		clubInformationId: number,
+		valueId: number,
+	): Promise<ApiResponse<ClubInformationValue>> {
+		return api.patch<ApiResponse<ClubInformationValue>>(
+			`/club-informations/${clubInformationId}/values/${valueId}/default`,
 		);
 	},
 
