@@ -4,6 +4,7 @@ import Dashboard from "../pages/Dashboard";
 import FacultyList from "@/pages/faculty/FacultyList";
 import FacultyTrashPage from "@/pages/faculty/FacultyTrashPage";
 import MajorList from "@/pages/major/MajorList";
+import MajorTrashPage from "@/pages/major/MajorTrashPage";
 import SchoolClassList from "@/pages/school-class/SchoolClassList";
 import ContactList from "@/pages/contact/ContactList";
 import UserList from "@/pages/user/UserList";
@@ -128,6 +129,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='academic_data.view'>
 						<MajorList />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "majors/trash",
+				element: (
+					<PermissionRoute permission='academic_data.view'>
+						<MajorTrashPage />
 					</PermissionRoute>
 				),
 			},

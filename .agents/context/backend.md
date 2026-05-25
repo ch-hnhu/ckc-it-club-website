@@ -71,6 +71,9 @@
 - `PATCH /api/v1/faculties/{faculty}/restore`
 - `DELETE /api/v1/faculties/{faculty}/force`
 - `GET /api/v1/majors`
+- `GET /api/v1/majors/trash`
+- `PATCH /api/v1/majors/{major}/restore`
+- `DELETE /api/v1/majors/{major}/force`
 - `GET /api/v1/roles`
 - `GET /api/v1/roles/{role}`
 - `POST /api/v1/roles/{role}/permissions`
@@ -199,6 +202,7 @@
 - `majors`
 - belongs to one `faculty`.
 - has many `school_classes`.
+- majors use `deleted_at/deleted_by` for the admin trash workflow; they can be restored from `GET /majors/trash` and permanently deleted from trash.
 - `school_classes`
 - belongs to one `major`.
 - `departments`

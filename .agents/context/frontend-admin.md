@@ -72,6 +72,8 @@
 - faculty trash page with search, sorting, pagination, restore, and permanent delete actions
 - `/majors`
 - major list
+- `/majors/trash`
+- major trash page with search, sorting, pagination, restore, and permanent delete actions
 - `/classes`
 - school class list
 - `/contacts`

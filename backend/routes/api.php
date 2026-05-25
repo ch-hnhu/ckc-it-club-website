@@ -174,6 +174,7 @@ Route::prefix('v1')->group(function () {
             Route::get('academic-structure/imports/{academicStructureImport}/download', [AcademicStructureController::class, 'download']);
             Route::get('faculties/trash', [FacultyController::class, 'trash']);
             Route::apiResource('faculties', FacultyController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
+            Route::get('majors/trash', [MajorController::class, 'trash']);
             Route::apiResource('majors', MajorController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
             Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
         });
@@ -182,6 +183,8 @@ Route::prefix('v1')->group(function () {
             Route::patch('faculties/{faculty}/restore', [FacultyController::class, 'restore']);
             Route::delete('faculties/{faculty}/force', [FacultyController::class, 'forceDestroy']);
             Route::apiResource('faculties', FacultyController::class)->only(['store', 'update', 'destroy']);
+            Route::patch('majors/{major}/restore', [MajorController::class, 'restore']);
+            Route::delete('majors/{major}/force', [MajorController::class, 'forceDestroy']);
             Route::apiResource('majors', MajorController::class)->only(['store', 'update', 'destroy']);
             Route::apiResource('school-classes', SchoolClassController::class)->only(['store', 'update', 'destroy']);
         });
