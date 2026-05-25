@@ -76,6 +76,8 @@
 - major trash page with search, sorting, pagination, restore, and permanent delete actions
 - `/classes`
 - school class list
+- `/classes/trash`
+- school class trash page with search, sorting, pagination, restore, and permanent delete actions
 - `/contacts`
 - contact management list with real backend data and status updates
 - `/divisions`

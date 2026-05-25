@@ -176,6 +176,7 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('faculties', FacultyController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
             Route::get('majors/trash', [MajorController::class, 'trash']);
             Route::apiResource('majors', MajorController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
+            Route::get('school-classes/trash', [SchoolClassController::class, 'trash']);
             Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
         });
         Route::middleware('permission:academic_structure.import')->group(function () {
@@ -186,6 +187,8 @@ Route::prefix('v1')->group(function () {
             Route::patch('majors/{major}/restore', [MajorController::class, 'restore']);
             Route::delete('majors/{major}/force', [MajorController::class, 'forceDestroy']);
             Route::apiResource('majors', MajorController::class)->only(['store', 'update', 'destroy']);
+            Route::patch('school-classes/{schoolClass}/restore', [SchoolClassController::class, 'restore']);
+            Route::delete('school-classes/{schoolClass}/force', [SchoolClassController::class, 'forceDestroy']);
             Route::apiResource('school-classes', SchoolClassController::class)->only(['store', 'update', 'destroy']);
         });
     });

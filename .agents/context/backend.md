@@ -80,6 +80,9 @@
 - `GET /api/v1/permissions`
 - `PUT /api/v1/permissions/{permission}/roles`
 - `GET /api/v1/school-classes`
+- `GET /api/v1/school-classes/trash`
+- `PATCH /api/v1/school-classes/{schoolClass}/restore`
+- `DELETE /api/v1/school-classes/{schoolClass}/force`
 - `POST /api/v1/academic-structure/import`
 - `GET /api/v1/academic-structure/imports`
 - `GET /api/v1/academic-structure/imports/stats`
@@ -205,6 +208,7 @@
 - majors use `deleted_at/deleted_by` for the admin trash workflow; they can be restored from `GET /majors/trash` and permanently deleted from trash.
 - `school_classes`
 - belongs to one `major`.
+- school classes use `deleted_at/deleted_by` for the admin trash workflow; they can be restored from `GET /school-classes/trash` and permanently deleted from trash.
 - `departments`
 - club operating departments/ban records seeded for Học thuật, Truyền thông, and Tình nguyện.
 - admins can list, fetch detail, create, update, soft-delete, restore, and permanently delete departments; users attach to departments through `department_user`.

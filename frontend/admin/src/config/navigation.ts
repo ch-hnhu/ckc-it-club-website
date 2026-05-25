@@ -171,6 +171,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/majors$/, permission: "academic_data.view" },
 	{ pattern: /^\/majors\/trash$/, permission: "academic_data.view" },
 	{ pattern: /^\/classes$/, permission: "academic_data.view" },
+	{ pattern: /^\/classes\/trash$/, permission: "academic_data.view" },
 	{ pattern: /^\/contacts$/, permission: "contacts.view" },
 	{ pattern: /^\/divisions$/, permission: "club_info.view" },
 	{ pattern: /^\/divisions\/trash$/, permission: "club_info.view" },
