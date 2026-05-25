@@ -81,9 +81,13 @@
 - `GET /api/v1/contacts`
 - `PATCH /api/v1/contacts/{contact}/status`
 - `GET /api/v1/departments`
+- `GET /api/v1/departments/trash`
 - `POST /api/v1/departments`
 - `GET /api/v1/departments/{department}`
 - `PUT/PATCH /api/v1/departments/{department}`
+- `DELETE /api/v1/departments/{department}`
+- `PATCH /api/v1/departments/{department}/restore`
+- `DELETE /api/v1/departments/{department}/force`
 - `POST /api/v1/departments/{department}/users`
 - `GET /api/v1/club-informations`
 - `POST /api/v1/club-informations`
@@ -195,7 +199,8 @@
 - belongs to one `major`.
 - `departments`
 - club operating departments/ban records seeded for Học thuật, Truyền thông, and Tình nguyện.
-- admins can list, fetch detail, create, and update departments; users attach to departments through `department_user`.
+- admins can list, fetch detail, create, update, soft-delete, restore, and permanently delete departments; users attach to departments through `department_user`.
+- department soft delete uses `departments.deleted_at` and `deleted_by`; the trash endpoint is `GET /departments/trash`. A department can only be moved to trash when it has no members.
 - department member management endpoints support adding members, changing whether a member is head of that department, and removing a member through `POST /departments/{department}/users`, `PATCH /departments/{department}/users/{user}`, and `DELETE /departments/{department}/users/{user}`; removing a head member also removes only that department's head role from the user.
 - department heads are resolved from the member's normal Spatie user roles against `departments.head_role_id`; the seeded head roles are `academic-head`, `communications-head`, and `volunteer-head`.
 - updating a department head assigns/removes only that department's configured head role on the user and does not sync or overwrite unrelated user roles, so one user can head multiple departments by holding multiple head roles.

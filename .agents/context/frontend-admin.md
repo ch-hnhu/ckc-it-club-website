@@ -245,6 +245,8 @@
 - Department management:
 - route `/divisions`
 - server-driven pagination, search, sort, status display through `CompactBadgeList`, row selection, member counts, create/update/delete modal flows, and row actions backed by backend department endpoints. Department delete is blocked when the department still has members; bulk delete uses a popup confirmation and only proceeds for selected departments without members.
+- route `/divisions/trash`
+- department trash page lists soft-deleted departments, supports search, sorting, pagination, restore, and permanent delete actions.
 - route `/divisions/:id`
 - detail page fetches `GET /departments/{department}`, renders the department info card, warns when no head exists, and manages members with client-side search, role filter, pagination, add-member modal, role-change modal, and remove confirmation.
 - add-member modal is intentionally minimal: member combobox, cancel/add actions, submit loading, close-and-refresh on success, and no primary-department toggle.

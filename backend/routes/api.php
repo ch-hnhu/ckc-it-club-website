@@ -130,6 +130,7 @@ Route::prefix('v1')->group(function () {
         // departments
         Route::middleware('permission:club_info.view')->group(function () {
             Route::get('departments', [DepartmentController::class, 'index']);
+            Route::get('departments/trash', [DepartmentController::class, 'trash']);
             Route::get('departments/{department}', [DepartmentController::class, 'show']);
         });
         Route::middleware('permission:club_info.manage')->group(function () {
@@ -137,6 +138,8 @@ Route::prefix('v1')->group(function () {
             Route::put('departments/{department}', [DepartmentController::class, 'update']);
             Route::patch('departments/{department}', [DepartmentController::class, 'update']);
             Route::delete('departments/{department}', [DepartmentController::class, 'destroy']);
+            Route::patch('departments/{department}/restore', [DepartmentController::class, 'restore']);
+            Route::delete('departments/{department}/force', [DepartmentController::class, 'forceDestroy']);
             Route::post('departments/{department}/users', [DepartmentController::class, 'storeUser']);
             Route::patch('departments/{department}/users/{user}', [DepartmentController::class, 'updateUserRole']);
             Route::delete('departments/{department}/users/{user}', [DepartmentController::class, 'destroyUser']);

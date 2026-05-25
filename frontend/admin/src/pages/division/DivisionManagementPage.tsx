@@ -320,6 +320,7 @@ function DivisionManagementPage() {
 							size='sm'
 							variant='outline'
 							type='button'
+							onClick={() => navigate("/divisions/trash")}
 							className='h-8'>
 							<Trash2 className='h-4 w-4' />
 							Thùng rác
@@ -620,7 +621,7 @@ function DivisionManagementPage() {
 						<AlertDialogDescription>
 							{deleteDepartment && deleteDepartment.users_count > 0
 								? "Không thể xóa ban đang có thành viên. Vui lòng xóa thành viên khỏi ban trước."
-								: "Ban sẽ bị xóa khỏi hệ thống. Hành động này không thể hoàn tác."}
+								: "Bạn có chắc chắn muốn xóa ban này?"}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -643,7 +644,7 @@ function DivisionManagementPage() {
 					<AlertDialogHeader>
 						<AlertDialogTitle>Xóa các ban đã chọn?</AlertDialogTitle>
 						<AlertDialogDescription>
-							{selectedIds.length} ban sẽ bị xóa khỏi hệ thống. Hành động này không thể hoàn tác.
+							Bạn có chắc chắn muốn xóa {selectedIds.length} ban đã chọn không?
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
