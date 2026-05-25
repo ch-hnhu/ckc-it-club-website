@@ -253,6 +253,13 @@
 - `academic_structure_imports`
 - admin academic structure import history for uploaded faculty/major/class files.
 - valid imports support `.xlsx` and `.csv`; unsupported uploaded file extensions are stored as `file_type = Other`, `status = failed`, and returned as validation errors so the admin UI can show failed upload history.
+- Community module schema is present but has no API/controllers yet:
+- `channels`, `posts`, `post_reports`, and `comments` support topic feeds, reports, nested comments, and soft-deleted comments.
+- `reactions` is polymorphic by `target_type`/`target_id` for posts, comments, and blogs.
+- `chat_rooms`, `chat_members`, and `messages` support direct/group chat, unread tracking through `last_read_at`, message replies, and soft-deleted messages.
+- `blogs`, `tags`, and `blog_tag` support long-form posts with normalized blog tags.
+- `media_files` stores shared uploads for posts, messages, and blogs.
+- Community notification metadata is added as nullable columns on the existing Laravel `notifications` table (`recipient_id`, `actor_id`, `community_type`, `target_type`, `target_id`, `message`) so existing database notifications continue to work through `notifiable_*`, `data`, and `read_at`.
 
 ## Recruitment Domain Rules
 
