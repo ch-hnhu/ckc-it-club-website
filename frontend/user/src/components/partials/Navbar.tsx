@@ -16,7 +16,7 @@ type NavbarProps = {
 };
 
 const NAV_ITEMS = [
-	{ label: "Bài viết", href: "#blog" },
+	{ label: "Cộng đồng", href: "/cong-dong" },
 	{ label: "Tài nguyên", href: "#resources" },
 	{ label: "Bảng xếp hạng", href: "#leaderboard" },
 	{ label: "Sự kiện", href: "#events" },
