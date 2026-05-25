@@ -67,6 +67,9 @@
 - `GET /api/v1/`
 - `GET /api/v1/users`
 - `GET /api/v1/faculties`
+- `GET /api/v1/faculties/trash`
+- `PATCH /api/v1/faculties/{faculty}/restore`
+- `DELETE /api/v1/faculties/{faculty}/force`
 - `GET /api/v1/majors`
 - `GET /api/v1/roles`
 - `GET /api/v1/roles/{role}`
@@ -192,6 +195,7 @@
 - `faculties`
 - top-level academic grouping.
 - has many `majors`.
+- faculties use existing `deleted_at/deleted_by` columns for the admin trash workflow; they can be restored from `GET /faculties/trash` and permanently deleted from trash.
 - `majors`
 - belongs to one `faculty`.
 - has many `school_classes`.

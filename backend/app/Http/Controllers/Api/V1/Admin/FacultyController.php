@@ -43,6 +43,42 @@ class FacultyController extends BaseApiController
 			->orderBy($sort, $order)
 			->paginate($perPage);
 
+		$data->getCollection()->transform(fn (Faculty $faculty) => $this->transformFaculty($faculty));
+
+		return $this->paginatedResponse($data, ApiMessage::RETRIEVED);
+	}
+
+	public function trash(Request $request): JsonResponse
+	{
+		$allowedSorts = ['id', 'value', 'label', 'slug', 'created_at', 'updated_at', 'deleted_at', 'majors_count'];
+		$sort = $request->query('sort', 'deleted_at');
+		$order = $request->query('order', 'desc');
+		$perPage = (int) $request->query('per_page', 10);
+		$search = $request->query('search');
+
+		if (! in_array($sort, $allowedSorts, true)) {
+			$sort = 'deleted_at';
+		}
+
+		if (! in_array($order, ['asc', 'desc'], true)) {
+			$order = 'desc';
+		}
+
+		$data = Faculty::onlyTrashed()
+			->withCount('majors')
+			->when($search, function ($query, $search) {
+				$query->where(function ($subQuery) use ($search) {
+					$subQuery
+						->where('value', 'like', "%{$search}%")
+						->orWhere('label', 'like', "%{$search}%")
+						->orWhere('slug', 'like', "%{$search}%");
+				});
+			})
+			->orderBy($sort, $order)
+			->paginate($perPage);
+
+		$data->getCollection()->transform(fn (Faculty $faculty) => $this->transformFaculty($faculty));
+
 		return $this->paginatedResponse($data, ApiMessage::RETRIEVED);
 	}
 
@@ -105,6 +141,8 @@ class FacultyController extends BaseApiController
 				continue;
 			}
 
+			$faculty->deleted_by = $request->user()?->id;
+			$faculty->save();
 			$faculty->delete();
 			$deleted++;
 		}
@@ -129,8 +167,42 @@ class FacultyController extends BaseApiController
 			]);
 		}
 
+		$faculty->deleted_by = $request->user()?->id;
+		$faculty->save();
 		$faculty->delete();
 
 		return $this->successResponse(true, null, 'Xóa khoa thành công.');
+	}
+	public function restore(int $faculty): JsonResponse
+	{
+		$faculty = Faculty::onlyTrashed()->findOrFail($faculty);
+		$faculty->restore();
+		$faculty->deleted_by = null;
+		$faculty->save();
+		$faculty->loadCount('majors');
+
+		return $this->successResponse(true, $this->transformFaculty($faculty), 'Khôi phục khoa thành công.');
+	}
+
+	public function forceDestroy(int $faculty): JsonResponse
+	{
+		$faculty = Faculty::onlyTrashed()->findOrFail($faculty);
+		$faculty->forceDelete();
+
+		return $this->successResponse(true, null, 'Xóa vĩnh viễn khoa thành công.');
+	}
+
+	private function transformFaculty(Faculty $faculty): array
+	{
+		return [
+			'id' => $faculty->id,
+			'value' => $faculty->value,
+			'label' => $faculty->label,
+			'slug' => $faculty->slug,
+			'majors_count' => $faculty->majors_count,
+			'created_at' => $faculty->created_at?->toISOString(),
+			'updated_at' => $faculty->updated_at?->toISOString(),
+			'deleted_at' => $faculty->deleted_at?->toISOString(),
+		];
 	}
 }

@@ -68,6 +68,8 @@
 - create-user form UI with avatar upload, required gender selection, and role loading from `/roles`
 - `/departments`
 - faculty list
+- `/departments/trash`
+- faculty trash page with search, sorting, pagination, restore, and permanent delete actions
 - `/majors`
 - major list
 - `/classes`

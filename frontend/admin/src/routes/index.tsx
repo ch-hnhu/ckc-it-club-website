@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/Dashboard";
 import FacultyList from "@/pages/faculty/FacultyList";
+import FacultyTrashPage from "@/pages/faculty/FacultyTrashPage";
 import MajorList from "@/pages/major/MajorList";
 import SchoolClassList from "@/pages/school-class/SchoolClassList";
 import ContactList from "@/pages/contact/ContactList";
@@ -111,6 +112,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='academic_data.view'>
 						<FacultyList />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "departments/trash",
+				element: (
+					<PermissionRoute permission='academic_data.view'>
+						<FacultyTrashPage />
 					</PermissionRoute>
 				),
 			},
