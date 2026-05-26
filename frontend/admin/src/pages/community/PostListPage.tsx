@@ -59,6 +59,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import { cn } from "@/lib/utils";
+import postService from "@/services/post.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -202,20 +203,34 @@ function PostListPage() {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
 	}, [debouncedSearch, statusFilter, sortConfig]);
 
-	// Fetch posts (placeholder — wire to postService when API is ready)
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
 
-		// TODO: replace with real API call
-		// postService.getPosts({ page, per_page, search, status, sort, order })
-		setTimeout(() => {
+		Promise.all([
+			postService.getPosts({
+				page: meta.current_page,
+				per_page: meta.per_page,
+				search: debouncedSearch || undefined,
+				sort: sortConfig.key ?? undefined,
+				order: sortConfig.order ?? undefined,
+				status: statusFilter !== "all" ? statusFilter : undefined,
+			}),
+			postService.getStats(),
+		]).then(([postsRes, statsRes]) => {
 			if (cancelled) return;
-			setPosts([]);
-			setStats(emptyStats);
-			setMeta({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
-			setLoading(false);
-		}, 600);
+			setPosts(postsRes.data);
+			setMeta((p) => ({
+				...p,
+				last_page: postsRes.meta.last_page,
+				total: postsRes.meta.total,
+			}));
+			setStats(statsRes.data);
+		}).catch(() => {
+			if (!cancelled) toast.error("Không thể tải danh sách bài đăng.");
+		}).finally(() => {
+			if (!cancelled) setLoading(false);
+		});
 
 		return () => { cancelled = true; };
 	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken, sortConfig, statusFilter]);
@@ -243,8 +258,7 @@ function PostListPage() {
 
 	// ── Actions ──
 
-	const handleTogglePin = async (post: PostRecord) => {
-		// TODO: call postService.togglePin(post.id)
+	const handleTogglePin = (post: PostRecord) => {
 		setPosts((prev) =>
 			prev.map((p) => (p.id === post.id ? { ...p, is_pinned: !p.is_pinned } : p)),
 		);
@@ -253,16 +267,20 @@ function PostListPage() {
 
 	const handleToggleStatus = async (post: PostRecord) => {
 		const next: PostStatus = post.status === "published" ? "hidden" : "published";
-		// TODO: call postService.updateStatus(post.id, next)
-		setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, status: next } : p)));
-		toast.success(next === "hidden" ? "Đã ẩn bài đăng." : "Đã hiện bài đăng.");
+		try {
+			await postService.updateStatus(post.id, next);
+			setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, status: next } : p)));
+			toast.success(next === "hidden" ? "Đã ẩn bài đăng." : "Đã hiện bài đăng.");
+		} catch {
+			toast.error("Không thể cập nhật trạng thái bài đăng.");
+		}
 	};
 
 	const handleDelete = async () => {
 		if (!deleteTarget) return;
 		setIsDeleting(true);
 		try {
-			// TODO: call postService.deletePost(deleteTarget.id)
+			await postService.deletePost(deleteTarget.id);
 			setPosts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
 			setDeleteTarget(null);
 			setReloadToken((prev) => prev + 1);

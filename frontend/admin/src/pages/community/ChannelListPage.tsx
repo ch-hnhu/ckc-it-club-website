@@ -7,10 +7,10 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	Hash,
 	MoreHorizontal,
 	Pencil,
 	Plus,
-	Tag,
 	Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	Table,
 	TableBody,
@@ -52,27 +53,18 @@ import {
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
-import tagService from "@/services/tag.service";
+import channelService from "@/services/channel.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export interface TagRecord {
+export interface ChannelRecord {
 	id: number;
 	name: string;
 	slug: string;
-	color: string | null;
+	description: string | null;
 	posts_count: number;
-	blogs_count: number;
 	created_at: string;
 }
-
-// ─── Preset colors ───────────────────────────────────────────────────────────
-
-const PRESET_COLORS = [
-	"#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
-	"#f97316", "#eab308", "#22c55e", "#14b8a6",
-	"#3b82f6", "#06b6d4", "#64748b", "#a855f7",
-];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -93,24 +85,24 @@ function toSlug(str: string) {
 		.replace(/^-+|-+$/g, "");
 }
 
-type SortKey = "id" | "name" | "posts_count" | "blogs_count" | "created_at";
+type SortKey = "id" | "name" | "posts_count" | "created_at";
 
 // ─── Form state ──────────────────────────────────────────────────────────────
 
-interface TagFormState {
+interface ChannelFormState {
 	name: string;
 	slug: string;
-	color: string;
+	description: string;
 }
 
-const emptyForm: TagFormState = { name: "", slug: "", color: "#6366f1" };
+const emptyForm: ChannelFormState = { name: "", slug: "", description: "" };
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-function TagListPage() {
-	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý tags" }]);
+function ChannelListPage() {
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý kênh" }]);
 
-	const [tags, setTags] = useState<TagRecord[]>([]);
+	const [channels, setChannels] = useState<ChannelRecord[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -122,14 +114,14 @@ function TagListPage() {
 
 	// Form / dialog state
 	const [formOpen, setFormOpen] = useState(false);
-	const [editTarget, setEditTarget] = useState<TagRecord | null>(null);
-	const [form, setForm] = useState<TagFormState>(emptyForm);
+	const [editTarget, setEditTarget] = useState<ChannelRecord | null>(null);
+	const [form, setForm] = useState<ChannelFormState>(emptyForm);
 	const [slugEdited, setSlugEdited] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
-	const [deleteTarget, setDeleteTarget] = useState<TagRecord | null>(null);
+	const [deleteTarget, setDeleteTarget] = useState<ChannelRecord | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
 
-	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(tags.map((t) => t.id));
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(channels.map((c) => c.id));
 
 	useEffect(() => {
 		const timer = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -144,7 +136,7 @@ function TagListPage() {
 		let cancelled = false;
 		setLoading(true);
 
-		tagService.getTags({
+		channelService.getChannels({
 			page: meta.current_page,
 			per_page: meta.per_page,
 			search: debouncedSearch || undefined,
@@ -152,14 +144,14 @@ function TagListPage() {
 			order: sortConfig.order ?? undefined,
 		}).then((res) => {
 			if (cancelled) return;
-			setTags(res.data);
+			setChannels(res.data);
 			setMeta((p) => ({
 				...p,
 				last_page: res.meta.last_page,
 				total: res.meta.total,
 			}));
 		}).catch(() => {
-			if (!cancelled) toast.error("Không thể tải danh sách tags.");
+			if (!cancelled) toast.error("Không thể tải danh sách kênh.");
 		}).finally(() => {
 			if (!cancelled) setLoading(false);
 		});
@@ -190,9 +182,9 @@ function TagListPage() {
 		setFormOpen(true);
 	};
 
-	const openEdit = (tag: TagRecord) => {
-		setEditTarget(tag);
-		setForm({ name: tag.name, slug: tag.slug, color: tag.color ?? "#6366f1" });
+	const openEdit = (channel: ChannelRecord) => {
+		setEditTarget(channel);
+		setForm({ name: channel.name, slug: channel.slug, description: channel.description ?? "" });
 		setSlugEdited(true);
 		setFormOpen(true);
 	};
@@ -207,32 +199,34 @@ function TagListPage() {
 
 	const handleSave = async () => {
 		if (!form.name.trim()) {
-			toast.error("Tên tag không được để trống.");
+			toast.error("Tên kênh không được để trống.");
 			return;
 		}
 		setIsSaving(true);
 		try {
 			if (editTarget) {
-				const res = await tagService.updateTag(editTarget.id, {
+				const res = await channelService.updateChannel(editTarget.id, {
 					name: form.name,
 					slug: form.slug || toSlug(form.name),
+					description: form.description || null,
 				});
-				setTags((prev) => prev.map((t) =>
-					t.id === editTarget.id ? { ...t, ...res.data } : t
+				setChannels((prev) => prev.map((c) =>
+					c.id === editTarget.id ? { ...c, ...res.data } : c
 				));
-				toast.success("Đã cập nhật tag.");
+				toast.success("Đã cập nhật kênh.");
 			} else {
-				const res = await tagService.createTag({
+				const res = await channelService.createChannel({
 					name: form.name,
 					slug: form.slug || toSlug(form.name),
+					description: form.description || null,
 				});
-				setTags((prev) => [{ ...res.data, color: form.color }, ...prev]);
-				toast.success("Đã tạo tag mới.");
+				setChannels((prev) => [res.data, ...prev]);
+				toast.success("Đã tạo kênh mới.");
 			}
 			setFormOpen(false);
 			setReloadToken((p) => p + 1);
 		} catch {
-			toast.error("Không thể lưu tag. Vui lòng thử lại.");
+			toast.error("Không thể lưu kênh. Vui lòng thử lại.");
 		} finally {
 			setIsSaving(false);
 		}
@@ -242,20 +236,19 @@ function TagListPage() {
 		if (!deleteTarget) return;
 		setIsDeleting(true);
 		try {
-			await tagService.deleteTag(deleteTarget.id);
-			setTags((prev) => prev.filter((t) => t.id !== deleteTarget.id));
+			await channelService.deleteChannel(deleteTarget.id);
+			setChannels((prev) => prev.filter((c) => c.id !== deleteTarget.id));
 			setDeleteTarget(null);
 			setReloadToken((p) => p + 1);
-			toast.success("Đã xóa tag.");
+			toast.success("Đã xóa kênh.");
 		} catch {
-			toast.error("Không thể xóa tag. Vui lòng thử lại.");
+			toast.error("Không thể xóa kênh. Vui lòng thử lại.");
 		} finally {
 			setIsDeleting(false);
 		}
 	};
 
-	const totalUsage = tags.reduce((s, t) => s + t.posts_count + t.blogs_count, 0);
-	const unusedCount = tags.filter((t) => t.posts_count + t.blogs_count === 0).length;
+	const totalPosts = channels.reduce((s, c) => s + c.posts_count, 0);
 
 	return (
 		<div className="min-h-full bg-background">
@@ -264,40 +257,35 @@ function TagListPage() {
 				{/* Header */}
 				<div className="flex items-start justify-between gap-4">
 					<div className="space-y-1">
-						<h2 className="text-2xl font-semibold tracking-tight">Quản lý Tags</h2>
+						<h2 className="text-2xl font-semibold tracking-tight">Quản lý kênh</h2>
 						<p className="text-muted-foreground text-sm">
-							Tạo và quản lý tags dùng chung cho bài đăng và blog của cộng đồng.
+							Tạo và quản lý các kênh thảo luận trong cộng đồng CLB.
 						</p>
 					</div>
 					<Button onClick={openCreate} className="shrink-0">
 						<Plus className="h-4 w-4" />
-						Thêm tag
+						Thêm kênh
 					</Button>
 				</div>
 
 				{/* Stats */}
-				<div className="grid gap-4 sm:grid-cols-3">
-					<div className="rounded-2xl border border-teal-500/15 bg-teal-500/5 p-5 shadow-sm">
-						<p className="text-sm font-semibold text-foreground">Tổng tags</p>
-						<p className="mt-1 text-3xl font-semibold tracking-tight text-teal-700 dark:text-teal-300">{meta.total}</p>
-						<p className="mt-1 text-xs text-muted-foreground">Tags đang tồn tại trong hệ thống.</p>
+				<div className="grid gap-4 sm:grid-cols-2">
+					<div className="rounded-2xl border border-indigo-500/15 bg-indigo-500/5 p-5 shadow-sm">
+						<p className="text-sm font-semibold text-foreground">Tổng kênh</p>
+						<p className="mt-1 text-3xl font-semibold tracking-tight text-indigo-700 dark:text-indigo-300">{meta.total}</p>
+						<p className="mt-1 text-xs text-muted-foreground">Số kênh thảo luận đang hoạt động.</p>
 					</div>
 					<div className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-5 shadow-sm">
-						<p className="text-sm font-semibold text-foreground">Lượt sử dụng</p>
-						<p className="mt-1 text-3xl font-semibold tracking-tight text-violet-700 dark:text-violet-300">{totalUsage}</p>
-						<p className="mt-1 text-xs text-muted-foreground">Tổng số lần được gán trên bài đăng và blog.</p>
-					</div>
-					<div className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-5 shadow-sm">
-						<p className="text-sm font-semibold text-foreground">Chưa dùng</p>
-						<p className="mt-1 text-3xl font-semibold tracking-tight text-amber-700 dark:text-amber-300">{unusedCount}</p>
-						<p className="mt-1 text-xs text-muted-foreground">Tags chưa được gán vào bài nào.</p>
+						<p className="text-sm font-semibold text-foreground">Tổng bài đăng</p>
+						<p className="mt-1 text-3xl font-semibold tracking-tight text-violet-700 dark:text-violet-300">{totalPosts}</p>
+						<p className="mt-1 text-xs text-muted-foreground">Tổng số bài đăng thuộc tất cả các kênh.</p>
 					</div>
 				</div>
 
 				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
 					<Input
-						placeholder="Tìm kiếm theo tên tag..."
+						placeholder="Tìm kiếm theo tên kênh hoặc slug..."
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						className="h-8 w-full sm:w-64 md:w-80"
@@ -316,20 +304,16 @@ function TagListPage() {
 											ID {getSortIcon("id")}
 										</Button>
 									</TableHead>
-									<TableHead>
+									<TableHead className="min-w-[180px]">
 										<Button variant="ghost" onClick={() => handleSort("name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Tên tag {getSortIcon("name")}
+											Tên kênh {getSortIcon("name")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[180px] text-sm font-medium">Slug</TableHead>
+									<TableHead className="w-[200px] text-sm font-medium">Slug</TableHead>
+									<TableHead className="min-w-[200px] text-sm font-medium">Mô tả</TableHead>
 									<TableHead className="w-[120px]">
 										<Button variant="ghost" onClick={() => handleSort("posts_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Bài đăng {getSortIcon("posts_count")}
-										</Button>
-									</TableHead>
-									<TableHead className="w-[100px]">
-										<Button variant="ghost" onClick={() => handleSort("blogs_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Blog {getSortIcon("blogs_count")}
 										</Button>
 									</TableHead>
 									<TableHead className="w-[140px]">
@@ -349,33 +333,36 @@ function TagListPage() {
 											<TableCell colSpan={7}><Skeleton className="h-4 w-full" /></TableCell>
 										</TableRow>
 									))
-								) : tags.length > 0 ? (
-									tags.map((tag) => (
-										<TableRow key={tag.id}>
+								) : channels.length > 0 ? (
+									channels.map((channel) => (
+										<TableRow key={channel.id}>
 											<TableCell>
-												<Checkbox checked={isSelected(tag.id)}
-													onCheckedChange={(c) => toggleOne(tag.id, c === true)} />
+												<Checkbox checked={isSelected(channel.id)}
+													onCheckedChange={(c) => toggleOne(channel.id, c === true)} />
 											</TableCell>
-											<TableCell className="font-medium text-muted-foreground">#{tag.id}</TableCell>
+											<TableCell className="font-medium text-muted-foreground">#{channel.id}</TableCell>
 											<TableCell>
 												<div className="flex items-center gap-2.5">
-													<span
-														className="h-3 w-3 shrink-0 rounded-full ring-1 ring-black/10"
-														style={{ backgroundColor: tag.color ?? "#64748b" }}
-													/>
-													<Badge
-														variant="outline"
-														className="rounded-full px-3 py-0.5 text-sm font-medium"
-														style={tag.color ? { borderColor: `${tag.color}50`, color: tag.color } : undefined}>
-														<Tag className="mr-1.5 h-3 w-3" />
-														{tag.name}
-													</Badge>
+													<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+														<Hash className="h-3.5 w-3.5" />
+													</div>
+													<span className="font-medium">{channel.name}</span>
 												</div>
 											</TableCell>
-											<TableCell className="text-sm text-muted-foreground font-mono">{tag.slug}</TableCell>
-											<TableCell className="text-sm text-muted-foreground">{tag.posts_count}</TableCell>
-											<TableCell className="text-sm text-muted-foreground">{tag.blogs_count}</TableCell>
-											<TableCell className="text-sm text-muted-foreground">{formatDate(tag.created_at)}</TableCell>
+											<TableCell className="font-mono text-sm text-muted-foreground">{channel.slug}</TableCell>
+											<TableCell>
+												{channel.description ? (
+													<span className="line-clamp-2 text-sm text-muted-foreground">{channel.description}</span>
+												) : (
+													<span className="text-xs text-muted-foreground/50 italic">Chưa có mô tả</span>
+												)}
+											</TableCell>
+											<TableCell>
+												<Badge variant="secondary" className="rounded-full">
+													{channel.posts_count}
+												</Badge>
+											</TableCell>
+											<TableCell className="text-sm text-muted-foreground">{formatDate(channel.created_at)}</TableCell>
 											<TableCell>
 												<DropdownMenu>
 													<DropdownMenuTrigger asChild>
@@ -384,16 +371,16 @@ function TagListPage() {
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end" className="w-[160px]">
-														<DropdownMenuItem onClick={() => openEdit(tag)}>
+														<DropdownMenuItem onClick={() => openEdit(channel)}>
 															<Pencil className="h-4 w-4" />
-															Sửa tag
+															Sửa kênh
 														</DropdownMenuItem>
 														<DropdownMenuSeparator />
 														<DropdownMenuItem
 															className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-															onClick={() => setDeleteTarget(tag)}>
+															onClick={() => setDeleteTarget(channel)}>
 															<Trash2 className="h-4 w-4 text-destructive" />
-															Xóa tag
+															Xóa kênh
 														</DropdownMenuItem>
 													</DropdownMenuContent>
 												</DropdownMenu>
@@ -403,7 +390,7 @@ function TagListPage() {
 								) : (
 									<TableRow>
 										<TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-											Không tìm thấy tag nào. Hãy thêm tag đầu tiên!
+											Không tìm thấy kênh nào. Hãy thêm kênh đầu tiên!
 										</TableCell>
 									</TableRow>
 								)}
@@ -414,7 +401,7 @@ function TagListPage() {
 									<TableCell colSpan={8}>
 										<div className="flex items-center justify-between px-2">
 											<p className="flex-1 text-sm text-muted-foreground">
-												Đang hiển thị {tags.length} trên tổng {meta.total} tags.
+												Đang hiển thị {channels.length} trên tổng {meta.total} kênh.
 											</p>
 											<div className="flex items-center space-x-6 lg:space-x-8">
 												<div className="flex items-center space-x-2">
@@ -460,25 +447,25 @@ function TagListPage() {
 
 			{/* Create / Edit dialog */}
 			<Dialog open={formOpen} onOpenChange={(o) => !o && setFormOpen(false)}>
-				<DialogContent className="sm:max-w-[460px]">
+				<DialogContent className="sm:max-w-[480px]">
 					<DialogHeader>
-						<DialogTitle>{editTarget ? "Sửa tag" : "Thêm tag mới"}</DialogTitle>
+						<DialogTitle>{editTarget ? "Sửa kênh" : "Thêm kênh mới"}</DialogTitle>
 					</DialogHeader>
 					<div className="space-y-4">
 						<div className="space-y-2">
-							<Label htmlFor="tag-name">Tên tag <span className="text-destructive">*</span></Label>
+							<Label htmlFor="channel-name">Tên kênh <span className="text-destructive">*</span></Label>
 							<Input
-								id="tag-name"
-								placeholder="Ví dụ: Lập trình web"
+								id="channel-name"
+								placeholder="Ví dụ: Học thuật & Kỹ thuật"
 								value={form.name}
 								onChange={(e) => handleNameChange(e.target.value)}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="tag-slug">Slug</Label>
+							<Label htmlFor="channel-slug">Slug</Label>
 							<Input
-								id="tag-slug"
-								placeholder="lap-trinh-web"
+								id="channel-slug"
+								placeholder="hoc-thuat-ky-thuat"
 								value={form.slug}
 								onChange={(e) => { setSlugEdited(true); setForm((p) => ({ ...p, slug: e.target.value })); }}
 								className="font-mono text-sm"
@@ -486,45 +473,21 @@ function TagListPage() {
 							<p className="text-xs text-muted-foreground">Tự động tạo từ tên. Có thể chỉnh sửa thủ công.</p>
 						</div>
 						<div className="space-y-2">
-							<Label>Màu sắc</Label>
-							<div className="flex flex-wrap gap-2">
-								{PRESET_COLORS.map((color) => (
-									<button
-										key={color}
-										type="button"
-										onClick={() => setForm((p) => ({ ...p, color }))}
-										className={`h-7 w-7 rounded-full ring-offset-background transition-all hover:scale-110 ${
-											form.color === color ? "ring-2 ring-ring ring-offset-2" : ""
-										}`}
-										style={{ backgroundColor: color }}
-										aria-label={color}
-									/>
-								))}
-							</div>
-							<div className="flex items-center gap-3 pt-1">
-								<span
-									className="h-8 w-8 shrink-0 rounded-full ring-1 ring-black/10"
-									style={{ backgroundColor: form.color }}
-								/>
-								<Input
-									type="color"
-									value={form.color}
-									onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))}
-									className="h-8 w-20 cursor-pointer px-1 py-0.5"
-								/>
-								<Badge
-									variant="outline"
-									className="rounded-full px-3"
-									style={{ borderColor: `${form.color}50`, color: form.color }}>
-									{form.name || "Xem trước"}
-								</Badge>
-							</div>
+							<Label htmlFor="channel-description">Mô tả</Label>
+							<Textarea
+								id="channel-description"
+								placeholder="Mô tả ngắn về mục đích của kênh..."
+								value={form.description}
+								onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+								rows={3}
+								className="resize-none"
+							/>
 						</div>
 					</div>
 					<DialogFooter>
 						<Button variant="outline" onClick={() => setFormOpen(false)} disabled={isSaving}>Hủy</Button>
 						<Button onClick={handleSave} disabled={isSaving}>
-							{isSaving ? "Đang lưu..." : editTarget ? "Lưu thay đổi" : "Tạo tag"}
+							{isSaving ? "Đang lưu..." : editTarget ? "Lưu thay đổi" : "Tạo kênh"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -535,20 +498,13 @@ function TagListPage() {
 				<DialogContent className="sm:max-w-[440px]">
 					{deleteTarget && (
 						<>
-							<DialogHeader><DialogTitle>Xác nhận xóa tag</DialogTitle></DialogHeader>
+							<DialogHeader><DialogTitle>Xác nhận xóa kênh</DialogTitle></DialogHeader>
 							<div className="space-y-3 text-sm text-muted-foreground">
-								<p>Bạn sắp xóa tag:</p>
-								<div className="flex items-center gap-2">
-									<span className="h-3 w-3 rounded-full" style={{ backgroundColor: deleteTarget.color ?? "#64748b" }} />
-									<Badge variant="outline" className="rounded-full"
-										style={deleteTarget.color ? { borderColor: `${deleteTarget.color}50`, color: deleteTarget.color } : undefined}>
-										{deleteTarget.name}
-									</Badge>
-								</div>
-								{(deleteTarget.posts_count + deleteTarget.blogs_count) > 0 && (
+								<p>Bạn sắp xóa kênh <span className="font-semibold text-foreground">"{deleteTarget.name}"</span>.</p>
+								{deleteTarget.posts_count > 0 && (
 									<p className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-amber-700">
-										Tag này đang được dùng trong {deleteTarget.posts_count} bài đăng và {deleteTarget.blogs_count} blog.
-										Xóa tag sẽ gỡ nó khỏi tất cả nội dung liên quan.
+										Kênh này hiện có <strong>{deleteTarget.posts_count}</strong> bài đăng.
+										Xóa kênh sẽ ảnh hưởng đến các bài đăng liên quan.
 									</p>
 								)}
 								<p>Hành động này không thể hoàn tác.</p>
@@ -556,7 +512,7 @@ function TagListPage() {
 							<DialogFooter>
 								<Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>Hủy</Button>
 								<Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-									{isDeleting ? "Đang xóa..." : "Xóa tag"}
+									{isDeleting ? "Đang xóa..." : "Xóa kênh"}
 								</Button>
 							</DialogFooter>
 						</>
@@ -567,4 +523,4 @@ function TagListPage() {
 	);
 }
 
-export default TagListPage;
+export default ChannelListPage;

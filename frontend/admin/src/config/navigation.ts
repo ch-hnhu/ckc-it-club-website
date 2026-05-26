@@ -149,6 +149,11 @@ export const adminNavMain: AdminNavItem[] = [
 		permission: "community.view",
 		items: [
 			{
+				title: "Kênh",
+				url: "/community/channels",
+				permission: "community.channels.manage",
+			},
+			{
 				title: "Bài đăng",
 				url: "/community/posts",
 				permission: "community.posts.view",
@@ -218,6 +223,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/questions$/, permission: "application_questions.view" },
 	{ pattern: /^\/questions\/[^/]+$/, permission: "application_questions.view" },
 	{ pattern: /^\/answers$/, permission: "applications.view" },
+	{ pattern: /^\/community\/channels$/, permission: "community.channels.manage" },
 	{ pattern: /^\/community\/posts$/, permission: "community.posts.view" },
 	{ pattern: /^\/community\/posts\/[^/]+$/, permission: "community.posts.view" },
 	{ pattern: /^\/community\/blogs$/, permission: "community.blogs.view" },

@@ -13,41 +13,29 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         User::firstOrCreate(
+            ['email' => 'admin@gmail.com'],
             [
-                'email' => 'admin@gmail.com',
-                'username' => 'admin',
+                'username'  => 'admin',
                 'full_name' => 'Quản trị viên',
-                'password' => bcrypt('Admin@123'),
+                'password'  => bcrypt('Admin@123'),
                 'is_active' => true,
             ],
         )->assignRole(RolesEnum::ADMIN->value);
         User::firstOrCreate(
-            [
-                'email' => 'hnhu07012004@gmail.com',
-                'full_name' => 'Thành viên',
-                'is_active' => true,
-            ],
+            ['email' => 'hnhu07012004@gmail.com'],
+            ['full_name' => 'Thành viên', 'is_active' => true],
         )->assignRole(RolesEnum::USER->value);
         User::firstOrCreate(
-            [
-                'email' => '0306231334@caothang.edu.vn',
-                'full_name' => 'Thành viên',
-                'is_active' => true,
-            ],
+            ['email' => '0306231334@caothang.edu.vn'],
+            ['full_name' => 'Thành viên', 'is_active' => true],
         )->assignRole(RolesEnum::USER->value);
         User::firstOrCreate(
-            [
-                'email' => '0306231295@caothang.edu.vn',
-                'full_name' => 'Thành viên',
-                'is_active' => true,
-            ],
+            ['email' => '0306231295@caothang.edu.vn'],
+            ['full_name' => 'Thành viên', 'is_active' => true],
         )->assignRole(RolesEnum::USER->value);
         User::firstOrCreate(
-            [
-                'email' => '0306231289@caothang.edu.vn',
-                'full_name' => 'Thành viên',
-                'is_active' => true,
-            ],
+            ['email' => '0306231289@caothang.edu.vn'],
+            ['full_name' => 'Thành viên', 'is_active' => true],
         )->assignRole(RolesEnum::USER->value);
 
         // Test member: tài khoản thành viên có mật khẩu, dùng cho test forgot password & login member

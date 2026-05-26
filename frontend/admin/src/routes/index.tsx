@@ -30,6 +30,7 @@ import ClubInformationDetailPage from "@/pages/club-information/ClubInformationD
 import CreateClubInformationPage from "@/pages/club-information/CreateClubInformationPage";
 import OrganizationImportListPage from "@/pages/organization/OrganizationImportListPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
+import ChannelListPage from "@/pages/community/ChannelListPage";
 import PostListPage from "@/pages/community/PostListPage";
 import BlogListPage from "@/pages/community/BlogListPage";
 import CommentListPage from "@/pages/community/CommentListPage";
@@ -253,6 +254,14 @@ const router = createBrowserRouter([
 			{
 				path: "notifications",
 				element: <NotificationsPage />,
+			},
+			{
+				path: "community/channels",
+				element: (
+					<PermissionRoute permission="community.channels.manage">
+						<ChannelListPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "community/posts",
