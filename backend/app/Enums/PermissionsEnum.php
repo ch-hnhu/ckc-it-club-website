@@ -52,6 +52,7 @@ enum PermissionsEnum: string
 
     // Cộng đồng
     case COMMUNITY_VIEW               = 'community.view';
+    case COMMUNITY_CHANNELS_MANAGE    = 'community.channels.manage';
     case COMMUNITY_POSTS_VIEW         = 'community.posts.view';
     case COMMUNITY_POSTS_MANAGE       = 'community.posts.manage';
     case COMMUNITY_BLOGS_VIEW         = 'community.blogs.view';
@@ -60,6 +61,8 @@ enum PermissionsEnum: string
     case COMMUNITY_COMMENTS_MANAGE    = 'community.comments.manage';
     case COMMUNITY_TAGS_MANAGE        = 'community.tags.manage';
     case COMMUNITY_NOTIFICATIONS_SEND = 'community.notifications.send';
+    case COMMUNITY_CHAT_VIEW          = 'community.chat.view';
+    case COMMUNITY_CHAT_MANAGE        = 'community.chat.manage';
 
     public static function values(): array
     {

@@ -36,6 +36,7 @@ import BlogListPage from "@/pages/community/BlogListPage";
 import CommentListPage from "@/pages/community/CommentListPage";
 import TagListPage from "@/pages/community/TagListPage";
 import SystemNotificationPage from "@/pages/community/SystemNotificationPage";
+import ChatRoomListPage from "@/pages/community/ChatRoomListPage";
 
 const router = createBrowserRouter([
 	{
@@ -300,6 +301,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.notifications.send">
 						<SystemNotificationPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/chat",
+				element: (
+					<PermissionRoute permission="community.chat.view">
+						<ChatRoomListPage />
 					</PermissionRoute>
 				),
 			},

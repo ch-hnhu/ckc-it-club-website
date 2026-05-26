@@ -174,6 +174,11 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "community.tags.manage",
 			},
 			{
+				title: "Phòng chat",
+				url: "/community/chat",
+				permission: "community.chat.view",
+			},
+			{
 				title: "Thông báo hệ thống",
 				url: "/community/notifications",
 				permission: "community.notifications.send",
@@ -231,6 +236,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/community\/blogs\/[^/]+$/, permission: "community.blogs.view" },
 	{ pattern: /^\/community\/comments$/, permission: "community.comments.view" },
 	{ pattern: /^\/community\/tags$/, permission: "community.tags.manage" },
+	{ pattern: /^\/community\/chat$/, permission: "community.chat.view" },
 	{ pattern: /^\/community\/notifications$/, permission: "community.notifications.send" },
 ];
 

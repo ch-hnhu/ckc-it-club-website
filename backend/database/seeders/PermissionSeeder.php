@@ -43,6 +43,8 @@ class PermissionSeeder extends Seeder
         'community.comments.manage'    => 'Ẩn, xóa bình luận vi phạm',
         'community.tags.manage'        => 'Thêm, sửa, xóa tags',
         'community.notifications.send' => 'Gửi thông báo hàng loạt đến người dùng',
+        'community.chat.view'          => 'Xem danh sách phòng chat và nhật ký sự kiện',
+        'community.chat.manage'        => 'Xóa sự kiện hệ thống trong phòng chat',
     ];
 
     /**
@@ -69,6 +71,7 @@ class PermissionSeeder extends Seeder
             'community.comments.view', 'community.comments.manage',
             'community.tags.manage',
             'community.notifications.send',
+            'community.chat.view', 'community.chat.manage',
         ],
 
         // Chủ nhiệm — hầu hết, không quản lý roles/permissions hệ thống
@@ -91,6 +94,7 @@ class PermissionSeeder extends Seeder
             'community.comments.view', 'community.comments.manage',
             'community.tags.manage',
             'community.notifications.send',
+            'community.chat.view', 'community.chat.manage',
         ],
 
         // Phó Chủ nhiệm — quản lý vận hành, không quản lý phân quyền
@@ -112,6 +116,7 @@ class PermissionSeeder extends Seeder
             'community.comments.view', 'community.comments.manage',
             'community.tags.manage',
             'community.notifications.send',
+            'community.chat.view', 'community.chat.manage',
         ],
 
         // Trưởng ban Học thuật — quản lý xét tuyển và cơ cấu học thuật
@@ -128,6 +133,7 @@ class PermissionSeeder extends Seeder
             'community.posts.view',
             'community.blogs.view',
             'community.comments.view',
+            'community.chat.view',
         ],
 
         // Trưởng ban Truyền thông — quản lý thông tin CLB, liên hệ và cộng đồng
@@ -146,6 +152,7 @@ class PermissionSeeder extends Seeder
             'community.comments.view', 'community.comments.manage',
             'community.tags.manage',
             'community.notifications.send',
+            'community.chat.view', 'community.chat.manage',
         ],
 
         // Trưởng ban Tình nguyện — quản lý đơn xét tuyển
@@ -160,6 +167,7 @@ class PermissionSeeder extends Seeder
             'community.posts.view',
             'community.blogs.view',
             'community.comments.view',
+            'community.chat.view',
         ],
     ];
 

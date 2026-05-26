@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Admin\BlogController;
 use App\Http\Controllers\Api\V1\Admin\ChannelController;
+use App\Http\Controllers\Api\V1\Admin\ChatRoomController;
 use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
@@ -64,12 +65,19 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:dashboard.view')
             ->get('/', [DashboardController::class, 'index']);
 
-        // notifications
+        // notifications (personal)
         Route::prefix('notifications')->group(function () {
             Route::get('/', [NotificationController::class, 'index']);
             Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
             Route::patch('/read-all', [NotificationController::class, 'markAllAsRead']);
             Route::patch('/{id}/read', [NotificationController::class, 'markAsRead']);
+        });
+
+        // notifications (admin log)
+        Route::middleware('permission:community.notifications.send')->group(function () {
+            Route::get('notifications/admin-stats', [NotificationController::class, 'adminStats']);
+            Route::get('notifications/log', [NotificationController::class, 'log']);
+            Route::delete('notifications/{id}/admin', [NotificationController::class, 'adminDestroy']);
         });
 
         // users
@@ -233,6 +241,16 @@ Route::prefix('v1')->group(function () {
         });
         Route::middleware('permission:community.comments.manage')->group(function () {
             Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
+        });
+
+        // chat rooms
+        Route::middleware('permission:community.chat.view')->group(function () {
+            Route::get('chat-rooms/stats', [ChatRoomController::class, 'stats']);
+            Route::get('chat-rooms', [ChatRoomController::class, 'index']);
+            Route::get('chat-rooms/{room}/system-messages', [ChatRoomController::class, 'systemMessages']);
+        });
+        Route::middleware('permission:community.chat.manage')->group(function () {
+            Route::delete('chat-rooms/{room}/messages/{message}', [ChatRoomController::class, 'destroyMessage']);
         });
 
         // tags
