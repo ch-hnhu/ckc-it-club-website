@@ -46,23 +46,41 @@ class DepartmentController extends BaseApiController
             ->orderBy($sort === 'users_count' ? 'members_count' : $sort, $order)
             ->paginate($perPage);
 
-        $departments->getCollection()->transform(fn (Department $department) => [
-            'id'          => $department->id,
-            'name'        => $department->name,
-            'slug'        => $department->slug,
-            'description' => $department->description,
-            'is_active'   => (bool) $department->is_active,
-            'head_role'   => $department->headRole
-                ? [
-                    'id'    => $department->headRole->id,
-                    'name'  => $department->headRole->name,
-                    'label' => $department->headRole->label,
-                ]
-                : null,
-            'users_count' => $department->members_count,
-            'created_at'  => $department->created_at?->format('d/m/Y'),
-            'updated_at'  => $department->updated_at?->format('d/m/Y'),
-        ]);
+        $departments->getCollection()->transform(fn (Department $department) => $this->transformDepartment($department));
+
+        return $this->paginatedResponse($departments, ApiMessage::RETRIEVED);
+    }
+
+    public function trash(Request $request): JsonResponse
+    {
+        $allowedSorts = ['id', 'name', 'slug', 'is_active', 'created_at', 'updated_at', 'deleted_at', 'users_count'];
+        $sort = $request->query('sort', 'deleted_at');
+        $order = $request->query('order', 'desc');
+        $perPage = (int) $request->query('per_page', 10);
+        $search = $request->query('search');
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'deleted_at';
+        }
+
+        if (! in_array($order, ['asc', 'desc'], true)) {
+            $order = 'desc';
+        }
+
+        $departments = Department::onlyTrashed()
+            ->withCount('members')
+            ->with('headRole:id,name,label')
+            ->when($search, function ($query, $search) {
+                $query->where(function ($sub) use ($search) {
+                    $sub->where('name', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy($sort === 'users_count' ? 'members_count' : $sort, $order)
+            ->paginate($perPage);
+
+        $departments->getCollection()->transform(fn (Department $department) => $this->transformDepartment($department));
 
         return $this->paginatedResponse($departments, ApiMessage::RETRIEVED);
     }
@@ -171,6 +189,43 @@ class DepartmentController extends BaseApiController
         return $this->successResponse(true, $department, 'Cập nhật ban thành công.');
     }
 
+    public function destroy(Department $department): JsonResponse
+    {
+        $department->loadCount('members');
+
+        if ($department->members_count > 0) {
+            return $this->validationErrorResponse([
+                'department' => ['KhÃ´ng thá»ƒ xÃ³a ban Ä‘ang cÃ³ thÃ nh viÃªn.'],
+            ], 'KhÃ´ng thá»ƒ xÃ³a ban Ä‘ang cÃ³ thÃ nh viÃªn.');
+        }
+
+        $department->deleted_by = request()->user()?->id;
+        $department->save();
+        $department->delete();
+
+        return $this->successResponse(true, null, 'XÃ³a ban thÃ nh cÃ´ng.');
+    }
+
+    public function restore(int $department): JsonResponse
+    {
+        $department = Department::onlyTrashed()->findOrFail($department);
+        $department->restore();
+        $department->deleted_by = null;
+        $department->save();
+        $department->load('headRole:id,name,label');
+        $department->loadCount('members');
+
+        return $this->successResponse(true, $this->transformDepartment($department), 'Khôi phục ban thành công.');
+    }
+
+    public function forceDestroy(int $department): JsonResponse
+    {
+        $department = Department::onlyTrashed()->findOrFail($department);
+        $department->forceDelete();
+
+        return $this->successResponse(true, null, 'Xóa vĩnh viễn ban thành công.');
+    }
+
     public function storeUser(StoreDepartmentUserRequest $request, Department $department): JsonResponse
     {
         $userId = $request->integer('user_id');
@@ -225,17 +280,17 @@ class DepartmentController extends BaseApiController
                     ->where('users.id', '<>', $user->id)
                     ->whereHas('roles', fn ($query) => $query->where('roles.id', $headRole->id))
                     ->get()
-                    ->each(fn (User $member) => $member->removeRole($headRole->name));
+                    ->each(fn (User $member) => $member->removeRole($headRole));
 
-                if (! $user->hasRole($headRole->name)) {
-                    $user->assignRole($headRole->name);
+                if (! $user->hasRole($headRole)) {
+                    $user->assignRole($headRole);
                 }
 
                 return;
             }
 
-            if ($user->hasRole($headRole->name)) {
-                $user->removeRole($headRole->name);
+            if ($user->hasRole($headRole)) {
+                $user->removeRole($headRole);
             }
         });
 
@@ -265,5 +320,26 @@ class DepartmentController extends BaseApiController
         $department->loadCount('members');
 
         return $this->successResponse(true, $department, 'Xóa thành viên khỏi ban thành công.');
+    }
+    private function transformDepartment(Department $department): array
+    {
+        return [
+            'id'          => $department->id,
+            'name'        => $department->name,
+            'slug'        => $department->slug,
+            'description' => $department->description,
+            'is_active'   => (bool) $department->is_active,
+            'head_role'   => $department->headRole
+                ? [
+                    'id'    => $department->headRole->id,
+                    'name'  => $department->headRole->name,
+                    'label' => $department->headRole->label,
+                ]
+                : null,
+            'users_count' => $department->members_count,
+            'created_at'  => $department->created_at?->format('d/m/Y'),
+            'updated_at'  => $department->updated_at?->format('d/m/Y'),
+            'deleted_at'  => $department->deleted_at?->format('d/m/Y'),
+        ];
     }
 }

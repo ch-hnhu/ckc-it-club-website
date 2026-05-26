@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { AxiosError } from "axios";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 import SchoolClassFormModal from "@/pages/school-class/SchoolClassFormModal";
 import schoolClassService from "@/services/school-class.service";
@@ -61,6 +62,7 @@ function SchoolClassList() {
 	);
 
 	useBreadcrumb(breadcrumb);
+	const navigate = useNavigate();
 
 	const [classes, setClasses] = useState<SchoolClass[]>([]);
 	const [meta, setMeta] = useState({
@@ -190,6 +192,15 @@ function SchoolClassList() {
 								))}
 							</SelectContent>
 						</Select>
+						<Button
+							size='sm'
+							variant='outline'
+							type='button'
+							onClick={() => navigate("/classes/trash")}
+							className='h-8'>
+							<Trash2 className='h-4 w-4' />
+							Thùng rác
+						</Button>
 						<Button
 							size='sm'
 							onClick={() => {

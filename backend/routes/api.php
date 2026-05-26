@@ -130,12 +130,16 @@ Route::prefix('v1')->group(function () {
         // departments
         Route::middleware('permission:club_info.view')->group(function () {
             Route::get('departments', [DepartmentController::class, 'index']);
+            Route::get('departments/trash', [DepartmentController::class, 'trash']);
             Route::get('departments/{department}', [DepartmentController::class, 'show']);
         });
         Route::middleware('permission:club_info.manage')->group(function () {
             Route::post('departments', [DepartmentController::class, 'store']);
             Route::put('departments/{department}', [DepartmentController::class, 'update']);
             Route::patch('departments/{department}', [DepartmentController::class, 'update']);
+            Route::delete('departments/{department}', [DepartmentController::class, 'destroy']);
+            Route::patch('departments/{department}/restore', [DepartmentController::class, 'restore']);
+            Route::delete('departments/{department}/force', [DepartmentController::class, 'forceDestroy']);
             Route::post('departments/{department}/users', [DepartmentController::class, 'storeUser']);
             Route::patch('departments/{department}/users/{user}', [DepartmentController::class, 'updateUserRole']);
             Route::delete('departments/{department}/users/{user}', [DepartmentController::class, 'destroyUser']);
@@ -168,14 +172,23 @@ Route::prefix('v1')->group(function () {
             Route::get('academic-structure/imports/stats', [AcademicStructureController::class, 'stats']);
             Route::get('academic-structure/imports', [AcademicStructureController::class, 'index']);
             Route::get('academic-structure/imports/{academicStructureImport}/download', [AcademicStructureController::class, 'download']);
+            Route::get('faculties/trash', [FacultyController::class, 'trash']);
             Route::apiResource('faculties', FacultyController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
+            Route::get('majors/trash', [MajorController::class, 'trash']);
             Route::apiResource('majors', MajorController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
+            Route::get('school-classes/trash', [SchoolClassController::class, 'trash']);
             Route::apiResource('school-classes', SchoolClassController::class)->except(['create', 'edit', 'store', 'update', 'destroy']);
         });
         Route::middleware('permission:academic_structure.import')->group(function () {
             Route::post('faculties/bulk-delete', [FacultyController::class, 'bulkDestroy']);
+            Route::patch('faculties/{faculty}/restore', [FacultyController::class, 'restore']);
+            Route::delete('faculties/{faculty}/force', [FacultyController::class, 'forceDestroy']);
             Route::apiResource('faculties', FacultyController::class)->only(['store', 'update', 'destroy']);
+            Route::patch('majors/{major}/restore', [MajorController::class, 'restore']);
+            Route::delete('majors/{major}/force', [MajorController::class, 'forceDestroy']);
             Route::apiResource('majors', MajorController::class)->only(['store', 'update', 'destroy']);
+            Route::patch('school-classes/{schoolClass}/restore', [SchoolClassController::class, 'restore']);
+            Route::delete('school-classes/{schoolClass}/force', [SchoolClassController::class, 'forceDestroy']);
             Route::apiResource('school-classes', SchoolClassController::class)->only(['store', 'update', 'destroy']);
         });
     });

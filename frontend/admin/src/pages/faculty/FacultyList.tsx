@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { AxiosError } from "axios";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 import FacultyFormModal from "@/pages/faculty/FacultyFormModal";
 import facultyService from "@/services/faculty.service";
@@ -56,6 +57,7 @@ function FacultyList() {
 	);
 
 	useBreadcrumb(breadcrumb);
+	const navigate = useNavigate();
 
 	const [faculties, setFaculties] = useState<Faculty[]>([]);
 	const [meta, setMeta] = useState({
@@ -206,6 +208,15 @@ function FacultyList() {
 						/>
 					</div>
 					<div className='flex items-center gap-2'>
+						<Button
+							size='sm'
+							variant='outline'
+							type='button'
+							onClick={() => navigate("/departments/trash")}
+							className='h-8'>
+							<Trash2 className='h-4 w-4' />
+							Thùng rác
+						</Button>
 						<Button
 							size='sm'
 							onClick={() => {

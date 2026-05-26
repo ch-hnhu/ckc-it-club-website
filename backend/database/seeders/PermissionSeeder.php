@@ -33,6 +33,15 @@ class PermissionSeeder extends Seeder
         'application_questions.manage' => 'Thêm, sửa, xóa, sắp xếp câu hỏi xét tuyển',
         'academic_structure.import' => 'Import cơ cấu học thuật',
         'academic_data.view' => 'Xem dữ liệu khoa, ngành, lớp',
+        'community.view'               => 'Truy cập khu vực quản lý cộng đồng',
+        'community.posts.view'         => 'Xem danh sách bài đăng cộng đồng',
+        'community.posts.manage'       => 'Ẩn, ghim, xóa bài đăng cộng đồng',
+        'community.blogs.view'         => 'Xem danh sách blog',
+        'community.blogs.manage'       => 'Tạo, sửa, xuất bản, xóa blog',
+        'community.comments.view'      => 'Xem danh sách bình luận',
+        'community.comments.manage'    => 'Ẩn, xóa bình luận vi phạm',
+        'community.tags.manage'        => 'Thêm, sửa, xóa tags',
+        'community.notifications.send' => 'Gửi thông báo hàng loạt đến người dùng',
     ];
 
     /**
@@ -52,6 +61,12 @@ class PermissionSeeder extends Seeder
             'application_questions.view', 'application_questions.manage',
             'academic_structure.import',
             'academic_data.view',
+            'community.view',
+            'community.posts.view', 'community.posts.manage',
+            'community.blogs.view', 'community.blogs.manage',
+            'community.comments.view', 'community.comments.manage',
+            'community.tags.manage',
+            'community.notifications.send',
         ],
 
         // Chủ nhiệm — hầu hết, không quản lý roles/permissions hệ thống
@@ -67,6 +82,12 @@ class PermissionSeeder extends Seeder
             'application_questions.view', 'application_questions.manage',
             'academic_structure.import',
             'academic_data.view',
+            'community.view',
+            'community.posts.view', 'community.posts.manage',
+            'community.blogs.view', 'community.blogs.manage',
+            'community.comments.view', 'community.comments.manage',
+            'community.tags.manage',
+            'community.notifications.send',
         ],
 
         // Phó Chủ nhiệm — quản lý vận hành, không quản lý phân quyền
@@ -81,6 +102,12 @@ class PermissionSeeder extends Seeder
             'application_questions.view',
             'academic_structure.import',
             'academic_data.view',
+            'community.view',
+            'community.posts.view', 'community.posts.manage',
+            'community.blogs.view', 'community.blogs.manage',
+            'community.comments.view', 'community.comments.manage',
+            'community.tags.manage',
+            'community.notifications.send',
         ],
 
         // Trưởng ban Học thuật — quản lý xét tuyển và cơ cấu học thuật
@@ -93,9 +120,13 @@ class PermissionSeeder extends Seeder
             'application_questions.view', 'application_questions.manage',
             'academic_structure.import',
             'academic_data.view',
+            'community.view',
+            'community.posts.view',
+            'community.blogs.view',
+            'community.comments.view',
         ],
 
-        // Trưởng ban Truyền thông — quản lý thông tin CLB và liên hệ
+        // Trưởng ban Truyền thông — quản lý thông tin CLB, liên hệ và cộng đồng
         'communications-head' => [
             'admin_panel.access',
             'dashboard.view',
@@ -104,6 +135,12 @@ class PermissionSeeder extends Seeder
             'club_info.view', 'club_info.manage',
             'contacts.view', 'contacts.manage',
             'academic_data.view',
+            'community.view',
+            'community.posts.view', 'community.posts.manage',
+            'community.blogs.view', 'community.blogs.manage',
+            'community.comments.view', 'community.comments.manage',
+            'community.tags.manage',
+            'community.notifications.send',
         ],
 
         // Trưởng ban Tình nguyện — quản lý đơn xét tuyển
@@ -114,6 +151,10 @@ class PermissionSeeder extends Seeder
             'roles.view',
             'applications.view', 'applications.manage',
             'academic_data.view',
+            'community.view',
+            'community.posts.view',
+            'community.blogs.view',
+            'community.comments.view',
         ],
     ];
 

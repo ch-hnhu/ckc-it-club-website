@@ -12,6 +12,7 @@ class ContactController extends BaseApiController
     public function store(StoreContactRequest $request): JsonResponse
     {
         $contact = Contact::create($request->validated());
+        $contact->refresh();
 
         return $this->createdResponse(
             [

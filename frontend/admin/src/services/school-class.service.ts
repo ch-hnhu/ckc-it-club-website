@@ -14,6 +14,17 @@ const schoolClassService = {
 		return api.get("/school-classes", params);
 	},
 
+	async getDeletedSchoolClasses(params?: {
+		page?: number;
+		per_page?: number;
+		search?: string;
+		sort?: string;
+		order?: "asc" | "desc";
+		major_id?: number;
+	}): Promise<PaginatedResponse<SchoolClass>> {
+		return api.get("/school-classes/trash", params);
+	},
+
 	async createSchoolClass(payload: {
 		label: string;
 		value: string;
@@ -45,6 +56,14 @@ const schoolClassService = {
 
 	async deleteSchoolClass(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/school-classes/${id}`);
+	},
+
+	async restoreSchoolClass(id: number | string): Promise<ApiResponse<SchoolClass>> {
+		return api.patch(`/school-classes/${id}/restore`);
+	},
+
+	async forceDeleteSchoolClass(id: number | string): Promise<ApiResponse<null>> {
+		return api.delete(`/school-classes/${id}/force`);
 	},
 };
 

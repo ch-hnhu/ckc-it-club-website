@@ -180,6 +180,45 @@
 		text-transform: uppercase;
 	}
 
+	.community-shell {
+		--community-left: clamp(15rem, 13.5vw, 17rem);
+		--community-feed: clamp(34rem, 42vw, 44rem);
+		--community-right: clamp(18rem, 17vw, 21rem);
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		width: 100%;
+	}
+
+	@media (min-width: 1024px) {
+		.community-shell {
+			grid-template-columns: var(--community-left) minmax(0, 1fr);
+		}
+	}
+
+	@media (min-width: 1280px) {
+		.community-shell {
+			grid-template-columns: var(--community-left) minmax(0, 1fr);
+		}
+	}
+
+	.community-content {
+		display: grid;
+		grid-template-columns: minmax(0, var(--community-feed));
+		justify-content: center;
+		width: 100%;
+	}
+
+	@media (min-width: 1280px) {
+		.community-content {
+			grid-template-columns: minmax(0, var(--community-feed)) var(--community-right);
+		}
+	}
+
+	.community-feed {
+		max-width: var(--community-feed);
+		width: 100%;
+	}
+
 	/* Fade-in animation on scroll */
 	.fade-in-up {
 		opacity: 0;

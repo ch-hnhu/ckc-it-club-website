@@ -2,8 +2,11 @@ import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/Dashboard";
 import FacultyList from "@/pages/faculty/FacultyList";
+import FacultyTrashPage from "@/pages/faculty/FacultyTrashPage";
 import MajorList from "@/pages/major/MajorList";
+import MajorTrashPage from "@/pages/major/MajorTrashPage";
 import SchoolClassList from "@/pages/school-class/SchoolClassList";
+import SchoolClassTrashPage from "@/pages/school-class/SchoolClassTrashPage";
 import ContactList from "@/pages/contact/ContactList";
 import UserList from "@/pages/user/UserList";
 import CreateUser from "@/pages/user/CreateUser";
@@ -20,12 +23,18 @@ import RoleList from "@/pages/role/RoleList";
 import RoleDetailPage from "@/pages/role/RoleDetailPage";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
 import DepartmentDetailPage from "@/pages/division/DepartmentDetailPage";
+import DepartmentTrashPage from "@/pages/division/DepartmentTrashPage";
 import PermissionList from "@/pages/permission/PermissionList";
 import ClubInformationList from "@/pages/club-information/ClubInformationList";
 import ClubInformationDetailPage from "@/pages/club-information/ClubInformationDetailPage";
 import CreateClubInformationPage from "@/pages/club-information/CreateClubInformationPage";
 import OrganizationImportListPage from "@/pages/organization/OrganizationImportListPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
+import PostListPage from "@/pages/community/PostListPage";
+import BlogListPage from "@/pages/community/BlogListPage";
+import CommentListPage from "@/pages/community/CommentListPage";
+import TagListPage from "@/pages/community/TagListPage";
+import SystemNotificationPage from "@/pages/community/SystemNotificationPage";
 
 const router = createBrowserRouter([
 	{
@@ -114,6 +123,14 @@ const router = createBrowserRouter([
 				),
 			},
 			{
+				path: "departments/trash",
+				element: (
+					<PermissionRoute permission='academic_data.view'>
+						<FacultyTrashPage />
+					</PermissionRoute>
+				),
+			},
+			{
 				path: "majors",
 				element: (
 					<PermissionRoute permission='academic_data.view'>
@@ -122,10 +139,26 @@ const router = createBrowserRouter([
 				),
 			},
 			{
+				path: "majors/trash",
+				element: (
+					<PermissionRoute permission='academic_data.view'>
+						<MajorTrashPage />
+					</PermissionRoute>
+				),
+			},
+			{
 				path: "classes",
 				element: (
 					<PermissionRoute permission='academic_data.view'>
 						<SchoolClassList />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "classes/trash",
+				element: (
+					<PermissionRoute permission='academic_data.view'>
+						<SchoolClassTrashPage />
 					</PermissionRoute>
 				),
 			},
@@ -142,6 +175,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='club_info.view'>
 						<DivisionManagementPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "divisions/trash",
+				element: (
+					<PermissionRoute permission='club_info.view'>
+						<DepartmentTrashPage />
 					</PermissionRoute>
 				),
 			},
@@ -212,6 +253,46 @@ const router = createBrowserRouter([
 			{
 				path: "notifications",
 				element: <NotificationsPage />,
+			},
+			{
+				path: "community/posts",
+				element: (
+					<PermissionRoute permission="community.posts.view">
+						<PostListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/blogs",
+				element: (
+					<PermissionRoute permission="community.blogs.view">
+						<BlogListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/comments",
+				element: (
+					<PermissionRoute permission="community.comments.view">
+						<CommentListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/tags",
+				element: (
+					<PermissionRoute permission="community.tags.manage">
+						<TagListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/notifications",
+				element: (
+					<PermissionRoute permission="community.notifications.send">
+						<SystemNotificationPage />
+					</PermissionRoute>
+				),
 			},
 		],
 	},

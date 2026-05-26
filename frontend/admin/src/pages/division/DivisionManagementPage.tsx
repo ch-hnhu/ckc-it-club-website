@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import {
 	ArrowDown,
@@ -15,6 +16,7 @@ import {
 	MoreHorizontal,
 	Pencil,
 	Plus,
+	Trash2,
 	UserPlus,
 	Users,
 } from "lucide-react";
@@ -23,6 +25,7 @@ import DepartmentFormModal from "@/pages/division/DepartmentFormModal";
 import DepartmentMemberModal from "@/pages/division/DepartmentMemberModal";
 import departmentService from "@/services/department.service";
 import type { Department, DepartmentDetail } from "@/types/department.type";
+import type { ApiErrorResponse } from "@/types/api.types";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import { Button } from "@/components/ui/button";
@@ -34,6 +37,16 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -82,6 +95,10 @@ function DivisionManagementPage() {
 	const [detailDepartment, setDetailDepartment] = useState<DepartmentDetail | null>(null);
 	const [isDetailLoading] = useState(false);
 	const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+	const [deleteDepartment, setDeleteDepartment] = useState<Department | null>(null);
+	const [deletingDepartment, setDeletingDepartment] = useState(false);
+	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+	const [bulkDeleting, setBulkDeleting] = useState(false);
 	const [sortConfig, setSortConfig] = useState<{
 		key: string | null;
 		order: "asc" | "desc" | null;
@@ -175,6 +192,93 @@ function DivisionManagementPage() {
 		/>
 	);
 
+	const getDepartmentDeleteError = (error: unknown) => {
+		if (isAxiosError<ApiErrorResponse>(error)) {
+			const response = error.response?.data;
+			const firstError = response?.errors
+				? Object.values(response.errors).find((messages) => messages?.length)?.[0]
+				: null;
+
+			return firstError ?? response?.message ?? "Không thể xóa ban.";
+		}
+
+		return "Không thể xóa ban.";
+	};
+
+	const handleDeleteDepartment = async () => {
+		if (!deleteDepartment || deleteDepartment.users_count > 0) {
+			return;
+		}
+
+		setDeletingDepartment(true);
+
+		try {
+			await departmentService.deleteDepartment(deleteDepartment.id);
+			toast.success("Xóa ban thành công.", { position: "top-right" });
+			setDeleteDepartment(null);
+			toggleOne(deleteDepartment.id, false);
+			await fetchDepartments();
+		} catch (error) {
+			toast.error(getDepartmentDeleteError(error), { position: "top-right" });
+		} finally {
+			setDeletingDepartment(false);
+		}
+	};
+
+	const openBulkDeleteDialog = () => {
+		if (selectedIds.length === 0) {
+			return;
+		}
+
+		const selectedDepartments = departments.filter((department) =>
+			selectedIds.includes(department.id),
+		);
+		const departmentsWithMembers = selectedDepartments.filter(
+			(department) => department.users_count > 0,
+		);
+
+		if (departmentsWithMembers.length > 0) {
+			toast.error("Không thể xóa ban đang có thành viên.", {
+				description: departmentsWithMembers.map((department) => department.name).join(", "),
+				position: "top-right",
+			});
+			return;
+		}
+
+		setBulkDeleteOpen(true);
+	};
+
+	const handleBulkDeleteDepartments = async () => {
+		const selectedDepartments = departments.filter((department) =>
+			selectedIds.includes(department.id),
+		);
+
+		if (selectedDepartments.length === 0) {
+			setBulkDeleteOpen(false);
+			return;
+		}
+
+		setBulkDeleting(true);
+
+		try {
+			await Promise.all(
+				selectedDepartments.map((department) =>
+					departmentService.deleteDepartment(department.id),
+				),
+			);
+			toast.success(`Đã xóa ${selectedDepartments.length} ban.`, {
+				position: "top-right",
+			});
+			setBulkDeleteOpen(false);
+			toggleAll(false);
+			await fetchDepartments();
+		} catch (error) {
+			toast.error(getDepartmentDeleteError(error), { position: "top-right" });
+		} finally {
+			setBulkDeleting(false);
+		}
+	};
+
 	const handleShowDetail = (department: Department) => {
 		navigate(`/divisions/${department.id}`);
 	};
@@ -201,6 +305,26 @@ function DivisionManagementPage() {
 						/>
 					</div>
 					<div className='flex flex-wrap items-center gap-2'>
+						{false && selectedIds.length > 0 ? (
+							<Button
+								size='sm'
+								variant='destructive'
+								onClick={openBulkDeleteDialog}
+								disabled={bulkDeleting}
+								className='h-8'>
+								<Trash2 className='h-4 w-4' />
+								Xóa đã chọn
+							</Button>
+						) : null}
+						<Button
+							size='sm'
+							variant='outline'
+							type='button'
+							onClick={() => navigate("/divisions/trash")}
+							className='h-8'>
+							<Trash2 className='h-4 w-4' />
+							Thùng rác
+						</Button>
 						<Button
 							size='sm'
 							onClick={() => {
@@ -244,27 +368,6 @@ function DivisionManagementPage() {
 									</Button>
 								</TableHead>
 								<TableHead>
-									<span className='text-sm'>Mô tả</span>
-								</TableHead>
-								<TableHead>
-									<Button
-										variant='ghost'
-										onClick={() => handleSort("users_count")}
-										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Thành viên
-										{getSortIcon("users_count")}
-									</Button>
-								</TableHead>
-								<TableHead>
-									<Button
-										variant='ghost'
-										onClick={() => handleSort("is_active")}
-										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										Trạng thái
-										{getSortIcon("is_active")}
-									</Button>
-								</TableHead>
-								<TableHead>
 									<Button
 										variant='ghost'
 										onClick={() => handleSort("created_at")}
@@ -280,6 +383,15 @@ function DivisionManagementPage() {
 										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
 										Ngày cập nhật
 										{getSortIcon("updated_at")}
+									</Button>
+								</TableHead>
+								<TableHead>
+									<Button
+										variant='ghost'
+										onClick={() => handleSort("users_count")}
+										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+										Số lượng thành viên
+										{getSortIcon("users_count")}
 									</Button>
 								</TableHead>
 								<TableHead className='w-[50px]'></TableHead>
@@ -305,21 +417,17 @@ function DivisionManagementPage() {
 											</div>
 											<div className='flex min-w-0 flex-col'>
 												<span className='font-medium'>{department.name}</span>
-												<span className='text-xs text-muted-foreground'>
-													{department.slug}
+												<span
+													className='max-w-[420px] truncate text-xs text-muted-foreground'
+													title={department.description ?? undefined}>
+													{department.description ?? department.slug}
 												</span>
 											</div>
 										</div>
 									</TableCell>
-									<TableCell className='max-w-[360px]'>
-										<p className='line-clamp-2 text-sm text-muted-foreground'>
-											{department.description ?? "Chưa có mô tả"}
-										</p>
-									</TableCell>
-									<TableCell>{department.users_count}</TableCell>
-									<TableCell>{getStatusBadge(department.is_active)}</TableCell>
 									<TableCell>{department.created_at ?? "N/A"}</TableCell>
 									<TableCell>{department.updated_at ?? "N/A"}</TableCell>
+									<TableCell>{department.users_count}</TableCell>
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
@@ -352,6 +460,12 @@ function DivisionManagementPage() {
 													<Pencil className='h-4 w-4' />
 													Cập nhật
 												</DropdownMenuItem>
+												<DropdownMenuItem
+													className='text-destructive focus:text-destructive'
+													onClick={() => setDeleteDepartment(department)}>
+													<Trash2 className='h-4 w-4 text-destructive' />
+													Xóa ban
+												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>
 									</TableCell>
@@ -359,7 +473,7 @@ function DivisionManagementPage() {
 							))}
 							{departments.length === 0 && (
 								<TableRow>
-									<TableCell colSpan={9} className='h-24 text-center'>
+									<TableCell colSpan={7} className='h-24 text-center'>
 										Không tìm thấy ban phù hợp.
 									</TableCell>
 								</TableRow>
@@ -367,7 +481,7 @@ function DivisionManagementPage() {
 						</TableBody>
 						<TableFooter className='bg-transparent'>
 							<TableRow>
-								<TableCell colSpan={9}>
+								<TableCell colSpan={7}>
 									<div className='flex items-center justify-between px-2'>
 										<div className='flex flex-1 items-center gap-3 text-sm text-muted-foreground'>
 											Hiển thị {departments.length} / {meta.total} ban.
@@ -377,6 +491,15 @@ function DivisionManagementPage() {
 													<span className='font-medium text-foreground'>
 														{selectedIds.length} ban được chọn
 													</span>
+													<Button
+														size='sm'
+														variant='destructive'
+														disabled={bulkDeleting}
+														onClick={openBulkDeleteDialog}
+														className='h-7'>
+														<Trash2 className='h-3.5 w-3.5' />
+														{bulkDeleting ? "Đang xóa..." : "Xóa đã chọn"}
+													</Button>
 												</>
 											)}
 										</div>
@@ -486,6 +609,58 @@ function DivisionManagementPage() {
 				department={selectedDepartment}
 				onSuccess={() => void fetchDepartments()}
 			/>
+
+			<AlertDialog
+				open={Boolean(deleteDepartment)}
+				onOpenChange={(open) => {
+					if (!open) setDeleteDepartment(null);
+				}}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa ban?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{deleteDepartment && deleteDepartment.users_count > 0
+								? "Không thể xóa ban đang có thành viên. Vui lòng xóa thành viên khỏi ban trước."
+								: "Bạn có chắc chắn muốn xóa ban này?"}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={deletingDepartment}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(event) => {
+								event.preventDefault();
+								void handleDeleteDepartment();
+							}}
+							disabled={deletingDepartment || Boolean(deleteDepartment?.users_count)}
+							className='bg-destructive text-white hover:bg-destructive/90'>
+							{deletingDepartment ? "Đang xóa..." : "Xóa ban"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			<AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa các ban đã chọn?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Bạn có chắc chắn muốn xóa {selectedIds.length} ban đã chọn không?
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={bulkDeleting}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(event) => {
+								event.preventDefault();
+								void handleBulkDeleteDepartments();
+							}}
+							disabled={bulkDeleting}
+							className='bg-destructive text-white hover:bg-destructive/90'>
+							{bulkDeleting ? "Đang xóa..." : "Xóa đã chọn"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 
 			<Dialog open={Boolean(detailDepartment)} onOpenChange={() => setDetailDepartment(null)}>
 				<DialogContent className='max-w-md'>

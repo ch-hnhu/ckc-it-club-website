@@ -1,5 +1,6 @@
 import MainLayout from "@/layouts/MainLayout";
 import ContactPage from "@/pages/ContactPage";
+import CommunityPage from "@/pages/CommunityPage";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
@@ -20,6 +21,10 @@ const router = createBrowserRouter([
 			{
 				path: "lien-he",
 				element: <ContactPage />,
+			},
+			{
+				path: "cong-dong",
+				element: <CommunityPage />,
 			},
 		],
 	},

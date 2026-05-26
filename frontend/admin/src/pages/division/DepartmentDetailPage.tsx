@@ -163,18 +163,19 @@ function DepartmentDetailPage() {
 		paginatedMembers.map((m) => m.id),
 	);
 
+	const [isBulkRemoveOpen, setIsBulkRemoveOpen] = useState(false);
 	const [isBulkRemoving, setIsBulkRemoving] = useState(false);
 
 	const handleBulkRemove = async () => {
 		if (!department || selectedIds.length === 0) return;
-		if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.length} thành viên khỏi ban?`)) return;
-
 		setIsBulkRemoving(true);
 		try {
 			await Promise.all(
 				selectedIds.map((userId) => departmentService.removeDepartmentUser(department.id, userId)),
 			);
 			toast.success(`Đã xóa ${selectedIds.length} thành viên khỏi ban.`, { position: "top-right" });
+			setIsBulkRemoveOpen(false);
+			toggleAll(false);
 			await fetchDepartment();
 		} catch (error) {
 			console.error(error);
@@ -472,7 +473,7 @@ function DepartmentDetailPage() {
 															size='sm'
 															variant='destructive'
 															disabled={isBulkRemoving || !canManageDepartment}
-															onClick={() => void handleBulkRemove()}
+															onClick={() => setIsBulkRemoveOpen(true)}
 															className='h-7'>
 															<Trash2 className='h-3.5 w-3.5' />
 															{isBulkRemoving ? "Đang xóa..." : "Xóa đã chọn"}
@@ -582,6 +583,29 @@ function DepartmentDetailPage() {
 							disabled={removing}
 							className='bg-destructive text-white hover:bg-destructive/90'>
 							{removing ? "Đang xóa..." : "Xóa khỏi ban"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			<AlertDialog open={isBulkRemoveOpen} onOpenChange={setIsBulkRemoveOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa các thành viên đã chọn?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{selectedIds.length} thành viên sẽ không còn nằm trong ban này. Tài khoản người dùng không bị xóa khỏi hệ thống.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isBulkRemoving}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(event) => {
+								event.preventDefault();
+								void handleBulkRemove();
+							}}
+							disabled={isBulkRemoving || selectedIds.length === 0}
+							className='bg-destructive text-white hover:bg-destructive/90'>
+							{isBulkRemoving ? "Đang xóa..." : "Xóa đã chọn"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
