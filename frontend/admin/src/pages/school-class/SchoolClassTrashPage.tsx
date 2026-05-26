@@ -56,9 +56,7 @@ import {
 
 const breadcrumbItems = [
 	{ title: "Dashboard", link: "/" },
-	{ title: "Quản lý đơn vị" },
-	{ title: "Lớp", link: "/classes" },
-	{ title: "Thùng rác" },
+	{ title: "Thùng rác lớp" },
 ];
 
 const getDisplayName = (item?: { label?: string | null; value?: string | null } | null) =>

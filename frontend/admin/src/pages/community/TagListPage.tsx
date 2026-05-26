@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -50,7 +50,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
@@ -108,8 +107,7 @@ const emptyForm: TagFormState = { name: "", slug: "", color: "#6366f1" };
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function TagListPage() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/community/tags"), []);
-	useBreadcrumb(breadcrumb);
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý tags" }]);
 
 	const [tags, setTags] = useState<TagRecord[]>([]);
 	const [loading, setLoading] = useState(true);

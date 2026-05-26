@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	Bell,
 	ChevronLeft,
@@ -33,7 +33,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { cn } from "@/lib/utils";
 
@@ -109,8 +108,7 @@ const emptyForm: FormState = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function SystemNotificationPage() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/community/notifications"), []);
-	useBreadcrumb(breadcrumb);
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Thông báo hệ thống" }]);
 
 	// Form
 	const [form, setForm] = useState<FormState>(emptyForm);

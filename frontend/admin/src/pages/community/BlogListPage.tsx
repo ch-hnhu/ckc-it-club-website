@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -52,7 +52,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import { cn } from "@/lib/utils";
@@ -157,8 +156,7 @@ const emptyStats: BlogStats = { total: 0, published: 0, draft: 0, archived: 0 };
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function BlogListPage() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/community/blogs"), []);
-	useBreadcrumb(breadcrumb);
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý blog" }]);
 
 	const [blogs, setBlogs] = useState<BlogRecord[]>([]);
 	const [stats, setStats] = useState<BlogStats>(emptyStats);

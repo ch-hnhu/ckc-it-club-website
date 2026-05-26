@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -53,7 +53,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 
@@ -119,8 +118,7 @@ const emptyStats: CommentStats = { total: 0, visible: 0, hidden: 0, replies: 0 }
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function CommentListPage() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/community/comments"), []);
-	useBreadcrumb(breadcrumb);
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý bình luận" }]);
 
 	const [comments, setComments] = useState<CommentRecord[]>([]);
 	const [stats, setStats] = useState<CommentStats>(emptyStats);
