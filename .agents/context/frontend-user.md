@@ -43,6 +43,11 @@
 - outlet content
 - footer
 - back-to-top control
+- `/cong-dong` is a dense community layout exception:
+- footer is hidden
+- navbar uses a full-width container, reduced horizontal padding, and a two-group `justify-between` layout for nav/profile alignment
+- community content fills the available desktop width up to a 76rem cap with reduced feed-side padding, and its right rail uses a custom `70rem` breakpoint so it remains visible below Tailwind `xl`
+- on mobile/tablet below `lg`, the community page shows a sticky community sub-header and turns the left sidebar into an overlay drawer
 
 ## Route Surface
 - `/`
@@ -59,6 +64,7 @@
 - User credential signup is available at `/register` and posts to `POST /api/v1/auth/register`.
 - `ContactPage` posts real data to `POST /api/v1/contacts`, shows backend success or error feedback, and resets the form on success.
 - `Navbar` and auth service use `localStorage` for the access token.
+- When a user is authenticated, `Navbar` shows an avatar-only account trigger. Clicking it opens a neo-styled profile dropdown with Profile, Bookmarks, Account, Switch theme, and Sign Out actions.
 - `src/config/axios.config.ts` tries to read the token from `sessionStorage`, not `localStorage`.
 - The same Axios interceptor redirects `401` responses to `/login`.
 - Conclusion: token storage is internally inconsistent between the shared Axios client and the auth service. Agents must treat auth/session handling carefully.

@@ -109,16 +109,22 @@ export default function VerifyOtpPage() {
 					<Link to='/' className='flex items-center gap-2 no-underline'>
 						<div
 							className='flex h-10 w-10 items-center justify-center overflow-hidden rounded-full'
-							style={{ border: "2px solid #111", background: "var(--color-primary)" }}>
+							style={{
+								border: "2px solid #111",
+								background: "var(--color-primary)",
+							}}>
 							<img
 								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
 								className='h-full w-full rounded-full object-cover'
-								alt='CKC IT Club'
+								alt='CKC IT CLUB'
 							/>
 						</div>
 						<span
 							className='text-2xl font-extrabold tracking-tight'
-							style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
+							style={{
+								fontFamily: "var(--font-heading)",
+								color: "var(--color-text)",
+							}}>
 							CKC IT CLUB
 						</span>
 					</Link>
@@ -130,7 +136,10 @@ export default function VerifyOtpPage() {
 					<div className='p-6 sm:p-8'>
 						<h1
 							className='mb-1 text-xl font-bold'
-							style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
+							style={{
+								fontFamily: "var(--font-heading)",
+								color: "var(--color-text)",
+							}}>
 							Nhập mã xác nhận
 						</h1>
 						<p className='mb-6 text-sm' style={{ color: "var(--color-text-muted)" }}>
@@ -178,7 +187,9 @@ export default function VerifyOtpPage() {
 							</button>
 						</form>
 
-						<div className='mt-4 text-center text-sm' style={{ color: "var(--color-text-muted)" }}>
+						<div
+							className='mt-4 text-center text-sm'
+							style={{ color: "var(--color-text-muted)" }}>
 							Không nhận được mã?{" "}
 							{cooldown > 0 ? (
 								<span className='font-semibold'>Gửi lại sau {cooldown}s</span>
@@ -196,7 +207,9 @@ export default function VerifyOtpPage() {
 					</div>
 				</div>
 
-				<p className='mt-5 text-center text-sm' style={{ color: "var(--color-text-muted)" }}>
+				<p
+					className='mt-5 text-center text-sm'
+					style={{ color: "var(--color-text-muted)" }}>
 					<Link
 						to='/forgot-password'
 						className='font-semibold underline-offset-2 hover:underline'
