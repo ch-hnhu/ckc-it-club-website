@@ -1,10 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-	BookOpen,
 	Bookmark,
 	Bug,
 	CalendarDays,
-	ChevronRight,
 	Code2,
 	Crown,
 	Flame,
@@ -12,6 +10,7 @@ import {
 	Heart,
 	Home,
 	ImageIcon,
+	List,
 	MessageCircle,
 	Monitor,
 	PenSquare,
@@ -20,10 +19,15 @@ import {
 	Share2,
 	Sparkles,
 	Trophy,
-	Users,
 	X,
 	Zap,
 } from "lucide-react";
+import { Link, useOutletContext } from "react-router-dom";
+import type { AuthUser } from "@/services/auth.service";
+
+type MainLayoutOutletContext = {
+	user: AuthUser | null;
+};
 
 const PRIMARY_NAV = [
 	{ id: "home", label: "Trang chủ", icon: Home },
@@ -47,7 +51,6 @@ const CHANNELS = [
 const SORT_OPTIONS = [
 	{ id: "top", label: "Top bài viết", icon: Flame },
 	{ id: "newest", label: "Mới nhất", icon: Sparkles },
-	{ id: "following", label: "Đang theo dõi", icon: Users },
 ];
 
 const CHANNEL_SORT_OPTIONS = [
@@ -74,9 +77,24 @@ const NEWS_ITEMS = [
 ];
 
 const TOP_CONTRIBUTORS = [
-	{ id: 1, name: "Minh Trí", avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=mt", points: 1420 },
-	{ id: 2, name: "Hồng Nhung", avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=hn", points: 1175 },
-	{ id: 3, name: "Quốc Bảo", avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=qb", points: 940 },
+	{
+		id: 1,
+		name: "Minh Trí",
+		avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=mt",
+		points: 1420,
+	},
+	{
+		id: 2,
+		name: "Hồng Nhung",
+		avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=hn",
+		points: 1175,
+	},
+	{
+		id: 3,
+		name: "Quốc Bảo",
+		avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=qb",
+		points: 940,
+	},
 ];
 
 const MOCK_POSTS = [
@@ -158,7 +176,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 	};
 
 	return (
-		<article className='neo-card neo-card-static bg-white p-4'>
+		<article className='border-2 border-black rounded-2xl bg-white p-4'>
 			<div className='mb-3 flex items-center gap-3'>
 				<div className='relative'>
 					<img
@@ -174,8 +192,12 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 				</div>
 				<div className='min-w-0'>
 					<div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
-						<p className='font-heading text-sm font-extrabold text-black'>{post.author.name}</p>
-						<span className='text-sm font-medium text-gray-500'>{post.author.handle}</span>
+						<p className='font-heading text-sm font-extrabold text-black'>
+							{post.author.name}
+						</p>
+						<span className='text-sm font-medium text-gray-500'>
+							{post.author.handle}
+						</span>
 						<span className='text-sm text-gray-400'>· {post.createdAt}</span>
 					</div>
 					<p className='text-xs font-bold text-lime-700'># {post.channelLabel}</p>
@@ -189,7 +211,11 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 
 			{post.image && (
 				<div className='mt-4 overflow-hidden rounded-[10px] border-2 border-black bg-[var(--color-pastel-yellow)]'>
-					<img src={post.image} alt={post.title} className='aspect-[16/9] w-full object-cover' />
+					<img
+						src={post.image}
+						alt={post.title}
+						className='aspect-[16/9] w-full object-cover'
+					/>
 				</div>
 			)}
 
@@ -233,259 +259,406 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 };
 
 const CommunityPage: React.FC = () => {
+	const outletContext = useOutletContext<MainLayoutOutletContext | undefined>();
+	const user = outletContext?.user ?? null;
 	const [activeChannel, setActiveChannel] = useState("all");
 	const [activeSort, setActiveSort] = useState("top");
 	const [pageMode, setPageMode] = useState<"home" | "channel">("home");
-	const [searchQuery, setSearchQuery] = useState("");
 	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const activePrimaryNav = pageMode === "home" ? "home" : "";
+	const userDisplayName = user?.name || user?.email || "CKC member";
+	const userAvatar =
+		user?.picture ||
+		`https://ui-avatars.com/api/?name=${encodeURIComponent(
+			userDisplayName,
+		)}&background=A3E635&color=111111&bold=true`;
 
 	const currentChannel = CHANNELS.find((channel) => channel.id === activeChannel);
 
+	useEffect(() => {
+		if (!isSidebarOpen) return;
+
+		const originalBodyOverflow = document.body.style.overflow;
+		const originalHtmlOverflow = document.documentElement.style.overflow;
+		document.body.style.overflow = "hidden";
+		document.documentElement.style.overflow = "hidden";
+
+		return () => {
+			document.body.style.overflow = originalBodyOverflow;
+			document.documentElement.style.overflow = originalHtmlOverflow;
+		};
+	}, [isSidebarOpen]);
+
 	const filteredPosts = MOCK_POSTS.filter((post) => {
-		const matchChannel = pageMode === "home" || activeChannel === "all" || post.channel === activeChannel;
-		const normalizedQuery = searchQuery.trim().toLowerCase();
-		const matchSearch =
-			!normalizedQuery ||
-			post.title.toLowerCase().includes(normalizedQuery) ||
-			post.excerpt.toLowerCase().includes(normalizedQuery);
-		return matchChannel && matchSearch;
+		return pageMode === "home" || activeChannel === "all" || post.channel === activeChannel;
 	});
+
+	const handlePrimaryNavClick = () => {
+		setPageMode("home");
+		setActiveChannel("all");
+		setActiveSort("top");
+		setIsSidebarOpen(false);
+	};
+
+	const handleChannelClick = (channelId: string) => {
+		setPageMode("channel");
+		setActiveChannel(channelId);
+		setActiveSort("top");
+		setIsSidebarOpen(false);
+	};
+
+	const renderSidebarContent = (isMobile = false) => (
+		<div className={isMobile ? "px-4 py-4" : "px-3 py-4"}>
+			<nav className={isMobile ? "space-y-2" : "space-y-2"}>
+				{PRIMARY_NAV.map((item) => {
+					const Icon = item.icon;
+					const isActive = activePrimaryNav === item.id;
+					return (
+						<button
+							key={item.id}
+							onClick={handlePrimaryNavClick}
+							className={`group relative flex w-full items-center text-left font-bold transition-all duration-200 hover:bg-primary-100 hover:text-[var(--color-text-primary)] ${
+								isMobile
+									? "gap-3 rounded-xl px-3 py-3 text-base"
+									: "gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px]"
+							} ${
+								isActive
+									? "bg-primary-100 text-[var(--color-text-primary)]"
+									: "bg-white text-gray-700"
+							}`}>
+							<Icon
+								className={`transition-colors duration-200 group-hover:text-[var(--color-text-primary)] ${
+									isMobile ? "h-5 w-5" : "h-4 w-4"
+								} ${isActive ? "text-[var(--color-text-primary)]" : "text-gray-700"}`}
+							/>
+							{item.label}
+							<span
+								className='absolute right-3 bottom-0.5 left-3 h-0.5 scale-x-0 rounded-full transition-transform duration-200 group-hover:scale-x-100'
+								style={{ background: "var(--color-primary)" }}
+							/>
+						</button>
+					);
+				})}
+			</nav>
+
+			<div
+				className={`font-bold uppercase tracking-[0.2em] text-gray-500 ${
+					isMobile ? "mt-6 px-1 text-xs" : "mt-7 px-3 text-[11px]"
+				}`}>
+				Kênh
+			</div>
+			<nav className={isMobile ? "mt-3 space-y-2" : "mt-3 space-y-2"}>
+				{CHANNELS.map((channel) => {
+					const isActive = pageMode === "channel" && activeChannel === channel.id;
+					return (
+						<button
+							key={channel.id}
+							onClick={() => handleChannelClick(channel.id)}
+							className={`group relative flex w-full items-center justify-between text-left font-bold transition-all duration-200 hover:bg-primary-100 hover:text-[var(--color-text-primary)] ${
+								isMobile
+									? "rounded-xl px-3 py-2.5 text-base"
+									: "rounded-lg px-2.5 py-2 text-[13px]"
+							} ${
+								isActive
+									? "bg-primary-100 text-[var(--color-text-primary)]"
+									: "bg-white text-black"
+							}`}>
+							<span
+								className={
+									isMobile ? "flex items-center gap-3" : "flex items-center gap-3"
+								}>
+								<Hash
+									className={`transition-colors duration-200 group-hover:text-[var(--color-text-primary)] ${
+										isMobile ? "h-5 w-5" : "h-3.5 w-3.5"
+									} ${
+										isActive
+											? "text-[var(--color-text-primary)]"
+											: "text-gray-500"
+									}`}
+								/>
+								{channel.label}
+							</span>
+							<span
+								className={`transition-colors duration-200 group-hover:text-[var(--color-text-primary)] ${
+									isMobile ? "text-sm" : "text-xs"
+								} ${
+									isActive ? "text-[var(--color-text-primary)]" : "text-gray-500"
+								}`}>
+								{channel.count}
+							</span>
+							<span
+								className='absolute right-3 bottom-0.5 left-3 h-0.5 scale-x-0 rounded-full transition-transform duration-200 group-hover:scale-x-100'
+								style={{ background: "var(--color-primary)" }}
+							/>
+						</button>
+					);
+				})}
+			</nav>
+		</div>
+	);
 
 	return (
 		<div className='min-h-screen bg-[var(--color-surface)] pt-16 text-black'>
 			<div className='community-shell'>
-				<aside className='hidden border-r-2 border-black bg-white lg:block'>
-					<div className='sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4 pr-1 pl-0'>
-						<nav className='space-y-1.5'>
-							{PRIMARY_NAV.map((item) => {
-								const Icon = item.icon;
-								const isActive = activePrimaryNav === item.id;
-								return (
-									<button
-										key={item.id}
-										onClick={() => {
-											setPageMode("home");
-											setActiveChannel("all");
-											setActiveSort("top");
-										}}
-										className='flex w-full items-center gap-2.5 rounded-[10px] border-2 px-2.5 py-2.5 text-left text-[13px] font-bold transition hover:translate-x-[1px] hover:translate-y-[1px] hover:border-black hover:bg-[var(--color-pastel-blue)] hover:shadow-[2px_2px_0_#111]'
-										style={{
-											background: isActive ? "var(--color-primary)" : "#fff",
-											borderColor: isActive ? "#111" : "transparent",
-											boxShadow: isActive ? "3px 3px 0 #111" : "none",
-											color: isActive ? "#111" : "#374151",
-										}}>
-										<Icon className='h-4 w-4' style={{ color: isActive ? "#111" : "#6b7280" }} />
-										{item.label}
-									</button>
-								);
-							})}
-						</nav>
-
-						<div className='mt-6 px-3 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-500'>
-							Kênh
-						</div>
-						<nav className='mt-2 space-y-1.5'>
-							{CHANNELS.map((channel) => (
-								<button
-									key={channel.id}
-									onClick={() => {
-										setPageMode("channel");
-										setActiveChannel(channel.id);
-										setActiveSort("top");
-									}}
-									className='flex w-full items-center justify-between rounded-[10px] border-2 px-2.5 py-2 text-left text-[13px] font-bold transition'
-									style={{
-										background: pageMode === "channel" && activeChannel === channel.id ? "var(--color-primary)" : "#fff",
-										borderColor: pageMode === "channel" && activeChannel === channel.id ? "#111" : "transparent",
-										boxShadow: pageMode === "channel" && activeChannel === channel.id ? "3px 3px 0 #111" : "none",
-										color: "#111",
-									}}>
-									<span className='flex items-center gap-3'>
-										<Hash className='h-3.5 w-3.5 text-gray-500' />
-										{channel.label}
-									</span>
-									<span className='text-xs text-gray-500'>{channel.count}</span>
-								</button>
-							))}
-						</nav>
+				<aside className='hidden border-r-2 border-black bg-white md:block'>
+					<div className='sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto'>
+						{renderSidebarContent()}
 					</div>
 				</aside>
 
 				<div className='community-content'>
-				<main className='community-feed min-w-0 px-4 py-5 md:px-5 lg:px-6'>
-					{/* Community header – home mode */}
-					{pageMode === "home" && (
-						<div className='mb-5 flex items-center gap-4 border-b border-gray-200 pb-5'>
+					<main className='community-feed min-w-0 px-4 pb-5 md:px-4 md:pt-5'>
+						{/* Mobile community header — inside feed for pixel-perfect alignment */}
+						<div className='sticky top-16 z-30 -mx-3 flex h-14 items-center gap-2 border-b border-gray-200 bg-[var(--color-surface)] px-3 md:hidden mb-3'>
+							<button
+								onClick={() => setIsSidebarOpen(true)}
+								className='inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-black transition hover:bg-gray-100'
+								aria-label='Mở menu cộng đồng'>
+								<List className='h-5 w-5' />
+							</button>
 							<img
 								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
-								alt='CKC IT Club'
-								className='h-14 w-14 shrink-0 rounded-full border-2 border-black object-cover'
-								style={{ boxShadow: "var(--neo-shadow)" }}
+								alt='CKC IT CLUB'
+								className='h-6 w-6 shrink-0 rounded-full border-2 border-black object-cover'
 							/>
-							<div>
-								<h1 className='font-heading text-xl font-extrabold leading-tight text-black md:text-2xl'>
-									CKC IT Club Community
-								</h1>
-								<p className='mt-0.5 text-sm font-medium text-gray-500'>
-									Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦
-								</p>
-							</div>
+							<h1 className='min-w-0 truncate font-heading text-sm font-bold text-black'>
+								Cộng đồng CKC IT CLUB
+							</h1>
 						</div>
-					)}
-
-					{/* Channel header */}
-					{pageMode === "channel" && (
-						<section className='neo-card neo-card-static mb-5 bg-[var(--color-pastel-green)] p-4'>
-							<div className='flex items-center gap-3'>
-								<div className='flex h-11 w-11 items-center justify-center rounded-[10px] border-2 border-black bg-white shadow-[3px_3px_0_#111]'>
-									<Hash className='h-5 w-5 text-black' />
-								</div>
+						{/* Community header – home mode */}
+						{pageMode === "home" && (
+							<div className='my-4 hidden items-center gap-4 pb-5 lg:flex'>
+								<img
+									src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
+									alt='CKC IT CLUB'
+									className='h-18 w-18 shrink-0 rounded-full border-2 border-black object-cover'
+								/>
 								<div>
-									<h1 className='font-heading text-xl font-extrabold text-black'>#{currentChannel?.label ?? "Kênh"}</h1>
-									<p className='text-sm font-semibold text-gray-700'>Bài viết và thảo luận trong kênh này.</p>
+									<h1 className='font-heading text-xl font-extrabold leading-tight text-black md:text-2xl lg:text-3xl'>
+										Cộng đồng CKC IT CLUB
+									</h1>
+									<p className='mt-2 text-sm font-medium text-gray-500'>
+										Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦
+									</p>
 								</div>
-							</div>
-						</section>
-					)}
-
-					<div className='mb-4 flex flex-col gap-3 md:flex-row md:items-center'>
-						<div className='flex min-h-10 flex-1 items-center gap-2 rounded-[10px] border-2 border-black bg-white px-3 shadow-[3px_3px_0_#111]'>
-							<Search className='h-4 w-4 shrink-0 text-gray-500' />
-							<input
-								type='text'
-								placeholder='Tìm bài viết, chủ đề, tài nguyên...'
-								value={searchQuery}
-								onChange={(event) => setSearchQuery(event.target.value)}
-								className='w-full bg-transparent text-sm font-medium text-black outline-none placeholder:text-gray-500'
-							/>
-							{searchQuery && (
-								<button onClick={() => setSearchQuery("")} aria-label='Xóa tìm kiếm'>
-									<X className='h-4 w-4 text-gray-500 hover:text-black' />
-								</button>
-							)}
-						</div>
-						<button
-							onClick={() => setShowCreateModal(true)}
-							className='neo-btn neo-btn-primary inline-flex h-11 px-4 py-0 text-sm md:hidden'>
-							<PenSquare className='h-4 w-4' />
-							Đăng bài
-						</button>
-					</div>
-
-					{pageMode === "home" ? (
-						<div className='mb-5 border-b border-gray-200'>
-							<div className='flex overflow-x-auto'>
-								{SORT_OPTIONS.map((option) => {
-									const Icon = option.icon;
-									const isActive = activeSort === option.id;
-									return (
-										<button
-											key={option.id}
-											onClick={() => setActiveSort(option.id)}
-											className='relative flex shrink-0 items-center gap-1.5 px-4 pb-3 pt-1 text-sm font-extrabold text-black transition hover:text-black md:text-base'
-											style={{
-												fontFamily: "var(--font-heading)",
-												color: isActive ? "#111" : "#6b7280",
-											}}>
-											<Icon className='h-4 w-4' />
-											{option.label}
-											{isActive && (
-												<span className='absolute right-0 -bottom-[3px] left-0 h-[3px] rounded-t-sm bg-[var(--color-primary)]' />
-											)}
-										</button>
-									);
-								})}
-							</div>
-						</div>
-					) : (
-						<div className='mb-5 rounded-[10px] border-2 border-black bg-white px-4 pt-3 shadow-[3px_3px_0_#111] md:px-5'>
-							<div className='flex border-b-[3px] border-gray-300'>
-								{CHANNEL_SORT_OPTIONS.map((option) => {
-									const isActive = activeSort === option.id;
-									return (
-										<button
-											key={option.id}
-											onClick={() => setActiveSort(option.id)}
-											className='relative shrink-0 px-4 pb-3 font-heading text-sm font-extrabold transition hover:text-black md:px-5 md:text-lg'
-											style={{ color: isActive ? "#111" : "#6b7280" }}>
-											{option.label}
-											{isActive && <span className='absolute right-0 -bottom-[3px] left-0 h-[3px] bg-[var(--color-primary)]' />}
-										</button>
-									);
-								})}
-							</div>
-						</div>
-					)}
-
-					<div className='space-y-5'>
-						{filteredPosts.length > 0 ? (
-							filteredPosts.map((post) => <PostCard key={post.id} post={post} />)
-						) : (
-							<div className='neo-card neo-card-static bg-white px-6 py-16 text-center'>
-								<Search className='mx-auto h-10 w-10 text-gray-500' />
-								<p className='mt-4 font-heading text-xl font-extrabold text-black'>Không tìm thấy bài viết</p>
-								<p className='mt-2 text-sm text-gray-600'>Thử từ khóa khác hoặc đổi kênh ở thanh bên.</p>
 							</div>
 						)}
-					</div>
-				</main>
 
-				<aside className='hidden border-l-2 border-black bg-white xl:block'>
-					<div className='sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto px-3 py-5'>
-						<section className='neo-card neo-card-static bg-white p-4'>
-							<div className='mb-4 flex items-center justify-between'>
-								<h2 className='font-heading text-base font-extrabold text-black'>Tin mới</h2>
-								<button className='text-xs font-bold text-lime-700 hover:text-black'>Xem tất cả</button>
-							</div>
-							<div className='space-y-4'>
-								{NEWS_ITEMS.map((item) => (
-									<button key={item.title} className='flex w-full gap-3 rounded-lg p-1 text-left transition hover:bg-[var(--color-pastel-yellow)]'>
-										<img src={item.image} alt='' className='h-11 w-11 rounded-lg border-2 border-black bg-[var(--color-pastel-blue)] object-cover' />
-										<span className='min-w-0'>
-											<span className='block text-[13px] font-extrabold leading-snug text-black'>{item.title}</span>
-											<span className='mt-1 block text-xs text-gray-600'>{item.meta}</span>
-										</span>
-									</button>
-								))}
-							</div>
-						</section>
-
-						<section className='neo-card neo-card-static mt-5 bg-[var(--color-pastel-yellow)] p-4'>
-							<div className='flex items-center gap-3'>
-								<div className='flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] text-black shadow-[2px_2px_0_#111]'>
-									<BookOpen className='h-5 w-5' />
-								</div>
-								<div>
-									<h2 className='font-heading text-sm font-extrabold text-black'>Quy tắc cộng đồng</h2>
-									<p className='text-sm text-gray-700'>Đọc code of conduct</p>
-								</div>
-								<ChevronRight className='ml-auto h-5 w-5 text-black' />
-							</div>
-						</section>
-
-						<section className='neo-card neo-card-static mt-5 bg-[var(--color-pastel-blue)] p-4'>
-							<h2 className='mb-3 font-heading text-base font-extrabold text-black'>Đóng góp nổi bật</h2>
-							<div className='space-y-3'>
-								{TOP_CONTRIBUTORS.map((member, index) => (
-									<div key={member.id} className='flex items-center gap-3'>
-										<span className='w-5 text-sm font-extrabold text-gray-600'>#{index + 1}</span>
-										<img src={member.avatar} alt={member.name} className='h-9 w-9 rounded-full border-2 border-black bg-white' />
-										<div className='min-w-0'>
-											<p className='truncate text-sm font-bold text-black'>{member.name}</p>
-											<p className='text-xs text-gray-700'>{member.points} điểm</p>
-										</div>
+						{/* Channel header */}
+						{pageMode === "channel" && (
+							<section className='neo-card neo-card-static mb-5 bg-[var(--color-pastel-green)] p-4'>
+								<div className='flex items-center gap-3'>
+									<div className='flex h-11 w-11 items-center justify-center rounded-[10px] border-2 border-black bg-white shadow-[3px_3px_0_#111]'>
+										<Hash className='h-5 w-5 text-black' />
 									</div>
-								))}
-							</div>
-						</section>
+									<div>
+										<h1 className='font-heading text-xl font-extrabold text-black'>
+											#{currentChannel?.label ?? "Kênh"}
+										</h1>
+										<p className='text-sm font-semibold text-gray-700'>
+											Bài viết và thảo luận trong kênh này.
+										</p>
+									</div>
+								</div>
+							</section>
+						)}
 
-						<p className='mt-5 text-sm text-gray-500'>© 2026 CKC IT Club · Điều khoản · Bảo mật</p>
-					</div>
-				</aside>
+							{user && (
+								<div className='mb-6 flex items-center gap-3 rounded-xl border-2 border-black bg-white px-5 py-4'>
+									<Link to='/profile' className='relative'>
+										<img
+											src={userAvatar}
+											alt={userDisplayName}
+											className='h-11 w-11 shrink-0 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
+										/>
+									</Link>
+									<button
+										type='button'
+										onClick={() => setShowCreateModal(true)}
+										className='flex h-11 min-w-0 flex-1 items-center rounded-[10px] border-2 border-black bg-gray-50 px-4 text-left font-body text-sm font-medium text-gray-500 transition cursor-pointer'>
+										Chia sẻ điều gì đó...
+									</button>
+									<button
+										type='button'
+										disabled
+										aria-disabled='true'
+										className='inline-flex h-11 shrink-0 cursor-not-allowed select-none items-center justify-center gap-2 rounded-[10px] border-2 border-black bg-[var(--color-primary)] px-4 py-0 font-heading text-sm font-extrabold text-dark opacity-60 shadow-[3px_3px_0_#000000]'>
+										<PenSquare strokeWidth={3} className='h-4 w-4 text-dark' />
+										Đăng bài
+									</button>
+								</div>
+							)}
+
+						{pageMode === "home" ? (
+							<div className='mb-5 border-b border-gray-200'>
+								<div className='flex'>
+									{SORT_OPTIONS.map((option) => {
+										const Icon = option.icon;
+										const isActive = activeSort === option.id;
+										return (
+											<button
+												key={option.id}
+												onClick={() => setActiveSort(option.id)}
+												className='relative flex shrink-0 items-center gap-1.5 px-4 pb-3 pt-1 text-sm font-extrabold text-black transition hover:text-black md:text-base'
+												style={{
+													fontFamily: "var(--font-heading)",
+													color: isActive ? "#111" : "#6b7280",
+												}}>
+												<Icon className='h-4 w-4' />
+												{option.label}
+												{isActive && (
+													<span className='absolute right-0 -bottom-[3px] left-0 h-[3px] rounded-t-sm bg-[var(--color-primary)]' />
+												)}
+											</button>
+										);
+									})}
+								</div>
+							</div>
+						) : (
+							<div className='mb-5 rounded-[10px] border-2 border-black bg-white px-4 pt-3 shadow-[3px_3px_0_#111] md:px-5'>
+								<div className='flex border-b-[3px] border-gray-300'>
+									{CHANNEL_SORT_OPTIONS.map((option) => {
+										const isActive = activeSort === option.id;
+										return (
+											<button
+												key={option.id}
+												onClick={() => setActiveSort(option.id)}
+												className='relative shrink-0 px-4 pb-3 font-heading text-sm font-extrabold transition hover:text-black md:px-5 md:text-lg'
+												style={{ color: isActive ? "#111" : "#6b7280" }}>
+												{option.label}
+												{isActive && (
+													<span className='absolute right-0 -bottom-[3px] left-0 h-[3px] bg-[var(--color-primary)]' />
+												)}
+											</button>
+										);
+									})}
+								</div>
+							</div>
+						)}
+
+						<div className='space-y-5'>
+							{filteredPosts.length > 0 ? (
+								filteredPosts.map((post) => <PostCard key={post.id} post={post} />)
+							) : (
+								<div className='neo-card neo-card-static bg-white px-6 py-16 text-center'>
+									<Search className='mx-auto h-10 w-10 text-gray-500' />
+									<p className='mt-4 font-heading text-xl font-extrabold text-black'>
+										Không tìm thấy bài viết
+									</p>
+									<p className='mt-2 text-sm text-gray-600'>
+										Thử từ khóa khác hoặc đổi kênh ở thanh bên.
+									</p>
+								</div>
+							)}
+						</div>
+					</main>
+
+					<aside className='community-right-rail'>
+						<div className='sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto px-3 py-5'>
+							<section className='neo-card neo-card-static bg-white p-4'>
+								<div className='mb-4 flex items-center justify-between'>
+									<h2 className='font-heading text-base font-extrabold text-black'>
+										Tin mới
+									</h2>
+									<button className='text-xs font-bold text-lime-700 hover:text-black cursor-pointer'>
+										Xem tất cả
+									</button>
+								</div>
+								<div className='space-y-4'>
+									{NEWS_ITEMS.map((item) => (
+										<button
+											key={item.title}
+											className='flex w-full gap-3 rounded-lg p-2 text-left transition hover:bg-[var(--color-primary-100)]'>
+											<img
+												src={item.image}
+												alt=''
+												className='h-11 w-11 rounded-lg border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
+											/>
+											<span className='min-w-0'>
+												<span className='block text-[13px] font-extrabold leading-snug text-black'>
+													{item.title}
+												</span>
+												<span className='mt-1 block text-xs text-gray-600'>
+													{item.meta}
+												</span>
+											</span>
+										</button>
+									))}
+								</div>
+							</section>
+
+							<section className='neo-card neo-card-static mt-5 bg-white p-4'>
+								<div className='mb-4 flex items-center justify-between'>
+									<h2 className='font-heading text-base font-extrabold text-black'>
+										Hoạt động sôi nổi
+									</h2>
+									<button className='text-xs font-bold text-lime-700 hover:text-black cursor-pointer cursor-pointer'>
+										Xem tất cả
+									</button>
+								</div>
+								<div className='space-y-3'>
+									{TOP_CONTRIBUTORS.map((member, index) => (
+										<Link
+											key={member.id}
+											to={`/profile/${member.id}`}
+											className='flex items-center gap-3'>
+											<div
+												key={member.id}
+												className='flex items-center gap-3'>
+												<span className='w-5 text-sm font-extrabold text-gray-600'>
+													#{index + 1}
+												</span>
+												<img
+													src={member.avatar}
+													alt={member.name}
+													className='h-9 w-9 rounded-full border-2 border-black bg-white'
+												/>
+												<div className='min-w-0'>
+													<p className='truncate text-sm font-bold text-black'>
+														{member.name}
+													</p>
+													<p className='text-xs text-gray-700'>
+														{member.points} điểm
+													</p>
+												</div>
+											</div>
+										</Link>
+									))}
+								</div>
+							</section>
+
+							<p className='mt-5 text-sm text-gray-500'>
+								© 2026 CKC IT CLUB · Điều khoản · Bảo mật
+							</p>
+						</div>
+					</aside>
 				</div>
 			</div>
+
+			{isSidebarOpen && (
+				<div className='fixed inset-x-0 bottom-0 top-16 z-50 md:hidden'>
+					<button
+						className='absolute inset-0 h-full w-full bg-black/55'
+						onClick={() => setIsSidebarOpen(false)}
+						aria-label='Đóng menu cộng đồng'
+					/>
+					<aside className='no-scrollbar relative h-full w-[min(70vw,20rem)] overflow-y-auto border-r-2 border-black bg-white shadow-[6px_0_0_#111]'>
+						<div className='sticky top-0 z-10 flex h-14 items-center justify-between border-b-2 border-black bg-white px-4'>
+							<h2 className='font-heading text-lg font-extrabold text-black'>
+								Cộng đồng
+							</h2>
+							<button
+								onClick={() => setIsSidebarOpen(false)}
+								className='inline-flex h-9 w-9 items-center justify-center rounded-lg bg-transparent text-black transition hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-gray-100'
+								aria-label='Đóng menu cộng đồng'>
+								<X className='h-4 w-4' />
+							</button>
+						</div>
+						{renderSidebarContent(true)}
+					</aside>
+				</div>
+			)}
 
 			{showCreateModal && (
 				<div
@@ -496,8 +669,12 @@ const CommunityPage: React.FC = () => {
 						onClick={(event) => event.stopPropagation()}>
 						<div className='mb-5 flex items-center justify-between'>
 							<div>
-								<span className='neo-tag bg-[var(--color-pastel-green)]'>Cộng đồng</span>
-								<h2 className='mt-3 font-heading text-xl font-extrabold'>Tạo bài viết mới</h2>
+								<span className='neo-tag bg-[var(--color-pastel-green)]'>
+									Cộng đồng
+								</span>
+								<h2 className='mt-3 font-heading text-xl font-extrabold'>
+									Tạo bài viết mới
+								</h2>
 							</div>
 							<button
 								onClick={() => setShowCreateModal(false)}
@@ -507,9 +684,13 @@ const CommunityPage: React.FC = () => {
 						</div>
 						<div className='space-y-4'>
 							<select className='h-11 w-full rounded-[10px] border-2 border-black bg-[var(--color-pastel-blue)] px-3 text-sm font-bold text-black shadow-[3px_3px_0_#111] outline-none focus:bg-white focus:ring-2 focus:ring-lime-300'>
-								{CHANNELS.filter((channel) => channel.id !== "all").map((channel) => (
-									<option key={channel.id} value={channel.id}>{channel.label}</option>
-								))}
+								{CHANNELS.filter((channel) => channel.id !== "all").map(
+									(channel) => (
+										<option key={channel.id} value={channel.id}>
+											{channel.label}
+										</option>
+									),
+								)}
 							</select>
 							<input
 								type='text'
@@ -523,13 +704,19 @@ const CommunityPage: React.FC = () => {
 							/>
 							<div className='flex flex-wrap items-center justify-between gap-3 border-t-2 border-black pt-4'>
 								<div className='flex gap-2 text-black'>
-									<button className='rounded-lg border-2 border-black bg-[var(--color-pastel-purple)] p-2 shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none' aria-label='Thêm hình ảnh'>
+									<button
+										className='rounded-lg border-2 border-black bg-[var(--color-pastel-purple)] p-2 shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+										aria-label='Thêm hình ảnh'>
 										<ImageIcon className='h-4 w-4' />
 									</button>
-									<button className='rounded-lg border-2 border-black bg-[var(--color-pastel-orange)] p-2 shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none' aria-label='Thêm lịch'>
+									<button
+										className='rounded-lg border-2 border-black bg-[var(--color-pastel-orange)] p-2 shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+										aria-label='Thêm lịch'>
 										<CalendarDays className='h-4 w-4' />
 									</button>
-									<button className='rounded-lg border-2 border-black bg-[var(--color-pastel-pink)] p-2 shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none' aria-label='Báo lỗi'>
+									<button
+										className='rounded-lg border-2 border-black bg-[var(--color-pastel-pink)] p-2 shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+										aria-label='Báo lỗi'>
 										<Bug className='h-4 w-4' />
 									</button>
 								</div>

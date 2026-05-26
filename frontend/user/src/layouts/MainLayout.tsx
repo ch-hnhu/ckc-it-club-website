@@ -8,6 +8,7 @@ import { Outlet, useLocation } from "react-router-dom";
 const MainLayout: React.FC = () => {
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const { pathname } = useLocation();
+	const isCommunityPage = pathname.startsWith("/cong-dong");
 
 	const refreshUser = useCallback(async () => {
 		const currentUser = await getCurrentUser();
@@ -39,10 +40,10 @@ const MainLayout: React.FC = () => {
 
 			{/* Main content */}
 			<main className='flex-grow flex flex-col'>
-				<Outlet />
+				<Outlet context={{ user }} />
 			</main>
 
-			<Footer />
+			{!isCommunityPage && <Footer />}
 
 			{/* Back to top button */}
 			<BackToTop />

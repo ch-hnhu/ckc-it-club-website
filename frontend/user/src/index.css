@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+	--color-primary: #a3e635;
+	--color-primary-100: #ecfccb;
+	--color-primary-500: #84cc16;
+}
+
 /* ============================================
    CKC IT CLUB – Soft Neobrutalism Design Tokens
    ============================================ */
@@ -13,6 +19,7 @@
 		--color-surface: #f9fafb;
 		--color-border: #111111;
 		--color-text: #111111;
+		--color-text-primary: #476715;
 		--color-text-muted: #6b7280;
 		--color-text-light: #9ca3af;
 
@@ -55,6 +62,7 @@
 		--color-surface: #1a1a1a;
 		--color-border: #333333;
 		--color-text: #ffffff;
+		--color-text-primary: #a3e635;
 		--color-text-muted: #a1a1aa;
 		--neo-border: 2px solid #444444;
 		--neo-shadow: 4px 4px 0px #444444;
@@ -181,21 +189,16 @@
 	}
 
 	.community-shell {
-		--community-left: clamp(15rem, 13.5vw, 17rem);
-		--community-feed: clamp(34rem, 42vw, 44rem);
-		--community-right: clamp(18rem, 17vw, 21rem);
+		--community-left: 16.25rem; /* 260px */
+		--community-feed: 43.75rem; /* 700px */
+		--community-right: 20rem;   /* 320px */
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		width: 100%;
 	}
 
-	@media (min-width: 1024px) {
-		.community-shell {
-			grid-template-columns: var(--community-left) minmax(0, 1fr);
-		}
-	}
-
-	@media (min-width: 1280px) {
+	/* Tablet ≥ 768px: left sidebar appears */
+	@media (min-width: 48rem) {
 		.community-shell {
 			grid-template-columns: var(--community-left) minmax(0, 1fr);
 		}
@@ -205,18 +208,40 @@
 		display: grid;
 		grid-template-columns: minmax(0, var(--community-feed));
 		justify-content: center;
+		margin: 0 auto;
+		max-width: 76rem;
 		width: 100%;
 	}
 
-	@media (min-width: 1280px) {
+	.community-right-rail {
+		display: none;
+	}
+
+	/* Tablet: single feed column with horizontal padding */
+	@media (min-width: 48rem) and (max-width: 75rem) {
 		.community-content {
-			grid-template-columns: minmax(0, var(--community-feed)) var(--community-right);
+			padding-inline: 1.5rem;
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
+	/* Large desktop ≥ 1200px: right sidebar appears */
+	@media (min-width: 75rem) {
+		.community-content {
+			grid-template-columns: minmax(0, 1fr) var(--community-right);
+			justify-content: stretch;
+			padding-inline: 1.5rem;
+		}
+
+		.community-right-rail {
+			display: block;
 		}
 	}
 
 	.community-feed {
 		max-width: var(--community-feed);
 		width: 100%;
+		margin-inline: auto;
 	}
 
 	/* Fade-in animation on scroll */
@@ -315,6 +340,15 @@
 	background: var(--color-primary);
 	border-radius: 4px;
 	border: 2px solid var(--color-surface);
+}
+
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
 }
 
 /* ============================================
