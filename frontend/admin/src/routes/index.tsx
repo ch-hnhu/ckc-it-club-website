@@ -30,6 +30,11 @@ import ClubInformationDetailPage from "@/pages/club-information/ClubInformationD
 import CreateClubInformationPage from "@/pages/club-information/CreateClubInformationPage";
 import OrganizationImportListPage from "@/pages/organization/OrganizationImportListPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
+import PostListPage from "@/pages/community/PostListPage";
+import BlogListPage from "@/pages/community/BlogListPage";
+import CommentListPage from "@/pages/community/CommentListPage";
+import TagListPage from "@/pages/community/TagListPage";
+import SystemNotificationPage from "@/pages/community/SystemNotificationPage";
 
 const router = createBrowserRouter([
 	{
@@ -248,6 +253,46 @@ const router = createBrowserRouter([
 			{
 				path: "notifications",
 				element: <NotificationsPage />,
+			},
+			{
+				path: "community/posts",
+				element: (
+					<PermissionRoute permission="community.posts.view">
+						<PostListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/blogs",
+				element: (
+					<PermissionRoute permission="community.blogs.view">
+						<BlogListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/comments",
+				element: (
+					<PermissionRoute permission="community.comments.view">
+						<CommentListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/tags",
+				element: (
+					<PermissionRoute permission="community.tags.manage">
+						<TagListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/notifications",
+				element: (
+					<PermissionRoute permission="community.notifications.send">
+						<SystemNotificationPage />
+					</PermissionRoute>
+				),
 			},
 		],
 	},
