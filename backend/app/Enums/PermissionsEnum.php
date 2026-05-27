@@ -50,6 +50,20 @@ enum PermissionsEnum: string
     case ACADEMIC_STRUCTURE_IMPORT = 'academic_structure.import';
     case ACADEMIC_DATA_VIEW        = 'academic_data.view';
 
+    // Cộng đồng
+    case COMMUNITY_VIEW               = 'community.view';
+    case COMMUNITY_CHANNELS_MANAGE    = 'community.channels.manage';
+    case COMMUNITY_POSTS_VIEW         = 'community.posts.view';
+    case COMMUNITY_POSTS_MANAGE       = 'community.posts.manage';
+    case COMMUNITY_BLOGS_VIEW         = 'community.blogs.view';
+    case COMMUNITY_BLOGS_MANAGE       = 'community.blogs.manage';
+    case COMMUNITY_COMMENTS_VIEW      = 'community.comments.view';
+    case COMMUNITY_COMMENTS_MANAGE    = 'community.comments.manage';
+    case COMMUNITY_TAGS_MANAGE        = 'community.tags.manage';
+    case COMMUNITY_NOTIFICATIONS_SEND = 'community.notifications.send';
+    case COMMUNITY_CHAT_VIEW          = 'community.chat.view';
+    case COMMUNITY_CHAT_MANAGE        = 'community.chat.manage';
+
     public static function values(): array
     {
         return array_column(self::cases(), 'value');

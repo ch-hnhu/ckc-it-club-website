@@ -17,6 +17,16 @@ const departmentService = {
 		return api.get(`/departments/${id}`);
 	},
 
+	async getDeletedDepartments(params?: {
+		page?: number;
+		per_page?: number;
+		search?: string;
+		sort?: string;
+		order?: "asc" | "desc";
+	}): Promise<PaginatedResponse<Department>> {
+		return api.get("/departments/trash", params);
+	},
+
 	async createDepartment(payload: {
 		name: string;
 		description?: string | null;
@@ -36,6 +46,18 @@ const departmentService = {
 		},
 	): Promise<ApiResponse<Department>> {
 		return api.put<ApiResponse<Department>, typeof payload>(`/departments/${id}`, payload);
+	},
+
+	async deleteDepartment(id: number | string): Promise<ApiResponse<null>> {
+		return api.delete(`/departments/${id}`);
+	},
+
+	async restoreDepartment(id: number | string): Promise<ApiResponse<Department>> {
+		return api.patch<ApiResponse<Department>, undefined>(`/departments/${id}/restore`);
+	},
+
+	async forceDeleteDepartment(id: number | string): Promise<ApiResponse<null>> {
+		return api.delete(`/departments/${id}/force`);
 	},
 
 	async addDepartmentUser(

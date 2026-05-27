@@ -157,7 +157,7 @@ class UserController extends BaseApiController
         $selectedRoles = collect($roleNames);
 
         Department::query()
-            ->with('headRole:id,name,label')
+            ->with('headRole:id,name,label,guard_name')
             ->whereNotNull('head_role_id')
             ->get()
             ->each(function (Department $department) use ($user, $selectedRoles) {
@@ -171,10 +171,10 @@ class UserController extends BaseApiController
                     $department->members()->attach($user->id, ['joined_at' => now()]);
                 }
 
-                User::role($headRole->name)
+                User::role($headRole)
                     ->whereKeyNot($user->id)
                     ->get()
-                    ->each(fn (User $otherUser) => $otherUser->removeRole($headRole->name));
+                    ->each(fn (User $otherUser) => $otherUser->removeRole($headRole));
             });
     }
 }

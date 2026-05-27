@@ -67,13 +67,22 @@
 - `GET /api/v1/`
 - `GET /api/v1/users`
 - `GET /api/v1/faculties`
+- `GET /api/v1/faculties/trash`
+- `PATCH /api/v1/faculties/{faculty}/restore`
+- `DELETE /api/v1/faculties/{faculty}/force`
 - `GET /api/v1/majors`
+- `GET /api/v1/majors/trash`
+- `PATCH /api/v1/majors/{major}/restore`
+- `DELETE /api/v1/majors/{major}/force`
 - `GET /api/v1/roles`
 - `GET /api/v1/roles/{role}`
 - `POST /api/v1/roles/{role}/permissions`
 - `GET /api/v1/permissions`
 - `PUT /api/v1/permissions/{permission}/roles`
 - `GET /api/v1/school-classes`
+- `GET /api/v1/school-classes/trash`
+- `PATCH /api/v1/school-classes/{schoolClass}/restore`
+- `DELETE /api/v1/school-classes/{schoolClass}/force`
 - `POST /api/v1/academic-structure/import`
 - `GET /api/v1/academic-structure/imports`
 - `GET /api/v1/academic-structure/imports/stats`
@@ -81,9 +90,13 @@
 - `GET /api/v1/contacts`
 - `PATCH /api/v1/contacts/{contact}/status`
 - `GET /api/v1/departments`
+- `GET /api/v1/departments/trash`
 - `POST /api/v1/departments`
 - `GET /api/v1/departments/{department}`
 - `PUT/PATCH /api/v1/departments/{department}`
+- `DELETE /api/v1/departments/{department}`
+- `PATCH /api/v1/departments/{department}/restore`
+- `DELETE /api/v1/departments/{department}/force`
 - `POST /api/v1/departments/{department}/users`
 - `GET /api/v1/club-informations`
 - `POST /api/v1/club-informations`
@@ -188,14 +201,18 @@
 - `faculties`
 - top-level academic grouping.
 - has many `majors`.
+- faculties use existing `deleted_at/deleted_by` columns for the admin trash workflow; they can be restored from `GET /faculties/trash` and permanently deleted from trash.
 - `majors`
 - belongs to one `faculty`.
 - has many `school_classes`.
+- majors use `deleted_at/deleted_by` for the admin trash workflow; they can be restored from `GET /majors/trash` and permanently deleted from trash.
 - `school_classes`
 - belongs to one `major`.
+- school classes use `deleted_at/deleted_by` for the admin trash workflow; they can be restored from `GET /school-classes/trash` and permanently deleted from trash.
 - `departments`
 - club operating departments/ban records seeded for Học thuật, Truyền thông, and Tình nguyện.
-- admins can list, fetch detail, create, and update departments; users attach to departments through `department_user`.
+- admins can list, fetch detail, create, update, soft-delete, restore, and permanently delete departments; users attach to departments through `department_user`.
+- department soft delete uses `departments.deleted_at` and `deleted_by`; the trash endpoint is `GET /departments/trash`. A department can only be moved to trash when it has no members.
 - department member management endpoints support adding members, changing whether a member is head of that department, and removing a member through `POST /departments/{department}/users`, `PATCH /departments/{department}/users/{user}`, and `DELETE /departments/{department}/users/{user}`; removing a head member also removes only that department's head role from the user.
 - department heads are resolved from the member's normal Spatie user roles against `departments.head_role_id`; the seeded head roles are `academic-head`, `communications-head`, and `volunteer-head`.
 - updating a department head assigns/removes only that department's configured head role on the user and does not sync or overwrite unrelated user roles, so one user can head multiple departments by holding multiple head roles.
@@ -218,6 +235,7 @@
 - stores raw `answer_value`.
 - `contacts`
 - public contact submissions are created through `POST /api/v1/contacts`.
+- public contact submission responses include the newly created contact with default `status` resolved as `pending`.
 - admin can list contacts with pagination, search, sort, and status filtering.
 - admin can update contact status through `PATCH /api/v1/contacts/{contact}/status`.
 - `club_informations` and `club_information_values`
@@ -235,6 +253,13 @@
 - `academic_structure_imports`
 - admin academic structure import history for uploaded faculty/major/class files.
 - valid imports support `.xlsx` and `.csv`; unsupported uploaded file extensions are stored as `file_type = Other`, `status = failed`, and returned as validation errors so the admin UI can show failed upload history.
+- Community module schema is present but has no API/controllers yet:
+- `channels`, `posts`, `post_reports`, and `comments` support topic feeds, reports, nested comments, and soft-deleted comments.
+- `reactions` is polymorphic by `target_type`/`target_id` for posts, comments, and blogs.
+- `chat_rooms`, `chat_members`, and `messages` support direct/group chat, unread tracking through `last_read_at`, message replies, and soft-deleted messages.
+- `blogs`, `tags`, and `blog_tags` support long-form posts with normalized blog tags.
+- `media_files` stores shared uploads for posts, messages, and blogs.
+- Community notification metadata is added as nullable columns on the existing Laravel `notifications` table (`recipient_id`, `actor_id`, `community_type`, `target_type`, `target_id`, `message`) so existing database notifications continue to work through `notifiable_*`, `data`, and `read_at`.
 
 ## Recruitment Domain Rules
 

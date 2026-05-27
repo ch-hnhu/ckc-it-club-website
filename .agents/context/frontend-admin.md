@@ -68,10 +68,16 @@
 - create-user form UI with avatar upload, required gender selection, and role loading from `/roles`
 - `/departments`
 - faculty list
+- `/departments/trash`
+- faculty trash page with search, sorting, pagination, restore, and permanent delete actions
 - `/majors`
 - major list
+- `/majors/trash`
+- major trash page with search, sorting, pagination, restore, and permanent delete actions
 - `/classes`
 - school class list
+- `/classes/trash`
+- school class trash page with search, sorting, pagination, restore, and permanent delete actions
 - `/contacts`
 - contact management list with real backend data and status updates
 - `/divisions`
@@ -92,6 +98,10 @@
 - recruitment question detail
 - `/answers`
 - recruitment answers page
+- `/notifications`
+- personal admin notification list with infinite scroll, read/unread state, and mark-as-read actions
+- `/community/notifications`
+- system notification log/admin stats page gated by `community.notifications.send`
 
 ## Important Reality Checks
 
@@ -197,6 +207,7 @@
 - `school-class.service.ts`
 - `contact.service.ts`
 - `application.service.ts`
+- `notification.service.ts`
 - `health.service.ts`
 - Prefer adding or updating endpoint wrappers in `src/services/` rather than making Axios calls directly in pages.
 
@@ -242,9 +253,14 @@
 - route `/contacts`
 - server-driven pagination, search, sort, and status filtering
 - status update is live against backend `PATCH /contacts/{contact}/status`
+- Notifications:
+- `notification.service.ts` owns both personal notification endpoints (`GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`) and the admin log endpoints (`GET /notifications/log`, `GET /notifications/admin-stats`, `DELETE /notifications/{id}/admin`).
+- `NotificationBell` polls unread count and links to `/notifications`; the full notification page uses paginated personal notification payloads.
 - Department management:
 - route `/divisions`
-- server-driven pagination, search, sort, status display through `CompactBadgeList`, row selection, member counts, create/update modal, and row actions backed by backend department endpoints.
+- server-driven pagination, search, sort, status display through `CompactBadgeList`, row selection, member counts, create/update/delete modal flows, and row actions backed by backend department endpoints. Department delete is blocked when the department still has members; bulk delete uses a popup confirmation and only proceeds for selected departments without members.
+- route `/divisions/trash`
+- department trash page lists soft-deleted departments, supports search, sorting, pagination, restore, and permanent delete actions.
 - route `/divisions/:id`
 - detail page fetches `GET /departments/{department}`, renders the department info card, warns when no head exists, and manages members with client-side search, role filter, pagination, add-member modal, role-change modal, and remove confirmation.
 - add-member modal is intentionally minimal: member combobox, cancel/add actions, submit loading, close-and-refresh on success, and no primary-department toggle.

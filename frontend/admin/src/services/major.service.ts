@@ -14,6 +14,17 @@ const majorService = {
 		return api.get("/majors", params);
 	},
 
+	async getDeletedMajors(params?: {
+		page?: number;
+		per_page?: number;
+		search?: string;
+		sort?: string;
+		order?: "asc" | "desc";
+		faculty_id?: number;
+	}): Promise<PaginatedResponse<Major>> {
+		return api.get("/majors/trash", params);
+	},
+
 	async createMajor(payload: {
 		label: string;
 		value: string;
@@ -39,6 +50,14 @@ const majorService = {
 
 	async deleteMajor(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/majors/${id}`);
+	},
+
+	async restoreMajor(id: number | string): Promise<ApiResponse<Major>> {
+		return api.patch(`/majors/${id}/restore`);
+	},
+
+	async forceDeleteMajor(id: number | string): Promise<ApiResponse<null>> {
+		return api.delete(`/majors/${id}/force`);
 	},
 };
 

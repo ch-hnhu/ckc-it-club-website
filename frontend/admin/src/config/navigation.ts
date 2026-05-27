@@ -1,5 +1,6 @@
 import {
 	Building,
+	Globe,
 	House,
 	MailOpen,
 	Trophy,
@@ -142,6 +143,49 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
+		title: "Quản lý cộng đồng",
+		url: "/community/posts",
+		icon: Globe,
+		permission: "community.view",
+		items: [
+			{
+				title: "Kênh",
+				url: "/community/channels",
+				permission: "community.channels.manage",
+			},
+			{
+				title: "Bài đăng",
+				url: "/community/posts",
+				permission: "community.posts.view",
+			},
+			{
+				title: "Blog",
+				url: "/community/blogs",
+				permission: "community.blogs.view",
+			},
+{
+				title: "Bình luận",
+				url: "/community/comments",
+				permission: "community.comments.view",
+			},
+			{
+				title: "Tags",
+				url: "/community/tags",
+				permission: "community.tags.manage",
+			},
+			{
+				title: "Phòng chat",
+				url: "/community/chat",
+				permission: "community.chat.view",
+			},
+			{
+				title: "Thông báo hệ thống",
+				url: "/community/notifications",
+				permission: "community.notifications.send",
+			},
+		],
+	},
+	{
 		title: "Quản lý liên hệ",
 		url: "/contacts",
 		icon: MailOpen,
@@ -167,10 +211,15 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/permissions$/, permission: "permissions.view" },
 	{ pattern: /^\/organization\/upload$/, permission: "academic_structure.import" },
 	{ pattern: /^\/departments$/, permission: "academic_data.view" },
+	{ pattern: /^\/departments\/trash$/, permission: "academic_data.view" },
 	{ pattern: /^\/majors$/, permission: "academic_data.view" },
+	{ pattern: /^\/majors\/trash$/, permission: "academic_data.view" },
 	{ pattern: /^\/classes$/, permission: "academic_data.view" },
+	{ pattern: /^\/classes\/trash$/, permission: "academic_data.view" },
 	{ pattern: /^\/contacts$/, permission: "contacts.view" },
 	{ pattern: /^\/divisions$/, permission: "club_info.view" },
+	{ pattern: /^\/divisions\/trash$/, permission: "club_info.view" },
+	{ pattern: /^\/divisions\/[^/]+$/, permission: "club_info.view" },
 	{ pattern: /^\/club-informations$/, permission: "club_info.view" },
 	{ pattern: /^\/club-informations\/create$/, permission: "club_info.manage" },
 	{ pattern: /^\/club-informations\/[^/]+$/, permission: "club_info.view" },
@@ -179,6 +228,16 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/questions$/, permission: "application_questions.view" },
 	{ pattern: /^\/questions\/[^/]+$/, permission: "application_questions.view" },
 	{ pattern: /^\/answers$/, permission: "applications.view" },
+	{ pattern: /^\/community\/channels$/, permission: "community.channels.manage" },
+	{ pattern: /^\/community\/posts$/, permission: "community.posts.view" },
+	{ pattern: /^\/community\/posts\/[^/]+$/, permission: "community.posts.view" },
+	{ pattern: /^\/community\/blogs$/, permission: "community.blogs.view" },
+	{ pattern: /^\/community\/blogs\/create$/, permission: "community.blogs.manage" },
+	{ pattern: /^\/community\/blogs\/[^/]+$/, permission: "community.blogs.view" },
+	{ pattern: /^\/community\/comments$/, permission: "community.comments.view" },
+	{ pattern: /^\/community\/tags$/, permission: "community.tags.manage" },
+	{ pattern: /^\/community\/chat$/, permission: "community.chat.view" },
+	{ pattern: /^\/community\/notifications$/, permission: "community.notifications.send" },
 ];
 
 export function getRequiredPermissionForPath(pathname: string): string | null {

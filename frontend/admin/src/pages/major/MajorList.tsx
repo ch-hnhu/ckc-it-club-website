@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { AxiosError } from "axios";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 import MajorFormModal from "@/pages/major/MajorFormModal";
 import majorService from "@/services/major.service";
@@ -61,6 +62,7 @@ function MajorList() {
 	);
 
 	useBreadcrumb(breadcrumb);
+	const navigate = useNavigate();
 
 	const [majors, setMajors] = useState<Major[]>([]);
 	const [meta, setMeta] = useState({
@@ -195,6 +197,15 @@ function MajorList() {
 								))}
 							</SelectContent>
 						</Select>
+						<Button
+							size='sm'
+							variant='outline'
+							type='button'
+							onClick={() => navigate("/majors/trash")}
+							className='h-8'>
+							<Trash2 className='h-4 w-4' />
+							Thùng rác
+						</Button>
 						<Button
 							size='sm'
 							onClick={() => {
