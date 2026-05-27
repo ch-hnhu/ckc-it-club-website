@@ -18,6 +18,12 @@ const blogService = {
 		return api.get("/blogs/stats");
 	},
 
+	async createBlog(payload: FormData): Promise<ApiResponse<BlogRecord>> {
+		return api.post<ApiResponse<BlogRecord>, FormData>("/blogs", payload, {
+			headers: { "Content-Type": "multipart/form-data" },
+		});
+	},
+
 	async updateStatus(
 		id: number | string,
 		status: BlogStatus,

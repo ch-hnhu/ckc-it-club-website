@@ -11,9 +11,11 @@ import {
 	Eye,
 	Filter,
 	MoreHorizontal,
+	Plus,
 	RefreshCw,
 	Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -164,6 +166,8 @@ const emptyStats: BlogStats = { total: 0, published: 0, draft: 0, archived: 0 };
 
 function BlogListPage() {
 	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý blog" }]);
+
+	const navigate = useNavigate();
 
 	const [blogs, setBlogs] = useState<BlogRecord[]>([]);
 	const [stats, setStats] = useState<BlogStats>(emptyStats);
@@ -340,24 +344,34 @@ function BlogListPage() {
 							onChange={(e) => setSearch(e.target.value)}
 							className="h-8 w-full sm:w-64 md:w-80"
 						/>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" size="sm" className="h-8">
-									<Filter className="h-4 w-4" />
-									{statusOptions.find((o) => o.value === statusFilter)?.label}
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end" className="w-[200px]">
-								<DropdownMenuLabel>Trạng thái blog</DropdownMenuLabel>
-								<DropdownMenuSeparator />
-								{statusOptions.map((opt) => (
-									<DropdownMenuItem key={opt.value} onClick={() => setStatusFilter(opt.value)}
-										className={statusFilter === opt.value ? "bg-muted font-medium" : ""}>
-										{opt.label}
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<div className="flex items-center gap-2">
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" size="sm" className="h-8">
+										<Filter className="h-4 w-4" />
+										{statusOptions.find((o) => o.value === statusFilter)?.label}
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end" className="w-[200px]">
+									<DropdownMenuLabel>Trạng thái blog</DropdownMenuLabel>
+									<DropdownMenuSeparator />
+									{statusOptions.map((opt) => (
+										<DropdownMenuItem key={opt.value} onClick={() => setStatusFilter(opt.value)}
+											className={statusFilter === opt.value ? "bg-muted font-medium" : ""}>
+											{opt.label}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+
+							<Button
+								size="sm"
+								className="h-8 bg-foreground text-background hover:bg-foreground/90"
+								onClick={() => navigate("/community/blogs/create")}>
+								<Plus className="h-4 w-4" />
+								Thêm blog
+							</Button>
+						</div>
 					</div>
 
 					<div className="overflow-hidden rounded-md border">
