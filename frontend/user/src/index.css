@@ -623,6 +623,9 @@
 .so-editor-outer .mb8 {
 	margin-bottom: 8px !important;
 }
+.so-editor-outer .mb12 {
+	margin-bottom: 12px !important;
+}
 .so-editor-outer .ml24 {
 	margin-left: 24px !important;
 }
@@ -742,6 +745,44 @@
 	min-width: 9rem;
 	padding: 4px 0;
 	overflow: hidden;
+}
+
+/* Image dialog: keep it anchored to the viewport so it does not jitter while scrolling */
+.so-editor-outer .s-popover:has(.js-image-uploader) {
+	position: fixed !important;
+	top: 5rem !important;
+	left: 50% !important;
+	right: auto !important;
+	bottom: auto !important;
+	transform: translateX(-50%) !important;
+	width: min(22rem, calc(100vw - 2rem));
+	max-height: calc(100dvh - 6rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	z-index: 40;
+}
+
+/* Give the <span> node-view a positioning context so the popover
+   can be anchored to it with position: absolute */
+.so-editor-outer .ProseMirror span:has(> .js-img-popover) {
+	position: relative;
+	display: inline-block;
+	vertical-align: bottom;
+}
+
+/* Inserted-image edit dialog: anchor directly below the image */
+.so-editor-outer .s-popover.js-img-popover {
+	position: absolute !important;
+	top: calc(100% + 8px) !important;
+	left: 50% !important;
+	right: auto !important;
+	bottom: auto !important;
+	transform: translateX(-50%) !important;
+	width: min(22rem, calc(100vw - 2rem));
+	max-height: calc(100dvh - 12rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	z-index: 40;
 }
 
 /* Arrow nub */
@@ -1064,6 +1105,23 @@
 .so-editor-outer .ProseMirror em {
 	font-style: italic;
 }
+.so-editor-outer .s-prose kbd,
+.so-editor-outer .ProseMirror kbd {
+	display: inline-block;
+	padding: 1px 6px;
+	font-size: 0.8em;
+	font-family: ui-monospace, monospace;
+	font-weight: 600;
+	line-height: 1.5;
+	color: #111;
+	background: #f3f4f6;
+	border: 1.5px solid #aaa;
+	border-bottom-width: 3px;
+	border-radius: 5px;
+	box-shadow: 0 1px 0 #bbb;
+	white-space: nowrap;
+	vertical-align: baseline;
+}
 .so-editor-outer .s-prose code,
 .so-editor-outer .ProseMirror code {
 	background: #f3f4f6;
@@ -1101,6 +1159,42 @@
 	margin: 0.5rem 0;
 	color: #374151;
 	font-style: italic;
+}
+
+/* Spoiler — dark background, clearly different from blockquote */
+.so-editor-outer .s-prose blockquote.spoiler,
+.so-editor-outer .ProseMirror blockquote.spoiler {
+	border-left: 4px solid #4b5563;
+	background: #1f2937;
+	color: #f3f4f6;
+	font-style: normal;
+	border-radius: 0 8px 8px 0;
+	padding: 14px 12px 14px 14px;
+	margin: 0.5rem 0;
+	position: relative;
+}
+/* "Spoiler" label chip in the top-right corner */
+.so-editor-outer .s-prose blockquote.spoiler::before,
+.so-editor-outer .ProseMirror blockquote.spoiler::before {
+	content: "🙈 Spoiler";
+	position: absolute;
+	top: 6px;
+	right: 10px;
+	font-size: 0.7rem;
+	font-weight: 700;
+	font-family: var(--font-heading);
+	font-style: normal;
+	background: #374151;
+	color: #9ca3af;
+	border-radius: 4px;
+	padding: 1px 6px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+/* Ensure text inside spoiler (paragraphs, spans) also uses light color */
+.so-editor-outer .s-prose blockquote.spoiler *,
+.so-editor-outer .ProseMirror blockquote.spoiler * {
+	color: #f3f4f6;
 }
 .so-editor-outer .s-prose ul,
 .so-editor-outer .ProseMirror ul {
@@ -1358,4 +1452,237 @@
 }
 .so-editor-outer .s-code-block .hljs-link {
 	text-decoration: underline;
+}
+
+/* ============================================================
+   IMAGE UPLOADER — missing Stacks utilities + neobrutalist skin
+   ============================================================ */
+
+/* ── Missing display / flex helpers ── */
+.so-editor-outer .d-block { display: block !important; }
+.so-editor-outer .d-inline { display: inline !important; }
+.so-editor-outer .fd-row { flex-direction: row !important; }
+.so-editor-outer .ai-start { align-items: flex-start !important; }
+.so-editor-outer .jc-space-between { justify-content: space-between !important; }
+
+/* ── Missing whitespace / sizing ── */
+.so-editor-outer .ws-nowrap { white-space: nowrap !important; }
+.so-editor-outer .wmx100 { max-width: 100% !important; }
+.so-editor-outer .fw-normal { font-weight: 400 !important; }
+.so-editor-outer .w100 { width: 100% !important; }
+
+/* ── Preview image max-height ── */
+.so-editor-outer .hmx1 { max-height: 200px !important; }
+
+/* ── Missing spacing ── */
+.so-editor-outer .m8 { margin: 8px !important; }
+.so-editor-outer .m12 { margin: 12px !important; }
+.so-editor-outer .mr4 { margin-right: 4px !important; }
+.so-editor-outer .mr8 { margin-right: 8px !important; }
+.so-editor-outer .mb0 { margin-bottom: 0 !important; }
+.so-editor-outer .pt12 { padding-top: 12px !important; }
+
+/* ── Background ── */
+.so-editor-outer .bg-black-150 { background-color: #f3f4f6 !important; }
+
+/* ── Border-radius ── */
+.so-editor-outer .bar-sm { border-radius: 4px !important; }
+
+/* ── Gap helpers ── */
+.so-editor-outer .gsx { column-gap: 6px !important; }
+
+/* ── Drag-over ring ── */
+.so-editor-outer .bs-ring,
+.so-editor-outer .outline-ring {
+	box-shadow: 0 0 0 3px #a3e635 !important;
+	outline: none !important;
+}
+.so-editor-outer .bc-theme-secondary-400 {
+	border-color: #65a30d !important;
+}
+
+/* ── Spinner ── */
+.so-editor-outer .s-spinner {
+	display: inline-block !important;
+	width: 1em !important;
+	height: 1em !important;
+	border: 2px solid currentColor !important;
+	border-right-color: transparent !important;
+	border-radius: 50% !important;
+	animation: so-spin 0.7s linear infinite !important;
+	vertical-align: middle !important;
+}
+.so-editor-outer .s-spinner__sm {
+	width: 0.875em !important;
+	height: 0.875em !important;
+}
+@keyframes so-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* ── Link styles ── */
+.so-editor-outer .s-link {
+	color: var(--color-text-primary) !important;
+	text-decoration: none !important;
+	font-weight: 600;
+	cursor: pointer;
+}
+.so-editor-outer .s-link:hover {
+	text-decoration: underline !important;
+}
+.so-editor-outer .s-anchors a,
+.so-editor-outer .s-anchors .s-link {
+	color: hsl(210, 8%, 45%) !important;
+	text-decoration: none;
+}
+.so-editor-outer .s-anchors a:hover,
+.so-editor-outer .s-anchors .s-link:hover {
+	text-decoration: underline;
+}
+.so-editor-outer .s-anchors__muted a,
+.so-editor-outer .s-anchors__muted .s-link {
+	color: hsl(210, 8%, 55%) !important;
+	text-decoration: none;
+}
+.so-editor-outer .s-anchors__muted a:hover,
+.so-editor-outer .s-anchors__muted .s-link:hover {
+	text-decoration: underline;
+}
+
+/* ── Button: link variant ── */
+.so-editor-outer .s-btn__link,
+.so-editor-outer .s-btn.s-btn__link {
+	background: none !important;
+	border-color: transparent !important;
+	box-shadow: none !important;
+	color: var(--color-text-primary) !important;
+	padding: 0 !important;
+	font-size: inherit !important;
+	font-weight: 600 !important;
+	text-decoration: none;
+	cursor: pointer;
+}
+.so-editor-outer .s-btn__link:hover:not(:disabled),
+.so-editor-outer .s-btn.s-btn__link:hover:not(:disabled) {
+	background: none !important;
+	text-decoration: underline !important;
+	transform: none !important;
+}
+
+/* ── Notice / alert boxes ── */
+.so-editor-outer .s-notice {
+	padding: 10px 14px;
+	border-radius: 6px;
+	font-size: 13px;
+	font-weight: 500;
+	border: 1.5px solid;
+}
+.so-editor-outer .s-notice__warning {
+	background-color: #fffbeb !important;
+	border-color: #fbbf24 !important;
+	color: #92400e !important;
+}
+.so-editor-outer .s-notice__danger {
+	background-color: #fef2f2 !important;
+	border-color: #f87171 !important;
+	color: #991b1b !important;
+}
+
+/* ── Image uploader container (neo-brutalist) ── */
+.so-editor-outer .js-image-uploader {
+	background: #fafafa;
+	border-top: 2px solid #111 !important;
+	border-bottom: 2px solid #111 !important;
+	font-size: 13px;
+	font-family: var(--font-body);
+}
+
+/* CTA row: "Browse, drag & drop, or enter a link" */
+.so-editor-outer .js-cta-container {
+	color: #555;
+	line-height: 1.6;
+}
+
+/* Browse label — styled like a link */
+.so-editor-outer .js-browse-button {
+	color: var(--color-text-primary) !important;
+	font-weight: 600;
+	cursor: pointer;
+	text-decoration: none;
+}
+.so-editor-outer .js-browse-button:hover {
+	text-decoration: underline;
+}
+
+/* External URL input row */
+.so-editor-outer .js-external-url-input-container {
+	border-top: 1px solid #ddd;
+}
+
+/* Validation message margin fix */
+.so-editor-outer .js-validation-message {
+	margin-left: 12px;
+	margin-right: 12px;
+}
+
+/* Upload progress placeholder */
+.so-editor-outer .js-image-upload-placeholder {
+	display: block;
+	padding: 6px 8px;
+	background: #f3f4f6;
+	border-radius: 4px;
+	font-size: 13px;
+	font-weight: 500;
+	color: #555;
+}
+
+/* Image preview container */
+.so-editor-outer .js-image-preview {
+	text-align: center;
+}
+.so-editor-outer .js-image-preview img,
+.so-editor-outer .js-image-preview video {
+	max-height: 200px;
+	width: auto;
+	max-width: 100%;
+	border: 1.5px solid #ddd;
+	border-radius: 4px;
+}
+
+/* "Apply" button inside the image-edit popover — full width */
+.so-editor-outer .js-img-popover button[type="submit"] {
+	display: flex !important;
+	width: 100% !important;
+	margin-top: 10px !important;
+	justify-content: center;
+}
+
+/* "Add image" + "Cancel" in the uploader — inline, side by side */
+.so-editor-outer .js-image-uploader div:has(> .js-add-image) {
+	display: flex !important;
+	flex-direction: row !important;
+	align-items: center !important;
+	gap: 8px !important;
+	flex-wrap: nowrap;
+}
+.so-editor-outer .js-add-image {
+	display: inline-flex !important;
+	width: auto !important;
+}
+.so-editor-outer .js-cancel-button {
+	background: #fff !important;
+	border: 2px solid #111 !important;
+	color: #111 !important;
+	display: inline-flex !important;
+	width: auto !important;
+}
+.so-editor-outer .js-cancel-button:hover {
+	background: #f3f4f6 !important;
+}
+
+/* Hide branding / content-policy rows — we set empty values in options
+   but guard here too in case deepMerge doesn't forward them */
+.so-editor-outer .js-branding-html,
+.so-editor-outer .js-content-policy-html {
+	display: none !important;
 }
