@@ -90,11 +90,6 @@ const SORT_OPTIONS = [
 	{ id: "newest", label: "Mới nhất", icon: Sparkles },
 ];
 
-const CHANNEL_SORT_OPTIONS = [
-	{ id: "top", label: "Top Posts" },
-	{ id: "newest", label: "Newest" },
-];
-
 const NEWS_ITEMS = [
 	{
 		title: "Workshop Git & GitHub cho sinh viên mới",
@@ -376,6 +371,19 @@ const CommunityPage: React.FC = () => {
 		return pageMode === "home" || activeChannel === "all" || post.channel === activeChannel;
 	});
 
+	// Dữ liệu header tính từ pageMode — dùng chung cho cả home lẫn channel
+	const pageInfo = {
+		image: pageMode === "home" ? COMMUNITY_LOGO : (currentChannel?.image ?? null),
+		title:
+			pageMode === "home"
+				? "Cộng đồng CKC IT CLUB"
+				: (currentChannel?.label ?? activeChannel),
+		description:
+			pageMode === "home"
+				? "Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦"
+				: (currentChannel?.description ?? "Bài viết và thảo luận trong kênh này."),
+	};
+
 	const renderSidebarContent = (isMobile = false) => (
 		<div className={isMobile ? "px-4 py-4" : "px-3 py-4"}>
 			<nav className={isMobile ? "space-y-2" : "space-y-2"}>
@@ -473,77 +481,52 @@ const CommunityPage: React.FC = () => {
 
 				<div className='community-content'>
 					<main className='community-feed min-w-0 px-4 pb-5 md:px-4 md:pt-5'>
-						{/* Mobile community header — inside feed for pixel-perfect alignment */}
-						<div className='sticky top-16 z-30 -mx-3 flex h-14 items-center gap-2 border-b border-gray-200 bg-[var(--color-surface)] px-3 md:hidden mb-3'>
+						{/* Mobile header — sticky, dùng chung cho cả home lẫn channel */}
+						<div className='sticky top-16 z-30 -mx-3 mb-3 flex h-14 items-center gap-2 border-b border-gray-200 bg-[var(--color-surface)] px-3 md:hidden'>
 							<button
 								onClick={() => setIsSidebarOpen(true)}
 								className='inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-black transition hover:bg-gray-100'
 								aria-label='Mở menu cộng đồng'>
 								<List className='h-5 w-5' />
 							</button>
-							{pageMode === "channel" && currentChannel?.image ? (
+							{pageInfo.image ? (
 								<img
-									src={currentChannel.image}
-									alt={currentChannel.label}
+									src={pageInfo.image}
+									alt={pageInfo.title}
 									className='h-6 w-6 shrink-0 rounded-full border-2 border-black object-cover'
 								/>
 							) : (
-								<img
-									src={COMMUNITY_LOGO}
-									alt='CKC IT CLUB'
-									className='h-6 w-6 shrink-0 rounded-full border-2 border-black object-cover'
-								/>
+								<div className='flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-green)]'>
+									<Hash className='h-3 w-3 text-black' />
+								</div>
 							)}
 							<h1 className='min-w-0 truncate font-heading text-sm font-bold text-black'>
-								{pageMode === "channel"
-									? `#${currentChannel?.label ?? activeChannel}`
-									: "Cộng đồng CKC IT CLUB"}
+								{pageInfo.title}
 							</h1>
 						</div>
-						{/* Community header – home mode */}
-						{pageMode === "home" && (
-							<div className='my-4 hidden items-center gap-4 pb-5 lg:flex'>
+
+						{/* Desktop page header — dùng chung cho home và channel */}
+						<div className='my-4 hidden items-center gap-4 pb-5 lg:flex'>
+							{pageInfo.image ? (
 								<img
-									src={COMMUNITY_LOGO}
-									alt='CKC IT CLUB'
+									src={pageInfo.image}
+									alt={pageInfo.title}
 									className='h-18 w-18 shrink-0 rounded-full border-2 border-black object-cover'
 								/>
-								<div>
-									<h1 className='font-heading text-xl font-extrabold leading-tight text-black md:text-2xl lg:text-3xl'>
-										Cộng đồng CKC IT CLUB
-									</h1>
-									<p className='mt-2 text-sm font-medium text-gray-500'>
-										Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦
-									</p>
+							) : (
+								<div className='flex h-18 w-18 shrink-0 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-green)]'>
+									<Hash className='h-8 w-8 text-black' />
 								</div>
+							)}
+							<div>
+								<h1 className='font-heading text-xl font-extrabold leading-tight text-black md:text-2xl lg:text-3xl'>
+									{pageInfo.title}
+								</h1>
+								<p className='mt-2 text-sm font-medium text-gray-500'>
+									{pageInfo.description}
+								</p>
 							</div>
-						)}
-
-						{/* Channel header */}
-						{pageMode === "channel" && (
-							<div className='my-4 hidden items-center gap-4 pb-5 lg:flex'>
-								{currentChannel?.image ? (
-									<img
-										src={currentChannel.image}
-										alt={currentChannel.label}
-										className='h-18 w-18 shrink-0 rounded-full border-2 border-black object-cover bg-white'
-									/>
-								) : (
-									<div className='flex h-18 w-18 shrink-0 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-green)]'>
-										<Hash className='h-8 w-8 text-black' />
-									</div>
-								)}
-								<div>
-									<h1 className='font-heading text-xl font-extrabold leading-tight text-black md:text-2xl lg:text-3xl'>
-										{currentChannel?.label ?? activeChannel}
-									</h1>
-									<p className='mt-2 text-sm font-medium text-gray-500'>
-										{currentChannel?.description ??
-											"Bài viết và thảo luận trong kênh này."}
-									</p>
-								</div>
-							</div>
-						)}
+						</div>
 
 						{user && (
 							<div className='mb-6 flex items-center gap-3 rounded-xl border-2 border-black bg-white px-5 py-4'>
@@ -568,58 +551,37 @@ const CommunityPage: React.FC = () => {
 							</div>
 						)}
 
-						{pageMode === "home" ? (
-							<div className='mb-5 border-b border-gray-200'>
-								<div className='flex'>
-									{SORT_OPTIONS.map((option) => {
-										const Icon = option.icon;
-										const isActive = activeSort === option.id;
-										return (
-											<button
-												key={option.id}
-												onClick={() => setActiveSort(option.id)}
-												className='relative flex shrink-0 items-center gap-1.5 px-4 pb-3 pt-1 text-sm font-extrabold text-black transition hover:text-black md:text-base'
-												style={{
-													fontFamily: "var(--font-heading)",
-													color: isActive ? "#111" : "#6b7280",
-												}}>
-												<Icon className='h-4 w-4' />
-												{option.label}
-												{isActive && (
-													<span className='absolute right-0 -bottom-[3px] left-0 h-[3px] rounded-t-sm bg-[var(--color-primary)]' />
-												)}
-											</button>
-										);
-									})}
-								</div>
+						{/* Sort tabs — dùng chung cho home và channel */}
+						<div className='mb-5 border-b border-gray-200'>
+							<div className='flex'>
+								{SORT_OPTIONS.map((option) => {
+									const Icon = option.icon;
+									const isActive = activeSort === option.id;
+									return (
+										<button
+											key={option.id}
+											onClick={() => setActiveSort(option.id)}
+											className='relative flex shrink-0 items-center gap-1.5 px-4 pb-3 pt-1 text-sm font-extrabold transition hover:text-black md:text-base'
+											style={{
+												fontFamily: "var(--font-heading)",
+												color: isActive ? "#111" : "#6b7280",
+											}}>
+											<Icon className='h-4 w-4' />
+											{option.label}
+											{isActive && (
+												<span className='absolute right-0 -bottom-[3px] left-0 h-[3px] rounded-t-sm bg-[var(--color-primary)]' />
+											)}
+										</button>
+									);
+								})}
 							</div>
-						) : (
-							<div className='mb-5 rounded-[10px] border-2 border-black bg-white px-4 pt-3 shadow-[3px_3px_0_#111] md:px-5'>
-								<div className='flex border-b-[3px] border-gray-300'>
-									{CHANNEL_SORT_OPTIONS.map((option) => {
-										const isActive = activeSort === option.id;
-										return (
-											<button
-												key={option.id}
-												onClick={() => setActiveSort(option.id)}
-												className='relative shrink-0 px-4 pb-3 font-heading text-sm font-extrabold transition hover:text-black md:px-5 md:text-lg'
-												style={{ color: isActive ? "#111" : "#6b7280" }}>
-												{option.label}
-												{isActive && (
-													<span className='absolute right-0 -bottom-[3px] left-0 h-[3px] bg-[var(--color-primary)]' />
-												)}
-											</button>
-										);
-									})}
-								</div>
-							</div>
-						)}
+						</div>
 
 						<div className='space-y-5'>
 							{filteredPosts.length > 0 ? (
 								filteredPosts.map((post) => <PostCard key={post.id} post={post} />)
 							) : (
-								<div className='neo-card neo-card-static bg-white px-6 py-16 text-center'>
+								<div className='border-2 border-black rounded-2xl bg-white px-6 py-16 text-center'>
 									<Search className='mx-auto h-10 w-10 text-gray-500' />
 									<p className='mt-4 font-heading text-xl font-extrabold text-black'>
 										Không tìm thấy bài viết
