@@ -54,20 +54,19 @@ type ChannelItem = {
 	slug: string;
 };
 
-const COMMUNITY_LOGO =
-	"https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg";
+const COMMUNITY_LOGO = "https://www.codedex.io/images/community/bouncer.gif";
 
 const buildChannelItems = (sourceChannels: ChannelItem[]) => {
 	const totalPostsCount = sourceChannels.reduce((sum, channel) => sum + channel.count, 0);
 
 	return [
 		{
-			id: "all",
-			label: "Tất cả kênh",
+			id: "chung",
+			label: "Kênh chung",
 			count: totalPostsCount,
-			description: "Tất cả bài viết từ mọi kênh trong cộng đồng CKC IT CLUB.",
+			description: "Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦",
 			image: COMMUNITY_LOGO,
-			slug: "all",
+			slug: "chung",
 		},
 		...sourceChannels,
 	];
@@ -295,10 +294,12 @@ const CommunityPage: React.FC = () => {
 	const user = outletContext?.user ?? null;
 	const { channelSlug } = useParams<{ channelSlug: string }>();
 	const pageMode: "home" | "channel" = channelSlug ? "channel" : "home";
-	const activeChannel = channelSlug ?? "all";
+	// channelSlug chỉ có giá trị khi ở /cong-dong/:slug, undefined khi ở /cong-dong
+	const activeChannel = channelSlug ?? "";
 	const [activeSort, setActiveSort] = useState("top");
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [channels, setChannels] = useState<ChannelItem[]>(buildFallbackChannels());
+	// "Trang chủ" chỉ active khi ở /cong-dong (home), không active khi ở /cong-dong/chung
 	const activePrimaryNav = pageMode === "home" ? "home" : "";
 	const userDisplayName = user?.name || user?.email || "CKC member";
 	const userAvatar =
@@ -307,10 +308,8 @@ const CommunityPage: React.FC = () => {
 			userDisplayName,
 		)}&background=A3E635&color=111111&bold=true`;
 
-	const currentChannel =
-		activeChannel === "all"
-			? channels[0]
-			: channels.find((channel) => channel.slug === activeChannel);
+	// Tìm channel theo slug từ URL — undefined khi ở home
+	const currentChannel = channels.find((channel) => channel.slug === activeChannel);
 
 	useEffect(() => {
 		if (!isSidebarOpen) return;
@@ -362,16 +361,15 @@ const CommunityPage: React.FC = () => {
 		};
 	}, []);
 
-	// Reset sort khi đổi channel qua URL
 	useEffect(() => {
 		setActiveSort("top");
 	}, [channelSlug]);
 
 	const filteredPosts = MOCK_POSTS.filter((post) => {
-		return pageMode === "home" || activeChannel === "all" || post.channel === activeChannel;
+		if (pageMode === "home" || activeChannel === "chung") return true;
+		return post.channel === activeChannel;
 	});
 
-	// Dữ liệu header tính từ pageMode — dùng chung cho cả home lẫn channel
 	const pageInfo = {
 		image: pageMode === "home" ? COMMUNITY_LOGO : (currentChannel?.image ?? null),
 		title:
@@ -423,12 +421,8 @@ const CommunityPage: React.FC = () => {
 			</div>
 			<nav className={isMobile ? "mt-3 space-y-2" : "mt-3 space-y-2"}>
 				{channels.map((channel) => {
-					const channelPath =
-						channel.slug === "all" ? "/cong-dong" : `/cong-dong/${channel.slug}`;
-					const isActive =
-						channel.slug === "all"
-							? pageMode === "home"
-							: pageMode === "channel" && activeChannel === channel.slug;
+					const channelPath = `/cong-dong/${channel.slug}`;
+					const isActive = pageMode === "channel" && activeChannel === channel.slug;
 					return (
 						<Link
 							key={channel.id}
