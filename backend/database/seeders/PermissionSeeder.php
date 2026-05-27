@@ -34,6 +34,7 @@ class PermissionSeeder extends Seeder
         'academic_structure.import' => 'Import cơ cấu học thuật',
         'academic_data.view' => 'Xem dữ liệu khoa, ngành, lớp',
         'community.view'               => 'Truy cập khu vực quản lý cộng đồng',
+        'community.channels.manage'    => 'Thêm, sửa, xóa kênh thảo luận',
         'community.posts.view'         => 'Xem danh sách bài đăng cộng đồng',
         'community.posts.manage'       => 'Ẩn, ghim, xóa bài đăng cộng đồng',
         'community.blogs.view'         => 'Xem danh sách blog',
@@ -42,6 +43,8 @@ class PermissionSeeder extends Seeder
         'community.comments.manage'    => 'Ẩn, xóa bình luận vi phạm',
         'community.tags.manage'        => 'Thêm, sửa, xóa tags',
         'community.notifications.send' => 'Gửi thông báo hàng loạt đến người dùng',
+        'community.chat.view'          => 'Xem danh sách phòng chat và nhật ký sự kiện',
+        'community.chat.manage'        => 'Xóa sự kiện hệ thống trong phòng chat',
     ];
 
     /**
@@ -62,11 +65,13 @@ class PermissionSeeder extends Seeder
             'academic_structure.import',
             'academic_data.view',
             'community.view',
+            'community.channels.manage',
             'community.posts.view', 'community.posts.manage',
             'community.blogs.view', 'community.blogs.manage',
             'community.comments.view', 'community.comments.manage',
             'community.tags.manage',
             'community.notifications.send',
+            'community.chat.view', 'community.chat.manage',
         ],
 
         // Chủ nhiệm — hầu hết, không quản lý roles/permissions hệ thống
@@ -83,11 +88,13 @@ class PermissionSeeder extends Seeder
             'academic_structure.import',
             'academic_data.view',
             'community.view',
+            'community.channels.manage',
             'community.posts.view', 'community.posts.manage',
             'community.blogs.view', 'community.blogs.manage',
             'community.comments.view', 'community.comments.manage',
             'community.tags.manage',
             'community.notifications.send',
+            'community.chat.view', 'community.chat.manage',
         ],
 
         // Phó Chủ nhiệm — quản lý vận hành, không quản lý phân quyền
@@ -103,11 +110,13 @@ class PermissionSeeder extends Seeder
             'academic_structure.import',
             'academic_data.view',
             'community.view',
+            'community.channels.manage',
             'community.posts.view', 'community.posts.manage',
             'community.blogs.view', 'community.blogs.manage',
             'community.comments.view', 'community.comments.manage',
             'community.tags.manage',
             'community.notifications.send',
+            'community.chat.view', 'community.chat.manage',
         ],
 
         // Trưởng ban Học thuật — quản lý xét tuyển và cơ cấu học thuật
@@ -124,6 +133,7 @@ class PermissionSeeder extends Seeder
             'community.posts.view',
             'community.blogs.view',
             'community.comments.view',
+            'community.chat.view',
         ],
 
         // Trưởng ban Truyền thông — quản lý thông tin CLB, liên hệ và cộng đồng
@@ -136,11 +146,13 @@ class PermissionSeeder extends Seeder
             'contacts.view', 'contacts.manage',
             'academic_data.view',
             'community.view',
+            'community.channels.manage',
             'community.posts.view', 'community.posts.manage',
             'community.blogs.view', 'community.blogs.manage',
             'community.comments.view', 'community.comments.manage',
             'community.tags.manage',
             'community.notifications.send',
+            'community.chat.view', 'community.chat.manage',
         ],
 
         // Trưởng ban Tình nguyện — quản lý đơn xét tuyển
@@ -155,6 +167,7 @@ class PermissionSeeder extends Seeder
             'community.posts.view',
             'community.blogs.view',
             'community.comments.view',
+            'community.chat.view',
         ],
     ];
 

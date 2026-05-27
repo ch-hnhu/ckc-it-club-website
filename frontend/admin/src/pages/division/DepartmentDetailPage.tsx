@@ -100,8 +100,6 @@ function DepartmentDetailPage() {
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
-		{ title: "Quản lý CLB" },
-		{ title: "Các ban", link: "/divisions" },
 		{ title: "Chi tiết ban" },
 	]);
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -53,9 +53,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
+import commentService from "@/services/comment.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -119,8 +119,7 @@ const emptyStats: CommentStats = { total: 0, visible: 0, hidden: 0, replies: 0 }
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function CommentListPage() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/community/comments"), []);
-	useBreadcrumb(breadcrumb);
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý bình luận" }]);
 
 	const [comments, setComments] = useState<CommentRecord[]>([]);
 	const [stats, setStats] = useState<CommentStats>(emptyStats);
@@ -153,14 +152,33 @@ function CommentListPage() {
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
-		// TODO: replace with commentService.getComments(...)
-		setTimeout(() => {
+
+		Promise.all([
+			commentService.getComments({
+				page: meta.current_page,
+				per_page: meta.per_page,
+				search: debouncedSearch || undefined,
+				sort: sortConfig.key ?? undefined,
+				order: sortConfig.order ?? undefined,
+				visibility: visibilityFilter !== "all" ? visibilityFilter : undefined,
+				type: typeFilter !== "all" ? typeFilter : undefined,
+			}),
+			commentService.getStats(),
+		]).then(([commentsRes, statsRes]) => {
 			if (cancelled) return;
-			setComments([]);
-			setStats(emptyStats);
-			setMeta({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
-			setLoading(false);
-		}, 600);
+			setComments(commentsRes.data);
+			setMeta((p) => ({
+				...p,
+				last_page: commentsRes.meta.last_page,
+				total: commentsRes.meta.total,
+			}));
+			setStats(statsRes.data);
+		}).catch(() => {
+			if (!cancelled) toast.error("Không thể tải danh sách bình luận.");
+		}).finally(() => {
+			if (!cancelled) setLoading(false);
+		});
+
 		return () => { cancelled = true; };
 	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken, sortConfig, visibilityFilter, typeFilter]);
 
@@ -178,8 +196,7 @@ function CommentListPage() {
 		sortConfig.order === "desc" ? <ArrowDown className="ml-2 h-4 w-4" /> :
 		<ArrowUpDown className="ml-2 h-4 w-4" />;
 
-	const handleToggleVisibility = async (comment: CommentRecord) => {
-		// TODO: commentService.toggleVisibility(comment.id)
+	const handleToggleVisibility = (comment: CommentRecord) => {
 		setComments((prev) => prev.map((c) => c.id === comment.id ? { ...c, is_hidden: !c.is_hidden } : c));
 		toast.success(comment.is_hidden ? "Đã hiện bình luận." : "Đã ẩn bình luận.");
 	};
@@ -188,7 +205,7 @@ function CommentListPage() {
 		if (!deleteTarget) return;
 		setIsDeleting(true);
 		try {
-			// TODO: commentService.deleteComment(deleteTarget.id)
+			await commentService.deleteComment(deleteTarget.id);
 			setComments((prev) => prev.filter((c) => c.id !== deleteTarget.id));
 			setDeleteTarget(null);
 			setReloadToken((p) => p + 1);

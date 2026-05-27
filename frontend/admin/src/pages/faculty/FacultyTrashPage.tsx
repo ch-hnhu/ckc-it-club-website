@@ -56,9 +56,7 @@ import {
 
 const breadcrumbItems = [
 	{ title: "Dashboard", link: "/" },
-	{ title: "Quản lý đơn vị" },
-	{ title: "Khoa", link: "/departments" },
-	{ title: "Thùng rác" },
+	{ title: "Thùng rác khoa" },
 ];
 
 function FacultyTrashPage() {

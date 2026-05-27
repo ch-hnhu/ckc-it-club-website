@@ -30,11 +30,13 @@ import ClubInformationDetailPage from "@/pages/club-information/ClubInformationD
 import CreateClubInformationPage from "@/pages/club-information/CreateClubInformationPage";
 import OrganizationImportListPage from "@/pages/organization/OrganizationImportListPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
+import ChannelListPage from "@/pages/community/ChannelListPage";
 import PostListPage from "@/pages/community/PostListPage";
 import BlogListPage from "@/pages/community/BlogListPage";
 import CommentListPage from "@/pages/community/CommentListPage";
 import TagListPage from "@/pages/community/TagListPage";
 import SystemNotificationPage from "@/pages/community/SystemNotificationPage";
+import ChatRoomListPage from "@/pages/community/ChatRoomListPage";
 
 const router = createBrowserRouter([
 	{
@@ -255,6 +257,14 @@ const router = createBrowserRouter([
 				element: <NotificationsPage />,
 			},
 			{
+				path: "community/channels",
+				element: (
+					<PermissionRoute permission="community.channels.manage">
+						<ChannelListPage />
+					</PermissionRoute>
+				),
+			},
+			{
 				path: "community/posts",
 				element: (
 					<PermissionRoute permission="community.posts.view">
@@ -291,6 +301,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.notifications.send">
 						<SystemNotificationPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/chat",
+				element: (
+					<PermissionRoute permission="community.chat.view">
+						<ChatRoomListPage />
 					</PermissionRoute>
 				),
 			},

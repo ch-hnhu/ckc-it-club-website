@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -52,14 +52,14 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { getBreadcrumbsFromNavigation } from "@/config/navigation";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import { cn } from "@/lib/utils";
+import blogService from "@/services/blog.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type BlogStatus = "draft" | "published" | "archived";
+export type BlogStatus = "draft" | "pending_review" | "published" | "archived";
 
 export interface BlogTag {
 	id: number;
@@ -96,6 +96,7 @@ export interface BlogStats {
 	published: number;
 	draft: number;
 	archived: number;
+	pending_review?: number;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -128,6 +129,10 @@ const STATUS_MAP: Record<BlogStatus, { label: string; className: string }> = {
 		label: "Bản nháp",
 		className: "border-amber-500/20 bg-amber-500/10 text-amber-700 hover:bg-amber-500/10",
 	},
+	pending_review: {
+		label: "Chờ duyệt",
+		className: "border-blue-500/20 bg-blue-500/10 text-blue-700 hover:bg-blue-500/10",
+	},
 	archived: {
 		label: "Lưu trữ",
 		className: "border-slate-500/20 bg-slate-500/10 text-slate-600 hover:bg-slate-500/10",
@@ -148,6 +153,7 @@ type SortKey = "id" | "status" | "view_count" | "published_at" | "created_at";
 const statusOptions: Array<{ value: BlogStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
 	{ value: "published", label: "Đã xuất bản" },
+	{ value: "pending_review", label: "Chờ duyệt" },
 	{ value: "draft", label: "Bản nháp" },
 	{ value: "archived", label: "Lưu trữ" },
 ];
@@ -157,8 +163,7 @@ const emptyStats: BlogStats = { total: 0, published: 0, draft: 0, archived: 0 };
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function BlogListPage() {
-	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/community/blogs"), []);
-	useBreadcrumb(breadcrumb);
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý blog" }]);
 
 	const [blogs, setBlogs] = useState<BlogRecord[]>([]);
 	const [stats, setStats] = useState<BlogStats>(emptyStats);
@@ -190,14 +195,32 @@ function BlogListPage() {
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
-		// TODO: replace with blogService.getBlogs(...)
-		setTimeout(() => {
+
+		Promise.all([
+			blogService.getBlogs({
+				page: meta.current_page,
+				per_page: meta.per_page,
+				search: debouncedSearch || undefined,
+				sort: sortConfig.key ?? undefined,
+				order: sortConfig.order ?? undefined,
+				status: statusFilter !== "all" ? statusFilter : undefined,
+			}),
+			blogService.getStats(),
+		]).then(([blogsRes, statsRes]) => {
 			if (cancelled) return;
-			setBlogs([]);
-			setStats(emptyStats);
-			setMeta({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
-			setLoading(false);
-		}, 600);
+			setBlogs(blogsRes.data);
+			setMeta((p) => ({
+				...p,
+				last_page: blogsRes.meta.last_page,
+				total: blogsRes.meta.total,
+			}));
+			setStats(statsRes.data);
+		}).catch(() => {
+			if (!cancelled) toast.error("Không thể tải danh sách blog.");
+		}).finally(() => {
+			if (!cancelled) setLoading(false);
+		});
+
 		return () => { cancelled = true; };
 	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken, sortConfig, statusFilter]);
 
@@ -216,16 +239,21 @@ function BlogListPage() {
 		<ArrowUpDown className="ml-2 h-4 w-4" />;
 
 	const handleChangeStatus = async (blog: BlogRecord, next: BlogStatus) => {
-		// TODO: blogService.updateStatus(blog.id, next)
-		setBlogs((prev) => prev.map((b) => b.id === blog.id ? { ...b, status: next } : b));
-		toast.success(`Đã chuyển blog sang "${STATUS_MAP[next].label}".`);
+		try {
+			await blogService.updateStatus(blog.id, next);
+			setBlogs((prev) => prev.map((b) => b.id === blog.id ? { ...b, status: next } : b));
+			toast.success(`Đã chuyển blog sang "${STATUS_MAP[next].label}".`);
+			setReloadToken((p) => p + 1);
+		} catch {
+			toast.error("Không thể cập nhật trạng thái blog.");
+		}
 	};
 
 	const handleDelete = async () => {
 		if (!deleteTarget) return;
 		setIsDeleting(true);
 		try {
-			// TODO: blogService.deleteBlog(deleteTarget.id)
+			await blogService.deleteBlog(deleteTarget.id);
 			setBlogs((prev) => prev.filter((b) => b.id !== deleteTarget.id));
 			setDeleteTarget(null);
 			setReloadToken((p) => p + 1);
@@ -239,6 +267,7 @@ function BlogListPage() {
 
 	const getNextActions = (status: BlogStatus): Array<{ next: BlogStatus; label: string }> => {
 		if (status === "draft") return [{ next: "published", label: "Xuất bản" }];
+		if (status === "pending_review") return [{ next: "published", label: "Duyệt & Xuất bản" }, { next: "draft", label: "Trả về nháp" }];
 		if (status === "published") return [{ next: "archived", label: "Lưu trữ" }, { next: "draft", label: "Thu hồi về nháp" }];
 		if (status === "archived") return [{ next: "published", label: "Khôi phục" }];
 		return [];

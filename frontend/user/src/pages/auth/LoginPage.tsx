@@ -91,7 +91,7 @@ export default function LoginPage() {
 							<img
 								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
 								className='h-full w-full rounded-full object-cover'
-								alt='CKC IT Club'
+								alt='CKC IT CLUB'
 							/>
 						</div>
 						<span

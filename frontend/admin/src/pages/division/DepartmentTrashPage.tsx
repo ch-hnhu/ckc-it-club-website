@@ -58,9 +58,7 @@ import {
 
 const breadcrumbItems = [
 	{ title: "Dashboard", link: "/" },
-	{ title: "Quản lý CLB" },
-	{ title: "Các ban", link: "/divisions" },
-	{ title: "Thùng rác" },
+	{ title: "Thùng rác ban" },
 ];
 
 function DepartmentTrashPage() {

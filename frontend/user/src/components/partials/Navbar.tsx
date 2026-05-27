@@ -1,6 +1,18 @@
-import React, { useEffect, useState } from "react";
-import { LogIn, Menu, UserPlus, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import {
+	Bookmark,
+	ChevronLeft,
+	ChevronRight,
+	LogIn,
+	LogOut,
+	Menu,
+	SlidersHorizontal,
+	Sun,
+	UserPlus,
+	UserRound,
+	X,
+} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import {
 	clearAccessToken,
 	getGoogleAuthUrl,
@@ -26,7 +38,21 @@ const NAV_ITEMS = [
 
 const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const [isMobileOpen, setIsMobileOpen] = useState(false);
+	const [mobileMenuView, setMobileMenuView] = useState<"nav" | "account">("nav");
+	const [isProfileOpen, setIsProfileOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const profileMenuRef = useRef<HTMLDivElement>(null);
+	const location = useLocation();
+	const isCommunityPage =
+		location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
+	const navbarContainerClass = isCommunityPage ? "mx-0 max-w-none" : "";
+	const navbarPaddingX = isCommunityPage ? "px-4 md:px-5 lg:px-6" : "px-6";
+	const userDisplayName = user?.name || user?.email || "CKC member";
+	const userAvatar =
+		user?.picture ||
+		`https://ui-avatars.com/api/?name=${encodeURIComponent(
+			userDisplayName,
+		)}&background=A3E635&color=111111&bold=true`;
 
 	useEffect(() => {
 		return listenOAuthAuthMessage({
@@ -42,6 +68,30 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 			},
 		});
 	}, [onAuthSuccess]);
+
+	useEffect(() => {
+		if (!isProfileOpen) return;
+
+		const handlePointerDown = (event: PointerEvent) => {
+			if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+				setIsProfileOpen(false);
+			}
+		};
+
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				setIsProfileOpen(false);
+			}
+		};
+
+		document.addEventListener("pointerdown", handlePointerDown);
+		document.addEventListener("keydown", handleKeyDown);
+
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [isProfileOpen]);
 
 	const handleLogin = async () => {
 		try {
@@ -67,6 +117,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const handleLogout = async () => {
 		try {
 			setLoading(true);
+			setIsProfileOpen(false);
 			await logout();
 			await onAuthSuccess();
 		} catch (err) {
@@ -76,80 +127,189 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 		}
 	};
 
+	const isNavItemActive = (href: string) => {
+		if (href === "/cong-dong") {
+			return location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
+		}
+
+		return href.startsWith("/") ? location.pathname === href : location.hash === href;
+	};
+
+	const getNavItemClass = (isActive: boolean, isMobile = false) =>
+		`group relative ${
+			isMobile
+				? "rounded-xl px-4 py-3 text-base font-bold"
+				: "rounded-lg px-4 py-2 text-sm font-semibold"
+		} transition-all duration-200 hover:bg-primary-100 hover:text-[var(--color-text-primary)] ${
+			isActive
+				? isMobile
+					? "bg-primary-100 text-[var(--color-text-primary)]" // mobile: highlight background như sidebar
+					: "text-[var(--color-text-primary)]"                  // desktop: chỉ đổi màu chữ + underline indicator
+				: "text-gray-700"
+		}`;
+
+	// Desktop: underline indicator. Mobile: ẩn (background đã thể hiện active state)
+	const getNavIndicatorClass = (isActive: boolean, isMobile = false) =>
+		`absolute right-4 bottom-0.5 left-4 h-0.5 rounded-full transition-transform duration-200 ${
+			isMobile
+				? "hidden"
+				: `group-hover:scale-x-100 ${isActive ? "scale-x-100" : "scale-x-0"}`
+		}`;
+
+	const closeMobileMenu = () => {
+		setIsMobileOpen(false);
+		setMobileMenuView("nav");
+	};
+
+	const closeProfileMenu = (isMobile = false) => {
+		setIsProfileOpen(false);
+		if (isMobile) closeMobileMenu();
+	};
+
+	const handleSwitchTheme = (isMobile = false) => {
+		document.documentElement.classList.toggle("dark");
+		closeProfileMenu(isMobile);
+	};
+
+	/** Shared class strings for profile menu items */
+	const profileMenuItemClass =
+		"flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-base font-bold text-gray-700 transition-colors hover:bg-[var(--color-primary-100)] hover:text-[var(--color-text-primary)] focus-visible:bg-[var(--color-primary-100)] focus-visible:outline-none active:bg-[var(--color-primary-100)]";
+	const profileMenuDangerItemClass = `${profileMenuItemClass} hover:bg-[var(--color-pastel-pink)] focus-visible:bg-[var(--color-pastel-pink)] active:bg-[var(--color-pastel-pink)] disabled:cursor-not-allowed disabled:opacity-60`;
+
+	const renderProfileMenu = (isMobile = false) => {
+		const handleMenuLogout = () => {
+			if (isMobile) closeMobileMenu();
+			void handleLogout();
+		};
+
+		return (
+			<div
+				className={`${
+					isMobile
+						? "w-56 max-w-full"
+						: "absolute top-[calc(100%+0.625rem)] right-0 w-56"
+				} space-y-1 rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[var(--neo-shadow)]`}
+				role='menu'
+				aria-label='User menu'>
+				<button
+					type='button'
+					onClick={() => closeProfileMenu(isMobile)}
+					className={profileMenuItemClass}
+					role='menuitem'>
+					<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
+					<span>Profile</span>
+				</button>
+				<button
+					type='button'
+					onClick={() => closeProfileMenu(isMobile)}
+					className={profileMenuItemClass}
+					role='menuitem'>
+					<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
+					<span>Bookmarks</span>
+				</button>
+				<button
+					type='button'
+					onClick={() => closeProfileMenu(isMobile)}
+					className={profileMenuItemClass}
+					role='menuitem'>
+					<SlidersHorizontal className='h-5 w-5 shrink-0 text-gray-600' />
+					<span>Account</span>
+				</button>
+				<button
+					type='button'
+					onClick={() => handleSwitchTheme(isMobile)}
+					className={profileMenuItemClass}
+					role='menuitem'>
+					<Sun className='h-5 w-5 shrink-0 text-gray-600' />
+					<span>Switch theme</span>
+				</button>
+				<button
+					type='button'
+					onClick={handleMenuLogout}
+					disabled={loading}
+					className={profileMenuDangerItemClass}
+					role='menuitem'>
+					<LogOut className='h-5 w-5 shrink-0 text-gray-600' />
+					<span>Sign Out</span>
+				</button>
+			</div>
+		);
+	};
+
 	return (
 		<header className='fixed top-0 left-0 z-50 w-full border-b-2 border-black bg-white/95 shadow-[0_2px_0_0_#111] backdrop-blur-sm transition-all duration-300'>
-			<div className='neo-container'>
-				<div className='flex h-16 items-center gap-4 px-6 lg:gap-8'>
-					<Link to='/' className='group flex items-center gap-2.5 no-underline'>
-						<div
-							className='flex h-9 w-9 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105'
-							style={{
-								background: "var(--color-primary)",
-								border: "2px solid #111",
-							}}>
-							<img
-								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
-								className='h-full w-full rounded-full object-cover'
-							/>
-						</div>
-						<span
-							className='text-xl font-extrabold tracking-tight text-black'
-							style={{ fontFamily: "var(--font-heading)" }}>
-							CKC IT CLUB
-						</span>
-					</Link>
+			<div className={`neo-container ${navbarContainerClass}`}>
+				<div className={`flex h-16 items-center justify-between gap-4 ${navbarPaddingX}`}>
+					<div className='flex min-w-0 items-center gap-4 lg:gap-8'>
+						<Link to='/' className='group flex items-center gap-2.5 no-underline'>
+							<div
+								className='flex h-9 w-9 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105'
+								style={{
+									background: "var(--color-primary)",
+									border: "2px solid #111",
+								}}>
+								<img
+									src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
+									className='h-full w-full rounded-full object-cover'
+								/>
+							</div>
+							<span
+								className='text-xl font-extrabold tracking-tight text-black'
+								style={{ fontFamily: "var(--font-heading)" }}>
+								CKC IT CLUB
+							</span>
+						</Link>
 
-					<nav className='hidden items-center gap-1 xl:flex'>
-						{NAV_ITEMS.map((item) =>
-							item.href.startsWith("/") ? (
-								<Link
-									key={item.label}
-									to={item.href}
-									className='group relative rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-100 hover:text-black'
-									style={{ fontFamily: "var(--font-body)" }}>
-									{item.label}
-									<span
-										className='absolute right-4 bottom-0.5 left-4 h-0.5 scale-x-0 rounded-full transition-transform duration-200 group-hover:scale-x-100'
-										style={{ background: "var(--color-primary)" }}
-									/>
-								</Link>
-							) : (
-								<a
-									key={item.label}
-									href={item.href}
-									className='group relative rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-100 hover:text-black'
-									style={{ fontFamily: "var(--font-body)" }}>
-									{item.label}
-									<span
-										className='absolute right-4 bottom-0.5 left-4 h-0.5 scale-x-0 rounded-full transition-transform duration-200 group-hover:scale-x-100'
-										style={{ background: "var(--color-primary)" }}
-									/>
-								</a>
-							),
-						)}
-					</nav>
-
-					<div className='ml-auto hidden items-center gap-3 xl:flex'>
-						{user ? (
-							<div className='flex items-center gap-3'>
-								<div className='flex h-10 items-center gap-2 neo-btn neo-btn-secondary px-4 py-0 text-sm disabled:opacity-50'>
-									{user.picture && (
-										<img
-											src={user.picture}
-											alt={user.name || "user"}
-											className='h-6 w-6 rounded-full'
+						<nav className='hidden min-w-0 items-center gap-1 xl:flex'>
+							{NAV_ITEMS.map((item) => {
+								const isActive = isNavItemActive(item.href);
+								const className = getNavItemClass(isActive);
+								return item.href.startsWith("/") ? (
+									<Link
+										key={item.label}
+										to={item.href}
+										className={className}
+										style={{ fontFamily: "var(--font-body)" }}>
+										{item.label}
+										<span
+											className={getNavIndicatorClass(isActive)}
+											style={{ background: "var(--color-primary)" }}
 										/>
-									)}
-									<span className='max-w-[120px] truncate'>
-										{user.name || user.email}
-									</span>
-								</div>
+									</Link>
+								) : (
+									<a
+										key={item.label}
+										href={item.href}
+										className={className}
+										style={{ fontFamily: "var(--font-body)" }}>
+										{item.label}
+										<span
+											className={getNavIndicatorClass(isActive)}
+											style={{ background: "var(--color-primary)" }}
+										/>
+									</a>
+								);
+							})}
+						</nav>
+					</div>
+
+					<div className='hidden shrink-0 items-center gap-3 xl:flex'>
+						{user ? (
+							<div ref={profileMenuRef} className='relative'>
 								<button
-									onClick={handleLogout}
-									disabled={loading}
-									className='h-10 neo-btn neo-btn-secondary px-4 py-0 text-sm disabled:opacity-50'>
-									Đăng xuất
+									type='button'
+									onClick={() => setIsProfileOpen((current) => !current)}
+									className='flex h-11 w-11 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-blue)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 cursor-pointer'
+									aria-label={`Mở menu tài khoản của ${userDisplayName}`}
+									aria-haspopup='menu'
+									aria-expanded={isProfileOpen}>
+									<img
+										src={userAvatar}
+										alt={userDisplayName}
+										className='h-full w-full rounded-full object-cover'
+									/>
 								</button>
+								{isProfileOpen && renderProfileMenu()}
 							</div>
 						) : (
 							<>
@@ -171,74 +331,160 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 					</div>
 
 					<button
-						className='ml-auto rounded-lg border-2 border-black p-2 xl:hidden'
-						onClick={() => setIsMobileOpen(!isMobileOpen)}
+						className='shrink-0 rounded-lg border-2 border-black p-2 xl:hidden'
+						onClick={() => (isMobileOpen ? closeMobileMenu() : setIsMobileOpen(true))}
 						aria-label='Mở menu điều hướng'>
 						{isMobileOpen ? <X className='h-5 w-5' /> : <Menu className='h-5 w-5' />}
 					</button>
 				</div>
 
 				{isMobileOpen && (
-					<div className='border-t-2 border-black bg-white px-6 pb-6 xl:hidden'>
-						<nav className='flex flex-col gap-1 pt-4'>
-							{NAV_ITEMS.map((item) =>
-								item.href.startsWith("/") ? (
-									<Link
-										key={item.label}
-										to={item.href}
-										onClick={() => setIsMobileOpen(false)}
-										className='rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100'>
-										{item.label}
-									</Link>
-								) : (
-									<a
-										key={item.label}
-										href={item.href}
-										onClick={() => setIsMobileOpen(false)}
-										className='rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100'>
-										{item.label}
-									</a>
-								),
-							)}
-						</nav>
-						<div className='mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4'>
-							{user ? (
-								<div className='flex flex-col gap-3'>
-									<div className='flex items-center justify-center gap-2 neo-btn neo-btn-secondary w-full disabled:opacity-50'>
-										{user.picture && (
+					<div className={`border-t-2 border-black bg-white ${navbarPaddingX} pb-6 xl:hidden`}>
+
+						{/* ── View: Main navigation ── */}
+						{mobileMenuView === "nav" && (
+							<>
+								<nav className='flex flex-col gap-3 py-5'>
+									{NAV_ITEMS.map((item) => {
+										const isActive = isNavItemActive(item.href);
+										const className = getNavItemClass(isActive, true);
+										return item.href.startsWith("/") ? (
+											<Link
+												key={item.label}
+												to={item.href}
+												onClick={closeMobileMenu}
+												className={className}
+												style={{ fontFamily: "var(--font-body)" }}>
+												{item.label}
+												<span
+													className={getNavIndicatorClass(isActive, true)}
+													style={{ background: "var(--color-primary)" }}
+												/>
+											</Link>
+										) : (
+											<a
+												key={item.label}
+												href={item.href}
+												onClick={closeMobileMenu}
+												className={className}
+												style={{ fontFamily: "var(--font-body)" }}>
+												{item.label}
+												<span
+													className={getNavIndicatorClass(isActive, true)}
+													style={{ background: "var(--color-primary)" }}
+												/>
+											</a>
+										);
+									})}
+								</nav>
+
+								<div className='border-t border-gray-100 pt-4'>
+									{user ? (
+										/* User row → click để mở account submenu */
+										<button
+											type='button'
+											onClick={() => setMobileMenuView("account")}
+											className='flex w-full items-center gap-3 rounded-[var(--neo-radius-sm)] border-2 border-black bg-[var(--color-pastel-blue)] p-3 text-left transition hover:bg-[var(--color-primary-100)]'>
 											<img
-												src={user.picture}
-												alt={user.name || "user"}
-												className='h-6 w-6 rounded-full'
+												src={userAvatar}
+												alt={userDisplayName}
+												className='h-11 w-11 rounded-full border-2 border-black bg-white object-cover'
 											/>
-										)}
-										<span className='truncate'>{user.name || user.email}</span>
-									</div>
-									<button
-										onClick={handleLogout}
-										disabled={loading}
-										className='neo-btn neo-btn-secondary w-full justify-center disabled:opacity-50'>
-										Đăng xuất
-									</button>
+											<span className='min-w-0 flex-1 truncate text-sm font-extrabold text-black'>
+												{userDisplayName}
+											</span>
+											<ChevronRight className='h-4 w-4 shrink-0 text-gray-500' />
+										</button>
+									) : (
+										<div className='flex flex-col gap-3'>
+											<Link
+												to='/login'
+												onClick={closeMobileMenu}
+												className='neo-btn neo-btn-secondary w-full justify-center'>
+												<LogIn className='h-4 w-4' /> Đăng nhập
+											</Link>
+											<button
+												onClick={handleLogin}
+												disabled={loading}
+												className='neo-btn neo-btn-primary w-full justify-center disabled:opacity-50'>
+												<UserPlus className='h-4 w-4' />{" "}
+												{loading ? "Đang xử lý..." : "Tham gia ngay"}
+											</button>
+										</div>
+									)}
 								</div>
-							) : (
-								<>
-									<Link
-										to='/login'
-										onClick={() => setIsMobileOpen(false)}
-										className='neo-btn neo-btn-secondary w-full justify-center'>
-										<LogIn className='h-4 w-4' /> Đăng nhập
-									</Link>
+							</>
+						)}
+
+						{/* ── View: Account submenu ── */}
+						{mobileMenuView === "account" && (
+							<>
+								{/* Nút quay lại */}
+								<button
+									type='button'
+									onClick={() => setMobileMenuView("nav")}
+									className='flex items-center gap-1.5 pt-4 pb-3 text-sm font-bold text-[var(--color-text-primary)] transition hover:opacity-75'>
+									<ChevronLeft className='h-4 w-4' />
+									Quay lại menu
+								</button>
+								<div className='mb-3 border-t border-gray-100' />
+
+								{/* User info card */}
+								<div className='mb-3 flex items-center gap-3 rounded-[var(--neo-radius-sm)] border-2 border-black bg-[var(--color-pastel-blue)] p-3'>
+									<img
+										src={userAvatar}
+										alt={userDisplayName}
+										className='h-11 w-11 rounded-full border-2 border-black bg-white object-cover'
+									/>
+									<span className='min-w-0 flex-1 truncate text-sm font-extrabold text-black'>
+										{userDisplayName}
+									</span>
+								</div>
+
+								{/* Account options */}
+								<nav className='flex flex-col gap-0.5'>
 									<button
-										onClick={handleLogin}
-										disabled={loading}
-										className='neo-btn neo-btn-primary w-full justify-center disabled:opacity-50'>
-										<UserPlus className='h-4 w-4' />{" "}
-										{loading ? "Đang xử lý..." : "Tham gia ngay"}
+										type='button'
+										onClick={closeMobileMenu}
+										className={profileMenuItemClass}>
+										<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
+										<span>Profile</span>
 									</button>
-								</>
-							)}
-						</div>
+									<button
+										type='button'
+										onClick={closeMobileMenu}
+										className={profileMenuItemClass}>
+										<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
+										<span>Bookmarks</span>
+									</button>
+									<button
+										type='button'
+										onClick={closeMobileMenu}
+										className={profileMenuItemClass}>
+										<SlidersHorizontal className='h-5 w-5 shrink-0 text-gray-600' />
+										<span>Account</span>
+									</button>
+									<button
+										type='button'
+										onClick={() => handleSwitchTheme(true)}
+										className={profileMenuItemClass}>
+										<Sun className='h-5 w-5 shrink-0 text-gray-600' />
+										<span>Switch theme</span>
+									</button>
+									<button
+										type='button'
+										onClick={() => {
+											closeMobileMenu();
+											void handleLogout();
+										}}
+										disabled={loading}
+										className={profileMenuDangerItemClass}>
+										<LogOut className='h-5 w-5 shrink-0 text-gray-600' />
+										<span>Sign Out</span>
+									</button>
+								</nav>
+							</>
+						)}
 					</div>
 				)}
 			</div>

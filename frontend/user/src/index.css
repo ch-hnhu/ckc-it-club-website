@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+	--color-primary: #a3e635;
+	--color-primary-100: #ecfccb;
+	--color-primary-500: #84cc16;
+}
+
 /* ============================================
    CKC IT CLUB – Soft Neobrutalism Design Tokens
    ============================================ */
@@ -13,6 +19,7 @@
 		--color-surface: #f9fafb;
 		--color-border: #111111;
 		--color-text: #111111;
+		--color-text-primary: #476715;
 		--color-text-muted: #6b7280;
 		--color-text-light: #9ca3af;
 
@@ -55,6 +62,7 @@
 		--color-surface: #1a1a1a;
 		--color-border: #333333;
 		--color-text: #ffffff;
+		--color-text-primary: #a3e635;
 		--color-text-muted: #a1a1aa;
 		--neo-border: 2px solid #444444;
 		--neo-shadow: 4px 4px 0px #444444;
@@ -181,21 +189,16 @@
 	}
 
 	.community-shell {
-		--community-left: clamp(15rem, 13.5vw, 17rem);
-		--community-feed: clamp(34rem, 42vw, 44rem);
-		--community-right: clamp(18rem, 17vw, 21rem);
+		--community-left: 16.25rem; /* 260px */
+		--community-feed: 43.75rem; /* 700px */
+		--community-right: 20rem; /* 320px */
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		width: 100%;
 	}
 
-	@media (min-width: 1024px) {
-		.community-shell {
-			grid-template-columns: var(--community-left) minmax(0, 1fr);
-		}
-	}
-
-	@media (min-width: 1280px) {
+	/* Tablet ≥ 768px: left sidebar appears */
+	@media (min-width: 48rem) {
 		.community-shell {
 			grid-template-columns: var(--community-left) minmax(0, 1fr);
 		}
@@ -205,18 +208,40 @@
 		display: grid;
 		grid-template-columns: minmax(0, var(--community-feed));
 		justify-content: center;
+		margin: 0 auto;
+		max-width: 76rem;
 		width: 100%;
 	}
 
-	@media (min-width: 1280px) {
+	.community-right-rail {
+		display: none;
+	}
+
+	/* Tablet: single feed column with horizontal padding */
+	@media (min-width: 48rem) and (max-width: 75rem) {
 		.community-content {
-			grid-template-columns: minmax(0, var(--community-feed)) var(--community-right);
+			padding-inline: 1.5rem;
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
+	/* Large desktop ≥ 1200px: right sidebar appears */
+	@media (min-width: 75rem) {
+		.community-content {
+			grid-template-columns: minmax(0, 1fr) var(--community-right);
+			justify-content: stretch;
+			padding-inline: 1.5rem;
+		}
+
+		.community-right-rail {
+			display: block;
 		}
 	}
 
 	.community-feed {
 		max-width: var(--community-feed);
 		width: 100%;
+		margin-inline: auto;
 	}
 
 	/* Fade-in animation on scroll */
@@ -317,6 +342,15 @@
 	border: 2px solid var(--color-surface);
 }
 
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+
 /* ============================================
    Section Dividers
    ============================================ */
@@ -353,4 +387,974 @@
 	background-repeat: no-repeat;
 	position: absolute;
 	inset: 0%;
+}
+
+/* ============================================
+   Stacks Editor – scoped utilities + neobrutalist overrides
+   stacks-editor/dist/styles.css handles the base editor chrome.
+   Everything here is scoped under .so-editor-outer to prevent
+   conflicts with Tailwind and the site's global CSS.
+   ============================================ */
+.so-editor-outer {
+	/* Stacks spacing tokens */
+	--su0: 0px;
+	--su2: 2px;
+	--su4: 4px;
+	--su6: 6px;
+	--su8: 8px;
+	--su12: 12px;
+	--su16: 16px;
+	--su24: 24px;
+	--su32: 32px;
+	--su-static2: 2px;
+	--su-static4: 4px;
+
+	/* Stacks design tokens */
+	--br-sm: 4px;
+	--br-md: 6px;
+	--zi-base: 0;
+	--zi-navigation: 5000;
+	--fs-body1: 13px;
+	--fs-body2: 15px;
+	--fs-body3: 17px;
+	--fs-caption: 11px;
+	--fs-fine: 11px;
+	--s-full: 97.2307692rem;
+	--s-step: calc(var(--s-full) / 12);
+	--scrollbar: rgba(0, 0, 0, 0.2);
+	--black-225: hsl(210, 8%, 90%);
+	--black-400: hsl(210, 8%, 45%);
+	--black-500: hsl(210, 8%, 35%);
+	--black-600: hsl(210, 8%, 25%);
+
+	/* Project palette override */
+	--theme-secondary-200: #ecfccb;
+	--theme-secondary-400: #a3e635;
+	--theme-secondary-500: #84cc16;
+	--theme-secondary-600: #65a30d;
+	--focus-theme: rgba(163, 230, 53, 0.4);
+	--focus-neutral: rgba(0, 0, 0, 0.12);
+}
+
+/* ── Layout ── */
+.so-editor-outer .d-flex {
+	display: flex !important;
+}
+.so-editor-outer .d-inline-flex {
+	display: inline-flex !important;
+}
+.so-editor-outer .d-none {
+	display: none !important;
+}
+.so-editor-outer .fd-column {
+	flex-direction: column !important;
+}
+.so-editor-outer .ai-center {
+	align-items: center !important;
+}
+.so-editor-outer .fl-grow1 {
+	flex-grow: 1 !important;
+}
+.so-editor-outer .flex--item {
+	flex: 0 auto;
+}
+.so-editor-outer .fw-nowrap {
+	flex-wrap: nowrap !important;
+}
+.so-editor-outer .g2 {
+	gap: 2px !important;
+}
+.so-editor-outer .g16 {
+	gap: 16px !important;
+}
+.so-editor-outer .gs8 {
+	gap: 8px !important;
+}
+.so-editor-outer .gsy {
+	row-gap: 8px !important;
+}
+.so-editor-outer .overflow-x-auto {
+	overflow-x: auto !important;
+}
+.so-editor-outer .overflow-auto {
+	overflow: auto !important;
+}
+.so-editor-outer .outline-none {
+	outline: 0 !important;
+}
+
+/* ── Position ── */
+.so-editor-outer .ps-relative {
+	position: relative !important;
+}
+.so-editor-outer .ps-absolute {
+	position: absolute !important;
+}
+.so-editor-outer .ps-sticky {
+	position: sticky !important;
+}
+.so-editor-outer .t0 {
+	top: 0 !important;
+}
+.so-editor-outer .t2 {
+	top: 2px !important;
+}
+.so-editor-outer .t32 {
+	top: 32px !important;
+}
+.so-editor-outer .r0 {
+	right: 0 !important;
+}
+.so-editor-outer .r4 {
+	right: 4px !important;
+}
+.so-editor-outer .l0 {
+	left: 0 !important;
+}
+.so-editor-outer .z-base {
+	z-index: 0 !important;
+}
+.so-editor-outer .z-nav {
+	z-index: 10 !important;
+}
+.so-editor-outer .z-popover {
+	z-index: 10 !important;
+}
+
+/* ── Text / Whitespace ── */
+.so-editor-outer .ws-normal {
+	white-space: normal !important;
+}
+.so-editor-outer .ow-normal {
+	overflow-wrap: normal !important;
+}
+.so-editor-outer .c-pointer {
+	cursor: pointer !important;
+}
+
+/* ── Size ── */
+.so-editor-outer .w100 {
+	width: 100% !important;
+}
+.so-editor-outer .w-auto {
+	width: auto !important;
+}
+.so-editor-outer .wmn-initial {
+	min-width: initial !important;
+}
+.so-editor-outer .hmn2 {
+	min-height: 16px !important;
+}
+
+/* ── Background ── */
+.so-editor-outer .bg-inherit {
+	background-color: inherit !important;
+}
+.so-editor-outer .bg-black-225 {
+	background-color: hsl(210, 8%, 90%) !important;
+}
+
+/* ── Border ── */
+.so-editor-outer .bt {
+	border-top: 1px solid #ddd !important;
+}
+.so-editor-outer .bb {
+	border-bottom: 1px solid #ddd !important;
+}
+.so-editor-outer .bc-black-400 {
+	border-color: hsl(210, 8%, 70%) !important;
+}
+.so-editor-outer .btr-sm {
+	border-top-left-radius: 4px !important;
+	border-top-right-radius: 4px !important;
+}
+
+/* ── Typography ── */
+.so-editor-outer .fc-medium {
+	color: hsl(210, 8%, 35%) !important;
+}
+.so-editor-outer .fc-light {
+	color: hsl(210, 8%, 45%) !important;
+}
+.so-editor-outer .fc-black-400 {
+	color: hsl(210, 8%, 45%) !important;
+}
+.so-editor-outer .fs-body1 {
+	font-size: 13px !important;
+}
+.so-editor-outer .fs-body2 {
+	font-size: 15px !important;
+}
+.so-editor-outer .fs-body3 {
+	font-size: 17px !important;
+}
+.so-editor-outer .fs-caption {
+	font-size: 11px !important;
+}
+.so-editor-outer .fs-fine {
+	font-size: 11px !important;
+}
+.so-editor-outer .tt-uppercase {
+	text-transform: uppercase !important;
+}
+.so-editor-outer .ta-left {
+	text-align: left !important;
+}
+
+/* ── Spacing ── */
+.so-editor-outer .m0 {
+	margin: 0 !important;
+}
+.so-editor-outer .mt4 {
+	margin-top: 4px !important;
+}
+.so-editor-outer .mt6 {
+	margin-top: 6px !important;
+}
+.so-editor-outer .mt12 {
+	margin-top: 12px !important;
+}
+.so-editor-outer .mb4 {
+	margin-bottom: 4px !important;
+}
+.so-editor-outer .mb6 {
+	margin-bottom: 6px !important;
+}
+.so-editor-outer .mb8 {
+	margin-bottom: 8px !important;
+}
+.so-editor-outer .ml24 {
+	margin-left: 24px !important;
+}
+.so-editor-outer .mx12 {
+	margin-left: 12px !important;
+	margin-right: 12px !important;
+}
+.so-editor-outer .myn2 {
+	margin-top: -2px !important;
+	margin-bottom: -2px !important;
+}
+.so-editor-outer .p0 {
+	padding: 0 !important;
+}
+.so-editor-outer .p12 {
+	padding: 12px !important;
+}
+.so-editor-outer .pt0 {
+	padding-top: 0 !important;
+}
+.so-editor-outer .pt6 {
+	padding-top: 6px !important;
+}
+.so-editor-outer .pb0 {
+	padding-bottom: 0 !important;
+}
+.so-editor-outer .px0 {
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+.so-editor-outer .px6 {
+	padding-left: 6px !important;
+	padding-right: 6px !important;
+}
+.so-editor-outer .px12 {
+	padding-left: 12px !important;
+	padding-right: 12px !important;
+}
+.so-editor-outer .py2 {
+	padding-top: 2px !important;
+	padding-bottom: 2px !important;
+}
+.so-editor-outer .py4 {
+	padding-top: 4px !important;
+	padding-bottom: 4px !important;
+}
+.so-editor-outer .py6 {
+	padding-top: 6px !important;
+	padding-bottom: 6px !important;
+}
+.so-editor-outer .py8 {
+	padding-top: 8px !important;
+	padding-bottom: 8px !important;
+}
+
+/* ── Accessibility ── */
+.so-editor-outer .v-visible-sr {
+	clip: rect(0, 0, 0, 0);
+	clip-path: inset(50%);
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
+/* ── Touch-device variant ── */
+@media (hover: none), (pointer: coarse) {
+	.so-editor-outer .vk\:d-inline-flex {
+		display: inline-flex !important;
+	}
+}
+
+/* ── Hidden elements ── */
+.so-editor-outer .js-help-link {
+	display: none !important;
+}
+
+/* ─────────────────────────────────────────────
+   POPOVERS & TOOLTIPS
+   ───────────────────────────────────────────── */
+
+/* All popovers: hidden by default, absolute-positioned */
+.so-editor-outer .s-popover {
+	position: absolute;
+	display: none;
+	z-index: 10;
+	padding: 8px;
+	background: #fff;
+	border: 2px solid #111;
+	border-radius: 10px;
+	box-shadow: 3px 3px 0 #111;
+	font-size: 13px;
+	color: #111;
+	min-width: 10rem;
+}
+
+/* Show when Stacks JS marks them visible */
+.so-editor-outer .s-popover.is-visible,
+.so-editor-outer .s-popover[data-popper-placement] {
+	display: block;
+}
+
+/* Small tooltip variant – compact, no padding override */
+.so-editor-outer .s-popover.s-popover__tooltip {
+	min-width: 0;
+	padding: 4px 8px;
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+	border-radius: 6px;
+	box-shadow: 2px 2px 0 #111;
+}
+
+/* Dropdown menus (heading, table, more-formatting) – reset padding to rely on items */
+.so-editor-outer .s-popover.wmn-initial {
+	min-width: 9rem;
+	padding: 4px 0;
+	overflow: hidden;
+}
+
+/* Arrow nub */
+.so-editor-outer .s-popover--arrow,
+.so-editor-outer .s-popover--arrow::before {
+	display: none;
+}
+
+/* ─────────────────────────────────────────────
+   DROPDOWN MENU ITEMS
+   ───────────────────────────────────────────── */
+.so-editor-outer .s-block-link {
+	display: block;
+	width: 100%;
+	padding: 8px 14px;
+	text-align: left;
+	background: transparent;
+	border: none;
+	font-size: 14px;
+	font-weight: 600;
+	color: #111;
+	cursor: pointer;
+	transition: background 120ms;
+}
+.so-editor-outer .s-block-link:hover,
+.so-editor-outer .s-block-link:focus {
+	background-color: var(--color-primary) !important;
+	outline: none;
+}
+
+.so-editor-outer .s-editor--dropdown-item {
+	padding: 8px 14px;
+}
+
+/* ─────────────────────────────────────────────
+   FORM COMPONENTS (link dialog, image dialog)
+   ───────────────────────────────────────────── */
+
+/* Link editor form container */
+.so-editor-outer .js-link-editor {
+	padding: 12px 14px;
+	background: #fafafa;
+	border-top: 2px solid #111 !important;
+	border-bottom: 2px solid #111 !important;
+}
+
+/* Labels */
+.so-editor-outer .s-label {
+	display: block;
+	font-size: 12px;
+	font-weight: 700;
+	color: #111;
+	margin-bottom: 4px;
+	font-family: var(--font-heading);
+}
+
+/* Text inputs */
+.so-editor-outer .s-input {
+	display: block;
+	width: 100%;
+	height: 2.25rem;
+	padding: 0 10px;
+	font-size: 13px;
+	font-weight: 500;
+	color: #111;
+	background: #fff;
+	border: 2px solid #111 !important;
+	border-radius: 8px !important;
+	outline: none;
+	transition: box-shadow 120ms;
+}
+.so-editor-outer .s-input:focus {
+	background: #fff;
+	box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.45);
+}
+
+/* Error message */
+.so-editor-outer .s-input-message {
+	display: block;
+	font-size: 11px;
+	font-weight: 600;
+	color: #dc2626;
+	margin-top: 4px;
+}
+
+/* Buttons inside popovers / link dialog */
+.so-editor-outer .s-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	padding: 5px 14px;
+	font-size: 13px;
+	font-weight: 700;
+	font-family: var(--font-heading);
+	border-radius: 8px;
+	border: 2px solid transparent;
+	cursor: pointer;
+	transition:
+		background 120ms,
+		box-shadow 120ms,
+		transform 120ms;
+	background: transparent;
+	color: #111;
+}
+
+.so-editor-outer .s-btn__primary {
+	background: var(--color-primary) !important;
+	border-color: #111 !important;
+	box-shadow: 2px 2px 0 #111;
+}
+.so-editor-outer .s-btn__primary:hover:not(:disabled) {
+	transform: translate(1px, 1px);
+	box-shadow: 1px 1px 0 #111;
+}
+.so-editor-outer .s-btn__primary:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.so-editor-outer .s-btn__muted,
+.so-editor-outer .js-link-editor .s-btn:not(.s-btn__primary) {
+	background: #fff !important;
+	border-color: #111 !important;
+}
+
+/* ─────────────────────────────────────────────
+   TOOLBAR
+   ───────────────────────────────────────────── */
+.so-editor-outer .js-plugin-container {
+	position: relative;
+	z-index: 1;
+	background-color: #fff !important;
+	border-bottom: 2px solid #111 !important;
+}
+
+/* Hide the horizontal scrollbar on the toolbar row — it shows as a colored bar */
+.so-editor-outer .overflow-x-auto {
+	scrollbar-width: none !important;
+}
+.so-editor-outer .overflow-x-auto::-webkit-scrollbar {
+	display: none !important;
+}
+
+/* Pin the mode-toggle group to the right edge of the scrollable toolbar */
+.so-editor-outer .js-editor-menu ~ div {
+	position: sticky !important;
+	right: 0 !important;
+	background: #fff;
+	z-index: 1;
+}
+
+/* Individual toolbar buttons */
+.so-editor-outer .s-btn.s-editor-btn {
+	display: flex !important;
+	align-items: center !important;
+	border: 2px solid transparent !important;
+	border-radius: 8px !important;
+	color: #111 !important;
+	font-weight: 700;
+	transition:
+		background 120ms,
+		border-color 120ms;
+}
+/* Override stacks-editor's reduced padding-right on dropdown buttons */
+.so-editor-outer .s-btn.s-editor-btn.s-btn__dropdown {
+	padding-right: 14px !important;
+}
+.so-editor-outer .s-btn.s-editor-btn.js-heading-dropdown[data-heading-label] {
+	gap: 6px;
+	min-width: 4.5rem;
+}
+.so-editor-outer .s-btn.s-editor-btn.js-heading-dropdown[data-heading-label]::after {
+	content: attr(data-heading-label);
+	font-family: var(--font-heading);
+	font-size: 0.8125rem;
+	font-weight: 800;
+	line-height: 1;
+	white-space: nowrap;
+}
+.so-editor-outer [data-codex-table-menu] {
+	position: relative;
+}
+.so-editor-outer[data-table-context="inside"] .js-plugin-container,
+.so-editor-outer[data-table-context="inside"] .js-plugin-container > .overflow-x-auto {
+	overflow: visible !important;
+}
+.so-editor-outer[data-table-context="inside"] [data-codex-insert-table],
+.so-editor-outer[data-table-context="inside"] .js-insert-table-btn {
+	display: none !important;
+}
+.so-editor-outer:not([data-table-context="inside"]) [data-codex-table-menu],
+.so-editor-outer[data-table-context="outside"] [data-codex-table-menu] {
+	display: none !important;
+}
+.so-editor-outer [data-codex-table-menu] > .s-popover[role="menu"].is-visible {
+	display: block !important;
+	left: 50% !important;
+	right: auto !important;
+	top: calc(100% + 8px) !important;
+	transform: translateX(-50%) !important;
+	width: 20rem !important;
+	max-width: calc(100vw - 2rem) !important;
+	max-height: min(24rem, calc(100vh - 10rem)) !important;
+	z-index: 5300 !important;
+	overflow-x: hidden !important;
+	overflow-y: auto !important;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+}
+.so-editor-outer [data-codex-table-menu] > .s-popover[role="menu"].is-visible .s-block-link {
+	white-space: nowrap;
+}
+.so-editor-outer .s-btn.s-editor-btn:hover {
+	border-color: #111 !important;
+	background-color: #f3f4f6 !important;
+}
+.so-editor-outer .s-btn.s-editor-btn.is-selected,
+.so-editor-outer .s-btn.s-editor-btn:active {
+	background-color: var(--color-primary) !important;
+	border-color: #111 !important;
+	color: #111 !important;
+}
+.so-editor-outer .s-block-link.is-selected {
+	background-color: var(--color-primary) !important;
+	color: #111 !important;
+}
+
+/* WYSIWYG / Markdown mode toggle */
+.so-editor-outer .s-btn-group {
+	display: inline-flex !important;
+	gap: 4px !important;
+	padding: 4px !important;
+	align-items: center;
+	border: 2px solid #111 !important;
+	border-radius: 8px !important;
+	overflow: hidden;
+}
+/* Hide the actual radio inputs — only the labels are visible */
+.so-editor-outer .s-btn--radio {
+	position: absolute !important;
+	opacity: 0 !important;
+	width: 0 !important;
+	height: 0 !important;
+	pointer-events: none !important;
+}
+.so-editor-outer .s-btn-group .s-btn--radio:checked + .s-editor-btn {
+	background-color: var(--color-primary) !important;
+	border: 2px solid #111 !important;
+	border-radius: 6px !important;
+	color: #111 !important;
+}
+.so-editor-outer .s-btn-group .s-btn--radio + .s-editor-btn {
+	border-radius: 6px !important;
+}
+
+/* ─────────────────────────────────────────────
+   CONTENT AREA
+   ───────────────────────────────────────────── */
+.so-editor-outer .s-editor-resizable {
+	min-height: 280px;
+	max-height: 700px;
+	overflow-x: hidden !important;
+	overflow-y: auto !important;
+}
+
+.so-editor-outer .ProseMirror {
+	max-width: 100%;
+	min-height: 280px;
+	padding: 1rem;
+	overflow-x: hidden;
+	outline: none;
+	font-size: 0.9375rem;
+	font-weight: 500;
+	line-height: 1.75;
+	color: #111;
+	font-family: var(--font-body);
+}
+
+/* Placeholder text */
+.so-editor-outer .ProseMirror p.is-editor-empty:first-child::before {
+	color: #9ca3af;
+	content: attr(data-placeholder);
+	float: left;
+	height: 0;
+	pointer-events: none;
+}
+
+/* Prose content styles (headings, lists, code, etc.) */
+.so-editor-outer .s-prose h1,
+.so-editor-outer .ProseMirror h1 {
+	font-size: 1.75rem;
+	font-weight: 800;
+	font-family: var(--font-heading);
+	margin: 0.75rem 0 0.5rem;
+}
+.so-editor-outer .s-prose h2,
+.so-editor-outer .ProseMirror h2 {
+	font-size: 1.375rem;
+	font-weight: 700;
+	font-family: var(--font-heading);
+	margin: 0.75rem 0 0.5rem;
+}
+.so-editor-outer .s-prose h3,
+.so-editor-outer .ProseMirror h3 {
+	font-size: 1.125rem;
+	font-weight: 700;
+	font-family: var(--font-heading);
+	margin: 0.5rem 0 0.25rem;
+}
+.so-editor-outer .s-prose p,
+.so-editor-outer .ProseMirror p {
+	margin: 0 0 0.5rem;
+}
+.so-editor-outer .s-prose strong,
+.so-editor-outer .ProseMirror strong {
+	font-weight: 700;
+}
+.so-editor-outer .s-prose em,
+.so-editor-outer .ProseMirror em {
+	font-style: italic;
+}
+.so-editor-outer .s-prose code,
+.so-editor-outer .ProseMirror code {
+	background: #f3f4f6;
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	padding: 1px 5px;
+	font-size: 0.85em;
+	font-family: ui-monospace, monospace;
+}
+.so-editor-outer .s-prose pre,
+.so-editor-outer .ProseMirror pre {
+	background: #1e1e2e;
+	color: #cdd6f4;
+	border: 2px solid #111;
+	border-radius: 8px;
+	box-shadow: 3px 3px 0 #111;
+	overflow-x: auto;
+	font-family: ui-monospace, monospace;
+	font-size: 0.875rem;
+}
+.so-editor-outer .s-prose pre code,
+.so-editor-outer .ProseMirror pre code {
+	background: transparent;
+	border: none;
+	padding: 0;
+	font-size: inherit;
+	color: inherit;
+}
+.so-editor-outer .s-prose blockquote,
+.so-editor-outer .ProseMirror blockquote {
+	border-left: 4px solid var(--color-primary);
+	background: var(--color-primary-100);
+	padding: 14px 10px 10px 12px;
+	border-radius: 0 8px 8px 0;
+	margin: 0.5rem 0;
+	color: #374151;
+	font-style: italic;
+}
+.so-editor-outer .s-prose ul,
+.so-editor-outer .ProseMirror ul {
+	list-style: disc;
+	padding-left: 1.5rem;
+	margin: 0.25rem 0;
+}
+.so-editor-outer .s-prose ol,
+.so-editor-outer .ProseMirror ol {
+	list-style: decimal;
+	padding-left: 1.5rem;
+	margin: 0.25rem 0;
+}
+.so-editor-outer .s-prose a,
+.so-editor-outer .ProseMirror a {
+	color: var(--color-primary-dark);
+	font-weight: 600;
+	text-decoration: underline;
+}
+.so-editor-outer .s-prose table,
+.so-editor-outer .ProseMirror table {
+	border-collapse: collapse;
+	table-layout: fixed;
+	max-width: 100%;
+	width: 100%;
+	margin: 0.5rem 0;
+}
+.so-editor-outer .s-table-container,
+.so-editor-outer .ProseMirror .s-table-container {
+	max-width: 100%;
+	overflow-x: hidden;
+}
+.so-editor-outer .s-prose th,
+.so-editor-outer .ProseMirror th,
+.so-editor-outer .s-prose td,
+.so-editor-outer .ProseMirror td {
+	border: 2px solid #111;
+	padding: 6px 10px;
+	font-size: 13px;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+.so-editor-outer .s-prose th,
+.so-editor-outer .ProseMirror th {
+	background: var(--color-pastel-yellow);
+	font-weight: 700;
+}
+
+/* ─────────────────────────────────────────────
+   CODE BLOCK — language selector
+   ─────────────────────────────────────────────
+   DOM structure (from CodeBlockView.render()):
+     .ps-relative.p0.ws-normal.ow-normal
+       button.s-btn.s-btn__xs.ps-absolute.t2.r4.js-language-selector  ← top-right button
+       .ps-absolute.t32.r4.js-language-input                          ← floating panel
+         .ps-relative.mb8
+           input.s-input.s-input__search.fs-caption
+           span.s-input-icon.s-input-icon__search
+         .s-card.js-language-dropdown-container.z-popover
+           ul.s-menu.js-language-dropdown
+             li.h:bg-black-150.px4
+       pre.s-code-block
+   ───────────────────────────────────────────── */
+
+/* XS button variant for language selector */
+.so-editor-outer .s-btn__xs {
+	padding: 2px 6px !important;
+	font-size: 11px !important;
+	min-height: 0 !important;
+	height: auto !important;
+	line-height: 1.4 !important;
+	border-radius: 4px !important;
+}
+
+/* Language input floating panel */
+.so-editor-outer .js-language-input {
+	z-index: 10;
+	min-width: 200px;
+}
+
+/* Search input — left-pad for the icon */
+.so-editor-outer .s-input__search {
+	padding-left: 2rem !important;
+}
+
+/* Icon wrapper inside input */
+.so-editor-outer .s-input-icon {
+	position: absolute !important;
+	top: 50% !important;
+	transform: translateY(-50%) !important;
+	left: 8px !important;
+	width: 14px !important;
+	height: 14px !important;
+	pointer-events: none;
+	opacity: 0.5;
+}
+.so-editor-outer .s-input-icon__search {
+	background-size: contain !important;
+	background-repeat: no-repeat !important;
+	background-position: center !important;
+}
+
+/* Dropdown container card */
+.so-editor-outer .s-card {
+	background: #fff;
+	border: 2px solid #111;
+	border-radius: 8px;
+	box-shadow: 3px 3px 0 #111;
+	overflow: hidden;
+}
+
+/* Menu list reset */
+.so-editor-outer .s-menu {
+	list-style: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+/* List items inside dropdown */
+.so-editor-outer .js-language-dropdown li {
+	display: block;
+	padding: 6px 12px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #111;
+	cursor: pointer;
+	outline: none;
+}
+.so-editor-outer .js-language-dropdown li:hover,
+.so-editor-outer .js-language-dropdown li:focus,
+.so-editor-outer .h\:bg-black-150:hover,
+.so-editor-outer .h\:bg-black-150:focus {
+	background-color: var(--color-primary) !important;
+}
+
+/* Markdown mode code editor — override the dark code-block theme */
+.so-editor-outer pre.s-code-block.markdown,
+.so-editor-outer .s-code-block.markdown {
+	background: #fff !important;
+	color: #111 !important;
+	border: none !important;
+	box-shadow: none !important;
+	border-radius: 0 !important;
+	font-family: ui-monospace, monospace !important;
+	line-height: 1.75 !important;
+}
+
+/* Markdown textarea */
+.so-editor-outer textarea.s-editor-area,
+.so-editor-outer .s-textarea {
+	display: block;
+	width: 100%;
+	min-height: 280px;
+	padding: 1rem;
+	font-size: 0.9375rem;
+	font-weight: 500;
+	line-height: 1.75;
+	color: #111;
+	font-family: ui-monospace, monospace;
+	resize: vertical;
+	outline: none;
+	border: none;
+	background: #fff;
+}
+
+/* ─────────────────────────────────────────────
+   SYNTAX HIGHLIGHTING — Catppuccin Mocha palette
+   background: #1e1e2e  |  base text: #cdd6f4
+   Applied to hljs token classes inside rich-text code blocks.
+   ───────────────────────────────────────────── */
+.so-editor-outer .s-code-block .hljs {
+	color: #cdd6f4;
+}
+
+/* Comments */
+.so-editor-outer .s-code-block .hljs-comment,
+.so-editor-outer .s-code-block .hljs-quote {
+	color: #7f849c;
+	font-style: italic;
+}
+
+/* Keywords, selectors */
+.so-editor-outer .s-code-block .hljs-keyword,
+.so-editor-outer .s-code-block .hljs-selector-tag,
+.so-editor-outer .s-code-block .hljs-doctag,
+.so-editor-outer .s-code-block .hljs-formula {
+	color: #cba6f7; /* mauve */
+}
+
+/* Tags, deletion, subst */
+.so-editor-outer .s-code-block .hljs-deletion,
+.so-editor-outer .s-code-block .hljs-name,
+.so-editor-outer .s-code-block .hljs-section,
+.so-editor-outer .s-code-block .hljs-subst,
+.so-editor-outer .s-code-block .hljs-tag {
+	color: #f38ba8; /* red */
+}
+
+/* Booleans / null */
+.so-editor-outer .s-code-block .hljs-literal {
+	color: #89dceb; /* sky */
+}
+
+/* Strings, regexes, additions */
+.so-editor-outer .s-code-block .hljs-string,
+.so-editor-outer .s-code-block .hljs-regexp,
+.so-editor-outer .s-code-block .hljs-addition,
+.so-editor-outer .s-code-block .hljs-attribute,
+.so-editor-outer .s-code-block .hljs-meta .hljs-string {
+	color: #a6e3a1; /* green */
+}
+
+/* Attributes, numbers, types */
+.so-editor-outer .s-code-block .hljs-attr,
+.so-editor-outer .s-code-block .hljs-variable,
+.so-editor-outer .s-code-block .hljs-template-variable,
+.so-editor-outer .s-code-block .hljs-type,
+.so-editor-outer .s-code-block .hljs-selector-class,
+.so-editor-outer .s-code-block .hljs-selector-attr,
+.so-editor-outer .s-code-block .hljs-selector-pseudo,
+.so-editor-outer .s-code-block .hljs-number {
+	color: #fab387; /* peach */
+}
+
+/* Symbols, titles, functions */
+.so-editor-outer .s-code-block .hljs-symbol,
+.so-editor-outer .s-code-block .hljs-bullet,
+.so-editor-outer .s-code-block .hljs-link,
+.so-editor-outer .s-code-block .hljs-meta,
+.so-editor-outer .s-code-block .hljs-selector-id,
+.so-editor-outer .s-code-block .hljs-title,
+.so-editor-outer .s-code-block .hljs-title\.function__,
+.so-editor-outer .s-code-block .hljs-title\.class__ {
+	color: #89b4fa; /* blue */
+}
+
+/* Built-ins, class names */
+.so-editor-outer .s-code-block .hljs-built_in,
+.so-editor-outer .s-code-block .hljs-class .hljs-title {
+	color: #f9e2af; /* yellow */
+}
+
+/* Params — use default text color */
+.so-editor-outer .s-code-block .hljs-params {
+	color: #cdd6f4;
+}
+
+/* Inline emphasis */
+.so-editor-outer .s-code-block .hljs-emphasis {
+	font-style: italic;
+}
+.so-editor-outer .s-code-block .hljs-strong {
+	font-weight: bold;
+}
+.so-editor-outer .s-code-block .hljs-link {
+	text-decoration: underline;
 }

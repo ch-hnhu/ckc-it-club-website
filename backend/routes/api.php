@@ -1,7 +1,13 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\BlogController;
+use App\Http\Controllers\Api\V1\Admin\ChannelController;
+use App\Http\Controllers\Api\V1\Admin\ChatRoomController;
+use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
+use App\Http\Controllers\Api\V1\Admin\PostController;
+use App\Http\Controllers\Api\V1\Admin\TagController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Admin\ClubInformationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
@@ -59,12 +65,19 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:dashboard.view')
             ->get('/', [DashboardController::class, 'index']);
 
-        // notifications
+        // notifications (personal)
         Route::prefix('notifications')->group(function () {
             Route::get('/', [NotificationController::class, 'index']);
             Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
             Route::patch('/read-all', [NotificationController::class, 'markAllAsRead']);
             Route::patch('/{id}/read', [NotificationController::class, 'markAsRead']);
+        });
+
+        // notifications (admin log)
+        Route::middleware('permission:community.notifications.send')->group(function () {
+            Route::get('notifications/admin-stats', [NotificationController::class, 'adminStats']);
+            Route::get('notifications/log', [NotificationController::class, 'log']);
+            Route::delete('notifications/{id}/admin', [NotificationController::class, 'adminDestroy']);
         });
 
         // users
@@ -190,6 +203,63 @@ Route::prefix('v1')->group(function () {
             Route::patch('school-classes/{schoolClass}/restore', [SchoolClassController::class, 'restore']);
             Route::delete('school-classes/{schoolClass}/force', [SchoolClassController::class, 'forceDestroy']);
             Route::apiResource('school-classes', SchoolClassController::class)->only(['store', 'update', 'destroy']);
+        });
+
+        // channels
+        Route::middleware('permission:community.channels.manage')->group(function () {
+            Route::get('channels', [ChannelController::class, 'index']);
+            Route::post('channels', [ChannelController::class, 'store']);
+            Route::put('channels/{channel}', [ChannelController::class, 'update']);
+            Route::patch('channels/{channel}', [ChannelController::class, 'update']);
+            Route::delete('channels/{channel}', [ChannelController::class, 'destroy']);
+        });
+
+        // posts
+        Route::middleware('permission:community.posts.view')->group(function () {
+            Route::get('posts/stats', [PostController::class, 'stats']);
+            Route::get('posts', [PostController::class, 'index']);
+        });
+        Route::middleware('permission:community.posts.manage')->group(function () {
+            Route::patch('posts/{post}/status', [PostController::class, 'updateStatus']);
+            Route::delete('posts/{post}', [PostController::class, 'destroy']);
+        });
+
+        // blogs
+        Route::middleware('permission:community.blogs.view')->group(function () {
+            Route::get('blogs/stats', [BlogController::class, 'stats']);
+            Route::get('blogs', [BlogController::class, 'index']);
+        });
+        Route::middleware('permission:community.blogs.manage')->group(function () {
+            Route::patch('blogs/{blog}/status', [BlogController::class, 'updateStatus']);
+            Route::delete('blogs/{blog}', [BlogController::class, 'destroy']);
+        });
+
+        // comments
+        Route::middleware('permission:community.comments.view')->group(function () {
+            Route::get('comments/stats', [CommentController::class, 'stats']);
+            Route::get('comments', [CommentController::class, 'index']);
+        });
+        Route::middleware('permission:community.comments.manage')->group(function () {
+            Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
+        });
+
+        // chat rooms
+        Route::middleware('permission:community.chat.view')->group(function () {
+            Route::get('chat-rooms/stats', [ChatRoomController::class, 'stats']);
+            Route::get('chat-rooms', [ChatRoomController::class, 'index']);
+            Route::get('chat-rooms/{room}/system-messages', [ChatRoomController::class, 'systemMessages']);
+        });
+        Route::middleware('permission:community.chat.manage')->group(function () {
+            Route::delete('chat-rooms/{room}/messages/{message}', [ChatRoomController::class, 'destroyMessage']);
+        });
+
+        // tags
+        Route::middleware('permission:community.tags.manage')->group(function () {
+            Route::get('tags', [TagController::class, 'index']);
+            Route::post('tags', [TagController::class, 'store']);
+            Route::put('tags/{tag}', [TagController::class, 'update']);
+            Route::patch('tags/{tag}', [TagController::class, 'update']);
+            Route::delete('tags/{tag}', [TagController::class, 'destroy']);
         });
     });
 });
