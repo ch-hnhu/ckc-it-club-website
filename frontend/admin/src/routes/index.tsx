@@ -34,6 +34,7 @@ import ChannelListPage from "@/pages/community/ChannelListPage";
 import PostListPage from "@/pages/community/PostListPage";
 import BlogListPage from "@/pages/community/BlogListPage";
 import BlogCreatePage from "@/pages/community/BlogCreatePage";
+import BlogDetailPage from "@/pages/community/BlogDetailPage";
 import CommentListPage from "@/pages/community/CommentListPage";
 import TagListPage from "@/pages/community/TagListPage";
 import SystemNotificationPage from "@/pages/community/SystemNotificationPage";
@@ -284,8 +285,16 @@ const router = createBrowserRouter([
 			{
 				path: "community/blogs/create",
 				element: (
-					<PermissionRoute permission="community.blogs.view">
+					<PermissionRoute permission="community.blogs.manage">
 						<BlogCreatePage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/blogs/:id",
+				element: (
+					<PermissionRoute permission="community.blogs.view">
+						<BlogDetailPage />
 					</PermissionRoute>
 				),
 			},

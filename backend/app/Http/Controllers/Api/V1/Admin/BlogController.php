@@ -8,6 +8,8 @@ use App\Models\Blog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class BlogController extends BaseApiController
 {
@@ -37,6 +39,68 @@ class BlogController extends BaseApiController
         $blogs->getCollection()->transform(fn (Blog $blog) => $this->transformBlog($blog));
 
         return $this->paginatedResponse($blogs, ApiMessage::RETRIEVED);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $request->validate([
+            'title'          => 'required|string|max:500',
+            'slug'           => 'nullable|string|max:500',
+            'content'        => 'required|string',
+            'excerpt'        => 'nullable|string|max:1000',
+            'status'         => 'nullable|in:draft,pending_review,published',
+            'featured_image' => 'nullable|image|max:5120',
+            'tag_ids'        => 'nullable|array',
+            'tag_ids.*'      => 'integer|exists:tags,id',
+        ]);
+
+        $coverImagePath = null;
+        if ($request->hasFile('featured_image')) {
+            $coverImagePath = $request->file('featured_image')->store('blog-covers', 'public');
+        }
+
+        $status = $request->input('status', 'draft');
+        $baseSlug = $request->input('slug') ?: Str::slug($request->input('title'));
+        $slug = $baseSlug;
+        $i = 1;
+        while (Blog::where('slug', $slug)->exists()) {
+            $slug = "{$baseSlug}-{$i}";
+            $i++;
+        }
+
+        $blog = DB::transaction(function () use ($request, $status, $slug, $coverImagePath) {
+            $blog = Blog::create([
+                'author_id'   => $request->user()->id,
+                'title'       => $request->input('title'),
+                'slug'        => $slug,
+                'content'     => $request->input('content'),
+                'excerpt'     => $request->input('excerpt'),
+                'cover_image' => $coverImagePath,
+                'status'      => $status,
+                'published_at'=> $status === 'published' ? now() : null,
+                'view_count'  => 0,
+            ]);
+
+            if ($request->filled('tag_ids')) {
+                $blog->tags()->sync($request->input('tag_ids'));
+            }
+
+            return $blog;
+        });
+
+        $blog->load('author:id,full_name,email,avatar', 'tags:id,name');
+
+        return $this->createdResponse($this->transformBlog($blog), 'Tạo blog thành công.');
+    }
+
+    public function show(Blog $blog): JsonResponse
+    {
+        $blog->load('author:id,full_name,email,avatar', 'tags:id,name');
+
+        $data               = $this->transformBlog($blog);
+        $data['content']    = $blog->content;
+
+        return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
     }
 
     public function stats(): JsonResponse
@@ -90,7 +154,9 @@ class BlogController extends BaseApiController
             'title'           => $blog->title,
             'slug'            => $blog->slug,
             'excerpt'         => $blog->excerpt,
-            'featured_image'  => $blog->cover_image,
+            'featured_image'  => $blog->cover_image
+                ? Storage::disk('public')->url($blog->cover_image)
+                : null,
             'status'          => $blog->status,
             'published_at'    => $blog->published_at?->toIso8601String(),
             'view_count'      => (int) $blog->view_count,

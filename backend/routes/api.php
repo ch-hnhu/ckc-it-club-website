@@ -228,8 +228,10 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:community.blogs.view')->group(function () {
             Route::get('blogs/stats', [BlogController::class, 'stats']);
             Route::get('blogs', [BlogController::class, 'index']);
+            Route::get('blogs/{blog}', [BlogController::class, 'show']);
         });
         Route::middleware('permission:community.blogs.manage')->group(function () {
+            Route::post('blogs', [BlogController::class, 'store']);
             Route::patch('blogs/{blog}/status', [BlogController::class, 'updateStatus']);
             Route::delete('blogs/{blog}', [BlogController::class, 'destroy']);
         });
