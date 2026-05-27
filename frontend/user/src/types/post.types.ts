@@ -32,6 +32,11 @@ export interface Post {
 	created_at: string;
 }
 
+/** Full post with content field (detail page) */
+export interface PostDetail extends Post {
+	content: string;
+}
+
 export interface PostListParams {
 	page?: number;
 	per_page?: number;
@@ -40,4 +45,26 @@ export interface PostListParams {
 	/** Sort by reactions (top) or date (newest). Default: created_at */
 	sort?: "created_at" | "reactions_count";
 	order?: "asc" | "desc";
+}
+
+// ---------------------------------------------------------------------------
+// Comments
+// ---------------------------------------------------------------------------
+
+export interface CommentUser {
+	id: number;
+	full_name: string;
+	username: string | null;
+	email: string;
+	avatar: string | null;
+}
+
+export interface PostComment {
+	id: number;
+	parent_id: number | null;
+	user: CommentUser | null;
+	content: string;
+	reactions_count: number;
+	created_at: string;
+	replies: PostComment[];
 }

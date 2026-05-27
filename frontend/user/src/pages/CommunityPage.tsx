@@ -22,7 +22,9 @@ import {
 import { Link, useOutletContext } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
+import { channelService } from "@/services/channel.service";
 import type { Post } from "@/types/post.types";
+import type { Channel } from "@/types/channel.types";
 import type { PaginatedResponse } from "@/types/api.types";
 
 type MainLayoutOutletContext = {
@@ -37,16 +39,6 @@ const PRIMARY_NAV = [
 	{ id: "code", label: "#30DaysOfCode", icon: Code2 },
 ];
 
-const CHANNELS = [
-	{ id: "general", label: "Chung" },
-	{ id: "discussion", label: "Thảo luận" },
-	{ id: "qa", label: "Hỏi đáp" },
-	{ id: "project", label: "Dự án" },
-	{ id: "resources", label: "Tài nguyên" },
-	{ id: "events", label: "Sự kiện" },
-	{ id: "career", label: "Cơ hội nghề nghiệp" },
-	{ id: "bugs", label: "Báo lỗi" },
-];
 
 const SORT_OPTIONS = [
 	{ id: "top", label: "Top bài viết", icon: Flame },
@@ -184,20 +176,22 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 				</div>
 			</div>
 
-			<h2 className='mb-3 font-heading text-lg font-extrabold leading-tight text-black md:text-xl'>
-				{post.title}
-			</h2>
-			<p className='max-w-3xl text-sm leading-6 text-gray-700'>{post.excerpt}</p>
+			<Link to={`/cong-dong/bai-viet/${post.id}`} className='block group'>
+				<h2 className='mb-3 font-heading text-lg font-extrabold leading-tight text-black group-hover:underline md:text-xl'>
+					{post.title}
+				</h2>
+				<p className='max-w-3xl text-sm leading-6 text-gray-700'>{post.excerpt}</p>
 
-			{post.featured_image && (
-				<div className='mt-4 overflow-hidden rounded-[10px] border-2 border-black bg-[var(--color-pastel-yellow)]'>
-					<img
-						src={post.featured_image}
-						alt={post.title}
-						className='aspect-[16/9] w-full object-cover'
-					/>
-				</div>
-			)}
+				{post.featured_image && (
+					<div className='mt-4 overflow-hidden rounded-[10px] border-2 border-black bg-[var(--color-pastel-yellow)]'>
+						<img
+							src={post.featured_image}
+							alt={post.title}
+							className='aspect-[16/9] w-full object-cover'
+						/>
+					</div>
+				)}
+			</Link>
 
 			{post.tags.length > 0 && (
 				<div className='mt-4 flex flex-wrap gap-2'>
@@ -219,10 +213,12 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 					<Heart className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`} />
 					{heartCount}
 				</button>
-				<button className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+				<Link
+					to={`/cong-dong/bai-viet/${post.id}#comments`}
+					className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 					<MessageCircle className='h-4 w-4' />
 					{post.comments_count}
-				</button>
+				</Link>
 				<button
 					onClick={() => setSaved((current) => !current)}
 					className='inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
@@ -274,7 +270,11 @@ const CommunityPage: React.FC = () => {
 	const [pageMode, setPageMode] = useState<"home" | "channel">("home");
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-	// API state
+	// Channels state
+	const [channels, setChannels] = useState<Channel[]>([]);
+	const [channelsLoading, setChannelsLoading] = useState(true);
+
+	// Posts API state
 	const [posts, setPosts] = useState<Post[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -288,13 +288,23 @@ const CommunityPage: React.FC = () => {
 			userDisplayName,
 		)}&background=A3E635&color=111111&bold=true`;
 
-	const currentChannel = CHANNELS.find((ch) => ch.id === activeChannel);
+	const currentChannel = channels.find((ch) => ch.slug === activeChannel);
 
 	// Map UI sort → API params
 	const sortParams =
 		activeSort === "top"
 			? { sort: "reactions_count" as const, order: "desc" as const }
 			: { sort: "created_at" as const, order: "desc" as const };
+
+	// Fetch channels once on mount
+	useEffect(() => {
+		setChannelsLoading(true);
+		channelService
+			.getChannels()
+			.then((res) => setChannels(res.data))
+			.catch(() => setChannels([]))
+			.finally(() => setChannelsLoading(false));
+	}, []);
 
 	// Fetch posts whenever filters change
 	const fetchPosts = useCallback(
@@ -349,9 +359,9 @@ const CommunityPage: React.FC = () => {
 		setIsSidebarOpen(false);
 	};
 
-	const handleChannelClick = (channelId: string) => {
+	const handleChannelClick = (slug: string) => {
 		setPageMode("channel");
-		setActiveChannel(channelId);
+		setActiveChannel(slug);
 		setActiveSort("top");
 		setIsSidebarOpen(false);
 	};
@@ -396,33 +406,63 @@ const CommunityPage: React.FC = () => {
 				}`}>
 				Kênh
 			</div>
-			<nav className={isMobile ? "mt-3 space-y-2" : "mt-3 space-y-2"}>
-				{CHANNELS.map((channel) => {
-					const isActive = pageMode === "channel" && activeChannel === channel.id;
-					return (
-						<button
-							key={channel.id}
-							onClick={() => handleChannelClick(channel.id)}
-							className={`group relative flex w-full items-center justify-between text-left font-bold ${
-								isMobile
-									? "rounded-xl px-3 py-2.5 text-base"
-									: "rounded-lg px-2.5 py-2 text-[13px]"
-							} ${
-								isActive
-									? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
-									: "border-2 border-transparent bg-white text-black hover:bg-gray-100"
-							}`}>
-							<span className='flex items-center gap-3'>
-								<Hash
-									className={`transition-colors duration-200 ${
-										isMobile ? "h-5 w-5" : "h-3.5 w-3.5"
-									} ${isActive ? "text-[var(--color-text-primary)]" : "text-gray-500"}`}
-								/>
-								{channel.label}
-							</span>
-						</button>
-					);
-				})}
+			<nav className='mt-3 space-y-1'>
+				{channelsLoading
+					? Array.from({ length: 5 }).map((_, i) => (
+							<div
+								key={i}
+								className='flex animate-pulse items-center justify-between rounded-lg px-2.5 py-2'>
+								<div className='flex items-center gap-3'>
+									<div className='h-3.5 w-3.5 rounded bg-gray-200' />
+									<div
+										className='h-3 rounded bg-gray-200'
+										style={{ width: `${55 + i * 12}px` }}
+									/>
+								</div>
+								<div className='h-3 w-4 rounded bg-gray-200' />
+							</div>
+						))
+					: channels.map((channel) => {
+							const isActive =
+								pageMode === "channel" && activeChannel === channel.slug;
+							return (
+								<button
+									key={channel.id}
+									onClick={() => handleChannelClick(channel.slug)}
+									className={`group relative flex w-full items-center justify-between text-left font-bold ${
+										isMobile
+											? "rounded-xl px-3 py-2.5 text-base"
+											: "rounded-lg px-2.5 py-2 text-[13px]"
+									} ${
+										isActive
+											? "border-2 border-[var(--color-primary-dark)] bg-primary-100 text-[var(--color-text-primary)]"
+											: "border-2 border-transparent bg-white text-black hover:bg-gray-100"
+									}`}>
+									<span className='flex items-center gap-3'>
+										<Hash
+											className={`transition-colors duration-200 ${
+												isMobile ? "h-5 w-5" : "h-3.5 w-3.5"
+											} ${
+												isActive
+													? "text-[var(--color-text-primary)]"
+													: "text-gray-500"
+											}`}
+										/>
+										{channel.name}
+									</span>
+									{channel.posts_count > 0 && (
+										<span
+											className={`text-xs tabular-nums transition-colors duration-200 ${
+												isActive
+													? "text-[var(--color-text-primary)]"
+													: "text-gray-400"
+											}`}>
+											{channel.posts_count}
+										</span>
+									)}
+								</button>
+							);
+						})}
 			</nav>
 		</div>
 	);
@@ -484,7 +524,7 @@ const CommunityPage: React.FC = () => {
 									</div>
 									<div>
 										<h1 className='font-heading text-xl font-extrabold text-black'>
-											#{currentChannel?.label ?? "Kênh"}
+											#{currentChannel?.name ?? "Kênh"}
 										</h1>
 										<p className='text-sm font-semibold text-gray-700'>
 											Bài viết và thảo luận trong kênh này.

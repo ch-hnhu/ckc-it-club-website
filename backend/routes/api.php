@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
+use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Admin\ClubInformationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
@@ -47,7 +48,10 @@ Route::prefix('v1')->group(function () {
 
     // Community public routes (no auth required – read-only, published posts only)
     Route::prefix('community')->group(function () {
-        Route::get('/posts', [UserPostController::class, 'index']);
+        Route::get('/posts',                         [UserPostController::class, 'index']);
+        Route::get('/posts/{id}',                    [UserPostController::class, 'show']);
+        Route::get('/posts/{id}/comments',           [UserPostController::class, 'comments']);
+        Route::get('/channels',                      [UserChannelController::class, 'index']);
     });
 
     // Forgot password (throttled: 5 attempts per minute per IP)

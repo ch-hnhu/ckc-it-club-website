@@ -1,6 +1,6 @@
 import { api } from "@/services/api.service";
-import type { PaginatedResponse } from "@/types/api.types";
-import type { Post, PostListParams } from "@/types/post.types";
+import type { PaginatedResponse, ApiResponse } from "@/types/api.types";
+import type { Post, PostDetail, PostComment, PostListParams } from "@/types/post.types";
 
 export const postService = {
 	/**
@@ -10,4 +10,12 @@ export const postService = {
 	 */
 	getPosts: (params?: PostListParams) =>
 		api.get<PaginatedResponse<Post>>("/community/posts", params as Record<string, unknown>),
+
+	/** Fetch a single published post with full content. */
+	getPost: (id: number) =>
+		api.get<ApiResponse<PostDetail>>(`/community/posts/${id}`),
+
+	/** Fetch top-level comments (with nested replies) for a post. */
+	getPostComments: (id: number) =>
+		api.get<ApiResponse<PostComment[]>>(`/community/posts/${id}/comments`),
 };

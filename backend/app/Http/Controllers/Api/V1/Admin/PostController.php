@@ -21,7 +21,7 @@ class PostController extends BaseApiController
         $status  = $request->query('status');
 
         $posts = Post::query()
-            ->with('user:id,full_name,email,avatar,student_code')
+            ->with('user:id,full_name,email,avatar,student_code', 'channel:id,name,slug')
             ->withCount('comments')
             ->selectRaw('posts.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "post" AND target_id = posts.id) as reactions_count')
             ->when($search, fn ($q) => $q->where(fn ($s) => $s
@@ -88,6 +88,11 @@ class PostController extends BaseApiController
             'is_pinned'       => false,
             'comments_count'  => $post->comments_count ?? 0,
             'reactions_count' => (int) ($post->reactions_count ?? 0),
+            'channel'         => $post->channel ? [
+                'id'   => $post->channel->id,
+                'name' => $post->channel->name,
+                'slug' => $post->channel->slug,
+            ] : null,
             'tags'            => [],
             'media'           => [],
             'created_at'      => $post->created_at?->toIso8601String(),

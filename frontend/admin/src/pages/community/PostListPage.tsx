@@ -72,6 +72,12 @@ export interface PostTag {
 	color: string | null;
 }
 
+export interface PostChannel {
+	id: number;
+	name: string;
+	slug: string;
+}
+
 export interface PostAuthor {
 	id: number;
 	full_name: string | null;
@@ -89,6 +95,7 @@ export interface PostMedia {
 export interface PostRecord {
 	id: number;
 	user: PostAuthor;
+	channel: PostChannel | null;
 	content: string;
 	status: PostStatus;
 	visibility: PostVisibility;
@@ -440,6 +447,7 @@ function PostListPage() {
 									<TableHead className="min-w-[160px] text-sm font-medium">Tác giả</TableHead>
 									<TableHead className="min-w-[220px] text-sm font-medium">Nội dung</TableHead>
 									<TableHead className="min-w-[120px] text-sm font-medium">Tags</TableHead>
+									<TableHead className="min-w-[120px] text-sm font-medium">Kênh</TableHead>
 									<TableHead className="w-[130px]">
 										<Button
 											variant="ghost"
@@ -467,7 +475,7 @@ function PostListPage() {
 									Array.from({ length: meta.per_page }).map((_, i) => (
 										<TableRow key={`skeleton-${i}`}>
 											<TableCell><Skeleton className="h-4 w-4" /></TableCell>
-											<TableCell colSpan={9}><Skeleton className="h-4 w-full" /></TableCell>
+											<TableCell colSpan={10}><Skeleton className="h-4 w-full" /></TableCell>
 										</TableRow>
 									))
 								) : posts.length > 0 ? (
@@ -536,6 +544,19 @@ function PostListPage() {
 														</Badge>
 													)}
 												</div>
+											</TableCell>
+
+											{/* Channel */}
+											<TableCell>
+												{post.channel ? (
+													<Badge
+														variant="outline"
+														className="rounded-full px-2 py-0 text-xs font-normal">
+														{post.channel.name}
+													</Badge>
+												) : (
+													<span className="text-muted-foreground/40">—</span>
+												)}
 											</TableCell>
 
 											{/* Status */}
@@ -608,7 +629,7 @@ function PostListPage() {
 									))
 								) : (
 									<TableRow>
-										<TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
+										<TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
 											Không tìm thấy bài đăng nào phù hợp.
 										</TableCell>
 									</TableRow>
@@ -617,7 +638,7 @@ function PostListPage() {
 
 							<TableFooter className="bg-transparent">
 								<TableRow>
-									<TableCell colSpan={10}>
+									<TableCell colSpan={11}>
 										<div className="flex items-center justify-between px-2">
 											<p className="flex-1 text-sm text-muted-foreground">
 												Đang hiển thị {posts.length} trên tổng {meta.total} bài đăng.
