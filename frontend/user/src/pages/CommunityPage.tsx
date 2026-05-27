@@ -5,7 +5,6 @@ import {
 	Crown,
 	Flame,
 	Hash,
-	Heart,
 	Home,
 	List,
 	MessageCircle,
@@ -26,6 +25,7 @@ import { channelService } from "@/services/channel.service";
 import type { Post } from "@/types/post.types";
 import type { Channel } from "@/types/channel.types";
 import type { PaginatedResponse } from "@/types/api.types";
+import ReactionButton from "@/components/community/ReactionButton";
 
 type MainLayoutOutletContext = {
 	user: AuthUser | null;
@@ -131,19 +131,11 @@ function getAvatar(post: Post): string {
 
 interface PostCardProps {
 	post: Post;
+	user: AuthUser | null;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post }) => {
-	const [liked, setLiked] = useState(false);
+const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 	const [saved, setSaved] = useState(false);
-	const [heartCount, setHeartCount] = useState(post.reactions_count);
-
-	const handleLike = () => {
-		setLiked((current) => {
-			setHeartCount((count) => (current ? count - 1 : count + 1));
-			return !current;
-		});
-	};
 
 	const channelLabel = post.channel?.name ?? "Chung";
 	const authorName   = post.user?.full_name ?? "Thành viên CKC";
@@ -206,13 +198,15 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 			)}
 
 			<div className='mt-4 flex flex-wrap items-center gap-2 border-t-2 border-black pt-3 text-black'>
-				<button
-					onClick={handleLike}
-					className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-					style={{ background: liked ? "var(--color-pastel-pink)" : "#fff" }}>
-					<Heart className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`} />
-					{heartCount}
-				</button>
+				{/* Reaction button with emoji picker */}
+				<ReactionButton
+					postId={post.id}
+					initialCount={post.reactions_count}
+					initialReaction={post.my_reaction}
+					user={user}
+					size='sm'
+				/>
+
 				<Link
 					to={`/cong-dong/bai-viet/${post.id}#comments`}
 					className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
@@ -630,7 +624,7 @@ const CommunityPage: React.FC = () => {
 							) : posts.length > 0 ? (
 								<>
 									{posts.map((post) => (
-										<PostCard key={post.id} post={post} />
+										<PostCard key={post.id} post={post} user={user} />
 									))}
 
 									{hasMore && (

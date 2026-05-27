@@ -1,5 +1,22 @@
 // Types for Community Post API (user-facing)
 
+export type ReactionType = "heart" | "like" | "haha" | "wow" | "sad";
+
+export interface ReactionSummary {
+	heart?: number;
+	like?: number;
+	haha?: number;
+	wow?: number;
+	sad?: number;
+}
+
+export interface ReactionToggleResponse {
+	reacted: boolean;
+	my_reaction: ReactionType | null;
+	reactions_count: number;
+	reaction_summary: ReactionSummary;
+}
+
 export interface PostUser {
 	id: number;
 	full_name: string;
@@ -27,6 +44,8 @@ export interface Post {
 	is_pinned: boolean;
 	comments_count: number;
 	reactions_count: number;
+	/** Type of current user's reaction, null if not reacted or guest */
+	my_reaction: ReactionType | null;
 	tags: string[];
 	media_urls: string[];
 	created_at: string;
@@ -35,6 +54,7 @@ export interface Post {
 /** Full post with content field (detail page) */
 export interface PostDetail extends Post {
 	content: string;
+	reaction_summary: ReactionSummary;
 }
 
 export interface PostListParams {

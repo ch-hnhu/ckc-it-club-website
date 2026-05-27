@@ -5,7 +5,6 @@ import {
 	Code2,
 	Crown,
 	Hash,
-	Heart,
 	Home,
 	List,
 	MessageCircle,
@@ -21,8 +20,9 @@ import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
 import { channelService } from "@/services/channel.service";
-import type { PostDetail, PostComment } from "@/types/post.types";
+import type { PostDetail, PostComment, ReactionSummary, ReactionToggleResponse } from "@/types/post.types";
 import type { Channel } from "@/types/channel.types";
+import ReactionButton, { REACTIONS } from "@/components/community/ReactionButton";
 
 type MainLayoutOutletContext = { user: AuthUser | null };
 
@@ -95,7 +95,7 @@ interface CommentItemProps {
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({ comment, depth = 0 }) => {
-	const [liked, setLiked] = useState(false);
+	const [liked, setLiked]   = useState(false);
 	const [likeCount, setLikeCount] = useState(comment.reactions_count);
 	const [showReplies, setShowReplies] = useState(true);
 
@@ -140,10 +140,8 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, depth = 0 }) => {
 									return !p;
 								});
 							}}
-							className='flex items-center gap-1 text-xs font-bold text-gray-500 transition hover:text-red-500'>
-							<Heart
-								className={`h-3.5 w-3.5 ${liked ? "fill-current text-red-500" : ""}`}
-							/>
+							className={`flex items-center gap-1 text-xs font-bold transition ${liked ? "text-red-500" : "text-gray-500 hover:text-red-500"}`}>
+							<span className='text-sm leading-none'>{liked ? "❤️" : "🤍"}</span>
 							{likeCount > 0 && <span>{likeCount}</span>}
 						</button>
 						{depth === 0 && (
@@ -206,8 +204,7 @@ const CommunityPostDetailPage: React.FC = () => {
 	const [comments, setComments] = useState<PostComment[]>([]);
 	const [commentsLoading, setCommentsLoading] = useState(true);
 
-	const [liked, setLiked] = useState(false);
-	const [likeCount, setLikeCount] = useState(0);
+	const [reactionSummary, setReactionSummary] = useState<ReactionSummary>({});
 	const [saved, setSaved] = useState(false);
 
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
@@ -238,7 +235,7 @@ const CommunityPostDetailPage: React.FC = () => {
 			.getPost(Number(id))
 			.then((res) => {
 				setPost(res.data);
-				setLikeCount(res.data.reactions_count);
+				setReactionSummary(res.data.reaction_summary ?? {});
 			})
 			.catch(() => setPostError("Không tìm thấy bài viết."))
 			.finally(() => setPostLoading(false));
@@ -495,39 +492,50 @@ const CommunityPostDetailPage: React.FC = () => {
 											</div>
 										)}
 
-										{/* Reaction bar */}
-										<div className='mt-6 flex flex-wrap items-center gap-2 border-t-2 border-black pt-4'>
-											<button
-												onClick={() => {
-													setLiked((p) => {
-														setLikeCount((c) => (p ? c - 1 : c + 1));
-														return !p;
-													});
+										{/* Reaction summary chips */}
+										{Object.keys(reactionSummary).length > 0 && (
+											<div className='mt-5 flex flex-wrap items-center gap-2'>
+												{REACTIONS.filter(
+													(r) => (reactionSummary[r.type] ?? 0) > 0,
+												).map((r) => (
+													<span
+														key={r.type}
+														className='inline-flex items-center gap-1 rounded-full border-2 border-black bg-white px-3 py-1 text-sm font-bold shadow-[2px_2px_0_#111]'>
+														<span>{r.emoji}</span>
+														<span className='tabular-nums'>
+															{reactionSummary[r.type]}
+														</span>
+													</span>
+												))}
+											</div>
+										)}
+
+										{/* Reaction / action bar */}
+										<div className='mt-5 flex flex-wrap items-center gap-2 border-t-2 border-black pt-4'>
+											{/* Reaction button with emoji picker */}
+											<ReactionButton
+												postId={post.id}
+												initialCount={post.reactions_count}
+												initialReaction={post.my_reaction}
+												user={user}
+												size='md'
+												onReacted={(data: ReactionToggleResponse) => {
+													setReactionSummary(data.reaction_summary);
 												}}
-												className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-												style={{
-													background: liked
-														? "var(--color-pastel-pink)"
-														: "#fff",
-												}}>
-												<Heart
-													className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`}
-												/>
-												{likeCount}
-											</button>
+											/>
 
 											<button
 												onClick={() =>
 													commentInputRef.current?.focus()
 												}
-												className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+												className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 												<MessageCircle className='h-4 w-4' />
 												{post.comments_count}
 											</button>
 
 											<button
 												onClick={() => setSaved((p) => !p)}
-												className='inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+												className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
 												style={{
 													background: saved
 														? "var(--color-primary)"
@@ -540,7 +548,7 @@ const CommunityPostDetailPage: React.FC = () => {
 											</button>
 
 											<button
-												className='inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+												className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
 												aria-label='Chia sẻ'>
 												<Share2 className='h-4 w-4' />
 											</button>

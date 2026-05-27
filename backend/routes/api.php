@@ -46,12 +46,18 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
 
-    // Community public routes (no auth required – read-only, published posts only)
+    // Community routes
     Route::prefix('community')->group(function () {
+        // Public (read-only, published posts only)
         Route::get('/posts',                         [UserPostController::class, 'index']);
         Route::get('/posts/{id}',                    [UserPostController::class, 'show']);
         Route::get('/posts/{id}/comments',           [UserPostController::class, 'comments']);
         Route::get('/channels',                      [UserChannelController::class, 'index']);
+
+        // Authenticated actions
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/posts/{id}/reactions',     [UserPostController::class, 'react']);
+        });
     });
 
     // Forgot password (throttled: 5 attempts per minute per IP)

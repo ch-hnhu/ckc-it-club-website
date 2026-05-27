@@ -6,9 +6,11 @@ use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Comment;
 use App\Models\Post;
+use App\Models\Reaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class PostController extends BaseApiController
 {
@@ -42,7 +44,23 @@ class PostController extends BaseApiController
             )
             ->paginate($perPage);
 
-        $posts->getCollection()->transform(fn (Post $post) => $this->transformPost($post));
+        // Optionally enrich with current user's reactions (one batch query)
+        $userId = auth('sanctum')->id();
+        $myReactions = [];
+        if ($userId) {
+            $postIds = $posts->pluck('id')->toArray();
+            $myReactions = Reaction::where('user_id', $userId)
+                ->where('target_type', 'post')
+                ->whereIn('target_id', $postIds)
+                ->pluck('type', 'target_id')
+                ->toArray();
+        }
+
+        $posts->getCollection()->transform(function (Post $post) use ($myReactions) {
+            $data               = $this->transformPost($post);
+            $data['my_reaction'] = $myReactions[$post->id] ?? null;
+            return $data;
+        });
 
         return $this->paginatedResponse($posts, ApiMessage::RETRIEVED);
     }
@@ -59,9 +77,86 @@ class PostController extends BaseApiController
         ->findOrFail($id);
 
         $data            = $this->transformPost($post);
-        $data['content'] = $post->content; // full content (not truncated)
+        $data['content'] = $post->content;
+
+        // Reaction breakdown by type
+        $data['reaction_summary'] = Reaction::where('target_type', 'post')
+            ->where('target_id', $id)
+            ->selectRaw('type, COUNT(*) as count')
+            ->groupBy('type')
+            ->pluck('count', 'type');
+
+        // Current user's own reaction (null for guests)
+        $userId = auth('sanctum')->id();
+        $data['my_reaction'] = $userId
+            ? Reaction::where('user_id', $userId)
+                ->where('target_type', 'post')
+                ->where('target_id', $id)
+                ->value('type')
+            : null;
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Toggle a reaction on a post (auth required).
+     * Same type → remove. Different type → switch. No reaction → add.
+     */
+    public function react(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'type' => ['required', Rule::in(['heart', 'like', 'haha', 'wow', 'sad'])],
+        ]);
+
+        Post::where('status', 'published')->findOrFail($id);
+
+        $userId = $request->user()->id;
+        $type   = $request->input('type');
+
+        $existing = Reaction::where('user_id', $userId)
+            ->where('target_type', 'post')
+            ->where('target_id', $id)
+            ->first();
+
+        $reacted    = false;
+        $myReaction = null;
+
+        if ($existing) {
+            if ($existing->type === $type) {
+                // Same reaction → remove (toggle off)
+                $existing->delete();
+            } else {
+                // Different reaction → update type
+                $existing->type = $type;
+                $existing->save();
+                $reacted    = true;
+                $myReaction = $type;
+            }
+        } else {
+            Reaction::create([
+                'user_id'     => $userId,
+                'target_type' => 'post',
+                'target_id'   => $id,
+                'type'        => $type,
+                'created_at'  => now(),
+            ]);
+            $reacted    = true;
+            $myReaction = $type;
+        }
+
+        // Updated summary
+        $summary = Reaction::where('target_type', 'post')
+            ->where('target_id', $id)
+            ->selectRaw('type, COUNT(*) as count')
+            ->groupBy('type')
+            ->pluck('count', 'type');
+
+        return $this->successResponse(true, [
+            'reacted'          => $reacted,
+            'my_reaction'      => $myReaction,
+            'reactions_count'  => (int) $summary->sum(),
+            'reaction_summary' => $summary,
+        ], ApiMessage::UPDATED);
     }
 
     public function comments(Request $request, int $id): JsonResponse
