@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
+use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Admin\ClubInformationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
@@ -43,6 +44,11 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
+
+    // Community public routes (no auth required – read-only, published posts only)
+    Route::prefix('community')->group(function () {
+        Route::get('/posts', [UserPostController::class, 'index']);
+    });
 
     // Forgot password (throttled: 5 attempts per minute per IP)
     Route::middleware('throttle:5,1')->group(function () {

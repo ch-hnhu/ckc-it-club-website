@@ -24,6 +24,7 @@ return [
 
     'allowed_origins_patterns' => [
         // '/^https?:\/\/.*\.yourdomain\.com$/', // Allow all subdomains
+        '/^http:\/\/localhost:\d+$/', // Allow any localhost port in development
     ],
 
     'allowed_headers' => ['*'],
