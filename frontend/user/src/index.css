@@ -1134,7 +1134,6 @@
 .so-editor-outer .s-prose pre,
 .so-editor-outer .ProseMirror pre {
 	background: #1e1e2e;
-	padding: 12px;
 	color: #cdd6f4;
 	border: 2px solid #111;
 	border-radius: 8px;
@@ -1459,37 +1458,75 @@
    ============================================================ */
 
 /* ── Missing display / flex helpers ── */
-.so-editor-outer .d-block { display: block !important; }
-.so-editor-outer .d-inline { display: inline !important; }
-.so-editor-outer .fd-row { flex-direction: row !important; }
-.so-editor-outer .ai-start { align-items: flex-start !important; }
-.so-editor-outer .jc-space-between { justify-content: space-between !important; }
+.so-editor-outer .d-block {
+	display: block !important;
+}
+.so-editor-outer .d-inline {
+	display: inline !important;
+}
+.so-editor-outer .fd-row {
+	flex-direction: row !important;
+}
+.so-editor-outer .ai-start {
+	align-items: flex-start !important;
+}
+.so-editor-outer .jc-space-between {
+	justify-content: space-between !important;
+}
 
 /* ── Missing whitespace / sizing ── */
-.so-editor-outer .ws-nowrap { white-space: nowrap !important; }
-.so-editor-outer .wmx100 { max-width: 100% !important; }
-.so-editor-outer .fw-normal { font-weight: 400 !important; }
-.so-editor-outer .w100 { width: 100% !important; }
+.so-editor-outer .ws-nowrap {
+	white-space: nowrap !important;
+}
+.so-editor-outer .wmx100 {
+	max-width: 100% !important;
+}
+.so-editor-outer .fw-normal {
+	font-weight: 400 !important;
+}
+.so-editor-outer .w100 {
+	width: 100% !important;
+}
 
 /* ── Preview image max-height ── */
-.so-editor-outer .hmx1 { max-height: 200px !important; }
+.so-editor-outer .hmx1 {
+	max-height: 200px !important;
+}
 
 /* ── Missing spacing ── */
-.so-editor-outer .m8 { margin: 8px !important; }
-.so-editor-outer .m12 { margin: 12px !important; }
-.so-editor-outer .mr4 { margin-right: 4px !important; }
-.so-editor-outer .mr8 { margin-right: 8px !important; }
-.so-editor-outer .mb0 { margin-bottom: 0 !important; }
-.so-editor-outer .pt12 { padding-top: 12px !important; }
+.so-editor-outer .m8 {
+	margin: 8px !important;
+}
+.so-editor-outer .m12 {
+	margin: 12px !important;
+}
+.so-editor-outer .mr4 {
+	margin-right: 4px !important;
+}
+.so-editor-outer .mr8 {
+	margin-right: 8px !important;
+}
+.so-editor-outer .mb0 {
+	margin-bottom: 0 !important;
+}
+.so-editor-outer .pt12 {
+	padding-top: 12px !important;
+}
 
 /* ── Background ── */
-.so-editor-outer .bg-black-150 { background-color: #f3f4f6 !important; }
+.so-editor-outer .bg-black-150 {
+	background-color: #f3f4f6 !important;
+}
 
 /* ── Border-radius ── */
-.so-editor-outer .bar-sm { border-radius: 4px !important; }
+.so-editor-outer .bar-sm {
+	border-radius: 4px !important;
+}
 
 /* ── Gap helpers ── */
-.so-editor-outer .gsx { column-gap: 6px !important; }
+.so-editor-outer .gsx {
+	column-gap: 6px !important;
+}
 
 /* ── Drag-over ring ── */
 .so-editor-outer .bs-ring,
@@ -1517,7 +1554,9 @@
 	height: 0.875em !important;
 }
 @keyframes so-spin {
-	to { transform: rotate(360deg); }
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 /* ── Link styles ── */
