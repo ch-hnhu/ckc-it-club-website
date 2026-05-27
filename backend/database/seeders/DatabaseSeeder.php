@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             ClubInformationSeeder::class,
             ClubInformationValueSeeder::class,
             DepartmentSeeder::class,
+            DepartmentUserSeeder::class,
             FacultySeeder::class,
             MajorSeeder::class,
             SchoolClassSeeder::class,
@@ -23,6 +24,13 @@ class DatabaseSeeder extends Seeder
             ApplicationQuestionOptionSeeder::class,
             ClubApplicationSeeder::class,
             ApplicationAnswerSeeder::class,
+            // Community module — thứ tự phụ thuộc: channel → tag → post → blog → comment → reaction
+            ChannelSeeder::class,
+            TagSeeder::class,
+            PostSeeder::class,
+            BlogSeeder::class,
+            CommentSeeder::class,
+            ReactionSeeder::class,
         ]);
     }
 }

@@ -39,6 +39,7 @@ class TagController extends BaseApiController
             'name'        => 'required|string|max:255',
             'slug'        => 'nullable|string|max:255|unique:tags,slug',
             'description' => 'nullable|string',
+            'color'       => 'nullable|string|max:7',
         ]);
 
         $name = trim($request->string('name')->value());
@@ -46,6 +47,7 @@ class TagController extends BaseApiController
             'name'        => $name,
             'slug'        => $request->filled('slug') ? trim($request->string('slug')->value()) : Str::slug($name),
             'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
+            'color'       => $request->filled('color') ? trim($request->string('color')->value()) : null,
             'created_by'  => $request->user()?->id,
             'updated_by'  => $request->user()?->id,
         ]);
@@ -61,6 +63,7 @@ class TagController extends BaseApiController
             'name'        => 'required|string|max:255',
             'slug'        => "nullable|string|max:255|unique:tags,slug,{$tag->id}",
             'description' => 'nullable|string',
+            'color'       => 'nullable|string|max:7',
         ]);
 
         $name = trim($request->string('name')->value());
@@ -68,6 +71,7 @@ class TagController extends BaseApiController
             'name'        => $name,
             'slug'        => $request->filled('slug') ? trim($request->string('slug')->value()) : Str::slug($name),
             'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
+            'color'       => $request->filled('color') ? trim($request->string('color')->value()) : $tag->color,
             'updated_by'  => $request->user()?->id,
         ]);
 
@@ -89,7 +93,7 @@ class TagController extends BaseApiController
             'id'          => $tag->id,
             'name'        => $tag->name,
             'slug'        => $tag->slug,
-            'color'       => null,
+            'color'       => $tag->color,
             'posts_count' => 0,
             'blogs_count' => $tag->blogs_count ?? 0,
             'created_at'  => $tag->created_at?->toIso8601String(),

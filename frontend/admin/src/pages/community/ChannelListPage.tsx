@@ -255,17 +255,11 @@ function ChannelListPage() {
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
 
 				{/* Header */}
-				<div className="flex items-start justify-between gap-4">
-					<div className="space-y-1">
-						<h2 className="text-2xl font-semibold tracking-tight">Quản lý kênh</h2>
-						<p className="text-muted-foreground text-sm">
-							Tạo và quản lý các kênh thảo luận trong cộng đồng CLB.
-						</p>
-					</div>
-					<Button onClick={openCreate} className="shrink-0">
-						<Plus className="h-4 w-4" />
-						Thêm kênh
-					</Button>
+				<div className="space-y-1">
+					<h2 className="text-2xl font-semibold tracking-tight">Quản lý kênh</h2>
+					<p className="text-muted-foreground text-sm">
+						Tạo và quản lý các kênh thảo luận trong cộng đồng CLB.
+					</p>
 				</div>
 
 				{/* Stats */}
@@ -284,12 +278,18 @@ function ChannelListPage() {
 
 				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
-					<Input
-						placeholder="Tìm kiếm theo tên kênh hoặc slug..."
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						className="h-8 w-full sm:w-64 md:w-80"
-					/>
+					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+						<Input
+							placeholder="Tìm kiếm theo tên kênh hoặc slug..."
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							className="h-8 w-full sm:w-64 md:w-80"
+						/>
+						<Button size="sm" onClick={openCreate} className="h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
+							<Plus className="h-4 w-4" />
+							Thêm kênh
+						</Button>
+					</div>
 
 					<div className="overflow-hidden rounded-md border">
 						<Table>

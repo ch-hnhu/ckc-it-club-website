@@ -10,7 +10,7 @@ class Tag extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'description', 'created_by', 'updated_by', 'deleted_by'];
+    protected $fillable = ['name', 'slug', 'description', 'color', 'created_by', 'updated_by', 'deleted_by'];
 
     public function blogs(): BelongsToMany
     {
