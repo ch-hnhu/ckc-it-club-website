@@ -1,21 +1,17 @@
 import React, { useEffect, useState } from "react";
 import {
 	Bookmark,
-	Bug,
-	CalendarDays,
 	Code2,
 	Crown,
 	Flame,
 	Hash,
 	Heart,
 	Home,
-	ImageIcon,
 	List,
 	MessageCircle,
 	Monitor,
 	PenSquare,
 	Search,
-	Send,
 	Share2,
 	Sparkles,
 	Trophy,
@@ -264,7 +260,6 @@ const CommunityPage: React.FC = () => {
 	const [activeChannel, setActiveChannel] = useState("all");
 	const [activeSort, setActiveSort] = useState("top");
 	const [pageMode, setPageMode] = useState<"home" | "channel">("home");
-	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const activePrimaryNav = pageMode === "home" ? "home" : "";
 	const userDisplayName = user?.name || user?.email || "CKC member";
@@ -318,25 +313,21 @@ const CommunityPage: React.FC = () => {
 						<button
 							key={item.id}
 							onClick={handlePrimaryNavClick}
-							className={`group relative flex w-full items-center text-left font-bold transition-all duration-200 hover:bg-primary-100 hover:text-[var(--color-text-primary)] ${
+							className={`group relative flex w-full items-center text-left font-bold ${
 								isMobile
 									? "gap-3 rounded-xl px-3 py-3 text-base"
 									: "gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px]"
-							} ${
-								isActive
-									? "bg-primary-100 text-[var(--color-text-primary)]"
-									: "bg-white text-gray-700"
-							}`}>
+								} ${
+									isActive
+										? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
+										: "border-2 border-transparent bg-white text-gray-700 hover:bg-gray-100"
+								}`}>
 							<Icon
-								className={`transition-colors duration-200 group-hover:text-[var(--color-text-primary)] ${
+								className={`transition-colors duration-200 ${
 									isMobile ? "h-5 w-5" : "h-4 w-4"
 								} ${isActive ? "text-[var(--color-text-primary)]" : "text-gray-700"}`}
 							/>
 							{item.label}
-							<span
-								className='absolute right-3 bottom-0.5 left-3 h-0.5 scale-x-0 rounded-full transition-transform duration-200 group-hover:scale-x-100'
-								style={{ background: "var(--color-primary)" }}
-							/>
 						</button>
 					);
 				})}
@@ -355,21 +346,21 @@ const CommunityPage: React.FC = () => {
 						<button
 							key={channel.id}
 							onClick={() => handleChannelClick(channel.id)}
-							className={`group relative flex w-full items-center justify-between text-left font-bold transition-all duration-200 hover:bg-primary-100 hover:text-[var(--color-text-primary)] ${
+							className={`group relative flex w-full items-center justify-between text-left font-bold ${
 								isMobile
 									? "rounded-xl px-3 py-2.5 text-base"
 									: "rounded-lg px-2.5 py-2 text-[13px]"
-							} ${
-								isActive
-									? "bg-primary-100 text-[var(--color-text-primary)]"
-									: "bg-white text-black"
-							}`}>
+								} ${
+									isActive
+										? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
+										: "border-2 border-transparent bg-white text-black hover:bg-gray-100"
+								}`}>
 							<span
 								className={
 									isMobile ? "flex items-center gap-3" : "flex items-center gap-3"
 								}>
 								<Hash
-									className={`transition-colors duration-200 group-hover:text-[var(--color-text-primary)] ${
+									className={`transition-colors duration-200 ${
 										isMobile ? "h-5 w-5" : "h-3.5 w-3.5"
 									} ${
 										isActive
@@ -380,17 +371,13 @@ const CommunityPage: React.FC = () => {
 								{channel.label}
 							</span>
 							<span
-								className={`transition-colors duration-200 group-hover:text-[var(--color-text-primary)] ${
+								className={`transition-colors duration-200 ${
 									isMobile ? "text-sm" : "text-xs"
 								} ${
 									isActive ? "text-[var(--color-text-primary)]" : "text-gray-500"
 								}`}>
 								{channel.count}
 							</span>
-							<span
-								className='absolute right-3 bottom-0.5 left-3 h-0.5 scale-x-0 rounded-full transition-transform duration-200 group-hover:scale-x-100'
-								style={{ background: "var(--color-primary)" }}
-							/>
 						</button>
 					);
 				})}
@@ -402,7 +389,7 @@ const CommunityPage: React.FC = () => {
 		<div className='min-h-screen bg-[var(--color-surface)] pt-16 text-black'>
 			<div className='community-shell'>
 				<aside className='hidden border-r-2 border-black bg-white md:block'>
-					<div className='sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto'>
+					<div className='no-scrollbar sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto'>
 						{renderSidebarContent()}
 					</div>
 				</aside>
@@ -464,31 +451,28 @@ const CommunityPage: React.FC = () => {
 							</section>
 						)}
 
-							{user && (
-								<div className='mb-6 flex items-center gap-3 rounded-xl border-2 border-black bg-white px-5 py-4'>
-									<Link to='/profile' className='relative'>
-										<img
-											src={userAvatar}
-											alt={userDisplayName}
-											className='h-11 w-11 shrink-0 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
-										/>
-									</Link>
-									<button
-										type='button'
-										onClick={() => setShowCreateModal(true)}
-										className='flex h-11 min-w-0 flex-1 items-center rounded-[10px] border-2 border-black bg-gray-50 px-4 text-left font-body text-sm font-medium text-gray-500 transition cursor-pointer'>
-										Chia sẻ điều gì đó...
-									</button>
-									<button
-										type='button'
-										disabled
-										aria-disabled='true'
-										className='inline-flex h-11 shrink-0 cursor-not-allowed select-none items-center justify-center gap-2 rounded-[10px] border-2 border-black bg-[var(--color-primary)] px-4 py-0 font-heading text-sm font-extrabold text-dark opacity-60 shadow-[3px_3px_0_#000000]'>
-										<PenSquare strokeWidth={3} className='h-4 w-4 text-dark' />
-										Đăng bài
-									</button>
-								</div>
-							)}
+						{user && (
+							<div className='mb-6 flex items-center gap-3 rounded-xl border-2 border-black bg-white px-5 py-4'>
+								<Link to='/profile' className='relative'>
+									<img
+										src={userAvatar}
+										alt={userDisplayName}
+										className='h-11 w-11 shrink-0 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
+									/>
+								</Link>
+								<Link
+									to='/community/create'
+									className='flex h-11 min-w-0 flex-1 items-center rounded-[10px] border-2 border-black bg-gray-50 px-4 text-left font-body text-sm font-medium text-gray-500 transition cursor-pointer'>
+									Chia sẻ điều gì đó...
+								</Link>
+								<Link
+									to='/community/create'
+									className='inline-flex h-11 shrink-0 select-none items-center justify-center gap-2 rounded-[10px] border-2 border-black bg-[var(--color-primary)] px-4 py-0 font-heading text-sm font-extrabold text-dark shadow-[3px_3px_0_#000000] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+									<PenSquare strokeWidth={3} className='h-4 w-4 text-dark' />
+									Đăng bài
+								</Link>
+							</div>
+						)}
 
 						{pageMode === "home" ? (
 							<div className='mb-5 border-b border-gray-200'>
@@ -555,7 +539,7 @@ const CommunityPage: React.FC = () => {
 					</main>
 
 					<aside className='community-right-rail'>
-						<div className='sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto px-3 py-5'>
+						<div className='no-scrollbar sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto px-3 py-5'>
 							<section className='neo-card neo-card-static bg-white p-4'>
 								<div className='mb-4 flex items-center justify-between'>
 									<h2 className='font-heading text-base font-extrabold text-black'>
@@ -657,76 +641,6 @@ const CommunityPage: React.FC = () => {
 						</div>
 						{renderSidebarContent(true)}
 					</aside>
-				</div>
-			)}
-
-			{showCreateModal && (
-				<div
-					className='fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm'
-					onClick={() => setShowCreateModal(false)}>
-					<div
-						className='w-full max-w-xl rounded-[14px] border-2 border-black bg-white p-5 text-black shadow-[6px_6px_0_#111]'
-						onClick={(event) => event.stopPropagation()}>
-						<div className='mb-5 flex items-center justify-between'>
-							<div>
-								<span className='neo-tag bg-[var(--color-pastel-green)]'>
-									Cộng đồng
-								</span>
-								<h2 className='mt-3 font-heading text-xl font-extrabold'>
-									Tạo bài viết mới
-								</h2>
-							</div>
-							<button
-								onClick={() => setShowCreateModal(false)}
-								className='rounded-lg border-2 border-black bg-white p-1.5 text-black transition hover:bg-[var(--color-pastel-pink)]'>
-								<X className='h-4 w-4' />
-							</button>
-						</div>
-						<div className='space-y-4'>
-							<select className='h-11 w-full rounded-[10px] border-2 border-black bg-[var(--color-pastel-blue)] px-3 text-sm font-bold text-black shadow-[3px_3px_0_#111] outline-none focus:bg-white focus:ring-2 focus:ring-lime-300'>
-								{CHANNELS.filter((channel) => channel.id !== "all").map(
-									(channel) => (
-										<option key={channel.id} value={channel.id}>
-											{channel.label}
-										</option>
-									),
-								)}
-							</select>
-							<input
-								type='text'
-								placeholder='Tiêu đề bài viết...'
-								className='h-11 w-full rounded-[10px] border-2 border-black bg-[var(--color-pastel-yellow)] px-3 text-sm font-bold text-black shadow-[3px_3px_0_#111] outline-none placeholder:text-gray-600 focus:bg-white focus:ring-2 focus:ring-lime-300'
-							/>
-							<textarea
-								rows={6}
-								placeholder='Chia sẻ kiến thức, đặt câu hỏi hoặc thông báo sự kiện...'
-								className='w-full resize-none rounded-[10px] border-2 border-black bg-[var(--color-pastel-green)] px-3 py-3 text-sm font-medium text-black shadow-[3px_3px_0_#111] outline-none placeholder:text-gray-600 focus:bg-white focus:ring-2 focus:ring-lime-300'
-							/>
-							<div className='flex flex-wrap items-center justify-between gap-3 border-t-2 border-black pt-4'>
-								<div className='flex gap-2 text-black'>
-									<button
-										className='rounded-lg border-2 border-black bg-[var(--color-pastel-purple)] p-2 shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-										aria-label='Thêm hình ảnh'>
-										<ImageIcon className='h-4 w-4' />
-									</button>
-									<button
-										className='rounded-lg border-2 border-black bg-[var(--color-pastel-orange)] p-2 shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-										aria-label='Thêm lịch'>
-										<CalendarDays className='h-4 w-4' />
-									</button>
-									<button
-										className='rounded-lg border-2 border-black bg-[var(--color-pastel-pink)] p-2 shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-										aria-label='Báo lỗi'>
-										<Bug className='h-4 w-4' />
-									</button>
-								</div>
-								<button className='neo-btn neo-btn-primary h-10 px-4 py-0 text-sm'>
-									<Send className='h-4 w-4' />
-									Đăng bài
-								</button>
-							</div>
-						</div>
-					</div>
 				</div>
 			)}
 		</div>

@@ -8,7 +8,7 @@ import { Outlet, useLocation } from "react-router-dom";
 const MainLayout: React.FC = () => {
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const { pathname } = useLocation();
-	const isCommunityPage = pathname.startsWith("/cong-dong");
+	const isCommunityPage = pathname.startsWith("/cong-dong") || pathname.startsWith("/community");
 
 	const refreshUser = useCallback(async () => {
 		const currentUser = await getCurrentUser();
