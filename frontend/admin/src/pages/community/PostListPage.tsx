@@ -14,10 +14,12 @@ import {
 	MoreHorizontal,
 	Pin,
 	PinOff,
+	Plus,
 	RefreshCw,
 	SquarePen,
 	Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -166,6 +168,8 @@ const emptyStats: PostStats = { total: 0, published: 0, hidden: 0, pinned: 0 };
 
 function PostListPage() {
 	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý bài đăng" }]);
+
+	const navigate = useNavigate();
 
 	const [posts, setPosts] = useState<PostRecord[]>([]);
 	const [stats, setStats] = useState<PostStats>(emptyStats);
@@ -394,28 +398,38 @@ function PostListPage() {
 								className="h-8 w-full sm:w-64 md:w-80"
 							/>
 						</div>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" size="sm" className="h-8">
-									<Filter className="h-4 w-4" />
-									{statusFilter === "all"
-										? "Tất cả trạng thái"
-										: statusFilterOptions.find((o) => o.value === statusFilter)?.label}
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end" className="w-[210px]">
-								<DropdownMenuLabel>Trạng thái bài đăng</DropdownMenuLabel>
-								<DropdownMenuSeparator />
-								{statusFilterOptions.map((opt) => (
-									<DropdownMenuItem
-										key={opt.value}
-										onClick={() => setStatusFilter(opt.value)}
-										className={statusFilter === opt.value ? "bg-muted font-medium" : ""}>
-										{opt.label}
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<div className="flex items-center gap-2">
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" size="sm" className="h-8">
+										<Filter className="h-4 w-4" />
+										{statusFilter === "all"
+											? "Tất cả trạng thái"
+											: statusFilterOptions.find((o) => o.value === statusFilter)?.label}
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end" className="w-[210px]">
+									<DropdownMenuLabel>Trạng thái bài đăng</DropdownMenuLabel>
+									<DropdownMenuSeparator />
+									{statusFilterOptions.map((opt) => (
+										<DropdownMenuItem
+											key={opt.value}
+											onClick={() => setStatusFilter(opt.value)}
+											className={statusFilter === opt.value ? "bg-muted font-medium" : ""}>
+											{opt.label}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+
+							<Button
+								size="sm"
+								className="h-8 bg-foreground text-background hover:bg-foreground/90"
+								onClick={() => navigate("/community/posts/create")}>
+								<Plus className="h-4 w-4" />
+								Thêm bài đăng
+							</Button>
+						</div>
 					</div>
 
 					<div className="overflow-hidden rounded-md border">
