@@ -1076,10 +1076,10 @@
 .so-editor-outer .s-prose pre,
 .so-editor-outer .ProseMirror pre {
 	background: #1e1e2e;
+	padding: 12px;
 	color: #cdd6f4;
 	border: 2px solid #111;
 	border-radius: 8px;
-	box-shadow: 3px 3px 0 #111;
 	overflow-x: auto;
 	font-family: ui-monospace, monospace;
 	font-size: 0.875rem;
@@ -1167,6 +1167,7 @@
 
 /* XS button variant for language selector */
 .so-editor-outer .s-btn__xs {
+	margin: 4px;
 	padding: 2px 6px !important;
 	font-size: 11px !important;
 	min-height: 0 !important;
