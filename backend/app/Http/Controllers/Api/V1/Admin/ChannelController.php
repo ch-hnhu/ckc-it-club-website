@@ -13,11 +13,11 @@ class ChannelController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $allowedSorts = ['id', 'name', 'posts_count', 'created_at'];
-        $sort    = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
-        $order   = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
+        $allowedSorts = ['id', 'name', 'slug', 'description', 'posts_count', 'created_at'];
+        $sort = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
+        $order = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
         $perPage = (int) $request->query('per_page', 10);
-        $search  = $request->query('search');
+        $search = $request->query('search');
 
         $channels = Channel::query()
             ->withCount('posts')
@@ -36,18 +36,20 @@ class ChannelController extends BaseApiController
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'name'        => 'required|string|max:255',
-            'slug'        => 'nullable|string|max:255|unique:channels,slug',
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:channels,slug',
             'description' => 'nullable|string',
+            'image' => 'nullable|string|max:2048',
         ]);
 
-        $name    = trim($request->string('name')->value());
+        $name = trim($request->string('name')->value());
         $channel = Channel::create([
-            'name'        => $name,
-            'slug'        => $request->filled('slug') ? trim($request->string('slug')->value()) : Str::slug($name),
+            'name' => $name,
+            'slug' => $request->filled('slug') ? trim($request->string('slug')->value()) : Str::slug($name),
             'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
-            'created_by'  => $request->user()?->id,
-            'updated_by'  => $request->user()?->id,
+            'image' => $request->filled('image') ? trim($request->string('image')->value()) : null,
+            'created_by' => $request->user()?->id,
+            'updated_by' => $request->user()?->id,
         ]);
 
         $channel->loadCount('posts');
@@ -58,17 +60,19 @@ class ChannelController extends BaseApiController
     public function update(Request $request, Channel $channel): JsonResponse
     {
         $request->validate([
-            'name'        => 'required|string|max:255',
-            'slug'        => "nullable|string|max:255|unique:channels,slug,{$channel->id}",
+            'name' => 'required|string|max:255',
+            'slug' => "nullable|string|max:255|unique:channels,slug,{$channel->id}",
             'description' => 'nullable|string',
+            'image' => 'nullable|string|max:2048',
         ]);
 
         $name = trim($request->string('name')->value());
         $channel->update([
-            'name'        => $name,
-            'slug'        => $request->filled('slug') ? trim($request->string('slug')->value()) : Str::slug($name),
+            'name' => $name,
+            'slug' => $request->filled('slug') ? trim($request->string('slug')->value()) : Str::slug($name),
             'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
-            'updated_by'  => $request->user()?->id,
+            'image' => $request->filled('image') ? trim($request->string('image')->value()) : null,
+            'updated_by' => $request->user()?->id,
         ]);
 
         $channel->loadCount('posts');
@@ -86,13 +90,14 @@ class ChannelController extends BaseApiController
     private function transformChannel(Channel $channel): array
     {
         return [
-            'id'          => $channel->id,
-            'name'        => $channel->name,
-            'slug'        => $channel->slug,
+            'id' => $channel->id,
+            'name' => $channel->name,
+            'slug' => $channel->slug,
             'description' => $channel->description,
+            'image' => $channel->image,
             'posts_count' => $channel->posts_count ?? 0,
-            'created_at'  => $channel->created_at?->toIso8601String(),
-            'updated_at'  => $channel->updated_at?->toIso8601String(),
+            'created_at' => $channel->created_at?->toIso8601String(),
+            'updated_at' => $channel->updated_at?->toIso8601String(),
         ];
     }
 }

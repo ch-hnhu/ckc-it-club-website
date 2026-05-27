@@ -18,8 +18,9 @@ import {
 	X,
 	Zap,
 } from "lucide-react";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
+import { communityService, type CommunityChannel } from "@/services/community.service";
 
 type MainLayoutOutletContext = {
 	user: AuthUser | null;
@@ -43,6 +44,46 @@ const CHANNELS = [
 	{ id: "career", label: "Cơ hội nghề nghiệp", count: 12 },
 	{ id: "bugs", label: "Báo lỗi", count: 7 },
 ];
+
+type ChannelItem = {
+	id: string;
+	label: string;
+	count: number;
+	description: string | null;
+	image: string | null;
+	slug: string;
+};
+
+const COMMUNITY_LOGO =
+	"https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg";
+
+const buildChannelItems = (sourceChannels: ChannelItem[]) => {
+	const totalPostsCount = sourceChannels.reduce((sum, channel) => sum + channel.count, 0);
+
+	return [
+		{
+			id: "all",
+			label: "Tất cả kênh",
+			count: totalPostsCount,
+			description: "Tất cả bài viết từ mọi kênh trong cộng đồng CKC IT CLUB.",
+			image: COMMUNITY_LOGO,
+			slug: "all",
+		},
+		...sourceChannels,
+	];
+};
+
+const buildFallbackChannels = () =>
+	buildChannelItems(
+		CHANNELS.map((channel) => ({
+			id: channel.id,
+			label: channel.label,
+			count: channel.count,
+			description: null,
+			image: null,
+			slug: channel.id,
+		})),
+	);
 
 const SORT_OPTIONS = [
 	{ id: "top", label: "Top bài viết", icon: Flame },
@@ -257,10 +298,12 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 const CommunityPage: React.FC = () => {
 	const outletContext = useOutletContext<MainLayoutOutletContext | undefined>();
 	const user = outletContext?.user ?? null;
-	const [activeChannel, setActiveChannel] = useState("all");
+	const { channelSlug } = useParams<{ channelSlug: string }>();
+	const pageMode: "home" | "channel" = channelSlug ? "channel" : "home";
+	const activeChannel = channelSlug ?? "all";
 	const [activeSort, setActiveSort] = useState("top");
-	const [pageMode, setPageMode] = useState<"home" | "channel">("home");
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+	const [channels, setChannels] = useState<ChannelItem[]>(buildFallbackChannels());
 	const activePrimaryNav = pageMode === "home" ? "home" : "";
 	const userDisplayName = user?.name || user?.email || "CKC member";
 	const userAvatar =
@@ -269,7 +312,10 @@ const CommunityPage: React.FC = () => {
 			userDisplayName,
 		)}&background=A3E635&color=111111&bold=true`;
 
-	const currentChannel = CHANNELS.find((channel) => channel.id === activeChannel);
+	const currentChannel =
+		activeChannel === "all"
+			? channels[0]
+			: channels.find((channel) => channel.slug === activeChannel);
 
 	useEffect(() => {
 		if (!isSidebarOpen) return;
@@ -285,23 +331,50 @@ const CommunityPage: React.FC = () => {
 		};
 	}, [isSidebarOpen]);
 
+	useEffect(() => {
+		let isMounted = true;
+
+		const loadChannels = async () => {
+			try {
+				const response = await communityService.getChannels({
+					per_page: 100,
+					sort: "posts_count",
+					order: "desc",
+				});
+
+				if (!isMounted) return;
+
+				const mappedChannels = response.data.map((channel: CommunityChannel) => ({
+					id: channel.slug,
+					label: channel.name,
+					count: channel.posts_count,
+					description: channel.description,
+					image: channel.image,
+					slug: channel.slug,
+				}));
+
+				setChannels(buildChannelItems(mappedChannels));
+			} catch {
+				if (!isMounted) return;
+				setChannels(buildFallbackChannels());
+			}
+		};
+
+		void loadChannels();
+
+		return () => {
+			isMounted = false;
+		};
+	}, []);
+
+	// Reset sort khi đổi channel qua URL
+	useEffect(() => {
+		setActiveSort("top");
+	}, [channelSlug]);
+
 	const filteredPosts = MOCK_POSTS.filter((post) => {
 		return pageMode === "home" || activeChannel === "all" || post.channel === activeChannel;
 	});
-
-	const handlePrimaryNavClick = () => {
-		setPageMode("home");
-		setActiveChannel("all");
-		setActiveSort("top");
-		setIsSidebarOpen(false);
-	};
-
-	const handleChannelClick = (channelId: string) => {
-		setPageMode("channel");
-		setActiveChannel(channelId);
-		setActiveSort("top");
-		setIsSidebarOpen(false);
-	};
 
 	const renderSidebarContent = (isMobile = false) => (
 		<div className={isMobile ? "px-4 py-4" : "px-3 py-4"}>
@@ -310,25 +383,26 @@ const CommunityPage: React.FC = () => {
 					const Icon = item.icon;
 					const isActive = activePrimaryNav === item.id;
 					return (
-						<button
+						<Link
 							key={item.id}
-							onClick={handlePrimaryNavClick}
+							to='/cong-dong'
+							onClick={() => setIsSidebarOpen(false)}
 							className={`group relative flex w-full items-center text-left font-bold ${
 								isMobile
 									? "gap-3 rounded-xl px-3 py-3 text-base"
 									: "gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px]"
-								} ${
-									isActive
-										? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
-										: "border-2 border-transparent bg-white text-gray-700 hover:bg-gray-100"
-								}`}>
+							} ${
+								isActive
+									? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
+									: "border-2 border-transparent bg-white text-gray-700 hover:bg-gray-100"
+							}`}>
 							<Icon
 								className={`transition-colors duration-200 ${
 									isMobile ? "h-5 w-5" : "h-4 w-4"
 								} ${isActive ? "text-[var(--color-text-primary)]" : "text-gray-700"}`}
 							/>
 							{item.label}
-						</button>
+						</Link>
 					);
 				})}
 			</nav>
@@ -340,25 +414,28 @@ const CommunityPage: React.FC = () => {
 				Kênh
 			</div>
 			<nav className={isMobile ? "mt-3 space-y-2" : "mt-3 space-y-2"}>
-				{CHANNELS.map((channel) => {
-					const isActive = pageMode === "channel" && activeChannel === channel.id;
+				{channels.map((channel) => {
+					const channelPath =
+						channel.slug === "all" ? "/cong-dong" : `/cong-dong/${channel.slug}`;
+					const isActive =
+						channel.slug === "all"
+							? pageMode === "home"
+							: pageMode === "channel" && activeChannel === channel.slug;
 					return (
-						<button
+						<Link
 							key={channel.id}
-							onClick={() => handleChannelClick(channel.id)}
+							to={channelPath}
+							onClick={() => setIsSidebarOpen(false)}
 							className={`group relative flex w-full items-center justify-between text-left font-bold ${
 								isMobile
 									? "rounded-xl px-3 py-2.5 text-base"
 									: "rounded-lg px-2.5 py-2 text-[13px]"
-								} ${
-									isActive
-										? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
-										: "border-2 border-transparent bg-white text-black hover:bg-gray-100"
-								}`}>
-							<span
-								className={
-									isMobile ? "flex items-center gap-3" : "flex items-center gap-3"
-								}>
+							} ${
+								isActive
+									? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
+									: "border-2 border-transparent bg-white text-black hover:bg-gray-100"
+							}`}>
+							<span className='flex items-center gap-3'>
 								<Hash
 									className={`transition-colors duration-200 ${
 										isMobile ? "h-5 w-5" : "h-3.5 w-3.5"
@@ -378,7 +455,7 @@ const CommunityPage: React.FC = () => {
 								}`}>
 								{channel.count}
 							</span>
-						</button>
+						</Link>
 					);
 				})}
 			</nav>
@@ -404,20 +481,30 @@ const CommunityPage: React.FC = () => {
 								aria-label='Mở menu cộng đồng'>
 								<List className='h-5 w-5' />
 							</button>
-							<img
-								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
-								alt='CKC IT CLUB'
-								className='h-6 w-6 shrink-0 rounded-full border-2 border-black object-cover'
-							/>
+							{pageMode === "channel" && currentChannel?.image ? (
+								<img
+									src={currentChannel.image}
+									alt={currentChannel.label}
+									className='h-6 w-6 shrink-0 rounded-full border-2 border-black object-cover'
+								/>
+							) : (
+								<img
+									src={COMMUNITY_LOGO}
+									alt='CKC IT CLUB'
+									className='h-6 w-6 shrink-0 rounded-full border-2 border-black object-cover'
+								/>
+							)}
 							<h1 className='min-w-0 truncate font-heading text-sm font-bold text-black'>
-								Cộng đồng CKC IT CLUB
+								{pageMode === "channel"
+									? `#${currentChannel?.label ?? activeChannel}`
+									: "Cộng đồng CKC IT CLUB"}
 							</h1>
 						</div>
 						{/* Community header – home mode */}
 						{pageMode === "home" && (
 							<div className='my-4 hidden items-center gap-4 pb-5 lg:flex'>
 								<img
-									src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
+									src={COMMUNITY_LOGO}
 									alt='CKC IT CLUB'
 									className='h-18 w-18 shrink-0 rounded-full border-2 border-black object-cover'
 								/>
@@ -434,21 +521,28 @@ const CommunityPage: React.FC = () => {
 
 						{/* Channel header */}
 						{pageMode === "channel" && (
-							<section className='neo-card neo-card-static mb-5 bg-[var(--color-pastel-green)] p-4'>
-								<div className='flex items-center gap-3'>
-									<div className='flex h-11 w-11 items-center justify-center rounded-[10px] border-2 border-black bg-white shadow-[3px_3px_0_#111]'>
-										<Hash className='h-5 w-5 text-black' />
+							<div className='my-4 hidden items-center gap-4 pb-5 lg:flex'>
+								{currentChannel?.image ? (
+									<img
+										src={currentChannel.image}
+										alt={currentChannel.label}
+										className='h-18 w-18 shrink-0 rounded-full border-2 border-black object-cover bg-white'
+									/>
+								) : (
+									<div className='flex h-18 w-18 shrink-0 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-green)]'>
+										<Hash className='h-8 w-8 text-black' />
 									</div>
-									<div>
-										<h1 className='font-heading text-xl font-extrabold text-black'>
-											#{currentChannel?.label ?? "Kênh"}
-										</h1>
-										<p className='text-sm font-semibold text-gray-700'>
-											Bài viết và thảo luận trong kênh này.
-										</p>
-									</div>
+								)}
+								<div>
+									<h1 className='font-heading text-xl font-extrabold leading-tight text-black md:text-2xl lg:text-3xl'>
+										{currentChannel?.label ?? activeChannel}
+									</h1>
+									<p className='mt-2 text-sm font-medium text-gray-500'>
+										{currentChannel?.description ??
+											"Bài viết và thảo luận trong kênh này."}
+									</p>
 								</div>
-							</section>
+							</div>
 						)}
 
 						{user && (
@@ -461,12 +555,12 @@ const CommunityPage: React.FC = () => {
 									/>
 								</Link>
 								<Link
-									to='/community/create'
+									to='/cong-dong/dang-bai'
 									className='flex h-11 min-w-0 flex-1 items-center rounded-[10px] border-2 border-black bg-gray-50 px-4 text-left font-body text-sm font-medium text-gray-500 transition cursor-pointer'>
 									Chia sẻ điều gì đó...
 								</Link>
 								<Link
-									to='/community/create'
+									to='/cong-dong/dang-bai'
 									className='inline-flex h-11 shrink-0 select-none items-center justify-center gap-2 rounded-[10px] border-2 border-black bg-[var(--color-primary)] px-4 py-0 font-heading text-sm font-extrabold text-dark shadow-[3px_3px_0_#000000] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 									<PenSquare strokeWidth={3} className='h-4 w-4 text-dark' />
 									Đăng bài

@@ -129,7 +129,10 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 
 	const isNavItemActive = (href: string) => {
 		if (href === "/cong-dong") {
-			return location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
+			return (
+				location.pathname.startsWith("/cong-dong") ||
+				location.pathname.startsWith("/community")
+			);
 		}
 
 		return href.startsWith("/") ? location.pathname === href : location.hash === href;
@@ -144,7 +147,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 			isActive
 				? isMobile
 					? "bg-primary-100 text-[var(--color-text-primary)]" // mobile: highlight background như sidebar
-					: "text-[var(--color-text-primary)]"                  // desktop: chỉ đổi màu chữ + underline indicator
+					: "text-[var(--color-text-primary)]" // desktop: chỉ đổi màu chữ + underline indicator
 				: "text-gray-700"
 		}`;
 
@@ -185,9 +188,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 		return (
 			<div
 				className={`${
-					isMobile
-						? "w-56 max-w-full"
-						: "absolute top-[calc(100%+0.625rem)] right-0 w-56"
+					isMobile ? "w-56 max-w-full" : "absolute top-[calc(100%+0.625rem)] right-0 w-56"
 				} space-y-1 rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[var(--neo-shadow)]`}
 				role='menu'
 				aria-label='User menu'>
@@ -197,7 +198,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 					className={profileMenuItemClass}
 					role='menuitem'>
 					<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
-					<span>Profile</span>
+					<span>Trang cá nhân</span>
 				</button>
 				<button
 					type='button'
@@ -205,7 +206,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 					className={profileMenuItemClass}
 					role='menuitem'>
 					<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
-					<span>Bookmarks</span>
+					<span>Đã lưu</span>
 				</button>
 				<button
 					type='button'
@@ -213,15 +214,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 					className={profileMenuItemClass}
 					role='menuitem'>
 					<SlidersHorizontal className='h-5 w-5 shrink-0 text-gray-600' />
-					<span>Account</span>
-				</button>
-				<button
-					type='button'
-					onClick={() => handleSwitchTheme(isMobile)}
-					className={profileMenuItemClass}
-					role='menuitem'>
-					<Sun className='h-5 w-5 shrink-0 text-gray-600' />
-					<span>Switch theme</span>
+					<span>Cài đặt</span>
 				</button>
 				<button
 					type='button'
@@ -230,7 +223,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 					className={profileMenuDangerItemClass}
 					role='menuitem'>
 					<LogOut className='h-5 w-5 shrink-0 text-gray-600' />
-					<span>Sign Out</span>
+					<span>Đăng xuất</span>
 				</button>
 			</div>
 		);
@@ -339,8 +332,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 				</div>
 
 				{isMobileOpen && (
-					<div className={`border-t-2 border-black bg-white ${navbarPaddingX} pb-6 xl:hidden`}>
-
+					<div
+						className={`border-t-2 border-black bg-white ${navbarPaddingX} pb-6 xl:hidden`}>
 						{/* ── View: Main navigation ── */}
 						{mobileMenuView === "nav" && (
 							<>
@@ -448,28 +441,21 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 										onClick={closeMobileMenu}
 										className={profileMenuItemClass}>
 										<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
-										<span>Profile</span>
+										<span>Trang cá nhân</span>
 									</button>
 									<button
 										type='button'
 										onClick={closeMobileMenu}
 										className={profileMenuItemClass}>
 										<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
-										<span>Bookmarks</span>
+										<span>Đã lưu</span>
 									</button>
 									<button
 										type='button'
 										onClick={closeMobileMenu}
 										className={profileMenuItemClass}>
 										<SlidersHorizontal className='h-5 w-5 shrink-0 text-gray-600' />
-										<span>Account</span>
-									</button>
-									<button
-										type='button'
-										onClick={() => handleSwitchTheme(true)}
-										className={profileMenuItemClass}>
-										<Sun className='h-5 w-5 shrink-0 text-gray-600' />
-										<span>Switch theme</span>
+										<span>Cài đặt</span>
 									</button>
 									<button
 										type='button'
@@ -480,7 +466,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 										disabled={loading}
 										className={profileMenuDangerItemClass}>
 										<LogOut className='h-5 w-5 shrink-0 text-gray-600' />
-										<span>Sign Out</span>
+										<span>Đăng xuất</span>
 									</button>
 								</nav>
 							</>

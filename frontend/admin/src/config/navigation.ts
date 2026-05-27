@@ -135,7 +135,7 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/questions",
 				permission: "application_questions.view",
 			},
-{
+			{
 				title: "Yêu cầu tham gia",
 				url: "/requests",
 				permission: "applications.view",
@@ -163,7 +163,7 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/community/blogs",
 				permission: "community.blogs.view",
 			},
-{
+			{
 				title: "Bình luận",
 				url: "/community/comments",
 				permission: "community.comments.view",
