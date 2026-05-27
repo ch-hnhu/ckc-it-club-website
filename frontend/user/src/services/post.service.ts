@@ -35,4 +35,14 @@ export const postService = {
 			`/community/posts/${postId}/reactions`,
 			{ type },
 		),
+
+	/**
+	 * Create a top-level comment or a reply on a post (requires auth).
+	 * Pass parentId to reply to an existing comment.
+	 */
+	createComment: (postId: number, content: string, parentId?: number) =>
+		api.post<ApiResponse<PostComment>>(
+			`/community/posts/${postId}/comments`,
+			{ content, ...(parentId !== undefined ? { parent_id: parentId } : {}) },
+		),
 };

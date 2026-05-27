@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
 	ArrowLeft,
 	Bookmark,
@@ -92,12 +93,59 @@ const CommentSkeleton: React.FC = () => (
 interface CommentItemProps {
 	comment: PostComment;
 	depth?: number;
+	postId: number;
+	user: AuthUser | null;
+	onReplyAdded?: (parentId: number, reply: PostComment) => void;
 }
 
-const CommentItem: React.FC<CommentItemProps> = ({ comment, depth = 0 }) => {
-	const [liked, setLiked]   = useState(false);
+const CommentItem: React.FC<CommentItemProps> = ({
+	comment,
+	depth = 0,
+	postId,
+	user,
+	onReplyAdded,
+}) => {
+	const navigate = useNavigate();
+
+	const [liked, setLiked]     = useState(false);
 	const [likeCount, setLikeCount] = useState(comment.reactions_count);
 	const [showReplies, setShowReplies] = useState(true);
+
+	// Reply form state
+	const [showReplyForm, setShowReplyForm] = useState(false);
+	const [replyText, setReplyText]         = useState("");
+	const [submittingReply, setSubmittingReply] = useState(false);
+	const replyInputRef = useRef<HTMLTextAreaElement>(null);
+
+	// Focus reply input when form appears
+	useEffect(() => {
+		if (showReplyForm) {
+			const t = setTimeout(() => replyInputRef.current?.focus(), 30);
+			return () => clearTimeout(t);
+		}
+	}, [showReplyForm]);
+
+	const handleReplyClick = () => {
+		if (!user) { navigate("/login"); return; }
+		setShowReplyForm((p) => !p);
+	};
+
+	const handleSubmitReply = async () => {
+		if (!replyText.trim() || submittingReply) return;
+		setSubmittingReply(true);
+		try {
+			const res = await postService.createComment(postId, replyText.trim(), comment.id);
+			onReplyAdded?.(comment.id, { ...res.data, replies: [] });
+			setReplyText("");
+			setShowReplyForm(false);
+			setShowReplies(true); // make sure replies are visible
+			toast.success("Đã trả lời bình luận!");
+		} catch {
+			toast.error("Không thể gửi trả lời. Vui lòng thử lại.");
+		} finally {
+			setSubmittingReply(false);
+		}
+	};
 
 	const u = comment.user;
 	const avatar = buildAvatar(u?.full_name, u?.avatar);
@@ -105,6 +153,12 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, depth = 0 }) => {
 	const handle = u ? getHandle(u.username, u.email) : "@ckc";
 	const time = comment.created_at ? formatRelativeTime(comment.created_at) : "";
 	const hasReplies = comment.replies && comment.replies.length > 0;
+
+	// current user avatar for reply form
+	const currentUserDisplayName = user?.name || user?.email || "CKC member";
+	const currentUserAvatar =
+		user?.picture ||
+		`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserDisplayName)}&background=A3E635&color=111111&bold=true`;
 
 	return (
 		<div className={depth > 0 ? "ml-11 mt-3" : ""}>
@@ -145,11 +199,57 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, depth = 0 }) => {
 							{likeCount > 0 && <span>{likeCount}</span>}
 						</button>
 						{depth === 0 && (
-							<button className='text-xs font-bold text-gray-500 transition hover:text-black'>
+							<button
+								onClick={handleReplyClick}
+								className={`text-xs font-bold transition ${
+									showReplyForm
+										? "text-black"
+										: "text-gray-500 hover:text-black"
+								}`}>
 								Trả lời
 							</button>
 						)}
 					</div>
+
+					{/* Inline reply form */}
+					{depth === 0 && showReplyForm && (
+						<div className='mt-3 flex gap-2'>
+							<img
+								src={currentUserAvatar}
+								alt={currentUserDisplayName}
+								className='h-8 w-8 shrink-0 rounded-full border-2 border-black object-cover'
+							/>
+							<div className='flex min-w-0 flex-1 flex-col gap-2'>
+								<textarea
+									ref={replyInputRef}
+									rows={2}
+									value={replyText}
+									onChange={(e) => setReplyText(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" && (e.ctrlKey || e.metaKey))
+											handleSubmitReply();
+										if (e.key === "Escape") setShowReplyForm(false);
+									}}
+									placeholder={`Trả lời ${name}...`}
+									className='w-full resize-none rounded-[10px] border-2 border-black bg-white px-3 py-2 text-sm font-medium leading-6 text-black outline-none transition placeholder:text-gray-400 focus:shadow-[0_0_0_3px_#A3E635]'
+								/>
+								<div className='flex justify-end gap-2'>
+									<button
+										onClick={() => { setShowReplyForm(false); setReplyText(""); }}
+										className='inline-flex h-8 items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 text-xs font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+										Hủy
+									</button>
+									<button
+										onClick={handleSubmitReply}
+										disabled={!replyText.trim() || submittingReply}
+										className='inline-flex h-8 items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-primary)] px-3 text-xs font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-50'>
+										<Send className='h-3.5 w-3.5' />
+										{submittingReply ? "Đang gửi..." : "Gửi"}
+									</button>
+								</div>
+							</div>
+						</div>
+					)}
 
 					{/* Toggle replies */}
 					{depth === 0 && hasReplies && (
@@ -169,7 +269,13 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, depth = 0 }) => {
 			{depth === 0 && hasReplies && showReplies && (
 				<div className='mt-1 space-y-3'>
 					{comment.replies.map((reply) => (
-						<CommentItem key={reply.id} comment={reply} depth={1} />
+						<CommentItem
+							key={reply.id}
+							comment={reply}
+							depth={1}
+							postId={postId}
+							user={user}
+						/>
 					))}
 				</div>
 			)}
@@ -206,6 +312,10 @@ const CommunityPostDetailPage: React.FC = () => {
 
 	const [reactionSummary, setReactionSummary] = useState<ReactionSummary>({});
 	const [saved, setSaved] = useState(false);
+
+	// Comment form state
+	const [commentText, setCommentText]           = useState("");
+	const [submittingComment, setSubmittingComment] = useState(false);
 
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -278,6 +388,44 @@ const CommunityPostDetailPage: React.FC = () => {
 	const channelName = post?.channel?.name ?? "Chung";
 	const channelSlug = post?.channel?.slug ?? "general";
 	const createdAt = post?.created_at ? formatRelativeTime(post.created_at) : "";
+
+	// -------------------------------------------------------------------------
+	// Comment handlers
+	// -------------------------------------------------------------------------
+
+	/** Submit a new top-level comment */
+	const handleSubmitComment = async () => {
+		if (!commentText.trim() || submittingComment) return;
+		setSubmittingComment(true);
+		try {
+			const res = await postService.createComment(Number(id), commentText.trim());
+			const newComment: PostComment = { ...res.data, replies: [] };
+			setComments((prev) => [...prev, newComment]);
+			setCommentText("");
+			setPost((prev) =>
+				prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev,
+			);
+			toast.success("Đã đăng bình luận!");
+		} catch {
+			toast.error("Không thể gửi bình luận. Vui lòng thử lại.");
+		} finally {
+			setSubmittingComment(false);
+		}
+	};
+
+	/** Append a new reply to its parent comment in state */
+	const handleReplyAdded = (parentId: number, reply: PostComment) => {
+		setComments((prev) =>
+			prev.map((c) =>
+				c.id === parentId
+					? { ...c, replies: [...(c.replies ?? []), reply] }
+					: c,
+			),
+		);
+		setPost((prev) =>
+			prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev,
+		);
+	};
 
 	// -------------------------------------------------------------------------
 	// Sidebar
@@ -583,13 +731,22 @@ const CommunityPostDetailPage: React.FC = () => {
 											<textarea
 												ref={commentInputRef}
 												rows={3}
-												placeholder='Viết bình luận của bạn...'
+												value={commentText}
+												onChange={(e) => setCommentText(e.target.value)}
+												onKeyDown={(e) => {
+													if (e.key === "Enter" && (e.ctrlKey || e.metaKey))
+														handleSubmitComment();
+												}}
+												placeholder='Viết bình luận của bạn... (Ctrl+Enter để gửi)'
 												className='w-full resize-none rounded-[10px] border-2 border-black bg-white px-4 py-3 text-sm font-medium leading-6 text-black outline-none transition placeholder:text-gray-400 focus:shadow-[0_0_0_3px_#A3E635]'
 											/>
 											<div className='flex justify-end'>
-												<button className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-4 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+												<button
+													onClick={handleSubmitComment}
+													disabled={!commentText.trim() || submittingComment}
+													className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-4 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-50 disabled:cursor-not-allowed'>
 													<Send className='h-4 w-4' />
-													Gửi
+													{submittingComment ? "Đang gửi..." : "Gửi"}
 												</button>
 											</div>
 										</div>
@@ -627,7 +784,13 @@ const CommunityPostDetailPage: React.FC = () => {
 										</div>
 									) : (
 										comments.map((comment) => (
-											<CommentItem key={comment.id} comment={comment} />
+											<CommentItem
+												key={comment.id}
+												comment={comment}
+												postId={Number(id)}
+												user={user}
+												onReplyAdded={handleReplyAdded}
+											/>
 										))
 									)}
 								</div>

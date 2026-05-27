@@ -57,6 +57,7 @@ Route::prefix('v1')->group(function () {
         // Authenticated actions
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/posts/{id}/reactions',     [UserPostController::class, 'react']);
+            Route::post('/posts/{id}/comments',      [UserPostController::class, 'comment']);
         });
     });
 

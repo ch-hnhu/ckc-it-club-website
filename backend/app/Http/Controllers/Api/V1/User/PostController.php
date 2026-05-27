@@ -159,6 +159,40 @@ class PostController extends BaseApiController
         ], ApiMessage::UPDATED);
     }
 
+    /**
+     * Create a new comment (or reply) on a post (auth required).
+     */
+    public function comment(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'content'   => ['required', 'string', 'min:1', 'max:2000'],
+            'parent_id' => ['nullable', 'integer', 'exists:comments,id'],
+        ]);
+
+        Post::where('status', 'published')->findOrFail($id);
+
+        $parentId = $request->input('parent_id');
+        $depth    = 0;
+
+        if ($parentId) {
+            $parent = Comment::findOrFail($parentId);
+            abort_if($parent->post_id !== $id, 422, 'Parent comment not found on this post');
+            $depth = 1;
+        }
+
+        $comment = Comment::create([
+            'post_id'   => $id,
+            'user_id'   => $request->user()->id,
+            'content'   => $request->input('content'),
+            'parent_id' => $parentId,
+            'depth'     => $depth,
+        ]);
+
+        $comment->load('user:id,full_name,username,email,avatar');
+
+        return $this->createdResponse($this->transformComment($comment));
+    }
+
     public function comments(Request $request, int $id): JsonResponse
     {
         // Ensure post exists and is published
