@@ -1,5 +1,6 @@
 import MainLayout from "@/layouts/MainLayout";
 import ContactPage from "@/pages/ContactPage";
+import CommunityCreatePage from "@/pages/CommunityCreatePage";
 import CommunityPage from "@/pages/CommunityPage";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
 			{
 				path: "cong-dong",
 				element: <CommunityPage />,
+			},
+			{
+				path: "community/create",
+				element: <CommunityCreatePage />,
 			},
 		],
 	},

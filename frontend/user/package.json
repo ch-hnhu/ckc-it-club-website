@@ -11,6 +11,7 @@
 	},
 	"dependencies": {
 		"@reduxjs/toolkit": "^2.11.2",
+		"@stackoverflow/stacks-editor": "^0.15.3",
 		"@tailwindcss/vite": "^4.1.18",
 		"axios": "^1.13.5",
 		"class-variance-authority": "^0.7.1",
@@ -41,4 +42,3 @@
 		"vite": "^7.3.1"
 	}
 }
-

@@ -43,7 +43,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const [loading, setLoading] = useState(false);
 	const profileMenuRef = useRef<HTMLDivElement>(null);
 	const location = useLocation();
-	const isCommunityPage = location.pathname.startsWith("/cong-dong");
+	const isCommunityPage =
+		location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
 	const navbarContainerClass = isCommunityPage ? "mx-0 max-w-none" : "";
 	const navbarPaddingX = isCommunityPage ? "px-4 md:px-5 lg:px-6" : "px-6";
 	const userDisplayName = user?.name || user?.email || "CKC member";
@@ -126,8 +127,13 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 		}
 	};
 
-	const isNavItemActive = (href: string) =>
-		href.startsWith("/") ? location.pathname === href : location.hash === href;
+	const isNavItemActive = (href: string) => {
+		if (href === "/cong-dong") {
+			return location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
+		}
+
+		return href.startsWith("/") ? location.pathname === href : location.hash === href;
+	};
 
 	const getNavItemClass = (isActive: boolean, isMobile = false) =>
 		`group relative ${

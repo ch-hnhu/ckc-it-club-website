@@ -48,12 +48,17 @@
 - navbar uses a full-width container, reduced horizontal padding, and a two-group `justify-between` layout for nav/profile alignment
 - community content fills the available desktop width up to a 76rem cap with reduced feed-side padding, and its right rail uses a custom `70rem` breakpoint so it remains visible below Tailwind `xl`
 - on mobile/tablet below `lg`, the community page shows a sticky community sub-header and turns the left sidebar into an overlay drawer
+- `/community/create` is also treated as a community layout exception and shows a standalone create-post page instead of a modal.
 
 ## Route Surface
 - `/`
 - landing page composed from multiple section components
 - `/lien-he`
 - contact page
+- `/cong-dong`
+- dense community page with sidebar, feed, and right rail
+- `/community/create`
+- standalone community create-post page linked from the composer entry and post button
 - `/login`
 - credential login page with Google/GitHub OAuth popup buttons.
 - `/register`
@@ -193,6 +198,7 @@ npm run dev
 - `src/routes/index.tsx`
 - `src/layouts/MainLayout.tsx`
 - `src/components/partials/Navbar.tsx`
+- `src/components/ui/StacksEditorWrapper.tsx`
 - `src/services/auth.service.ts`
 - `src/config/axios.config.ts`
 - `src/pages/LandingPage.tsx`
@@ -219,4 +225,6 @@ npm run dev
 - Public branding assets partly depend on external Supabase-hosted images.
 
 ## Change Log
+- `2026-05-27`: Community create Stacks editor table toolbar now shows a single table control: insert table outside tables, and table-format dropdown when the selection is inside a table.
+- `2026-05-27`: `StacksEditorWrapper` now syncs the Heading toolbar state with the active rich-text selection and shows `H1`/`H2`/`H3` only when the selected text is inside a heading.
 - `2026-04-08`: Replaced scaffold with full user frontend audit. Added landing-page structure, neo-brutalist design assumptions, auth/session model, service conventions, env notes, and known gap inventory.
