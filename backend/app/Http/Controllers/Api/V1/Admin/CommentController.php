@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
+use App\Events\CommentVisibilityChanged;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Comment;
 use Illuminate\Http\JsonResponse;
@@ -63,6 +64,13 @@ class CommentController extends BaseApiController
         $request->validate(['is_hidden' => 'required|boolean']);
 
         $comment->update(['is_hidden' => $request->boolean('is_hidden')]);
+
+        // Broadcast to all clients viewing this post
+        broadcast(new CommentVisibilityChanged(
+            commentId: $comment->id,
+            postId:    $comment->post_id,
+            isHidden:  $comment->is_hidden,
+        ))->toOthers();
 
         return $this->successResponse(true, ['is_hidden' => $comment->is_hidden], 'Cập nhật trạng thái bình luận thành công.');
     }

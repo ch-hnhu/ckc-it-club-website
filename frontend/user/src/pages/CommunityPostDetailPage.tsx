@@ -24,6 +24,7 @@ import { channelService } from "@/services/channel.service";
 import type { PostDetail, PostComment, ReactionSummary, ReactionToggleResponse } from "@/types/post.types";
 import type { Channel } from "@/types/channel.types";
 import ReactionButton, { REACTIONS } from "@/components/community/ReactionButton";
+import echo from "@/config/echo";
 
 type MainLayoutOutletContext = { user: AuthUser | null };
 
@@ -362,6 +363,45 @@ const CommunityPostDetailPage: React.FC = () => {
 			.then((res) => setComments(res.data))
 			.catch(() => setComments([]))
 			.finally(() => setCommentsLoading(false));
+	}, [id]);
+
+	// -------------------------------------------------------------------------
+	// Real-time: subscribe to comment visibility changes via Reverb
+	// -------------------------------------------------------------------------
+	useEffect(() => {
+		if (!id) return;
+
+		const channel = echo.channel(`post.${id}`);
+
+		channel.listen(
+			".comment.visibility.changed",
+			(data: { comment_id: number; post_id: number; is_hidden: boolean }) => {
+				if (data.is_hidden) {
+					// Remove hidden comment (and any hidden reply) immediately
+					setComments((prev) =>
+						prev
+							.filter((c) => c.id !== data.comment_id)
+							.map((c) => ({
+								...c,
+								replies: (c.replies ?? []).filter(
+									(r) => r.id !== data.comment_id,
+								),
+							})),
+					);
+				} else {
+					// Comment was un-hidden → refetch to restore it
+					postService
+						.getPostComments(Number(id))
+						.then((res) => setComments(res.data))
+						.catch(() => {});
+				}
+			},
+		);
+
+		return () => {
+			channel.stopListening(".comment.visibility.changed");
+			echo.leaveChannel(`post.${id}`);
+		};
 	}, [id]);
 
 	// Body lock when mobile sidebar open
