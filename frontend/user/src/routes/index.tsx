@@ -2,6 +2,7 @@ import MainLayout from "@/layouts/MainLayout";
 import ContactPage from "@/pages/ContactPage";
 import CommunityCreatePage from "@/pages/CommunityCreatePage";
 import CommunityPage from "@/pages/CommunityPage";
+import CommunityPostDetailPage from "@/pages/CommunityPostDetailPage";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
 			{
 				path: "cong-dong",
 				element: <CommunityPage />,
+			},
+			{
+				path: "cong-dong/bai-viet/:id",
+				element: <CommunityPostDetailPage />,
 			},
 			{
 				path: "community/create",

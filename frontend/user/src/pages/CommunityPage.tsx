@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
 	Bookmark,
 	Code2,
 	Crown,
 	Flame,
 	Hash,
-	Heart,
 	Home,
 	List,
 	MessageCircle,
 	Monitor,
 	PenSquare,
+	RefreshCcw,
 	Search,
 	Share2,
 	Sparkles,
@@ -20,6 +20,12 @@ import {
 } from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
+import { postService } from "@/services/post.service";
+import { channelService } from "@/services/channel.service";
+import type { Post } from "@/types/post.types";
+import type { Channel } from "@/types/channel.types";
+import type { PaginatedResponse } from "@/types/api.types";
+import ReactionButton from "@/components/community/ReactionButton";
 
 type MainLayoutOutletContext = {
 	user: AuthUser | null;
@@ -33,16 +39,6 @@ const PRIMARY_NAV = [
 	{ id: "code", label: "#30DaysOfCode", icon: Code2 },
 ];
 
-const CHANNELS = [
-	{ id: "general", label: "Chung", count: 128 },
-	{ id: "discussion", label: "Thảo luận", count: 42 },
-	{ id: "qa", label: "Hỏi đáp", count: 35 },
-	{ id: "project", label: "Dự án", count: 18 },
-	{ id: "resources", label: "Tài nguyên", count: 23 },
-	{ id: "events", label: "Sự kiện", count: 10 },
-	{ id: "career", label: "Cơ hội nghề nghiệp", count: 12 },
-	{ id: "bugs", label: "Báo lỗi", count: 7 },
-];
 
 const SORT_OPTIONS = [
 	{ id: "top", label: "Top bài viết", icon: Flame },
@@ -93,94 +89,70 @@ const TOP_CONTRIBUTORS = [
 	},
 ];
 
-const MOCK_POSTS = [
-	{
-		id: 1,
-		channel: "project",
-		channelLabel: "Dự án",
-		author: {
-			name: "Trần Minh Khôi",
-			handle: "@khoidev",
-			avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=khoi",
-			role: "Ban kỹ thuật",
-		},
-		title: "Ra mắt chatbot AI hỗ trợ sinh viên CKC",
-		excerpt:
-			"Nhóm mình vừa hoàn thành bản beta chatbot AI tích hợp vào website câu lạc bộ. Bot hỗ trợ hỏi đáp lịch học, tài liệu nhập môn và gợi ý lộ trình học theo từng ngành.",
-		image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80",
-		tags: ["AI", "python", "chatbot"],
-		reactions: 48,
-		comments: 23,
-		createdAt: "5 giờ",
-		pinned: true,
-	},
-	{
-		id: 2,
-		channel: "qa",
-		channelLabel: "Hỏi đáp",
-		author: {
-			name: "Nguyễn Hoài Nam",
-			handle: "@namnguyen",
-			avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=nam",
-			role: "Thành viên",
-		},
-		title: "Deploy Laravel lên VPS Ubuntu bị lỗi 502",
-		excerpt:
-			"Mình đã cài nginx và PHP 8.2 nhưng project vẫn trả về 502 Bad Gateway. Mọi người có checklist nào để kiểm tra service, socket PHP-FPM và permission không?",
-		tags: ["laravel", "devops", "nginx"],
-		reactions: 12,
-		comments: 8,
-		createdAt: "20 giờ",
-		pinned: false,
-	},
-	{
-		id: 3,
-		channel: "resources",
-		channelLabel: "Tài nguyên",
-		author: {
-			name: "Lê Thị Phương",
-			handle: "@phuonglearns",
-			avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=phuong",
-			role: "Ban nội dung",
-		},
-		title: "Roadmap học lập trình từ cơ bản đến nâng cao",
-		excerpt:
-			"Mình tổng hợp lại các nguồn học miễn phí cho Frontend, Backend, Mobile, Data Science và DevOps. Mỗi phần có bài tập nhỏ để tự kiểm tra sau khi học.",
-		image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
-		tags: ["roadmap", "beginners", "resources"],
-		reactions: 95,
-		comments: 31,
-		createdAt: "1 ngày",
-		pinned: false,
-	},
-];
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-interface PostCardProps {
-	post: (typeof MOCK_POSTS)[0];
+/** Format ISO timestamp to relative Vietnamese string */
+function formatRelativeTime(isoString: string): string {
+	const now = Date.now();
+	const then = new Date(isoString).getTime();
+	const diffMs = now - then;
+	const diffMins = Math.floor(diffMs / 60_000);
+	const diffHours = Math.floor(diffMs / 3_600_000);
+	const diffDays = Math.floor(diffMs / 86_400_000);
+
+	if (diffMins < 1) return "vừa xong";
+	if (diffMins < 60) return `${diffMins} phút`;
+	if (diffHours < 24) return `${diffHours} giờ`;
+	if (diffDays < 30) return `${diffDays} ngày`;
+	return new Date(isoString).toLocaleDateString("vi-VN");
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post }) => {
-	const [liked, setLiked] = useState(false);
-	const [saved, setSaved] = useState(false);
-	const [heartCount, setHeartCount] = useState(post.reactions);
+/** Derive a @handle from username or email */
+function getHandle(post: Post): string {
+	const u = post.user;
+	if (!u) return "@ckc";
+	if (u.username) return `@${u.username}`;
+	return `@${u.email.split("@")[0]}`;
+}
 
-	const handleLike = () => {
-		setLiked((current) => {
-			setHeartCount((count) => (current ? count - 1 : count + 1));
-			return !current;
-		});
-	};
+/** Get or generate avatar URL */
+function getAvatar(post: Post): string {
+	const u = post.user;
+	if (u?.avatar) return u.avatar;
+	const name = u?.full_name || u?.email || "CKC";
+	return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=A3E635&color=111111&bold=true`;
+}
+
+// ---------------------------------------------------------------------------
+// PostCard
+// ---------------------------------------------------------------------------
+
+interface PostCardProps {
+	post: Post;
+	user: AuthUser | null;
+}
+
+const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
+	const [saved, setSaved] = useState(false);
+
+	const channelLabel = post.channel?.name ?? "Chung";
+	const authorName   = post.user?.full_name ?? "Thành viên CKC";
+	const handle       = getHandle(post);
+	const avatar       = getAvatar(post);
+	const createdAt    = post.created_at ? formatRelativeTime(post.created_at) : "";
 
 	return (
 		<article className='border-2 border-black rounded-2xl bg-white p-4'>
 			<div className='mb-3 flex items-center gap-3'>
 				<div className='relative'>
 					<img
-						src={post.author.avatar}
-						alt={post.author.name}
+						src={avatar}
+						alt={authorName}
 						className='h-10 w-10 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
 					/>
-					{post.pinned && (
+					{post.is_pinned && (
 						<span className='absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)] text-black'>
 							<Zap className='h-3 w-3 fill-current' />
 						</span>
@@ -188,55 +160,59 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 				</div>
 				<div className='min-w-0'>
 					<div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
-						<p className='font-heading text-sm font-extrabold text-black'>
-							{post.author.name}
-						</p>
-						<span className='text-sm font-medium text-gray-500'>
-							{post.author.handle}
-						</span>
-						<span className='text-sm text-gray-400'>· {post.createdAt}</span>
+						<p className='font-heading text-sm font-extrabold text-black'>{authorName}</p>
+						<span className='text-sm font-medium text-gray-500'>{handle}</span>
+						<span className='text-sm text-gray-400'>· {createdAt}</span>
 					</div>
-					<p className='text-xs font-bold text-lime-700'># {post.channelLabel}</p>
+					<p className='text-xs font-bold text-lime-700'># {channelLabel}</p>
 				</div>
 			</div>
 
-			<h2 className='mb-3 font-heading text-lg font-extrabold leading-tight text-black md:text-xl'>
-				{post.title}
-			</h2>
-			<p className='max-w-3xl text-sm leading-6 text-gray-700'>{post.excerpt}</p>
+			<Link to={`/cong-dong/bai-viet/${post.id}`} className='block group'>
+				<h2 className='mb-3 font-heading text-lg font-extrabold leading-tight text-black group-hover:underline md:text-xl'>
+					{post.title}
+				</h2>
+				<p className='max-w-3xl text-sm leading-6 text-gray-700'>{post.excerpt}</p>
 
-			{post.image && (
-				<div className='mt-4 overflow-hidden rounded-[10px] border-2 border-black bg-[var(--color-pastel-yellow)]'>
-					<img
-						src={post.image}
-						alt={post.title}
-						className='aspect-[16/9] w-full object-cover'
-					/>
+				{post.featured_image && (
+					<div className='mt-4 overflow-hidden rounded-[10px] border-2 border-black bg-[var(--color-pastel-yellow)]'>
+						<img
+							src={post.featured_image}
+							alt={post.title}
+							className='aspect-[16/9] w-full object-cover'
+						/>
+					</div>
+				)}
+			</Link>
+
+			{post.tags.length > 0 && (
+				<div className='mt-4 flex flex-wrap gap-2'>
+					{post.tags.map((tag) => (
+						<button
+							key={tag}
+							className='rounded-lg border-2 border-black bg-[var(--color-pastel-blue)] px-2.5 py-1 text-xs font-bold text-black transition hover:bg-[var(--color-primary)]'>
+							#{tag}
+						</button>
+					))}
 				</div>
 			)}
 
-			<div className='mt-4 flex flex-wrap gap-2'>
-				{post.tags.map((tag) => (
-					<button
-						key={tag}
-						className='rounded-lg border-2 border-black bg-[var(--color-pastel-blue)] px-2.5 py-1 text-xs font-bold text-black transition hover:bg-[var(--color-primary)]'>
-						#{tag}
-					</button>
-				))}
-			</div>
-
 			<div className='mt-4 flex flex-wrap items-center gap-2 border-t-2 border-black pt-3 text-black'>
-				<button
-					onClick={handleLike}
-					className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-					style={{ background: liked ? "var(--color-pastel-pink)" : "#fff" }}>
-					<Heart className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`} />
-					{heartCount}
-				</button>
-				<button className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+				{/* Reaction button with emoji picker */}
+				<ReactionButton
+					postId={post.id}
+					initialCount={post.reactions_count}
+					initialReaction={post.my_reaction}
+					user={user}
+					size='sm'
+				/>
+
+				<Link
+					to={`/cong-dong/bai-viet/${post.id}#comments`}
+					className='inline-flex h-9 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 					<MessageCircle className='h-4 w-4' />
-					{post.comments}
-				</button>
+					{post.comments_count}
+				</Link>
 				<button
 					onClick={() => setSaved((current) => !current)}
 					className='inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
@@ -254,13 +230,50 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 	);
 };
 
+// ---------------------------------------------------------------------------
+// Skeleton loader
+// ---------------------------------------------------------------------------
+const PostSkeleton: React.FC = () => (
+	<div className='animate-pulse border-2 border-black rounded-2xl bg-white p-4 space-y-3'>
+		<div className='flex items-center gap-3'>
+			<div className='h-10 w-10 rounded-full bg-gray-200' />
+			<div className='flex-1 space-y-2'>
+				<div className='h-3 w-32 rounded bg-gray-200' />
+				<div className='h-3 w-20 rounded bg-gray-200' />
+			</div>
+		</div>
+		<div className='h-5 w-3/4 rounded bg-gray-200' />
+		<div className='space-y-1.5'>
+			<div className='h-3 w-full rounded bg-gray-200' />
+			<div className='h-3 w-5/6 rounded bg-gray-200' />
+		</div>
+		<div className='aspect-[16/9] w-full rounded-[10px] bg-gray-200' />
+	</div>
+);
+
+// ---------------------------------------------------------------------------
+// CommunityPage
+// ---------------------------------------------------------------------------
+
 const CommunityPage: React.FC = () => {
 	const outletContext = useOutletContext<MainLayoutOutletContext | undefined>();
 	const user = outletContext?.user ?? null;
+
 	const [activeChannel, setActiveChannel] = useState("all");
 	const [activeSort, setActiveSort] = useState("top");
 	const [pageMode, setPageMode] = useState<"home" | "channel">("home");
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+	// Channels state
+	const [channels, setChannels] = useState<Channel[]>([]);
+	const [channelsLoading, setChannelsLoading] = useState(true);
+
+	// Posts API state
+	const [posts, setPosts] = useState<Post[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const [paginationMeta, setPaginationMeta] = useState<PaginatedResponse<Post>["meta"] | null>(null);
+
 	const activePrimaryNav = pageMode === "home" ? "home" : "";
 	const userDisplayName = user?.name || user?.email || "CKC member";
 	const userAvatar =
@@ -269,25 +282,69 @@ const CommunityPage: React.FC = () => {
 			userDisplayName,
 		)}&background=A3E635&color=111111&bold=true`;
 
-	const currentChannel = CHANNELS.find((channel) => channel.id === activeChannel);
+	const currentChannel = channels.find((ch) => ch.slug === activeChannel);
+
+	// Map UI sort → API params
+	const sortParams =
+		activeSort === "top"
+			? { sort: "reactions_count" as const, order: "desc" as const }
+			: { sort: "created_at" as const, order: "desc" as const };
+
+	// Fetch channels once on mount
+	useEffect(() => {
+		setChannelsLoading(true);
+		channelService
+			.getChannels()
+			.then((res) => setChannels(res.data))
+			.catch(() => setChannels([]))
+			.finally(() => setChannelsLoading(false));
+	}, []);
+
+	// Fetch posts whenever filters change
+	const fetchPosts = useCallback(
+		async (page = 1) => {
+			setLoading(true);
+			setError(null);
+			try {
+				const channelParam =
+					pageMode === "channel" && activeChannel !== "all" ? activeChannel : undefined;
+				const response = await postService.getPosts({
+					page,
+					per_page: 15,
+					channel: channelParam,
+					...sortParams,
+				});
+				if (page === 1) {
+					setPosts(response.data);
+				} else {
+					setPosts((prev) => [...prev, ...response.data]);
+				}
+				setPaginationMeta(response.meta);
+			} catch {
+				setError("Không thể tải bài viết. Vui lòng thử lại.");
+			} finally {
+				setLoading(false);
+			}
+		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[activeChannel, activeSort, pageMode],
+	);
+
+	useEffect(() => {
+		fetchPosts(1);
+	}, [fetchPosts]);
 
 	useEffect(() => {
 		if (!isSidebarOpen) return;
-
 		const originalBodyOverflow = document.body.style.overflow;
 		const originalHtmlOverflow = document.documentElement.style.overflow;
 		document.body.style.overflow = "hidden";
 		document.documentElement.style.overflow = "hidden";
-
 		return () => {
 			document.body.style.overflow = originalBodyOverflow;
 			document.documentElement.style.overflow = originalHtmlOverflow;
 		};
 	}, [isSidebarOpen]);
-
-	const filteredPosts = MOCK_POSTS.filter((post) => {
-		return pageMode === "home" || activeChannel === "all" || post.channel === activeChannel;
-	});
 
 	const handlePrimaryNavClick = () => {
 		setPageMode("home");
@@ -296,12 +353,16 @@ const CommunityPage: React.FC = () => {
 		setIsSidebarOpen(false);
 	};
 
-	const handleChannelClick = (channelId: string) => {
+	const handleChannelClick = (slug: string) => {
 		setPageMode("channel");
-		setActiveChannel(channelId);
+		setActiveChannel(slug);
 		setActiveSort("top");
 		setIsSidebarOpen(false);
 	};
+
+	const hasMore =
+		paginationMeta != null &&
+		paginationMeta.current_page < paginationMeta.last_page;
 
 	const renderSidebarContent = (isMobile = false) => (
 		<div className={isMobile ? "px-4 py-4" : "px-3 py-4"}>
@@ -317,11 +378,11 @@ const CommunityPage: React.FC = () => {
 								isMobile
 									? "gap-3 rounded-xl px-3 py-3 text-base"
 									: "gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px]"
-								} ${
-									isActive
-										? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
-										: "border-2 border-transparent bg-white text-gray-700 hover:bg-gray-100"
-								}`}>
+							} ${
+								isActive
+									? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
+									: "border-2 border-transparent bg-white text-gray-700 hover:bg-gray-100"
+							}`}>
 							<Icon
 								className={`transition-colors duration-200 ${
 									isMobile ? "h-5 w-5" : "h-4 w-4"
@@ -339,48 +400,63 @@ const CommunityPage: React.FC = () => {
 				}`}>
 				Kênh
 			</div>
-			<nav className={isMobile ? "mt-3 space-y-2" : "mt-3 space-y-2"}>
-				{CHANNELS.map((channel) => {
-					const isActive = pageMode === "channel" && activeChannel === channel.id;
-					return (
-						<button
-							key={channel.id}
-							onClick={() => handleChannelClick(channel.id)}
-							className={`group relative flex w-full items-center justify-between text-left font-bold ${
-								isMobile
-									? "rounded-xl px-3 py-2.5 text-base"
-									: "rounded-lg px-2.5 py-2 text-[13px]"
-								} ${
-									isActive
-										? "bg-primary-100 border-2 border-[var(--color-primary-dark)] text-[var(--color-text-primary)]"
-										: "border-2 border-transparent bg-white text-black hover:bg-gray-100"
-								}`}>
-							<span
-								className={
-									isMobile ? "flex items-center gap-3" : "flex items-center gap-3"
-								}>
-								<Hash
-									className={`transition-colors duration-200 ${
-										isMobile ? "h-5 w-5" : "h-3.5 w-3.5"
+			<nav className='mt-3 space-y-1'>
+				{channelsLoading
+					? Array.from({ length: 5 }).map((_, i) => (
+							<div
+								key={i}
+								className='flex animate-pulse items-center justify-between rounded-lg px-2.5 py-2'>
+								<div className='flex items-center gap-3'>
+									<div className='h-3.5 w-3.5 rounded bg-gray-200' />
+									<div
+										className='h-3 rounded bg-gray-200'
+										style={{ width: `${55 + i * 12}px` }}
+									/>
+								</div>
+								<div className='h-3 w-4 rounded bg-gray-200' />
+							</div>
+						))
+					: channels.map((channel) => {
+							const isActive =
+								pageMode === "channel" && activeChannel === channel.slug;
+							return (
+								<button
+									key={channel.id}
+									onClick={() => handleChannelClick(channel.slug)}
+									className={`group relative flex w-full items-center justify-between text-left font-bold ${
+										isMobile
+											? "rounded-xl px-3 py-2.5 text-base"
+											: "rounded-lg px-2.5 py-2 text-[13px]"
 									} ${
 										isActive
-											? "text-[var(--color-text-primary)]"
-											: "text-gray-500"
-									}`}
-								/>
-								{channel.label}
-							</span>
-							<span
-								className={`transition-colors duration-200 ${
-									isMobile ? "text-sm" : "text-xs"
-								} ${
-									isActive ? "text-[var(--color-text-primary)]" : "text-gray-500"
-								}`}>
-								{channel.count}
-							</span>
-						</button>
-					);
-				})}
+											? "border-2 border-[var(--color-primary-dark)] bg-primary-100 text-[var(--color-text-primary)]"
+											: "border-2 border-transparent bg-white text-black hover:bg-gray-100"
+									}`}>
+									<span className='flex items-center gap-3'>
+										<Hash
+											className={`transition-colors duration-200 ${
+												isMobile ? "h-5 w-5" : "h-3.5 w-3.5"
+											} ${
+												isActive
+													? "text-[var(--color-text-primary)]"
+													: "text-gray-500"
+											}`}
+										/>
+										{channel.name}
+									</span>
+									{channel.posts_count > 0 && (
+										<span
+											className={`text-xs tabular-nums transition-colors duration-200 ${
+												isActive
+													? "text-[var(--color-text-primary)]"
+													: "text-gray-400"
+											}`}>
+											{channel.posts_count}
+										</span>
+									)}
+								</button>
+							);
+						})}
 			</nav>
 		</div>
 	);
@@ -396,7 +472,7 @@ const CommunityPage: React.FC = () => {
 
 				<div className='community-content'>
 					<main className='community-feed min-w-0 px-4 pb-5 md:px-4 md:pt-5'>
-						{/* Mobile community header — inside feed for pixel-perfect alignment */}
+						{/* Mobile community header */}
 						<div className='sticky top-16 z-30 -mx-3 flex h-14 items-center gap-2 border-b border-gray-200 bg-[var(--color-surface)] px-3 md:hidden mb-3'>
 							<button
 								onClick={() => setIsSidebarOpen(true)}
@@ -413,6 +489,7 @@ const CommunityPage: React.FC = () => {
 								Cộng đồng CKC IT CLUB
 							</h1>
 						</div>
+
 						{/* Community header – home mode */}
 						{pageMode === "home" && (
 							<div className='my-4 hidden items-center gap-4 pb-5 lg:flex'>
@@ -441,7 +518,7 @@ const CommunityPage: React.FC = () => {
 									</div>
 									<div>
 										<h1 className='font-heading text-xl font-extrabold text-black'>
-											#{currentChannel?.label ?? "Kênh"}
+											#{currentChannel?.name ?? "Kênh"}
 										</h1>
 										<p className='text-sm font-semibold text-gray-700'>
 											Bài viết và thảo luận trong kênh này.
@@ -474,6 +551,7 @@ const CommunityPage: React.FC = () => {
 							</div>
 						)}
 
+						{/* Sort tabs */}
 						{pageMode === "home" ? (
 							<div className='mb-5 border-b border-gray-200'>
 								<div className='flex'>
@@ -521,18 +599,61 @@ const CommunityPage: React.FC = () => {
 							</div>
 						)}
 
+						{/* Posts list */}
 						<div className='space-y-5'>
-							{filteredPosts.length > 0 ? (
-								filteredPosts.map((post) => <PostCard key={post.id} post={post} />)
+							{loading ? (
+								<>
+									<PostSkeleton />
+									<PostSkeleton />
+									<PostSkeleton />
+								</>
+							) : error ? (
+								<div className='neo-card neo-card-static bg-white px-6 py-16 text-center'>
+									<RefreshCcw className='mx-auto h-10 w-10 text-gray-400' />
+									<p className='mt-4 font-heading text-xl font-extrabold text-black'>
+										Không thể tải bài viết
+									</p>
+									<p className='mt-2 text-sm text-gray-600'>{error}</p>
+									<button
+										onClick={() => fetchPosts(1)}
+										className='mt-5 inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+										<RefreshCcw className='h-4 w-4' />
+										Thử lại
+									</button>
+								</div>
+							) : posts.length > 0 ? (
+								<>
+									{posts.map((post) => (
+										<PostCard key={post.id} post={post} user={user} />
+									))}
+
+									{hasMore && (
+										<button
+											onClick={() =>
+												fetchPosts((paginationMeta?.current_page ?? 1) + 1)
+											}
+											className='w-full rounded-xl border-2 border-black bg-white py-3 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											Xem thêm bài viết
+										</button>
+									)}
+								</>
 							) : (
 								<div className='neo-card neo-card-static bg-white px-6 py-16 text-center'>
 									<Search className='mx-auto h-10 w-10 text-gray-500' />
 									<p className='mt-4 font-heading text-xl font-extrabold text-black'>
-										Không tìm thấy bài viết
+										Chưa có bài viết nào
 									</p>
 									<p className='mt-2 text-sm text-gray-600'>
-										Thử từ khóa khác hoặc đổi kênh ở thanh bên.
+										Hãy là người đầu tiên chia sẻ trong cộng đồng này!
 									</p>
+									{user && (
+										<Link
+											to='/community/create'
+											className='mt-5 inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											<PenSquare className='h-4 w-4' />
+											Đăng bài ngay
+										</Link>
+									)}
 								</div>
 							)}
 						</div>
@@ -577,7 +698,7 @@ const CommunityPage: React.FC = () => {
 									<h2 className='font-heading text-base font-extrabold text-black'>
 										Hoạt động sôi nổi
 									</h2>
-									<button className='text-xs font-bold text-lime-700 hover:text-black cursor-pointer cursor-pointer'>
+									<button className='text-xs font-bold text-lime-700 hover:text-black cursor-pointer'>
 										Xem tất cả
 									</button>
 								</div>
@@ -587,9 +708,7 @@ const CommunityPage: React.FC = () => {
 											key={member.id}
 											to={`/profile/${member.id}`}
 											className='flex items-center gap-3'>
-											<div
-												key={member.id}
-												className='flex items-center gap-3'>
+											<div className='flex items-center gap-3'>
 												<span className='w-5 text-sm font-extrabold text-gray-600'>
 													#{index + 1}
 												</span>

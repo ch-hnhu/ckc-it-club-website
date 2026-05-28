@@ -40,6 +40,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@reduxjs/toolkit": "^2.11.2",
+    "@stackoverflow/stacks-editor": "^0.15.3",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.5",
     "class-variance-authority": "^0.7.1",
@@ -48,6 +49,7 @@
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.563.0",
+    "marked": "^18.0.4",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
     "react": "^19.2.0",
@@ -68,6 +70,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@supabase/supabase-js": "^2.101.1",
+    "@types/marked": "^5.0.2",
     "@types/node": "^24.10.13",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

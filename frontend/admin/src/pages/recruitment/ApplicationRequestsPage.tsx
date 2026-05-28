@@ -134,21 +134,22 @@ function MetricCard({
 	footer: string;
 }) {
 	return (
-		<Card className='border-border/80 bg-card/95 shadow-sm backdrop-blur'>
-			<CardContent className='p-5'>
-				<div className='flex items-start justify-between gap-4'>
-					<div className='space-y-1'>
-						<p className='text-sm font-semibold text-foreground'>{label}</p>
-						<p className='text-foreground text-3xl font-semibold tracking-tight'>{value}</p>
-						<p className='text-muted-foreground text-sm leading-6'>{description}</p>
+		<Card
+			aria-label={`${label}: ${value}. ${description}`}
+			className='border-border/80 bg-card/95 shadow-sm backdrop-blur'>
+			<CardContent className='p-4'>
+				<div className='flex items-center justify-between gap-3'>
+					<div className='space-y-0.5 min-w-0'>
+						<p className='text-xs font-semibold text-muted-foreground'>{label}</p>
+						<p className='text-foreground text-2xl font-bold tracking-tight'>{value}</p>
 					</div>
-					<div className='rounded-2xl border border-emerald-500/15 bg-emerald-500/10 p-3 text-emerald-700 dark:border-emerald-400/15 dark:bg-emerald-400/10 dark:text-emerald-300'>
+					<div className='rounded-xl border border-emerald-500/15 bg-emerald-500/10 p-2 text-emerald-700 dark:border-emerald-400/15 dark:bg-emerald-400/10 dark:text-emerald-300 shrink-0'>
 						{icon}
 					</div>
 				</div>
-				<div className='mt-4 flex items-center gap-2 text-xs font-medium text-muted-foreground'>
-					<span className='h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400' />
-					<span>{footer}</span>
+				<div className='mt-2.5 flex items-center gap-1.5 text-xs text-muted-foreground'>
+					<span className='h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 shrink-0' />
+					<span className='truncate'>{footer}</span>
 				</div>
 			</CardContent>
 		</Card>
@@ -157,10 +158,7 @@ function MetricCard({
 
 function ApplicationRequestsPage() {
 	const breadcrumb = useMemo(
-		() => [
-			{ title: "Dashboard", link: "/" },
-			{ title: "Quản lý Yêu cầu tham gia" },
-		],
+		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý Yêu cầu tham gia" }],
 		[],
 	);
 
@@ -260,8 +258,7 @@ function ApplicationRequestsPage() {
 	const averageAnswers = applications.length
 		? (totalAnswers / applications.length).toFixed(1)
 		: "0.0";
-	const activeFilterCount =
-		Number(Boolean(search.trim())) + Number(statusFilter !== "all");
+	const activeFilterCount = Number(Boolean(search.trim())) + Number(statusFilter !== "all");
 	const reviewedPercent = applications.length
 		? Math.round((reviewedApplications / applications.length) * 100)
 		: 0;
@@ -395,85 +392,93 @@ function ApplicationRequestsPage() {
 	return (
 		<div className='min-h-full bg-background'>
 			<div className='space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8'>
-				<section className='overflow-hidden rounded-[30px] border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(246,253,250,0.96)_44%,rgba(252,255,253,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(12,18,16,0.96)_45%,rgba(8,11,10,0.98)_100%)]'>
-					<div className='grid gap-8 px-6 py-7 md:px-8 md:py-9 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,30rem)] xl:items-start'>
-						<div className='max-w-3xl space-y-5'>
-							<Badge className='w-fit rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-800 hover:bg-emerald-500/10 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200'>
+				<section className='overflow-hidden rounded-2xl border border-emerald-500/15 bg-[linear-gradient(135deg,rgba(16,185,129,0.13),rgba(248,252,250,0.97)_44%,rgba(252,255,253,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.13),rgba(10,14,12,0.96)_45%,rgba(8,11,10,0.98)_100%)]'>
+					<div className='grid gap-4 px-6 py-5 md:px-8 md:py-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] xl:items-center'>
+						{/* Left */}
+						<div className='max-w-2xl space-y-3'>
+							<Badge className='w-fit rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-0.5 text-xs text-emerald-800 hover:bg-emerald-500/10 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200'>
 								Trang quản lý yêu cầu tham gia
 							</Badge>
-							<div className='space-y-3'>
-								<h1 className='text-foreground max-w-3xl text-[1.85rem] font-semibold leading-tight md:text-[2.8rem] md:leading-[1.08] xl:text-[3.05rem]'>
-									Theo dõi và xử lý hồ sơ ứng tuyển theo từng trạng thái
-								</h1>
-								<p className='max-w-2xl text-sm leading-7 text-emerald-950/72 md:text-base dark:text-emerald-50/70'>
-									Xem tổng quan tiến độ duyệt hồ sơ, lọc nhanh theo trạng thái và từ
-									khóa, sau đó chuyển sang trang chi tiết để xử lý từng ứng viên.
-								</p>
-							</div>
-
-							<div className='flex flex-wrap items-center gap-3 pt-1'>
+							<h1 className='text-foreground text-[1.4rem] font-semibold leading-tight md:text-[1.85rem] md:leading-[1.1]'>
+								Theo dõi và xử lý hồ sơ ứng tuyển theo từng trạng thái
+							</h1>
+							<p className='text-sm leading-6 text-emerald-950/65 dark:text-emerald-50/60'>
+								Lọc nhanh theo trạng thái và từ khóa, chuyển sang chi tiết để xử lý
+								từng ứng viên.
+							</p>
+							<div className='flex flex-wrap items-center gap-2'>
 								<Button
 									variant='outline'
-									className='h-11 rounded-2xl border-emerald-500/20 bg-background/80 px-4 text-emerald-800 shadow-sm hover:bg-emerald-500/10 dark:bg-background/70 dark:text-emerald-200'
+									size='sm'
+									className='h-8 rounded-xl border-emerald-500/20 bg-background/80 px-3 text-emerald-800 shadow-sm hover:bg-emerald-500/10 dark:bg-background/70 dark:text-emerald-200'
 									onClick={() => {
 										setSearch("");
 										setStatusFilter("all");
 									}}>
-									<RefreshCw className='size-4' />
+									<RefreshCw className='size-3.5' />
 									Đặt lại bộ lọc
 								</Button>
-								<div className='inline-flex h-11 items-center gap-2 rounded-2xl border border-emerald-500/20 bg-background/72 px-4 text-sm font-medium text-emerald-800 dark:text-emerald-200'>
-									<Filter className='size-4' />
+								<div className='inline-flex h-8 items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-background/72 px-3 text-xs font-medium text-emerald-800 dark:text-emerald-200'>
+									<Filter className='size-3.5' />
 									{activeFilterCount} điều kiện đang áp dụng
 								</div>
 							</div>
 						</div>
 
-						<div className='self-start rounded-[28px] border border-emerald-500/15 bg-background/82 p-5 shadow-sm backdrop-blur'>
-							<div className='flex items-start justify-between gap-4'>
-								<div className='space-y-2'>
-									<p className='text-foreground inline-flex items-center gap-2 text-sm font-semibold'>
-										<BarChart3 className='size-4' />
+						{/* Right — compact stats card */}
+						<div className='self-start rounded-xl border border-emerald-500/15 bg-background/82 p-4 shadow-sm backdrop-blur'>
+							<div className='flex items-center justify-between gap-3 mb-3'>
+								<div>
+									<p className='inline-flex items-center gap-1.5 text-xs font-semibold text-foreground'>
+										<BarChart3 className='size-3.5' />
 										Nhịp xử lý hồ sơ
 									</p>
-									<p className='text-foreground text-4xl font-semibold tracking-tight'>
+									<p className='text-2xl font-bold tracking-tight text-foreground mt-0.5'>
 										{reviewedPercent}%
 									</p>
-									<p className='text-muted-foreground text-sm leading-6'>
-										{topStatus.label} đang là nhóm trạng thái lớn nhất với{" "}
-										{topStatus.count} hồ sơ.
+									<p className='text-xs text-muted-foreground mt-0.5'>
+										{topStatus.label} lớn nhất — {topStatus.count} hồ sơ
 									</p>
 								</div>
-								<div className='rounded-2xl border border-emerald-500/15 bg-emerald-500/10 p-3 text-emerald-700 dark:border-emerald-400/15 dark:bg-emerald-400/10 dark:text-emerald-300'>
-									<Sparkles className='size-5' />
+								<div className='rounded-xl border border-emerald-500/15 bg-emerald-500/10 p-2 text-emerald-700 dark:border-emerald-400/15 dark:bg-emerald-400/10 dark:text-emerald-300'>
+									<Sparkles className='size-4' />
 								</div>
 							</div>
 
-							<div className='mt-5 overflow-hidden rounded-full bg-emerald-500/10 dark:bg-emerald-400/10'>
+							<div className='mb-3 overflow-hidden rounded-full bg-emerald-500/10 dark:bg-emerald-400/10'>
 								<div
-									className='h-2 rounded-full bg-emerald-600 transition-all dark:bg-emerald-400'
+									className='h-1.5 rounded-full bg-emerald-600 transition-all dark:bg-emerald-400'
 									style={{ width: `${reviewedPercent}%` }}
 								/>
 							</div>
 
-							<div className='mt-6 space-y-3'>
+							<div className='space-y-2'>
 								{statusInsights.map((item) => (
-									<div key={item.key} className='space-y-1.5'>
-										<div className='flex items-center justify-between gap-3 text-sm'>
-											<div className='flex items-center gap-2'>
-												<span className={cn("h-2.5 w-2.5 rounded-full", item.barClass)} />
-												<span className='font-medium text-foreground'>{item.label}</span>
-											</div>
-											<div className='text-muted-foreground'>
-												{item.count} hồ sơ, {item.percent}%
-											</div>
-										</div>
-										<div className='overflow-hidden rounded-full bg-muted/70'>
+									<div key={item.key} className='flex items-center gap-2'>
+										<span
+											className={cn(
+												"h-2 w-2 shrink-0 rounded-full",
+												item.barClass,
+											)}
+										/>
+										<span className='flex-1 text-xs font-medium text-foreground'>
+											{item.label}
+										</span>
+										<span className='text-xs text-muted-foreground tabular-nums'>
+											{item.count} hồ sơ
+										</span>
+										<div className='w-16 overflow-hidden rounded-full bg-muted/70'>
 											<div
-												className={cn("h-1.5 rounded-full transition-all", item.barClass)}
+												className={cn(
+													"h-1 rounded-full transition-all",
+													item.barClass,
+												)}
 												style={{ width: `${item.percent}%` }}
 											/>
 										</div>
+										<span className='w-8 text-right text-xs text-muted-foreground tabular-nums'>
+											{item.percent}%
+										</span>
 									</div>
 								))}
 							</div>
@@ -544,7 +549,9 @@ function ApplicationRequestsPage() {
 											setPagination((prev) => ({ ...prev, currentPage: 1 }));
 										}}
 										className={
-											statusFilter === option.value ? "bg-muted font-medium" : ""
+											statusFilter === option.value
+												? "bg-muted font-medium"
+												: ""
 										}>
 										{option.label}
 									</DropdownMenuItem>
@@ -561,7 +568,9 @@ function ApplicationRequestsPage() {
 										<Checkbox
 											aria-label='Select all applications'
 											checked={allSelected}
-											onCheckedChange={(checked) => toggleAll(checked === true)}
+											onCheckedChange={(checked) =>
+												toggleAll(checked === true)
+											}
 										/>
 									</TableHead>
 									<TableHead className='w-[120px]'>
@@ -643,7 +652,9 @@ function ApplicationRequestsPage() {
 									))
 								) : paginatedApplications.length > 0 ? (
 									paginatedApplications.map((application) => {
-										const availableStatuses = getNextStatuses(application.status);
+										const availableStatuses = getNextStatuses(
+											application.status,
+										);
 										return (
 											<TableRow key={application.id}>
 												<TableCell>
@@ -651,7 +662,10 @@ function ApplicationRequestsPage() {
 														aria-label={`Select application ${application.id}`}
 														checked={isSelected(application.id)}
 														onCheckedChange={(checked) =>
-															toggleOne(application.id, checked === true)
+															toggleOne(
+																application.id,
+																checked === true,
+															)
 														}
 													/>
 												</TableCell>
@@ -664,7 +678,8 @@ function ApplicationRequestsPage() {
 															{getApplicantName(application)}
 														</p>
 														<p className='text-sm text-muted-foreground'>
-															{application.applicant?.class_name || "Chưa có lớp"}
+															{application.applicant?.class_name ||
+																"Chưa có lớp"}
 														</p>
 													</div>
 												</TableCell>
@@ -674,9 +689,15 @@ function ApplicationRequestsPage() {
 												<TableCell>
 													{application.applicant?.student_code || "--"}
 												</TableCell>
-												<TableCell>{getStatusBadge(application.status)}</TableCell>
-												<TableCell>{formatDate(application.created_at)}</TableCell>
-												<TableCell>{formatDate(application.updated_at)}</TableCell>
+												<TableCell>
+													{getStatusBadge(application.status)}
+												</TableCell>
+												<TableCell>
+													{formatDate(application.created_at)}
+												</TableCell>
+												<TableCell>
+													{formatDate(application.updated_at)}
+												</TableCell>
 												<TableCell className='text-right'>
 													<DropdownMenu>
 														<DropdownMenuTrigger asChild>
@@ -687,17 +708,25 @@ function ApplicationRequestsPage() {
 																<MoreHorizontal className='h-4 w-4' />
 															</Button>
 														</DropdownMenuTrigger>
-														<DropdownMenuContent align='end' className='w-[190px]'>
+														<DropdownMenuContent
+															align='end'
+															className='w-[190px]'>
 															<DropdownMenuItem
 																onClick={() =>
-																	navigate(`/requests/${application.id}`)
+																	navigate(
+																		`/requests/${application.id}`,
+																	)
 																}>
 																<Eye className='h-4 w-4' />
 																Xem chi tiết
 															</DropdownMenuItem>
 															<DropdownMenuItem
-																onClick={() => openStatusDialog(application)}
-																disabled={availableStatuses.length === 0}>
+																onClick={() =>
+																	openStatusDialog(application)
+																}
+																disabled={
+																	availableStatuses.length === 0
+																}>
 																<RefreshCw className='h-4 w-4' />
 																Cập nhật trạng thái
 															</DropdownMenuItem>
@@ -725,7 +754,9 @@ function ApplicationRequestsPage() {
 											</div>
 											<div className='flex items-center space-x-6 lg:space-x-8'>
 												<div className='flex items-center space-x-2'>
-													<p className='text-sm font-medium'>Số hồ sơ mỗi trang</p>
+													<p className='text-sm font-medium'>
+														Số hồ sơ mỗi trang
+													</p>
 													<Select
 														value={`${pagination.perPage}`}
 														onValueChange={(value) =>
@@ -735,14 +766,20 @@ function ApplicationRequestsPage() {
 															})
 														}>
 														<SelectTrigger className='h-8 w-[70px]'>
-															<SelectValue placeholder={pagination.perPage} />
+															<SelectValue
+																placeholder={pagination.perPage}
+															/>
 														</SelectTrigger>
 														<SelectContent side='top'>
-															{[10, 20, 25, 30, 40, 50].map((pageSize) => (
-																<SelectItem key={pageSize} value={`${pageSize}`}>
-																	{pageSize}
-																</SelectItem>
-															))}
+															{[10, 20, 25, 30, 40, 50].map(
+																(pageSize) => (
+																	<SelectItem
+																		key={pageSize}
+																		value={`${pageSize}`}>
+																		{pageSize}
+																	</SelectItem>
+																),
+															)}
 														</SelectContent>
 													</Select>
 												</div>
@@ -760,7 +797,9 @@ function ApplicationRequestsPage() {
 															}))
 														}
 														disabled={currentPage === 1}>
-														<span className='sr-only'>Đi đến trang đầu</span>
+														<span className='sr-only'>
+															Đi đến trang đầu
+														</span>
 														<ChevronsLeft className='h-4 w-4' />
 													</Button>
 													<Button
@@ -769,11 +808,16 @@ function ApplicationRequestsPage() {
 														onClick={() =>
 															setPagination((prev) => ({
 																...prev,
-																currentPage: Math.max(1, prev.currentPage - 1),
+																currentPage: Math.max(
+																	1,
+																	prev.currentPage - 1,
+																),
 															}))
 														}
 														disabled={currentPage === 1}>
-														<span className='sr-only'>Quay lại trang trước</span>
+														<span className='sr-only'>
+															Quay lại trang trước
+														</span>
 														<ChevronLeft className='h-4 w-4' />
 													</Button>
 													<Button
@@ -789,7 +833,9 @@ function ApplicationRequestsPage() {
 															}))
 														}
 														disabled={currentPage === totalPages}>
-														<span className='sr-only'>Đi đến trang tiếp theo</span>
+														<span className='sr-only'>
+															Đi đến trang tiếp theo
+														</span>
 														<ChevronRight className='h-4 w-4' />
 													</Button>
 													<Button
@@ -802,7 +848,9 @@ function ApplicationRequestsPage() {
 															}))
 														}
 														disabled={currentPage === totalPages}>
-														<span className='sr-only'>Đi đến trang cuối</span>
+														<span className='sr-only'>
+															Đi đến trang cuối
+														</span>
 														<ChevronsRight className='h-4 w-4' />
 													</Button>
 												</div>
@@ -841,28 +889,36 @@ function ApplicationRequestsPage() {
 										<div>{getStatusBadge(statusDialogApplication.status)}</div>
 									</div>
 									<div className='grid gap-2'>
-										<label className='text-sm font-medium' htmlFor='next-status'>
+										<label
+											className='text-sm font-medium'
+											htmlFor='next-status'>
 											Trạng thái tiếp theo
 										</label>
 										<div className='flex flex-wrap gap-2' id='next-status'>
-											{getNextStatuses(statusDialogApplication.status).map((status) => {
-												const isActive = nextStatus === status;
-												const config = getStatusConfig(status);
-												return (
-													<Button
-														key={status}
-														type='button'
-														variant='outline'
-														onClick={() =>
-															setNextStatus(
-																status as UpdateApplicationStatusPayload["status"],
-															)
-														}
-														className={isActive ? `${config.className} border-current` : ""}>
-														{config.label}
-													</Button>
-												);
-											})}
+											{getNextStatuses(statusDialogApplication.status).map(
+												(status) => {
+													const isActive = nextStatus === status;
+													const config = getStatusConfig(status);
+													return (
+														<Button
+															key={status}
+															type='button'
+															variant='outline'
+															onClick={() =>
+																setNextStatus(
+																	status as UpdateApplicationStatusPayload["status"],
+																)
+															}
+															className={
+																isActive
+																	? `${config.className} border-current`
+																	: ""
+															}>
+															{config.label}
+														</Button>
+													);
+												},
+											)}
 										</div>
 									</div>
 									<div className='grid gap-2'>
@@ -887,7 +943,9 @@ function ApplicationRequestsPage() {
 										disabled={isSubmittingStatus}>
 										Hủy
 									</Button>
-									<Button onClick={handleSubmitStatusUpdate} disabled={isSubmittingStatus}>
+									<Button
+										onClick={handleSubmitStatusUpdate}
+										disabled={isSubmittingStatus}>
 										{isSubmittingStatus ? "Đang cập nhật..." : "Lưu thay đổi"}
 									</Button>
 								</DialogFooter>
