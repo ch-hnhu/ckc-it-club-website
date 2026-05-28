@@ -21,6 +21,7 @@ class ChannelController extends BaseApiController
             'name'        => $channel->name,
             'slug'        => $channel->slug,
             'description' => $channel->description,
+            'image'       => $channel->image,
             'posts_count' => $channel->posts_count ?? 0,
         ])->values()->toArray();
 

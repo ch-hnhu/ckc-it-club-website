@@ -31,7 +31,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 
 Route::prefix('v1')->group(function () {
 
-    // public
+    // public routes
     Route::get('/health', function () {
         return response()->json([
             'success' => true,
@@ -46,6 +46,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
+    Route::get('/community/channels', [ChannelController::class, 'index']);
 
     // Community routes
     Route::prefix('community')->group(function () {

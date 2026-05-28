@@ -1,17 +1,20 @@
 # CKC IT Club Frontend User Context
 
 ## Purpose
+
 - This folder is the user-facing frontend at `frontend/user/`.
 - It is the public-facing site for CKC IT Club with landing-page sections, contact page, and user login CTA through Google OAuth.
 - It is visually opinionated and already has a soft neo-brutalist design direction encoded in CSS and component structure.
 
 ## Read This First
+
 - Treat this file as the source-of-truth for user frontend work.
 - Do not trust `frontend/user/README.md`; it is still the generic Vite template.
 - If your task touches auth/session or backend response contracts, also read `.agents/context/backend.md`.
 - If your task changes the public-facing design language, also inspect the local skill `ckc-user-frontend-style`.
 
 ## Maintenance Rule
+
 - Any agent changing user frontend behavior MUST review and update this file before finishing work.
 - Update this file when any of these change:
 - route surface
@@ -23,6 +26,7 @@
 - important static asset or external dependency assumptions
 
 ## Stack
+
 - Framework: React 19.
 - Language: TypeScript.
 - Build tool: Vite 7.
@@ -34,6 +38,7 @@
 - Redux Toolkit is installed but not actively used.
 
 ## App Boot Flow
+
 - Entry: `src/main.tsx`
 - Root app: `src/App.tsx`
 - Router only; no top-level provider stack like admin.
@@ -48,16 +53,18 @@
 - navbar uses a full-width container, reduced horizontal padding, and a two-group `justify-between` layout for nav/profile alignment
 - community content fills the available desktop width up to a 76rem cap with reduced feed-side padding, and its right rail uses a custom `70rem` breakpoint so it remains visible below Tailwind `xl`
 - on mobile/tablet below `lg`, the community page shows a sticky community sub-header and turns the left sidebar into an overlay drawer
-- `/community/create` is also treated as a community layout exception and shows a standalone create-post page instead of a modal.
+- community channels are fetched in `CommunityPage` from public `GET /community/channels` through `communityService`; the page keeps a seeded local fallback list if the request fails.
+- `/cong-dong/dang-bai` is also treated as a community layout exception and shows a standalone create-post page instead of a modal.
 
 ## Route Surface
+
 - `/`
 - landing page composed from multiple section components
 - `/lien-he`
 - contact page
 - `/cong-dong`
 - dense community page with sidebar, feed, and right rail
-- `/community/create`
+- `/cong-dong/dang-bai`
 - standalone community create-post page linked from the composer entry and post button
 - `/login`
 - credential login page with Google/GitHub OAuth popup buttons.
@@ -65,6 +72,7 @@
 - credential signup page requiring only full name, username, email, password, and password confirmation.
 
 ## Important Reality Checks
+
 - User login supports a dedicated credential `/login` page and popup-based Google/GitHub OAuth.
 - User credential signup is available at `/register` and posts to `POST /api/v1/auth/register`.
 - `ContactPage` posts real data to `POST /api/v1/contacts`, shows backend success or error feedback, and resets the form on success.
@@ -76,6 +84,7 @@
 - Several public links inside landing sections still point to `#` placeholders.
 
 ## Layout and Visual System
+
 - Global visual direction is defined in `src/index.css`.
 - The design system is not generic shadcn. It is custom and should be preserved unless a redesign is explicit.
 - Core characteristics:
@@ -100,6 +109,7 @@
 - decorative floating shapes and SVG assets are part of the intended look
 
 ## Module Layout
+
 - `src/components/landing-page/`
 - landing page sections such as hero, quick actions, board, mentors, featured content, leaderboard, contribution CTA
 - `src/components/partials/`
@@ -116,6 +126,7 @@
 - shared TS types
 
 ## Landing Page Structure
+
 - `LandingPage.tsx` is a composition page, not a data-heavy page.
 - Current order:
 - `HeroSection`
@@ -137,6 +148,7 @@
 - Not every referenced target represents a full routed page; many are in-page anchors only.
 
 ## Authentication Model
+
 - Login is popup-based and starts from the navbar.
 - Auth URL is derived from `VITE_BACKEND_URL` and points to `/user/auth/google`.
 - OAuth completion is communicated back through `postMessage`.
@@ -150,6 +162,7 @@
 - Logout also uses `fetch` and clears the local token.
 
 ## Auth Risks and Assumptions
+
 - Since `getCurrentUser()` uses `fetch` and not the shared Axios client, changing one auth path may not update the other.
 - `axios.config.ts` currently has token storage behavior that does not match the auth service:
 - clears `localStorage`
@@ -161,6 +174,7 @@
 - this file
 
 ## Service Layer Conventions
+
 - Generic API wrapper lives in `src/services/api.service.ts`.
 - Health check service exists and is simple.
 - Auth flow is custom and mostly bypasses Axios.
@@ -172,10 +186,12 @@
 - Prefer centralizing real backend integration in services rather than embedding fetch logic into pages, unless you are deliberately consolidating auth behavior.
 
 ## Data and Form Reality
+
 - It keeps form state locally, submits to the backend through `contact.service.ts`, and resets the form after a successful response.
 - Contact submissions are stored in the backend `contacts` table through the public API.
 
 ## Environment Variables
+
 - Current app uses:
 - `VITE_API_URL`
 - `VITE_BACKEND_URL`
@@ -183,11 +199,13 @@
 - If you formalize setup for other developers or agents, add `.env.example` and document it here.
 
 ## Setup and Run
+
 ```bash
 cd frontend/user
 npm install
 npm run dev
 ```
+
 - Standard scripts:
 - `npm run dev`
 - `npm run build`
@@ -195,6 +213,7 @@ npm run dev
 - `npm run preview`
 
 ## Source-of-Truth Files
+
 - `src/routes/index.tsx`
 - `src/layouts/MainLayout.tsx`
 - `src/components/partials/Navbar.tsx`
@@ -207,6 +226,7 @@ npm run dev
 - `src/index.css`
 
 ## Safe Edit Rules For Agents
+
 - Preserve the current visual language unless the task explicitly requests a redesign.
 - When modifying landing sections, prefer extending existing section components over adding new top-level page complexity.
 - Do not introduce a `/login` flow casually without reconciling the popup OAuth design.
@@ -215,6 +235,7 @@ npm run dev
 - Keep anchor-based navigation coherent; update section IDs and navbar targets together.
 
 ## Known Gaps and Debt
+
 - `frontend/user/README.md` is stale.
 - No `.env.example` is committed for this package.
 - Contact form now submits to backend, but there is still no dedicated admin workflow for reviewing contact submissions from the public site.
@@ -225,6 +246,7 @@ npm run dev
 - Public branding assets partly depend on external Supabase-hosted images.
 
 ## Change Log
+
 - `2026-05-27`: Community create Stacks editor table toolbar now shows a single table control: insert table outside tables, and table-format dropdown when the selection is inside a table.
 - `2026-05-27`: `StacksEditorWrapper` now syncs the Heading toolbar state with the active rich-text selection and shows `H1`/`H2`/`H3` only when the selected text is inside a heading.
 - `2026-04-08`: Replaced scaffold with full user frontend audit. Added landing-page structure, neo-brutalist design assumptions, auth/session model, service conventions, env notes, and known gap inventory.

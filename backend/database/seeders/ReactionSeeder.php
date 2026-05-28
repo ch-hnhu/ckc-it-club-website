@@ -9,10 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 class ReactionSeeder extends Seeder
 {
+    private array $types = ['heart'];
 
     public function run(): void
     {
-        $admin    = User::where('email', 'admin@gmail.com')->first();
+        $admin = User::where('email', 'admin@gmail.com')->first();
         $students = User::where('email', 'like', 'student%@gmail.com')->pluck('id')->toArray();
 
         if (! $admin || empty($students)) {
@@ -21,8 +22,8 @@ class ReactionSeeder extends Seeder
 
         $allUserIds = array_merge($students, [$admin->id]);
 
-        $postIds    = DB::table('posts')->where('status', 'published')->pluck('id')->toArray();
-        $blogIds    = DB::table('blogs')->where('status', 'published')->pluck('id')->toArray();
+        $postIds = DB::table('posts')->where('status', 'published')->pluck('id')->toArray();
+        $blogIds = DB::table('blogs')->where('status', 'published')->pluck('id')->toArray();
         $commentIds = DB::table('comments')->pluck('id')->toArray();
 
         foreach ($postIds as $postId) {

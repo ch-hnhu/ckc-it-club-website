@@ -1,8 +1,9 @@
 import MainLayout from "@/layouts/MainLayout";
 import ContactPage from "@/pages/ContactPage";
-import CommunityCreatePage from "@/pages/CommunityCreatePage";
-import CommunityPage from "@/pages/CommunityPage";
-import CommunityPostDetailPage from "@/pages/CommunityPostDetailPage";
+import CommunityLayout from "@/pages/community/CommunityLayout";
+import CommunityFeedPage from "@/pages/community/CommunityFeedPage";
+import CommunityCreatePage from "@/pages/community/CommunityCreatePage";
+import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
@@ -25,16 +26,26 @@ const router = createBrowserRouter([
 				element: <ContactPage />,
 			},
 			{
-				path: "cong-dong",
-				element: <CommunityPage />,
-			},
-			{
-				path: "cong-dong/bai-viet/:id",
-				element: <CommunityPostDetailPage />,
-			},
-			{
-				path: "community/create",
+				path: "cong-dong/dang-bai",
 				element: <CommunityCreatePage />,
+			},
+			{
+				path: "cong-dong",
+				element: <CommunityLayout />,
+				children: [
+					{
+						index: true,
+						element: <CommunityFeedPage />,
+					},
+					{
+						path: "bai-viet/:id",
+						element: <CommunityPostDetailPage />,
+					},
+					{
+						path: ":channelSlug",
+						element: <CommunityFeedPage />,
+					},
+				],
 			},
 		],
 	},

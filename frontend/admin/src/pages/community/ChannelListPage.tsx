@@ -14,6 +14,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -62,6 +63,7 @@ export interface ChannelRecord {
 	name: string;
 	slug: string;
 	description: string | null;
+	image: string | null;
 	posts_count: number;
 	created_at: string;
 }
@@ -93,9 +95,10 @@ interface ChannelFormState {
 	name: string;
 	slug: string;
 	description: string;
+	image: string;
 }
 
-const emptyForm: ChannelFormState = { name: "", slug: "", description: "" };
+const emptyForm: ChannelFormState = { name: "", slug: "", description: "", image: "" };
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -184,7 +187,7 @@ function ChannelListPage() {
 
 	const openEdit = (channel: ChannelRecord) => {
 		setEditTarget(channel);
-		setForm({ name: channel.name, slug: channel.slug, description: channel.description ?? "" });
+		setForm({ name: channel.name, slug: channel.slug, description: channel.description ?? "", image: channel.image ?? "" });
 		setSlugEdited(true);
 		setFormOpen(true);
 	};
@@ -209,6 +212,7 @@ function ChannelListPage() {
 					name: form.name,
 					slug: form.slug || toSlug(form.name),
 					description: form.description || null,
+					image: form.image || null,
 				});
 				setChannels((prev) => prev.map((c) =>
 					c.id === editTarget.id ? { ...c, ...res.data } : c
@@ -219,6 +223,7 @@ function ChannelListPage() {
 					name: form.name,
 					slug: form.slug || toSlug(form.name),
 					description: form.description || null,
+					image: form.image || null,
 				});
 				setChannels((prev) => [res.data, ...prev]);
 				toast.success("Đã tạo kênh mới.");
@@ -304,7 +309,7 @@ function ChannelListPage() {
 											ID {getSortIcon("id")}
 										</Button>
 									</TableHead>
-									<TableHead className="min-w-[180px]">
+									<TableHead className="min-w-[200px]">
 										<Button variant="ghost" onClick={() => handleSort("name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Tên kênh {getSortIcon("name")}
 										</Button>
@@ -338,7 +343,7 @@ function ChannelListPage() {
 									Array.from({ length: meta.per_page }).map((_, i) => (
 										<TableRow key={i}>
 											<TableCell><Skeleton className="h-4 w-4" /></TableCell>
-											<TableCell colSpan={7}><Skeleton className="h-4 w-full" /></TableCell>
+											<TableCell colSpan={8}><Skeleton className="h-4 w-full" /></TableCell>
 										</TableRow>
 									))
 								) : channels.length > 0 ? (
@@ -350,10 +355,13 @@ function ChannelListPage() {
 											</TableCell>
 											<TableCell className="font-medium text-muted-foreground">#{channel.id}</TableCell>
 											<TableCell>
-												<div className="flex items-center gap-2.5">
-													<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-														<Hash className="h-3.5 w-3.5" />
-													</div>
+												<div className="flex items-center gap-3">
+													<Avatar className="h-8 w-8">
+														<AvatarImage src={channel.image ?? undefined} alt={channel.name} />
+														<AvatarFallback className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+															<Hash className="h-3.5 w-3.5" />
+														</AvatarFallback>
+													</Avatar>
 													<span className="font-medium">{channel.name}</span>
 												</div>
 											</TableCell>
@@ -490,6 +498,24 @@ function ChannelListPage() {
 								rows={3}
 								className="resize-none"
 							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="channel-image">Ảnh đại diện (URL)</Label>
+							<div className="flex items-center gap-3">
+								<Avatar className="h-10 w-10 shrink-0">
+									<AvatarImage src={form.image || undefined} alt="preview" />
+									<AvatarFallback className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+										<Hash className="h-4 w-4" />
+									</AvatarFallback>
+								</Avatar>
+								<Input
+									id="channel-image"
+									placeholder="https://example.com/image.png"
+									value={form.image}
+									onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))}
+								/>
+							</div>
+							<p className="text-xs text-muted-foreground">Nhập URL ảnh. Để trống nếu không có.</p>
 						</div>
 					</div>
 					<DialogFooter>
