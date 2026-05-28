@@ -84,14 +84,6 @@ function formatDate(value: string | null) {
 	return Number.isNaN(d.getTime()) ? "--" : dateFormatter.format(d);
 }
 
-function toSlug(str: string) {
-	return str
-		.toLowerCase()
-		.normalize("NFD")
-		.replace(/[̀-ͯ]/g, "")
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "");
-}
 
 type SortKey = "id" | "name" | "posts_count" | "blogs_count" | "created_at";
 
@@ -99,11 +91,10 @@ type SortKey = "id" | "name" | "posts_count" | "blogs_count" | "created_at";
 
 interface TagFormState {
 	name: string;
-	slug: string;
 	color: string;
 }
 
-const emptyForm: TagFormState = { name: "", slug: "", color: "#6366f1" };
+const emptyForm: TagFormState = { name: "", color: "#6366f1" };
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -124,7 +115,6 @@ function TagListPage() {
 	const [formOpen, setFormOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<TagRecord | null>(null);
 	const [form, setForm] = useState<TagFormState>(emptyForm);
-	const [slugEdited, setSlugEdited] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<TagRecord | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -186,23 +176,13 @@ function TagListPage() {
 	const openCreate = () => {
 		setEditTarget(null);
 		setForm(emptyForm);
-		setSlugEdited(false);
 		setFormOpen(true);
 	};
 
 	const openEdit = (tag: TagRecord) => {
 		setEditTarget(tag);
-		setForm({ name: tag.name, slug: tag.slug, color: tag.color ?? "#6366f1" });
-		setSlugEdited(true);
+		setForm({ name: tag.name, color: tag.color ?? "#6366f1" });
 		setFormOpen(true);
-	};
-
-	const handleNameChange = (value: string) => {
-		setForm((p) => ({
-			...p,
-			name: value,
-			slug: slugEdited ? p.slug : toSlug(value),
-		}));
 	};
 
 	const handleSave = async () => {
@@ -215,7 +195,6 @@ function TagListPage() {
 			if (editTarget) {
 				const res = await tagService.updateTag(editTarget.id, {
 					name: form.name,
-					slug: form.slug || toSlug(form.name),
 				});
 				setTags((prev) => prev.map((t) =>
 					t.id === editTarget.id ? { ...t, ...res.data } : t
@@ -224,7 +203,6 @@ function TagListPage() {
 			} else {
 				const res = await tagService.createTag({
 					name: form.name,
-					slug: form.slug || toSlug(form.name),
 				});
 				setTags((prev) => [{ ...res.data, color: form.color }, ...prev]);
 				toast.success("Đã tạo tag mới.");
@@ -467,19 +445,8 @@ function TagListPage() {
 								id="tag-name"
 								placeholder="Ví dụ: Lập trình web"
 								value={form.name}
-								onChange={(e) => handleNameChange(e.target.value)}
+								onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
 							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="tag-slug">Slug</Label>
-							<Input
-								id="tag-slug"
-								placeholder="lap-trinh-web"
-								value={form.slug}
-								onChange={(e) => { setSlugEdited(true); setForm((p) => ({ ...p, slug: e.target.value })); }}
-								className="font-mono text-sm"
-							/>
-							<p className="text-xs text-muted-foreground">Tự động tạo từ tên. Có thể chỉnh sửa thủ công.</p>
 						</div>
 						<div className="space-y-2">
 							<Label>Màu sắc</Label>
