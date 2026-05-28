@@ -13,7 +13,7 @@ class ChannelController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $allowedSorts = ['id', 'name', 'posts_count', 'created_at'];
+        $allowedSorts = ['id', 'name', 'slug', 'description', 'posts_count', 'created_at'];
         $sort    = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
         $order   = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
         $perPage = (int) $request->query('per_page', 10);
@@ -25,7 +25,7 @@ class ChannelController extends BaseApiController
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('slug', 'like', "%{$search}%")
             ))
-            ->orderBy($sort === 'posts_count' ? 'posts_count' : $sort, $order)
+            ->orderBy($sort, $order)
             ->paginate($perPage);
 
         $channels->getCollection()->transform(fn (Channel $c) => $this->transformChannel($c));

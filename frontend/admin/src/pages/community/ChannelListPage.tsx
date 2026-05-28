@@ -85,7 +85,7 @@ function toSlug(str: string) {
 		.replace(/^-+|-+$/g, "");
 }
 
-type SortKey = "id" | "name" | "posts_count" | "created_at";
+type SortKey = "id" | "name" | "slug" | "description" | "posts_count" | "created_at";
 
 // ─── Form state ──────────────────────────────────────────────────────────────
 
@@ -309,8 +309,16 @@ function ChannelListPage() {
 											Tên kênh {getSortIcon("name")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[200px] text-sm font-medium">Slug</TableHead>
-									<TableHead className="min-w-[200px] text-sm font-medium">Mô tả</TableHead>
+									<TableHead className="w-[200px]">
+										<Button variant="ghost" onClick={() => handleSort("slug")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Slug {getSortIcon("slug")}
+										</Button>
+									</TableHead>
+									<TableHead className="min-w-[200px]">
+										<Button variant="ghost" onClick={() => handleSort("description")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Mô tả {getSortIcon("description")}
+										</Button>
+									</TableHead>
 									<TableHead className="w-[120px]">
 										<Button variant="ghost" onClick={() => handleSort("posts_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Bài đăng {getSortIcon("posts_count")}

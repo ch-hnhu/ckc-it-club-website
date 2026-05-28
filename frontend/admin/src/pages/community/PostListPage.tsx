@@ -58,6 +58,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
+import { CompactBadgeList } from "@/components/ui/compact-badge-list";
 import { cn } from "@/lib/utils";
 import postService from "@/services/post.service";
 
@@ -157,7 +158,7 @@ function getVisibilityLabel(v: PostVisibility) {
 	return v === "public" ? "Công khai" : "Thành viên";
 }
 
-type SortKey = "id" | "status" | "created_at";
+type SortKey = "id" | "status" | "created_at" | "reactions_count" | "user_name" | "channel_name";
 
 const statusFilterOptions: Array<{ value: PostStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -444,10 +445,22 @@ function PostListPage() {
 											ID {getSortIcon("id")}
 										</Button>
 									</TableHead>
-									<TableHead className="min-w-[160px] text-sm font-medium">Tác giả</TableHead>
-									<TableHead className="min-w-[220px] text-sm font-medium">Nội dung</TableHead>
-									<TableHead className="min-w-[120px] text-sm font-medium">Tags</TableHead>
-									<TableHead className="min-w-[120px] text-sm font-medium">Kênh</TableHead>
+									<TableHead className="min-w-[160px]">
+										<Button variant="ghost" onClick={() => handleSort("user_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Tác giả {getSortIcon("user_name")}
+										</Button>
+									</TableHead>
+									<TableHead className="min-w-[220px] text-sm font-medium">
+										<span className="flex items-center gap-2">Nội dung <ArrowUpDown className="h-4 w-4 text-muted-foreground/40" /></span>
+									</TableHead>
+									<TableHead className="min-w-[120px] text-sm font-medium">
+										<span className="flex items-center gap-2">Tags <ArrowUpDown className="h-4 w-4 text-muted-foreground/40" /></span>
+									</TableHead>
+									<TableHead className="min-w-[120px]">
+										<Button variant="ghost" onClick={() => handleSort("channel_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Kênh {getSortIcon("channel_name")}
+										</Button>
+									</TableHead>
 									<TableHead className="w-[130px]">
 										<Button
 											variant="ghost"
@@ -456,8 +469,14 @@ function PostListPage() {
 											Trạng thái {getSortIcon("status")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[70px] text-center text-sm font-medium">Ghim</TableHead>
-									<TableHead className="w-[160px] text-sm font-medium">Tương tác</TableHead>
+									<TableHead className="w-[70px] text-center text-sm font-medium">
+										<span className="flex items-center justify-center gap-2">Ghim <ArrowUpDown className="h-4 w-4 text-muted-foreground/40" /></span>
+									</TableHead>
+									<TableHead className="w-[160px]">
+										<Button variant="ghost" onClick={() => handleSort("reactions_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Tương tác {getSortIcon("reactions_count")}
+										</Button>
+									</TableHead>
 									<TableHead className="w-[150px]">
 										<Button
 											variant="ghost"
@@ -548,15 +567,10 @@ function PostListPage() {
 
 											{/* Channel */}
 											<TableCell>
-												{post.channel ? (
-													<Badge
-														variant="outline"
-														className="rounded-full px-2 py-0 text-xs font-normal">
-														{post.channel.name}
-													</Badge>
-												) : (
-													<span className="text-muted-foreground/40">—</span>
-												)}
+												<CompactBadgeList
+													items={post.channel ? [{ key: post.channel.id, label: post.channel.name }] : []}
+													emptyLabel="—"
+												/>
 											</TableCell>
 
 											{/* Status */}

@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev", "--prefix", "frontend/user"],
       "port": 5175,
       "autoPort": false
+    },
+    {
+      "name": "admin-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend/admin"],
+      "port": 5173,
+      "autoPort": false
     }
   ]
 }

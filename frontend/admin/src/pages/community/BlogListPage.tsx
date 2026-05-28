@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
+import { CompactBadgeList } from "@/components/ui/compact-badge-list";
 import { cn } from "@/lib/utils";
 import blogService from "@/services/blog.service";
 
@@ -154,7 +155,7 @@ function getStatusBadge(status: BlogStatus) {
 	);
 }
 
-type SortKey = "id" | "status" | "view_count" | "published_at" | "created_at";
+type SortKey = "id" | "title" | "status" | "view_count" | "published_at" | "created_at" | "user_name" | "tags_count";
 
 const statusOptions: Array<{ value: BlogStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -390,9 +391,21 @@ function BlogListPage() {
 											ID {getSortIcon("id")}
 										</Button>
 									</TableHead>
-									<TableHead className="min-w-[160px] text-sm font-medium">Tác giả</TableHead>
-									<TableHead className="min-w-[260px] text-sm font-medium">Tiêu đề</TableHead>
-									<TableHead className="min-w-[120px] text-sm font-medium">Tags</TableHead>
+									<TableHead className="min-w-[160px]">
+										<Button variant="ghost" onClick={() => handleSort("user_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Tác giả {getSortIcon("user_name")}
+										</Button>
+									</TableHead>
+									<TableHead className="min-w-[260px]">
+										<Button variant="ghost" onClick={() => handleSort("title")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Tiêu đề {getSortIcon("title")}
+										</Button>
+									</TableHead>
+									<TableHead className="min-w-[120px]">
+										<Button variant="ghost" onClick={() => handleSort("tags_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Tags {getSortIcon("tags_count")}
+										</Button>
+									</TableHead>
 									<TableHead className="w-[140px]">
 										<Button variant="ghost" onClick={() => handleSort("status")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Trạng thái {getSortIcon("status")}
@@ -451,17 +464,10 @@ function BlogListPage() {
 												</div>
 											</TableCell>
 											<TableCell>
-												<div className="flex flex-wrap gap-1">
-													{blog.tags.slice(0, 2).map((tag) => (
-														<Badge key={tag.id} variant="outline" className="rounded-full px-2 py-0 text-xs"
-															style={tag.color ? { borderColor: `${tag.color}40`, color: tag.color } : undefined}>
-															{tag.name}
-														</Badge>
-													))}
-													{blog.tags.length > 2 && (
-														<Badge variant="secondary" className="rounded-full px-2 py-0 text-xs">+{blog.tags.length - 2}</Badge>
-													)}
-												</div>
+												<CompactBadgeList
+													items={blog.tags.map((tag) => ({ key: tag.id, label: tag.name }))}
+													emptyLabel="--"
+												/>
 											</TableCell>
 											<TableCell>{getStatusBadge(blog.status)}</TableCell>
 											<TableCell className="text-sm text-muted-foreground">{blog.view_count.toLocaleString("vi-VN")}</TableCell>
