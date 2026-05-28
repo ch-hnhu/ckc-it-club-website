@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -11,9 +11,11 @@ import {
 	Eye,
 	Filter,
 	MoreHorizontal,
+	Plus,
 	RefreshCw,
 	Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +101,10 @@ export interface BlogStats {
 	pending_review?: number;
 }
 
+export interface BlogDetail extends BlogRecord {
+	content: string;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
@@ -165,13 +171,14 @@ const emptyStats: BlogStats = { total: 0, published: 0, draft: 0, archived: 0 };
 function BlogListPage() {
 	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý blog" }]);
 
+	const navigate = useNavigate();
+
 	const [blogs, setBlogs] = useState<BlogRecord[]>([]);
 	const [stats, setStats] = useState<BlogStats>(emptyStats);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState<BlogStatus | "all">("all");
-	const [selectedBlog, setSelectedBlog] = useState<BlogRecord | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<BlogRecord | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [reloadToken, setReloadToken] = useState(0);
@@ -340,24 +347,34 @@ function BlogListPage() {
 							onChange={(e) => setSearch(e.target.value)}
 							className="h-8 w-full sm:w-64 md:w-80"
 						/>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" size="sm" className="h-8">
-									<Filter className="h-4 w-4" />
-									{statusOptions.find((o) => o.value === statusFilter)?.label}
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end" className="w-[200px]">
-								<DropdownMenuLabel>Trạng thái blog</DropdownMenuLabel>
-								<DropdownMenuSeparator />
-								{statusOptions.map((opt) => (
-									<DropdownMenuItem key={opt.value} onClick={() => setStatusFilter(opt.value)}
-										className={statusFilter === opt.value ? "bg-muted font-medium" : ""}>
-										{opt.label}
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<div className="flex items-center gap-2">
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" size="sm" className="h-8">
+										<Filter className="h-4 w-4" />
+										{statusOptions.find((o) => o.value === statusFilter)?.label}
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end" className="w-[200px]">
+									<DropdownMenuLabel>Trạng thái blog</DropdownMenuLabel>
+									<DropdownMenuSeparator />
+									{statusOptions.map((opt) => (
+										<DropdownMenuItem key={opt.value} onClick={() => setStatusFilter(opt.value)}
+											className={statusFilter === opt.value ? "bg-muted font-medium" : ""}>
+											{opt.label}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+
+							<Button
+								size="sm"
+								className="h-8 bg-foreground text-background hover:bg-foreground/90"
+								onClick={() => navigate("/community/blogs/create")}>
+								<Plus className="h-4 w-4" />
+								Thêm blog
+							</Button>
+						</div>
 					</div>
 
 					<div className="overflow-hidden rounded-md border">
@@ -457,7 +474,7 @@ function BlogListPage() {
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end" className="w-[190px]">
-														<DropdownMenuItem onClick={() => setSelectedBlog(blog)}>
+														<DropdownMenuItem onClick={() => navigate(`/community/blogs/${blog.id}`)}>
 															<Eye className="h-4 w-4" />
 															Xem chi tiết
 														</DropdownMenuItem>
@@ -536,73 +553,6 @@ function BlogListPage() {
 					</div>
 				</div>
 			</div>
-
-			{/* Detail dialog */}
-			<Dialog open={Boolean(selectedBlog)} onOpenChange={(o) => !o && setSelectedBlog(null)}>
-				<DialogContent className="sm:max-w-[680px]">
-					{selectedBlog && (
-						<>
-							<DialogHeader>
-								<DialogTitle>Chi tiết Blog BLG-{selectedBlog.id}</DialogTitle>
-							</DialogHeader>
-							<div className="space-y-4">
-								<div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-									<Avatar className="h-9 w-9">
-										<AvatarImage src={selectedBlog.user.avatar ?? undefined} />
-										<AvatarFallback>{getAuthorInitials(selectedBlog.user)}</AvatarFallback>
-									</Avatar>
-									<div>
-										<p className="text-sm font-medium">{selectedBlog.user.full_name ?? "Ẩn danh"}</p>
-										<p className="text-xs text-muted-foreground">{selectedBlog.user.email}</p>
-									</div>
-									<div className="ml-auto">{getStatusBadge(selectedBlog.status)}</div>
-								</div>
-								<div className="space-y-1">
-									<p className="text-sm font-medium">Tiêu đề</p>
-									<p className="text-base font-semibold">{selectedBlog.title}</p>
-									<p className="text-xs text-muted-foreground">/{selectedBlog.slug}</p>
-								</div>
-								{selectedBlog.excerpt && (
-									<div className="space-y-1">
-										<p className="text-sm font-medium">Tóm tắt</p>
-										<p className="text-sm text-muted-foreground leading-6">{selectedBlog.excerpt}</p>
-									</div>
-								)}
-								<div className="grid gap-4 sm:grid-cols-3 text-sm">
-									<div className="space-y-0.5">
-										<p className="font-medium">Lượt xem</p>
-										<p className="text-muted-foreground">{selectedBlog.view_count.toLocaleString("vi-VN")}</p>
-									</div>
-									<div className="space-y-0.5">
-										<p className="font-medium">Bình luận</p>
-										<p className="text-muted-foreground">{selectedBlog.comments_count}</p>
-									</div>
-									<div className="space-y-0.5">
-										<p className="font-medium">Cảm xúc</p>
-										<p className="text-muted-foreground">{selectedBlog.reactions_count}</p>
-									</div>
-								</div>
-								<div className="grid gap-4 sm:grid-cols-2 text-sm">
-									<div className="space-y-0.5">
-										<p className="font-medium">Xuất bản lúc</p>
-										<p className="text-muted-foreground">{formatDate(selectedBlog.published_at)}</p>
-									</div>
-									<div className="space-y-0.5">
-										<p className="font-medium">Cập nhật lần cuối</p>
-										<p className="text-muted-foreground">{formatDate(selectedBlog.updated_at)}</p>
-									</div>
-								</div>
-							</div>
-							<DialogFooter className="gap-2">
-								<Button variant="outline" onClick={() => setSelectedBlog(null)}>Đóng</Button>
-								<Button variant="destructive" onClick={() => { setSelectedBlog(null); setDeleteTarget(selectedBlog); }}>
-									<Trash2 className="h-4 w-4" />Xóa blog
-								</Button>
-							</DialogFooter>
-						</>
-					)}
-				</DialogContent>
-			</Dialog>
 
 			{/* Delete confirm */}
 			<Dialog open={Boolean(deleteTarget)} onOpenChange={(o) => !o && setDeleteTarget(null)}>
