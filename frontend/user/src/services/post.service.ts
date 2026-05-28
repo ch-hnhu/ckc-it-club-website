@@ -19,8 +19,7 @@ export const postService = {
 		api.get<PaginatedResponse<Post>>("/community/posts", params as Record<string, unknown>),
 
 	/** Fetch a single published post with full content. */
-	getPost: (id: number) =>
-		api.get<ApiResponse<PostDetail>>(`/community/posts/${id}`),
+	getPost: (id: number) => api.get<ApiResponse<PostDetail>>(`/community/posts/${id}`),
 
 	/** Fetch top-level comments (with nested replies) for a post. */
 	getPostComments: (id: number) =>
@@ -31,18 +30,17 @@ export const postService = {
 	 * Same type → removes the reaction. Different type → switches. No reaction → adds.
 	 */
 	toggleReaction: (postId: number, type: ReactionType) =>
-		api.post<ApiResponse<ReactionToggleResponse>>(
-			`/community/posts/${postId}/reactions`,
-			{ type },
-		),
+		api.post<ApiResponse<ReactionToggleResponse>>(`/community/posts/${postId}/reactions`, {
+			type,
+		}),
 
 	/**
 	 * Create a top-level comment or a reply on a post (requires auth).
 	 * Pass parentId to reply to an existing comment.
 	 */
 	createComment: (postId: number, content: string, parentId?: number) =>
-		api.post<ApiResponse<PostComment>>(
-			`/community/posts/${postId}/comments`,
-			{ content, ...(parentId !== undefined ? { parent_id: parentId } : {}) },
-		),
+		api.post<ApiResponse<PostComment>>(`/community/posts/${postId}/comments`, {
+			content,
+			...(parentId !== undefined ? { parent_id: parentId } : {}),
+		}),
 };

@@ -10,7 +10,7 @@ class Channel extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'description', 'created_by', 'updated_by', 'deleted_by'];
+    protected $fillable = ['name', 'slug', 'description', 'image', 'created_by', 'updated_by', 'deleted_by'];
 
     public function posts(): HasMany
     {
