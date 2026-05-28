@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Code2, Crown, Hash, Home, Monitor, Trophy, X } from "lucide-react";
-import { Link, Outlet, useMatch, useOutletContext, useParams } from "react-router-dom";
+import { Link, Outlet, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { communityService, type CommunityChannel } from "@/services/community.service";
 
@@ -19,7 +19,6 @@ export type ChannelItem = {
 	slug: string;
 };
 
-/** Context được truyền xuống cho tất cả các trang con trong community */
 export type CommunityLayoutContext = {
 	user: AuthUser | null;
 	channels: ChannelItem[];
@@ -52,17 +51,18 @@ export const COMMUNITY_LOGO = "https://www.codedex.io/images/community/bouncer.g
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export const buildChannelItems = (sourceChannels: ChannelItem[]): ChannelItem[] => {
-	const totalPostsCount = sourceChannels.reduce((sum, ch) => sum + ch.count, 0);
+	const sorted = [...sourceChannels].sort((a, b) => b.count - a.count);
+	const totalPostsCount = sorted.reduce((sum, ch) => sum + ch.count, 0);
 	return [
 		{
 			id: "chung",
-			label: "Cộng đồng CKC IT CLUB",
+			label: "Kênh chung",
 			count: totalPostsCount,
 			description: "Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦",
 			image: COMMUNITY_LOGO,
 			slug: "chung",
 		},
-		...sourceChannels,
+		...sorted,
 	];
 };
 
@@ -85,16 +85,13 @@ const CommunityLayout: React.FC = () => {
 	const user = outletContext?.user ?? null;
 
 	const { channelSlug } = useParams<{ channelSlug: string }>();
-	const isCreatePage = useMatch("/cong-dong/dang-bai") !== null;
 
-	// pageMode chỉ dùng để highlight sidebar
-	const pageMode = isCreatePage ? "create" : channelSlug ? "channel" : "home";
+	const pageMode = channelSlug ? "channel" : "home";
 	const activeChannel = channelSlug ?? "all";
 
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [channels, setChannels] = useState<ChannelItem[]>(buildFallbackChannels());
 
-	// Khoá scroll body khi mobile sidebar mở
 	useEffect(() => {
 		if (!isSidebarOpen) return;
 		const prevBody = document.body.style.overflow;
@@ -107,7 +104,6 @@ const CommunityLayout: React.FC = () => {
 		};
 	}, [isSidebarOpen]);
 
-	// Load channels từ API
 	useEffect(() => {
 		let isMounted = true;
 		const loadChannels = async () => {
@@ -182,10 +178,9 @@ const CommunityLayout: React.FC = () => {
 					const channelPath =
 						channel.slug === "all" ? "/cong-dong" : `/cong-dong/${channel.slug}`;
 					const isActive =
-						pageMode !== "create" &&
-						(channel.slug === "all"
+						channel.slug === "all"
 							? pageMode === "home"
-							: pageMode === "channel" && activeChannel === channel.slug);
+							: pageMode === "channel" && activeChannel === channel.slug;
 					return (
 						<Link
 							key={channel.id}

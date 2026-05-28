@@ -3,5 +3,6 @@ export interface Channel {
 	name: string;
 	slug: string;
 	description: string | null;
+	image: string | null;
 	posts_count: number;
 }
