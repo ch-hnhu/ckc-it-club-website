@@ -11,7 +11,7 @@ import {
 	Share2,
 	Zap,
 } from "lucide-react";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
 import type { PostDetail, PostComment } from "@/types/post.types";
@@ -71,6 +71,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 	onReplyAdded,
 }) => {
 	const navigate = useNavigate();
+	const location = useLocation();
 
 	const [liked, setLiked] = useState(false);
 	const [likeCount, setLikeCount] = useState(comment.reactions_count);
@@ -90,7 +91,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
 	const handleReplyClick = () => {
 		if (!user) {
-			navigate("/login");
+			navigate("/login", { state: { from: location.pathname + location.search } });
 			return;
 		}
 		setShowReplyForm((p) => !p);
@@ -245,6 +246,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 const CommunityPostDetailPage: React.FC = () => {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { user, setIsSidebarOpen } = useOutletContext<CommunityLayoutContext>();
 
 	const [post, setPost] = useState<PostDetail | null>(null);
@@ -456,7 +458,7 @@ const CommunityPostDetailPage: React.FC = () => {
 								<div className='mt-5 flex flex-wrap items-center gap-2 border-t-2 border-black pt-4'>
 									<button
 										onClick={async () => {
-											if (!user) { navigate("/login"); return; }
+											if (!user) { navigate("/login", { state: { from: location.pathname + location.search } }); return; }
 											if (reactionLoading) return;
 											const wasLiked = liked;
 											setLiked(!wasLiked);
@@ -551,6 +553,7 @@ const CommunityPostDetailPage: React.FC = () => {
 								<p className='text-sm font-semibold text-gray-600'>
 									<Link
 										to='/login'
+										state={{ from: location.pathname + location.search }}
 										className='font-extrabold text-lime-700 hover:underline'>
 										Đăng nhập
 									</Link>{" "}

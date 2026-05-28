@@ -20,7 +20,12 @@ function openOAuthPopup(url: string, name: string) {
 export default function LoginPage() {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const successMessage = (location.state as { successMessage?: string } | null)?.successMessage;
+	const locationState = location.state as { successMessage?: string; from?: string } | null;
+	const successMessage = locationState?.successMessage;
+	const returnTo =
+		locationState?.from ||
+		new URLSearchParams(location.search).get("returnTo") ||
+		"/";
 
 	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
@@ -34,13 +39,13 @@ export default function LoginPage() {
 				if (payload.token) {
 					setAccessToken(payload.token);
 				}
-				navigate("/", { replace: true });
+				navigate(returnTo, { replace: true });
 			},
 			onError: (payload) => {
 				setError(payload.message || "Đăng nhập thất bại!");
 			},
 		});
-	}, [navigate]);
+	}, [navigate, returnTo]);
 
 	const handleCredentialLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -50,7 +55,7 @@ export default function LoginPage() {
 			const res = await loginWithCredentials(identifier, password);
 			if (res.success && res.token) {
 				setAccessToken(res.token);
-				navigate("/", { replace: true });
+				navigate(returnTo, { replace: true });
 			} else {
 				setError(res.message || "Thông tin đăng nhập không chính xác!");
 			}
