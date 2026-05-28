@@ -112,7 +112,7 @@ function getAuthorInitials(a: CommentAuthor) {
 
 type VisibilityFilter = "all" | "visible" | "hidden";
 type TypeFilter = "all" | "post" | "blog";
-type SortKey = "id" | "created_at" | "user_name" | "content" | "post_id";
+type SortKey = "id" | "created_at" | "user_name" | "content" | "post_id" | "reactions_count" | "is_hidden";
 
 const emptyStats: CommentStats = { total: 0, visible: 0, hidden: 0, replies: 0 };
 
@@ -374,10 +374,16 @@ function CommentListPage() {
 											Thuộc về {getSortIcon("post_id")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[120px] text-sm font-medium">
-										<span className="flex items-center gap-2">Trạng thái <ArrowUpDown className="h-4 w-4 text-muted-foreground/40" /></span>
+									<TableHead className="w-[130px]">
+										<Button variant="ghost" onClick={() => handleSort("is_hidden")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Trạng thái {getSortIcon("is_hidden")}
+										</Button>
 									</TableHead>
-									<TableHead className="w-[100px] text-sm font-medium">Tương tác</TableHead>
+									<TableHead className="w-[120px]">
+										<Button variant="ghost" onClick={() => handleSort("reactions_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Tương tác {getSortIcon("reactions_count")}
+										</Button>
+									</TableHead>
 									<TableHead className="w-[150px]">
 										<Button variant="ghost" onClick={() => handleSort("created_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Ngày đăng {getSortIcon("created_at")}

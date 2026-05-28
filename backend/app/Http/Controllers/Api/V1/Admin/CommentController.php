@@ -13,7 +13,7 @@ class CommentController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $allowedSorts = ['id', 'created_at', 'content', 'post_id', 'user_name'];
+        $allowedSorts = ['id', 'created_at', 'content', 'post_id', 'user_name', 'reactions_count', 'is_hidden'];
         $sort    = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
         $order   = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
         $perPage = (int) $request->query('per_page', 10);
@@ -34,6 +34,8 @@ class CommentController extends BaseApiController
             ->when($visibility === 'hidden',  fn ($q) => $q->where('comments.is_hidden', true))
             ->when(in_array($sort, ['id', 'created_at', 'content', 'post_id']), fn ($q) => $q->orderBy("comments.{$sort}", $order))
             ->when($sort === 'user_name', fn ($q) => $q->orderByRaw("(SELECT COALESCE(full_name, email) FROM users WHERE users.id = comments.user_id) {$order}"))
+            ->when($sort === 'reactions_count', fn ($q) => $q->orderByRaw("reactions_count {$order}"))
+            ->when($sort === 'is_hidden', fn ($q) => $q->orderBy('comments.is_hidden', $order))
             ->paginate($perPage);
 
         $comments->getCollection()->transform(fn (Comment $comment) => $this->transformComment($comment));
