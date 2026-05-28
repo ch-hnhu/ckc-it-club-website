@@ -10,7 +10,12 @@ class Comment extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['post_id', 'user_id', 'parent_id', 'content', 'depth'];
+    protected $fillable = ['post_id', 'user_id', 'parent_id', 'content', 'depth', 'is_hidden'];
+
+    protected function casts(): array
+    {
+        return ['is_hidden' => 'boolean'];
+    }
 
     public function user(): BelongsTo
     {

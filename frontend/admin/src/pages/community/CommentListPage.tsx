@@ -112,7 +112,7 @@ function getAuthorInitials(a: CommentAuthor) {
 
 type VisibilityFilter = "all" | "visible" | "hidden";
 type TypeFilter = "all" | "post" | "blog";
-type SortKey = "id" | "created_at";
+type SortKey = "id" | "created_at" | "user_name" | "content" | "post_id";
 
 const emptyStats: CommentStats = { total: 0, visible: 0, hidden: 0, replies: 0 };
 
@@ -196,9 +196,19 @@ function CommentListPage() {
 		sortConfig.order === "desc" ? <ArrowDown className="ml-2 h-4 w-4" /> :
 		<ArrowUpDown className="ml-2 h-4 w-4" />;
 
-	const handleToggleVisibility = (comment: CommentRecord) => {
-		setComments((prev) => prev.map((c) => c.id === comment.id ? { ...c, is_hidden: !c.is_hidden } : c));
-		toast.success(comment.is_hidden ? "Đã hiện bình luận." : "Đã ẩn bình luận.");
+	const handleToggleVisibility = async (comment: CommentRecord) => {
+		const nextHidden = !comment.is_hidden;
+		// Optimistic update
+		setComments((prev) => prev.map((c) => c.id === comment.id ? { ...c, is_hidden: nextHidden } : c));
+		try {
+			await commentService.updateVisibility(comment.id, nextHidden);
+			toast.success(nextHidden ? "Đã ẩn bình luận." : "Đã hiện bình luận.");
+			setReloadToken((p) => p + 1); // refresh stats
+		} catch {
+			// Revert on failure
+			setComments((prev) => prev.map((c) => c.id === comment.id ? { ...c, is_hidden: comment.is_hidden } : c));
+			toast.error("Không thể cập nhật trạng thái bình luận.");
+		}
 	};
 
 	const handleDelete = async () => {
@@ -349,10 +359,24 @@ function CommentListPage() {
 											ID {getSortIcon("id")}
 										</Button>
 									</TableHead>
-									<TableHead className="min-w-[160px] text-sm font-medium">Tác giả</TableHead>
-									<TableHead className="min-w-[260px] text-sm font-medium">Nội dung</TableHead>
-									<TableHead className="w-[130px] text-sm font-medium">Thuộc về</TableHead>
-									<TableHead className="w-[120px] text-sm font-medium">Trạng thái</TableHead>
+									<TableHead className="min-w-[160px]">
+										<Button variant="ghost" onClick={() => handleSort("user_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Tác giả {getSortIcon("user_name")}
+										</Button>
+									</TableHead>
+									<TableHead className="min-w-[260px]">
+										<Button variant="ghost" onClick={() => handleSort("content")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Nội dung {getSortIcon("content")}
+										</Button>
+									</TableHead>
+									<TableHead className="w-[130px]">
+										<Button variant="ghost" onClick={() => handleSort("post_id")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Thuộc về {getSortIcon("post_id")}
+										</Button>
+									</TableHead>
+									<TableHead className="w-[120px] text-sm font-medium">
+										<span className="flex items-center gap-2">Trạng thái <ArrowUpDown className="h-4 w-4 text-muted-foreground/40" /></span>
+									</TableHead>
 									<TableHead className="w-[100px] text-sm font-medium">Tương tác</TableHead>
 									<TableHead className="w-[150px]">
 										<Button variant="ghost" onClick={() => handleSort("created_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">

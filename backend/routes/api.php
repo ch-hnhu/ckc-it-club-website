@@ -259,6 +259,7 @@ Route::prefix('v1')->group(function () {
             Route::get('comments', [CommentController::class, 'index']);
         });
         Route::middleware('permission:community.comments.manage')->group(function () {
+            Route::patch('comments/{comment}/visibility', [CommentController::class, 'updateVisibility']);
             Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
         });
 
