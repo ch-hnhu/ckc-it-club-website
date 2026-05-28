@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
+use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
@@ -280,6 +281,13 @@ Route::prefix('v1')->group(function () {
             Route::put('tags/{tag}', [TagController::class, 'update']);
             Route::patch('tags/{tag}', [TagController::class, 'update']);
             Route::delete('tags/{tag}', [TagController::class, 'destroy']);
+        });
+
+        // media files
+        Route::middleware('permission:community.media.view')->group(function () {
+            Route::get('media-files/stats', [MediaFileController::class, 'stats']);
+            Route::get('media-files', [MediaFileController::class, 'index']);
+            Route::delete('media-files/{mediaFile}', [MediaFileController::class, 'destroy']);
         });
     });
 });

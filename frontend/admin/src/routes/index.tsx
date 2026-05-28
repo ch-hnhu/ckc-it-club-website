@@ -39,6 +39,7 @@ import CommentListPage from "@/pages/community/CommentListPage";
 import TagListPage from "@/pages/community/TagListPage";
 import SystemNotificationPage from "@/pages/community/SystemNotificationPage";
 import ChatRoomListPage from "@/pages/community/ChatRoomListPage";
+import MediaListPage from "@/pages/community/MediaListPage";
 
 const router = createBrowserRouter([
 	{
@@ -327,6 +328,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.chat.view">
 						<ChatRoomListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/media",
+				element: (
+					<PermissionRoute permission="community.media.view">
+						<MediaListPage />
 					</PermissionRoute>
 				),
 			},
