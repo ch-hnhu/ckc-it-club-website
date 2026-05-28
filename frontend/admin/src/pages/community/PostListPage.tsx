@@ -158,7 +158,7 @@ function getVisibilityLabel(v: PostVisibility) {
 	return v === "public" ? "Công khai" : "Thành viên";
 }
 
-type SortKey = "id" | "status" | "created_at" | "reactions_count" | "user_name" | "channel_name";
+type SortKey = "id" | "status" | "created_at" | "reactions_count" | "user_name" | "channel_name" | "content" | "tags" | "is_pinned";
 
 const statusFilterOptions: Array<{ value: PostStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -254,15 +254,10 @@ function PostListPage() {
 	};
 
 	const getSortIcon = (key: SortKey) =>
-		sortConfig.key !== key ? (
-			<ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/60" />
-		) : sortConfig.order === "asc" ? (
-			<ArrowUp className="h-3.5 w-3.5" />
-		) : sortConfig.order === "desc" ? (
-			<ArrowDown className="h-3.5 w-3.5" />
-		) : (
-			<ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/60" />
-		);
+		sortConfig.key !== key ? <ArrowUpDown className="ml-2 h-4 w-4" /> :
+		sortConfig.order === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> :
+		sortConfig.order === "desc" ? <ArrowDown className="ml-2 h-4 w-4" /> :
+		<ArrowUpDown className="ml-2 h-4 w-4" />;
 
 	// ── Actions ──
 
@@ -438,10 +433,7 @@ function PostListPage() {
 										/>
 									</TableHead>
 									<TableHead className="w-[90px]">
-										<Button
-											variant="ghost"
-											onClick={() => handleSort("id")}
-											className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										<Button variant="ghost" onClick={() => handleSort("id")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											ID {getSortIcon("id")}
 										</Button>
 									</TableHead>
@@ -450,11 +442,15 @@ function PostListPage() {
 											Tác giả {getSortIcon("user_name")}
 										</Button>
 									</TableHead>
-									<TableHead className="min-w-[220px] text-sm font-medium">
-										<span className="flex items-center gap-2">Nội dung <ArrowUpDown className="h-4 w-4 text-muted-foreground/40" /></span>
+									<TableHead className="min-w-[220px]">
+										<Button variant="ghost" onClick={() => handleSort("content")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Nội dung {getSortIcon("content")}
+										</Button>
 									</TableHead>
-									<TableHead className="min-w-[120px] text-sm font-medium">
-										<span className="flex items-center gap-2">Tags <ArrowUpDown className="h-4 w-4 text-muted-foreground/40" /></span>
+									<TableHead className="min-w-[120px]">
+										<Button variant="ghost" onClick={() => handleSort("tags")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Tags {getSortIcon("tags")}
+										</Button>
 									</TableHead>
 									<TableHead className="min-w-[120px]">
 										<Button variant="ghost" onClick={() => handleSort("channel_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
@@ -462,15 +458,14 @@ function PostListPage() {
 										</Button>
 									</TableHead>
 									<TableHead className="w-[130px]">
-										<Button
-											variant="ghost"
-											onClick={() => handleSort("status")}
-											className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										<Button variant="ghost" onClick={() => handleSort("status")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Trạng thái {getSortIcon("status")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[70px] text-center text-sm font-medium">
-										<span className="flex items-center justify-center gap-2">Ghim <ArrowUpDown className="h-4 w-4 text-muted-foreground/40" /></span>
+									<TableHead className="w-[70px]">
+										<Button variant="ghost" onClick={() => handleSort("is_pinned")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Ghim {getSortIcon("is_pinned")}
+										</Button>
 									</TableHead>
 									<TableHead className="w-[160px]">
 										<Button variant="ghost" onClick={() => handleSort("reactions_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
@@ -478,10 +473,7 @@ function PostListPage() {
 										</Button>
 									</TableHead>
 									<TableHead className="w-[150px]">
-										<Button
-											variant="ghost"
-											onClick={() => handleSort("created_at")}
-											className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										<Button variant="ghost" onClick={() => handleSort("created_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Ngày đăng {getSortIcon("created_at")}
 										</Button>
 									</TableHead>
