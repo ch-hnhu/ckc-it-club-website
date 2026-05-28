@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ReactionType;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class ReactionSeeder extends Seeder
 {
-    private array $types = ['heart', 'like', 'haha', 'wow', 'sad'];
 
     public function run(): void
     {
@@ -58,6 +58,7 @@ class ReactionSeeder extends Seeder
 
     private function randomType(): string
     {
-        return $this->types[array_rand($this->types)];
+        $cases = ReactionType::cases();
+        return $cases[array_rand($cases)]->value;
     }
 }

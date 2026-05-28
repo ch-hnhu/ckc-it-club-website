@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\ApiMessage;
+use App\Enums\ReactionType;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Comment;
 use App\Models\Post;
@@ -105,7 +106,7 @@ class PostController extends BaseApiController
     public function react(Request $request, int $id): JsonResponse
     {
         $request->validate([
-            'type' => ['required', Rule::in(['heart', 'like', 'haha', 'wow', 'sad'])],
+            'type' => ['required', Rule::enum(ReactionType::class)],
         ]);
 
         Post::where('status', 'published')->findOrFail($id);
