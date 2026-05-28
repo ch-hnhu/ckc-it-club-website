@@ -302,6 +302,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 							<>
 								<Link
 									to='/login'
+									state={{ from: location.pathname + location.search }}
 									className='neo-btn neo-btn-secondary px-4 py-2 text-sm'>
 									<LogIn className='h-4 w-4' />
 									Đăng nhập
@@ -386,6 +387,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 										<div className='flex flex-col gap-3'>
 											<Link
 												to='/login'
+												state={{ from: location.pathname + location.search }}
 												onClick={closeMobileMenu}
 												className='neo-btn neo-btn-secondary w-full justify-center'>
 												<LogIn className='h-4 w-4' /> Đăng nhập

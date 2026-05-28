@@ -9,7 +9,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Heart } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { postService } from "@/services/post.service";
 import type { AuthUser } from "@/services/auth.service";
 import type { ReactionType, ReactionToggleResponse } from "@/types/post.types";
@@ -54,6 +54,7 @@ const ReactionButton: React.FC<ReactionButtonProps> = ({
 	onReacted,
 }) => {
 	const navigate = useNavigate();
+	const location = useLocation();
 
 	const [isOpen,     setIsOpen]     = useState(false);
 	const [myReaction, setMyReaction] = useState<ReactionType | null>(initialReaction);
@@ -121,7 +122,7 @@ const ReactionButton: React.FC<ReactionButtonProps> = ({
 	// ----- open handler (guest → login) -----
 	const handleOpen = () => {
 		if (!user) {
-			navigate("/login");
+			navigate("/login", { state: { from: location.pathname + location.search } });
 			return;
 		}
 		setIsOpen((o) => !o);
