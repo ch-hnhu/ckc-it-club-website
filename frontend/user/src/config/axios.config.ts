@@ -48,7 +48,7 @@ clientApi.interceptors.response.use(
 					// localStorage.removeItem("access_token");
 					localStorage.clear();
 
-					window.location.href = "/login";
+					window.location.href = `/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
 					break;
 
 				case 403:

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Bookmark, Heart, MessageCircle, Share2, Zap } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Post } from "@/types/post.types";
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
@@ -13,6 +13,7 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const authorName = post.user?.full_name ?? "Ẩn danh";
 	const authorHandle = post.user ? getHandle(post.user.username, post.user.email) : "@ẩn danh";
 	const authorAvatar = buildAvatar(post.user?.full_name, post.user?.avatar);
@@ -24,7 +25,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 
 	const handleLike = async () => {
 		if (!user) {
-			navigate("/login");
+			navigate("/login", { state: { from: location.pathname + location.search } });
 			return;
 		}
 		if (loading) return;
