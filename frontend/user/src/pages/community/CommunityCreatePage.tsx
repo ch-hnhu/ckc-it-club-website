@@ -175,6 +175,17 @@ const CommunityCreatePage: React.FC = () => {
 		setMediaFile(event.target.files?.[0] ?? null);
 	};
 
+	const clearMediaFile = () => {
+		setMediaFile(null);
+		if (mediaInputRef.current) mediaInputRef.current.value = "";
+	};
+
+	const handleClearMediaClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+		event.preventDefault();
+		event.stopPropagation();
+		clearMediaFile();
+	};
+
 	return (
 		<div className='min-h-screen bg-[var(--color-surface)] pt-16 text-black'>
 			<div className='community-shell'>
@@ -308,7 +319,14 @@ const CommunityCreatePage: React.FC = () => {
 												{mediaPreviews.map((preview) => (
 													<figure
 														key={preview.id}
-														className='min-w-0 overflow-hidden rounded-[10px] border-2 border-black bg-[var(--color-surface)] text-left shadow-[2px_2px_0_#111]'>
+														className='relative min-w-0 overflow-hidden rounded-[10px] border-2 border-black bg-[var(--color-surface)] text-left shadow-[2px_2px_0_#111]'>
+														<button
+															type='button'
+															onClick={handleClearMediaClick}
+															className='absolute right-2 top-2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-100 hover:text-red-600 hover:shadow-none'
+															aria-label='Xoá ảnh đã chọn'>
+															<X className='h-4 w-4' />
+														</button>
 														<div className='aspect-video w-full bg-white'>
 															{preview.type.startsWith("video/") ? (
 																<video

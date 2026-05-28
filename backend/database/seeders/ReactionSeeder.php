@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class ReactionSeeder extends Seeder
 {
-    private array $types = ['heart', 'like', 'haha', 'wow', 'sad'];
+    private array $types = ['heart'];
 
     public function run(): void
     {

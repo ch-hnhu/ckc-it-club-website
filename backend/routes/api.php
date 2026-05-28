@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
+use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
+use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Admin\ClubInformationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
@@ -28,7 +30,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 
 Route::prefix('v1')->group(function () {
 
-    // public
+    // public routes
     Route::get('/health', function () {
         return response()->json([
             'success' => true,
@@ -43,6 +45,22 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
+    Route::get('/community/channels', [ChannelController::class, 'index']);
+
+    // Community routes
+    Route::prefix('community')->group(function () {
+        // Public (read-only, published posts only)
+        Route::get('/posts',                         [UserPostController::class, 'index']);
+        Route::get('/posts/{id}',                    [UserPostController::class, 'show']);
+        Route::get('/posts/{id}/comments',           [UserPostController::class, 'comments']);
+        Route::get('/channels',                      [UserChannelController::class, 'index']);
+
+        // Authenticated actions
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/posts/{id}/reactions',     [UserPostController::class, 'react']);
+            Route::post('/posts/{id}/comments',      [UserPostController::class, 'comment']);
+        });
+    });
 
     // Forgot password (throttled: 5 attempts per minute per IP)
     Route::middleware('throttle:5,1')->group(function () {
@@ -228,8 +246,10 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:community.blogs.view')->group(function () {
             Route::get('blogs/stats', [BlogController::class, 'stats']);
             Route::get('blogs', [BlogController::class, 'index']);
+            Route::get('blogs/{blog}', [BlogController::class, 'show']);
         });
         Route::middleware('permission:community.blogs.manage')->group(function () {
+            Route::post('blogs', [BlogController::class, 'store']);
             Route::patch('blogs/{blog}/status', [BlogController::class, 'updateStatus']);
             Route::delete('blogs/{blog}', [BlogController::class, 'destroy']);
         });

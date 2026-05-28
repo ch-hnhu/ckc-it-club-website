@@ -18,6 +18,12 @@ const postService = {
 		return api.get("/posts/stats");
 	},
 
+	async createPost(payload: FormData): Promise<ApiResponse<PostRecord>> {
+		return api.post<ApiResponse<PostRecord>, FormData>("/posts", payload, {
+			headers: { "Content-Type": "multipart/form-data" },
+		});
+	},
+
 	async updateStatus(
 		id: number | string,
 		status: PostStatus,

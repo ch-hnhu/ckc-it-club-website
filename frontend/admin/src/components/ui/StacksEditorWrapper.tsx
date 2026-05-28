@@ -142,17 +142,6 @@ const StacksEditorWrapper = forwardRef<StacksEditorHandle, StacksEditorWrapperPr
 						maxSuggestions: 6,
 					},
 				},
-				imageUpload: {
-					handler: async (file: File | string): Promise<string> => {
-						// External URL — pass through as-is
-						if (typeof file === "string") return file;
-						// Local file — create a temporary object URL
-						return URL.createObjectURL(file);
-					},
-					allowExternalUrls: true,
-					brandingHtml: " ",
-					contentPolicyHtml: " ",
-				},
 			});
 			editorRef.current = editor;
 

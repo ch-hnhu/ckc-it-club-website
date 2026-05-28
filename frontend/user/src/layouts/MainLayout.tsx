@@ -4,6 +4,7 @@ import Footer from "@/components/partials/Footer";
 import BackToTop from "@/components/partials/BackToTop";
 import { getCurrentUser, type AuthUser } from "@/services/auth.service";
 import { Outlet, useLocation } from "react-router-dom";
+import { Toaster } from "sonner";
 
 const MainLayout: React.FC = () => {
 	const [user, setUser] = useState<AuthUser | null>(null);
@@ -47,6 +48,17 @@ const MainLayout: React.FC = () => {
 
 			{/* Back to top button */}
 			<BackToTop />
+
+			{/* Global toast notifications */}
+			<Toaster
+				position='bottom-right'
+				richColors
+				toastOptions={{
+					classNames: {
+						toast: "!rounded-xl !border-2 !border-black !shadow-[4px_4px_0_#111] !font-bold !text-sm",
+					},
+				}}
+			/>
 		</div>
 	);
 };

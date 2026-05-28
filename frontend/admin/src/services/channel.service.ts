@@ -17,13 +17,14 @@ const channelService = {
 		name: string;
 		slug?: string;
 		description?: string | null;
+		image?: string | null;
 	}): Promise<ApiResponse<ChannelRecord>> {
 		return api.post<ApiResponse<ChannelRecord>, typeof payload>("/channels", payload);
 	},
 
 	async updateChannel(
 		id: number | string,
-		payload: { name: string; slug?: string; description?: string | null },
+		payload: { name: string; slug?: string; description?: string | null; image?: string | null },
 	): Promise<ApiResponse<ChannelRecord>> {
 		return api.put<ApiResponse<ChannelRecord>, typeof payload>(`/channels/${id}`, payload);
 	},

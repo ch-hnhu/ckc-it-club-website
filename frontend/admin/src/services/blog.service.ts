@@ -1,6 +1,6 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
-import type { BlogRecord, BlogStats, BlogStatus } from "@/pages/community/BlogListPage";
+import type { BlogDetail, BlogRecord, BlogStats, BlogStatus } from "@/pages/community/BlogListPage";
 
 const blogService = {
 	async getBlogs(params?: {
@@ -16,6 +16,16 @@ const blogService = {
 
 	async getStats(): Promise<ApiResponse<BlogStats>> {
 		return api.get("/blogs/stats");
+	},
+
+	async getBlog(id: number | string): Promise<ApiResponse<BlogDetail>> {
+		return api.get(`/blogs/${id}`);
+	},
+
+	async createBlog(payload: FormData): Promise<ApiResponse<BlogRecord>> {
+		return api.post<ApiResponse<BlogRecord>, FormData>("/blogs", payload, {
+			headers: { "Content-Type": "multipart/form-data" },
+		});
 	},
 
 	async updateStatus(
