@@ -34,6 +34,7 @@ export interface PostChannel {
 
 export interface Post {
 	id: number;
+	slug: string;
 	user: PostUser | null;
 	channel: PostChannel | null;
 	title: string;

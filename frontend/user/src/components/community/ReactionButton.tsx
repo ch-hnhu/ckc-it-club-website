@@ -8,6 +8,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
+import { Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { postService } from "@/services/post.service";
 import type { AuthUser } from "@/services/auth.service";
@@ -129,8 +130,7 @@ const ReactionButton: React.FC<ReactionButtonProps> = ({
 	const currentReaction = REACTIONS.find((r) => r.type === myReaction);
 	const isReacted       = !!myReaction;
 
-	const btnHeight   = size === "md" ? "h-10" : "h-9";
-	const emojiSize   = size === "md" ? "text-lg" : "text-base";
+	const btnHeight = size === "md" ? "h-10" : "h-9";
 
 	return (
 		<div className='relative' ref={wrapperRef}>
@@ -171,9 +171,11 @@ const ReactionButton: React.FC<ReactionButtonProps> = ({
 				aria-label={isReacted ? `Đang ${currentReaction?.label} · ${count}` : "Thả cảm xúc"}
 				className={`inline-flex ${btnHeight} select-none items-center gap-2 rounded-lg border-2 border-black px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60`}
 				style={{ background: isReacted ? "var(--color-pastel-pink)" : "#fff" }}>
-				<span className={`${emojiSize} leading-none`}>
-					{currentReaction?.emoji ?? "❤️"}
-				</span>
+				{isReacted ? (
+					<span className='text-base leading-none'>{currentReaction?.emoji}</span>
+				) : (
+					<Heart className='h-4 w-4' />
+				)}
 				<span className='tabular-nums'>{count}</span>
 			</button>
 
