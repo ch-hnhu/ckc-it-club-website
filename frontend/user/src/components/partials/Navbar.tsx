@@ -7,7 +7,6 @@ import {
 	LogOut,
 	Menu,
 	SlidersHorizontal,
-	Sun,
 	UserPlus,
 	UserRound,
 	X,
@@ -167,11 +166,6 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const closeProfileMenu = (isMobile = false) => {
 		setIsProfileOpen(false);
 		if (isMobile) closeMobileMenu();
-	};
-
-	const handleSwitchTheme = (isMobile = false) => {
-		document.documentElement.classList.toggle("dark");
-		closeProfileMenu(isMobile);
 	};
 
 	/** Shared class strings for profile menu items */
