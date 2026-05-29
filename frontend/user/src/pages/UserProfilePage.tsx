@@ -4,9 +4,10 @@ import {
 	BookOpen,
 	Building2,
 	Calendar,
+	Camera,
 	GraduationCap,
 	Heart,
-	MessageCircle,
+	ImagePlus,
 	Share2,
 	UserCheck,
 	UserPlus,
@@ -15,7 +16,7 @@ import {
 import type { AuthUser } from "@/services/auth.service";
 import { userService } from "@/services/user.service";
 import { postService } from "@/services/post.service";
-import { buildAvatar, formatRelativeTime, getHandle } from "@/lib/utils";
+import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle } from "@/lib/utils";
 import type { UserProfile } from "@/types/user.types";
 import type { Post } from "@/types/post.types";
 import PostCard from "@/components/community/PostCard";
@@ -155,97 +156,123 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 	const avatar = buildAvatar(profile.full_name, profile.avatar);
 	const joinYear = new Date(profile.created_at).getFullYear();
 
-	const coverStyle = profile.cover_image
-		? { backgroundImage: `url(${profile.cover_image})`, backgroundSize: "cover", backgroundPosition: "center" }
-		: { background: "linear-gradient(135deg, #a3e635 0%, #35d399 50%, #bfd9fe 100%)" };
+	const DEFAULT_BANNER = "https://www.codedex.io/images/css/banner-v2.png";
+	const coverBg = profile.cover_image || DEFAULT_BANNER;
 
 	return (
-		<div className='overflow-hidden rounded-2xl border-2 border-black'>
-			{/* Banner */}
-			<div className='relative h-44' style={coverStyle}>
-				{/* Avatar positioned at bottom-left, overlapping */}
-				<div className='absolute -bottom-10 left-6'>
-					<img
-						src={avatar}
-						alt={profile.full_name}
-						className='h-24 w-24 rounded-full border-4 border-black bg-[var(--color-pastel-blue)] object-cover shadow-[3px_3px_0_#111]'
-					/>
-				</div>
+		<div className='overflow-hidden'>
+			{/* ── Banner ─────────────────────────────────────────────── */}
+			<div className='relative h-40 cursor-pointer overflow-hidden group sm:h-48 md:h-55'>
+				<img
+					src={coverBg}
+					alt='Ảnh bìa'
+					className='h-full w-full object-cover sm:rounded-xl'
+				/>
+				{isOwnProfile && (
+					<div className='absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 sm:rounded-2xl'>
+						<ImagePlus className='h-6 w-6 text-white' />
+						<span className='text-sm font-bold text-white'>Cập nhật ảnh bìa</span>
+					</div>
+				)}
 			</div>
 
-			{/* Profile info */}
-			<div className='bg-white px-6 pb-5 pt-14'>
-				<div className='flex items-start justify-between gap-3'>
-					<div className='min-w-0'>
-						<h1 className='font-heading text-xl font-extrabold text-black leading-tight'>
-							{profile.full_name}
-						</h1>
-						<p className='text-sm font-medium text-gray-500'>{handle}</p>
+			{/* ── Avatar row + button ─────────────────────────────────── */}
+			<div className='bg-white pb-5'>
+				<div className='relative -mt-12 flex items-end justify-between gap-3 sm:-mt-16 md:-mt-[5rem]'>
+					{/* Avatar with edit overlay */}
+					<div className='px-6'>
+						<div className='relative rounded-full border-4 border-white shrink-0 group'>
+							<img
+								src={avatar}
+								alt={profile.full_name}
+								className='h-24 w-24 rounded-full bg-[var(--color-pastel-blue)] object-cover sm:h-32 sm:w-32 md:h-36 md:w-36'
+							/>
+							{isOwnProfile && (
+								<div className='absolute inset-0 flex cursor-pointer flex-col items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100'>
+									<Camera className='h-5 w-5 text-white' />
+									<span className='mt-0.5 text-[10px] font-bold text-white'>
+										Đổi ảnh
+									</span>
+								</div>
+							)}
+						</div>
 					</div>
 
-					{isOwnProfile ? (
-						<Link
-							to='/cai-dat'
-							className='inline-flex shrink-0 items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2 text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-							Chỉnh sửa hồ sơ
-						</Link>
-					) : (
-						<button
-							onClick={onFollow}
-							className={`inline-flex shrink-0 items-center gap-2 rounded-xl border-2 border-black px-4 py-2 text-sm font-extrabold shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${
-								followed
-									? "bg-white text-black"
-									: "bg-[var(--color-primary)] text-black"
-							}`}>
-							{followed ? (
-								<>
-									<UserCheck className='h-4 w-4' />
-									Đang theo dõi
-								</>
-							) : (
-								<>
-									<UserPlus className='h-4 w-4' />
-									Theo dõi
-								</>
-							)}
+					<div className='absolute bottom-0 right-6 shrink-0 sm:static sm:px-1'>
+						{/* Edit / Follow button */}
+						{isOwnProfile ? (
+							<Link
+								to='/cai-dat'
+								className='inline-flex shrink-0 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 py-2 text-xs font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:px-4 sm:text-sm'>
+								<Camera className='h-4 w-4' />
+								Chỉnh sửa hồ sơ
+							</Link>
+						) : (
+							<button
+								onClick={onFollow}
+								className={`inline-flex shrink-0 items-center gap-2 rounded-lg border-2 border-black px-3 py-2 text-xs font-extrabold hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition hover:bg-white shadow-[3px_3px_0_#111] sm:px-4 sm:text-sm ${
+									followed
+										? "bg-white text-black shadow-none translate-x-[1px] translate-y-[1px]"
+										: "bg-[var(--color-primary)] text-black"
+								}`}>
+								{followed ? (
+									<>
+										<UserCheck className='h-4 w-4' />
+										Đang theo dõi
+									</>
+								) : (
+									<>
+										<UserPlus className='h-4 w-4' />
+										Theo dõi
+									</>
+								)}
+							</button>
+						)}
+					</div>
+				</div>
+
+				{/* ── Profile info ────────────────────────────────────── */}
+				<div className='mt-5 px-6 sm:px-0'>
+					<h1 className='font-heading text-3xl font-extrabold leading-tight text-black sm:text-4xl'>
+						{profile.full_name}
+					</h1>
+					<p className='text-sm font-medium text-gray-500'>{handle}</p>
+
+					{profile.bio && (
+						<p className='mt-2 hidden text-sm leading-relaxed text-gray-700 sm:block'>
+							{profile.bio}
+						</p>
+					)}
+
+					<div className='mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500'>
+						{profile.faculty && (
+							<span className='hidden items-center gap-1.5 sm:flex'>
+								<Building2 className='h-4 w-4 shrink-0' />
+								{profile.faculty}
+							</span>
+						)}
+						{profile.major && (
+							<span className='hidden items-center gap-1.5 sm:flex'>
+								<GraduationCap className='h-4 w-4 shrink-0' />
+								{profile.major}
+							</span>
+						)}
+						<span className='flex items-center gap-1.5'>
+							<Calendar className='h-4 w-4 shrink-0' />
+							Tham gia {joinYear}
+						</span>
+					</div>
+
+					<div className='mt-3 flex items-center gap-5 text-sm'>
+						<button className='flex items-center gap-1 font-bold text-black hover:underline'>
+							<span className='font-extrabold'>{profile.followers_count}</span>
+							<span className='font-medium text-gray-500'>Người theo dõi</span>
 						</button>
-					)}
-				</div>
-
-				{profile.bio && (
-					<p className='mt-3 text-sm leading-relaxed text-gray-700'>{profile.bio}</p>
-				)}
-
-				{/* Metadata row */}
-				<div className='mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500'>
-					{profile.faculty && (
-						<span className='flex items-center gap-1.5'>
-							<Building2 className='h-4 w-4 shrink-0' />
-							{profile.faculty}
-						</span>
-					)}
-					{profile.major && (
-						<span className='flex items-center gap-1.5'>
-							<GraduationCap className='h-4 w-4 shrink-0' />
-							{profile.major}
-						</span>
-					)}
-					<span className='flex items-center gap-1.5'>
-						<Calendar className='h-4 w-4 shrink-0' />
-						Tham gia {joinYear}
-					</span>
-				</div>
-
-				{/* Follower counts */}
-				<div className='mt-3 flex items-center gap-5 text-sm'>
-					<button className='flex items-center gap-1 font-bold text-black hover:underline'>
-						<span className='font-extrabold'>{profile.followers_count}</span>
-						<span className='font-medium text-gray-500'>Người theo dõi</span>
-					</button>
-					<button className='flex items-center gap-1 font-bold text-black hover:underline'>
-						<span className='font-extrabold'>{profile.following_count}</span>
-						<span className='font-medium text-gray-500'>Đang theo dõi</span>
-					</button>
+						<button className='flex items-center gap-1 font-bold text-black hover:underline'>
+							<span className='font-extrabold'>{profile.following_count}</span>
+							<span className='font-medium text-gray-500'>Đang theo dõi</span>
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -263,8 +290,8 @@ const ProfileNotFound: React.FC<{ username: string }> = ({ username }) => (
 			Không tìm thấy người dùng
 		</h1>
 		<p className='mt-2 text-gray-500'>
-			Không có tài khoản nào với tên{" "}
-			<span className='font-bold text-black'>@{username}</span>.
+			Không có tài khoản nào với tên <span className='font-bold text-black'>@{username}</span>
+			.
 		</p>
 		<Link
 			to='/cong-dong'
@@ -311,7 +338,7 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, postsCount 
 
 	if (loading) {
 		return (
-			<div className='mt-5 space-y-5'>
+			<div className='mt-5 space-y-5 px-6 sm:px-0'>
 				{Array.from({ length: 3 }).map((_, i) => (
 					<PostSkeleton key={i} />
 				))}
@@ -321,21 +348,19 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, postsCount 
 
 	if (error || posts.length === 0) {
 		return (
-			<div className='mt-5 rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-black bg-white px-6 py-16 text-center sm:mx-0'>
 				<p className='font-heading text-lg font-extrabold text-black'>
 					{error ? "Không thể tải bài viết" : "Chưa có bài viết nào"}
 				</p>
 				<p className='mt-2 text-sm text-gray-500'>
-					{error
-						? "Vui lòng thử lại sau."
-						: `Người dùng này chưa đăng bài viết nào.`}
+					{error ? "Vui lòng thử lại sau." : `Người dùng này chưa đăng bài viết nào.`}
 				</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className='mt-5 space-y-5'>
+		<div className='mt-5 space-y-5 px-6 sm:px-0'>
 			{posts.map((post) => (
 				<PostCard key={post.id} post={post} user={user} />
 			))}
@@ -376,7 +401,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user }) => {
 	}, [profile]);
 
 	return (
-		<div className='mt-5 space-y-6'>
+		<div className='mt-5 space-y-6 px-6 sm:px-0'>
 			{/* Recent posts preview */}
 			<section>
 				<div className='mb-3 flex items-center justify-between'>
@@ -433,8 +458,15 @@ const UserProfilePage: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<Tab>("overview");
 	const [followed, setFollowed] = useState(false);
 
+	// Derive the handle the current user would own (same logic as buildProfileUrl / Navbar links)
+	const myHandle = user ? buildProfileUrl(user.username, user.email).replace(/^\/@/, "") : null;
 	const isOwnProfile = Boolean(
-		user && profile && (String(user.id) === String(profile.id) || user.email === profile.email),
+		user &&
+		username &&
+		// Handle-based match: works even when profile API returns stub data
+		((myHandle && myHandle === username) ||
+			// DB-level match: works once the real profile is loaded
+			(profile && (String(user.id) === String(profile.id) || user.email === profile.email))),
 	);
 
 	useEffect(() => {
@@ -496,15 +528,17 @@ const UserProfilePage: React.FC = () => {
 
 	if (loading) {
 		return (
-			<div className='mx-auto w-full max-w-6xl px-4 py-8'>
-				<div className='flex gap-6'>
-					<div className='min-w-0 flex-1'>
-						<ProfileSkeleton />
+			<div className='w-full min-h-screen pt-16'>
+				<div className='neo-container px-0 py-0 sm:px-4 sm:py-8 md:px-6'>
+					<div className='flex gap-6'>
+						<div className='min-w-0 flex-1'>
+							<ProfileSkeleton />
+						</div>
+						<aside className='hidden w-72 shrink-0 space-y-5 lg:block'>
+							<div className='h-48 animate-pulse rounded-2xl border-2 border-black bg-gray-200' />
+							<div className='h-36 animate-pulse rounded-2xl border-2 border-black bg-gray-200' />
+						</aside>
 					</div>
-					<aside className='hidden w-72 shrink-0 space-y-5 lg:block'>
-						<div className='h-48 animate-pulse rounded-2xl border-2 border-black bg-gray-200' />
-						<div className='h-36 animate-pulse rounded-2xl border-2 border-black bg-gray-200' />
-					</aside>
 				</div>
 			</div>
 		);
@@ -512,8 +546,10 @@ const UserProfilePage: React.FC = () => {
 
 	if (notFound || !username) {
 		return (
-			<div className='mx-auto w-full max-w-6xl px-4'>
-				<ProfileNotFound username={username ?? ""} />
+			<div className='w-full min-h-screen pt-16'>
+				<div className='neo-container px-4 md:px-6'>
+					<ProfileNotFound username={username ?? ""} />
+				</div>
 			</div>
 		);
 	}
@@ -521,117 +557,123 @@ const UserProfilePage: React.FC = () => {
 	if (!profile) return null;
 
 	return (
-		<div className='mx-auto w-full max-w-6xl px-4 py-8'>
-			<div className='flex gap-6'>
-				{/* ── Main content ── */}
-				<div className='min-w-0 flex-1'>
-					<ProfileHeader
-						profile={profile}
-						isOwnProfile={isOwnProfile}
-						followed={followed}
-						onFollow={() => setFollowed((f) => !f)}
-					/>
+		<div className='w-full min-h-screen pt-16'>
+			<div className='neo-container px-0 py-0 sm:px-4 sm:py-8 md:px-6'>
+				<div className='flex gap-6'>
+					{/* ── Main content ── */}
+					<div className='min-w-0 flex-1'>
+						<ProfileHeader
+							profile={profile}
+							isOwnProfile={isOwnProfile}
+							followed={followed}
+							onFollow={() => setFollowed((f) => !f)}
+						/>
 
-					{/* Tabs */}
-					<div className='mt-5 border-b-2 border-black'>
-						<nav className='flex'>
-							{TABS.map((tab) => {
-								const isActive = activeTab === tab.id;
-								return (
-									<button
-										key={tab.id}
-										onClick={() => setActiveTab(tab.id)}
-										className='relative pb-3 pr-6 pt-1 font-heading text-sm font-extrabold transition md:text-base'
-										style={{ color: isActive ? "#111" : "#6b7280" }}>
-										{tab.label}
-										{tab.id === "posts" && profile.posts_count > 0 && (
-											<span className='ml-1.5 rounded-md border border-black bg-[var(--color-pastel-yellow)] px-1.5 py-0.5 text-xs font-bold'>
-												{profile.posts_count}
-											</span>
-										)}
-										{isActive && (
-											<span className='absolute -bottom-[3px] left-0 right-6 h-[3px] rounded-t-sm bg-[var(--color-primary)]' />
-										)}
-									</button>
-								);
-							})}
-						</nav>
+						{/* Tabs */}
+						<div className='mx-6 mt-5 border-b-2 border-black sm:mx-0'>
+							<nav className='flex'>
+								{TABS.map((tab) => {
+									const isActive = activeTab === tab.id;
+									return (
+										<button
+											key={tab.id}
+											onClick={() => setActiveTab(tab.id)}
+											className='relative pb-3 pr-6 pt-1 font-heading text-sm font-extrabold transition md:text-base'
+											style={{ color: isActive ? "#111" : "#6b7280" }}>
+											{tab.label}
+											{tab.id === "posts" && profile.posts_count > 0 && (
+												<span className='ml-1.5 rounded-md border border-black bg-[var(--color-pastel-yellow)] px-1.5 py-0.5 text-xs font-bold'>
+													{profile.posts_count}
+												</span>
+											)}
+											{isActive && (
+												<span className='absolute -bottom-[3px] left-0 right-6 h-[3px] rounded-t-sm bg-[var(--color-primary)]' />
+											)}
+										</button>
+									);
+								})}
+							</nav>
+						</div>
+
+						{/* Tab content */}
+						{activeTab === "overview" ? (
+							<OverviewTab profile={profile} user={user} />
+						) : (
+							<UserPostsTab
+								username={username}
+								user={user}
+								postsCount={profile.posts_count}
+							/>
+						)}
 					</div>
 
-					{/* Tab content */}
-					{activeTab === "overview" ? (
-						<OverviewTab profile={profile} user={user} />
-					) : (
-						<UserPostsTab
-							username={username}
-							user={user}
-							postsCount={profile.posts_count}
-						/>
-					)}
-				</div>
+					{/* ── Sidebar ── */}
+					<aside className='hidden w-72 shrink-0 space-y-5 lg:block'>
+						<StatsCard profile={profile} />
 
-				{/* ── Sidebar ── */}
-				<aside className='hidden w-72 shrink-0 space-y-5 lg:block'>
-					<StatsCard profile={profile} />
-
-					{/* Member info card */}
-					<div className='rounded-2xl border-2 border-black bg-white p-4 shadow-[4px_4px_0_#111]'>
-						<h2 className='mb-4 font-heading text-base font-extrabold text-black'>
-							Thông tin thành viên
-						</h2>
-						<div className='space-y-2.5 text-sm'>
-							{profile.student_code && (
-								<div className='flex items-center justify-between'>
-									<span className='text-gray-500'>MSSV</span>
-									<span className='font-bold text-black'>{profile.student_code}</span>
-								</div>
-							)}
-							{profile.faculty && (
-								<div className='flex items-center justify-between'>
-									<span className='text-gray-500'>Khoa</span>
-									<span className='max-w-[60%] text-right font-bold text-black'>
-										{profile.faculty}
+						{/* Member info card */}
+						<div className='rounded-2xl border-2 border-black bg-white p-4 shadow-[4px_4px_0_#111]'>
+							<h2 className='mb-4 font-heading text-base font-extrabold text-black'>
+								Thông tin thành viên
+							</h2>
+							<div className='space-y-2.5 text-sm'>
+								{profile.student_code && (
+									<div className='flex items-center justify-between'>
+										<span className='text-gray-500'>MSSV</span>
+										<span className='font-bold text-black'>
+											{profile.student_code}
+										</span>
+									</div>
+								)}
+								{profile.faculty && (
+									<div className='flex items-center justify-between'>
+										<span className='text-gray-500'>Khoa</span>
+										<span className='max-w-[60%] text-right font-bold text-black'>
+											{profile.faculty}
+										</span>
+									</div>
+								)}
+								{profile.major && (
+									<div className='flex items-center justify-between'>
+										<span className='text-gray-500'>Ngành</span>
+										<span className='max-w-[60%] text-right font-bold text-black'>
+											{profile.major}
+										</span>
+									</div>
+								)}
+								{profile.class_name && (
+									<div className='flex items-center justify-between'>
+										<span className='text-gray-500'>Lớp</span>
+										<span className='font-bold text-black'>
+											{profile.class_name}
+										</span>
+									</div>
+								)}
+								<div className='flex items-center justify-between border-t-2 border-dashed border-gray-200 pt-2'>
+									<span className='text-gray-500'>Tham gia</span>
+									<span className='font-bold text-black'>
+										{new Date(profile.created_at).toLocaleDateString("vi-VN", {
+											year: "numeric",
+											month: "short",
+										})}
 									</span>
 								</div>
-							)}
-							{profile.major && (
-								<div className='flex items-center justify-between'>
-									<span className='text-gray-500'>Ngành</span>
-									<span className='max-w-[60%] text-right font-bold text-black'>
-										{profile.major}
-									</span>
-								</div>
-							)}
-							{profile.class_name && (
-								<div className='flex items-center justify-between'>
-									<span className='text-gray-500'>Lớp</span>
-									<span className='font-bold text-black'>{profile.class_name}</span>
-								</div>
-							)}
-							<div className='flex items-center justify-between border-t-2 border-dashed border-gray-200 pt-2'>
-								<span className='text-gray-500'>Tham gia</span>
-								<span className='font-bold text-black'>
-									{new Date(profile.created_at).toLocaleDateString("vi-VN", {
-										year: "numeric",
-										month: "short",
-									})}
-								</span>
 							</div>
 						</div>
-					</div>
 
-					<SkillsCard skills={profile.skills} />
+						<SkillsCard skills={profile.skills} />
 
-					{/* Share profile */}
-					<button
-						onClick={() => {
-							navigator.clipboard.writeText(window.location.href);
-						}}
-						className='flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-						<Share2 className='h-4 w-4' />
-						Sao chép liên kết hồ sơ
-					</button>
-				</aside>
+						{/* Share profile */}
+						<button
+							onClick={() => {
+								navigator.clipboard.writeText(window.location.href);
+							}}
+							className='flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							<Share2 className='h-4 w-4' />
+							Sao chép liên kết hồ sơ
+						</button>
+					</aside>
+				</div>
 			</div>
 		</div>
 	);
