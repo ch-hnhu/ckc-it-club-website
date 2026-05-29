@@ -55,12 +55,12 @@ const buildChannelItems = (sourceChannels: ChannelItem[]): ChannelItem[] => {
 	const totalPostsCount = sorted.reduce((sum, ch) => sum + ch.count, 0);
 	return [
 		{
-			id: "all",
+			id: "chung",
 			label: "Kênh chung",
 			count: totalPostsCount,
-			description: "Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦",
+			description: "Tất cả bài viết từ mọi kênh trong cộng đồng 🌱✦",
 			image: COMMUNITY_LOGO,
-			slug: "all",
+			slug: "chung",
 		},
 		...sorted,
 	];
@@ -87,7 +87,7 @@ const CommunityLayout: React.FC = () => {
 	const { channelSlug } = useParams<{ channelSlug: string }>();
 
 	const pageMode = channelSlug ? "channel" : "home";
-	const activeChannel = channelSlug ?? "all";
+	const activeChannel = channelSlug ?? "";
 
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [channels, setChannels] = useState<ChannelItem[]>(buildFallbackChannels());
@@ -175,12 +175,8 @@ const CommunityLayout: React.FC = () => {
 			</div>
 			<nav className='mt-3 space-y-2'>
 				{channels.map((channel) => {
-					const channelPath =
-						channel.slug === "all" ? "/cong-dong" : `/cong-dong/${channel.slug}`;
-					const isActive =
-						channel.slug === "all"
-							? pageMode === "home"
-							: pageMode === "channel" && activeChannel === channel.slug;
+					const channelPath = `/cong-dong/${channel.slug}`;
+					const isActive = pageMode === "channel" && activeChannel === channel.slug;
 					return (
 						<Link
 							key={channel.id}
