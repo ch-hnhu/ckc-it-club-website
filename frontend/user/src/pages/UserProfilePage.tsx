@@ -105,7 +105,7 @@ const StatsCard: React.FC<StatsCardProps> = ({ profile }) => (
 			<div className='flex items-center justify-between'>
 				<span className='flex items-center gap-2 text-sm font-medium text-gray-600'>
 					<Heart className='h-4 w-4' />
-					Lượt thích nhận được
+					Tổng lượt thích
 				</span>
 				<span className='font-heading text-sm font-extrabold text-black'>—</span>
 			</div>
@@ -369,7 +369,7 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user }) => {
 	}
 
 	return (
-		<div className='mt-5 space-y-5 px-6 sm:px-0'>
+		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
 			{posts.map((post) => (
 				<PostCard key={post.id} post={post} user={user} />
 			))}
@@ -424,9 +424,9 @@ const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
 	};
 
 	return (
-		<article className='flex w-68 shrink-0 flex-col rounded-2xl border-2 border-black bg-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+		<article className='flex w-68 shrink-0 flex-col rounded-2xl border-2 border-black bg-white'>
 			{/* Header */}
-			<div className='flex items-center gap-2 px-4 pt-4 pb-2'>
+			<div className='flex items-center gap-2 px-4 pt-4 pb-2 cursor-pointer'>
 				<Link
 					to={authorProfileUrl ?? "#"}
 					onClick={(e) => !authorProfileUrl && e.preventDefault()}
@@ -555,7 +555,7 @@ const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) =
 				<button
 					onClick={onShowAll}
 					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-					Xem tất cả bài viết
+					Xem tất cả Posts
 					<ChevronRight className='h-4 w-4' />
 				</button>
 			</div>
@@ -597,7 +597,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user, onSwitchToPost
 	}, [profile]);
 
 	return (
-		<div className='mt-5 px-6 sm:px-0'>
+		<div className='mt-5 mb-5 px-6 sm:px-0'>
 			{/* Recent posts carousel */}
 			{loading ? (
 				<div>
@@ -639,7 +639,7 @@ type Tab = "overview" | "posts";
 
 const TABS: { id: Tab; label: string }[] = [
 	{ id: "overview", label: "Tổng quan" },
-	{ id: "posts", label: "Bài viết" },
+	{ id: "posts", label: "Posts" },
 ];
 
 const UserProfilePage: React.FC = () => {
