@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
+use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use Illuminate\Support\Facades\Route;
@@ -56,10 +57,17 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{id}/comments',           [UserPostController::class, 'comments']);
         Route::get('/channels',                      [UserChannelController::class, 'index']);
 
+        // Public blog routes
+        Route::get('/blogs',                         [UserBlogController::class, 'index']);
+        Route::get('/blogs/{slug}',                  [UserBlogController::class, 'show']);
+        Route::get('/blogs/{id}/comments',           [UserBlogController::class, 'comments']);
+
         // Authenticated actions
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/posts/{id}/reactions',     [UserPostController::class, 'react']);
             Route::post('/posts/{id}/comments',      [UserPostController::class, 'comment']);
+            Route::post('/blogs/{id}/reactions',     [UserBlogController::class, 'react']);
+            Route::post('/blogs/{id}/comments',      [UserBlogController::class, 'comment']);
         });
     });
 

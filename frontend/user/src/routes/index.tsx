@@ -4,6 +4,8 @@ import CommunityLayout from "@/pages/community/CommunityLayout";
 import CommunityFeedPage from "@/pages/community/CommunityFeedPage";
 import CommunityCreatePage from "@/pages/community/CommunityCreatePage";
 import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
+import BlogFeedPage from "@/pages/community/BlogFeedPage";
+import BlogDetailPage from "@/pages/community/BlogDetailPage";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
@@ -28,6 +30,14 @@ const router = createBrowserRouter([
 			{
 				path: "cong-dong/dang-bai",
 				element: <CommunityCreatePage />,
+			},
+			{
+				path: "cong-dong/blog",
+				element: <BlogFeedPage />,
+			},
+			{
+				path: "cong-dong/blog/:slug",
+				element: <BlogDetailPage />,
 			},
 			{
 				path: "cong-dong",

@@ -1,12 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+	BookOpen,
 	Bookmark,
+	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
+	Code2,
+	Crown,
+	Home,
 	LogIn,
 	LogOut,
 	Menu,
+	Monitor,
 	SlidersHorizontal,
+	Trophy,
 	UserPlus,
 	UserRound,
 	X,
@@ -27,7 +34,7 @@ type NavbarProps = {
 };
 
 const NAV_ITEMS = [
-	{ label: "Cộng đồng", href: "/cong-dong" },
+	{ label: "Cộng đồng", href: "/cong-dong", dropdown: true },
 	{ label: "Tài nguyên", href: "#resources" },
 	{ label: "Bảng xếp hạng", href: "#leaderboard" },
 	{ label: "Sự kiện", href: "#events" },
@@ -35,12 +42,23 @@ const NAV_ITEMS = [
 	{ label: "Liên hệ", href: "/lien-he" },
 ];
 
+const COMMUNITY_DROPDOWN = [
+	{ id: "home", label: "Trang chủ", to: "/cong-dong", icon: Home },
+	{ id: "leaderboard", label: "Bảng xếp hạng", to: "/cong-dong", icon: Trophy },
+	{ id: "showcase", label: "Showcase dự án", to: "/cong-dong", icon: Monitor },
+	{ id: "challenge", label: "Thử thách tháng", to: "/cong-dong", icon: Crown },
+	{ id: "code", label: "#30DaysOfCode", to: "/cong-dong", icon: Code2 },
+	{ id: "blog", label: "Blog", to: "/cong-dong/blog", icon: BookOpen },
+];
+
 const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const [isMobileOpen, setIsMobileOpen] = useState(false);
-	const [mobileMenuView, setMobileMenuView] = useState<"nav" | "account">("nav");
+	const [mobileMenuView, setMobileMenuView] = useState<"nav" | "account" | "community">("nav");
 	const [isProfileOpen, setIsProfileOpen] = useState(false);
+	const [isCommunityOpen, setIsCommunityOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const profileMenuRef = useRef<HTMLDivElement>(null);
+	const communityDropdownRef = useRef<HTMLDivElement>(null);
 	const location = useLocation();
 	const isCommunityPage =
 		location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
@@ -91,6 +109,24 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
 	}, [isProfileOpen]);
+
+	useEffect(() => {
+		if (!isCommunityOpen) return;
+		const handlePointerDown = (e: PointerEvent) => {
+			if (communityDropdownRef.current && !communityDropdownRef.current.contains(e.target as Node)) {
+				setIsCommunityOpen(false);
+			}
+		};
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setIsCommunityOpen(false);
+		};
+		document.addEventListener("pointerdown", handlePointerDown);
+		document.addEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [isCommunityOpen]);
 
 	const handleLogin = async () => {
 		try {
@@ -251,6 +287,56 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 							{NAV_ITEMS.map((item) => {
 								const isActive = isNavItemActive(item.href);
 								const className = getNavItemClass(isActive);
+
+								if (item.dropdown) {
+									return (
+										<div key={item.label} ref={communityDropdownRef} className='relative'>
+											<button
+												type='button'
+												onClick={() => setIsCommunityOpen((p) => !p)}
+												className={`${className} flex items-center gap-1`}
+												style={{ fontFamily: "var(--font-body)" }}
+												aria-haspopup='true'
+												aria-expanded={isCommunityOpen}>
+												{item.label}
+												<ChevronDown
+													className={`h-3.5 w-3.5 transition-transform duration-200 ${isCommunityOpen ? "rotate-180" : ""}`}
+												/>
+												<span
+													className={getNavIndicatorClass(isActive)}
+													style={{ background: "var(--color-primary)" }}
+												/>
+											</button>
+
+											{isCommunityOpen && (
+												<div className='absolute top-[calc(100%+10px)] left-0 z-50 w-56 overflow-hidden rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
+													{COMMUNITY_DROPDOWN.map((sub) => {
+														const subActive =
+															(sub.id === "blog" && location.pathname.startsWith("/cong-dong/blog")) ||
+															(sub.id === "home" && location.pathname === "/cong-dong" && !location.pathname.startsWith("/cong-dong/blog"));
+														const SubIcon = sub.icon;
+														return (
+															<Link
+																key={sub.id}
+																to={sub.to}
+																onClick={() => setIsCommunityOpen(false)}
+																className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition-colors ${
+																	subActive
+																		? "bg-[var(--color-primary)] text-black"
+																		: "text-gray-700 hover:bg-[var(--color-primary-100)] hover:text-[var(--color-text-primary)]"
+																}`}
+																style={{ fontFamily: "var(--font-body)" }}>
+																<SubIcon className='h-4 w-4 shrink-0' />
+																{sub.label}
+															</Link>
+														);
+													})}
+												</div>
+											)}
+										</div>
+									);
+								}
+
 								return item.href.startsWith("/") ? (
 									<Link
 										key={item.label}
@@ -335,6 +421,21 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 									{NAV_ITEMS.map((item) => {
 										const isActive = isNavItemActive(item.href);
 										const className = getNavItemClass(isActive, true);
+
+										if (item.dropdown) {
+											return (
+												<button
+													key={item.label}
+													type='button'
+													onClick={() => setMobileMenuView("community")}
+													className={`${className} flex w-full items-center justify-between`}
+													style={{ fontFamily: "var(--font-body)" }}>
+													{item.label}
+													<ChevronRight className='h-4 w-4 shrink-0 text-gray-500' />
+												</button>
+											);
+										}
+
 										return item.href.startsWith("/") ? (
 											<Link
 												key={item.label}
@@ -400,6 +501,43 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 										</div>
 									)}
 								</div>
+							</>
+						)}
+
+						{/* ── View: Community submenu ── */}
+						{mobileMenuView === "community" && (
+							<>
+								<button
+									type='button'
+									onClick={() => setMobileMenuView("nav")}
+									className='flex items-center gap-1.5 pt-4 pb-3 text-sm font-bold text-[var(--color-text-primary)] transition hover:opacity-75'>
+									<ChevronLeft className='h-4 w-4' />
+									Quay lại menu
+								</button>
+								<div className='mb-3 border-t border-gray-100' />
+								<nav className='flex flex-col gap-0.5'>
+									{COMMUNITY_DROPDOWN.map((sub) => {
+										const subActive =
+											(sub.id === "blog" && location.pathname.startsWith("/cong-dong/blog")) ||
+											(sub.id === "home" && location.pathname === "/cong-dong" && !location.pathname.startsWith("/cong-dong/blog"));
+										const SubIcon = sub.icon;
+										return (
+											<Link
+												key={sub.id}
+												to={sub.to}
+												onClick={closeMobileMenu}
+												className={`flex items-center gap-3 rounded-xl px-4 py-3 text-base font-bold transition-colors ${
+													subActive
+														? "bg-[var(--color-primary)] text-black"
+														: "text-gray-700 hover:bg-[var(--color-primary-100)] hover:text-[var(--color-text-primary)]"
+												}`}
+												style={{ fontFamily: "var(--font-body)" }}>
+												<SubIcon className='h-5 w-5 shrink-0' />
+												{sub.label}
+											</Link>
+										);
+									})}
+								</nav>
 							</>
 						)}
 

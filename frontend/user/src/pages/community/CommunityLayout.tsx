@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Code2, Crown, Hash, Home, Monitor, Trophy, X } from "lucide-react";
-import { Link, Outlet, useOutletContext, useParams } from "react-router-dom";
+import { BookOpen, Code2, Crown, Hash, Home, Monitor, Trophy, X } from "lucide-react";
+import { Link, Outlet, useLocation, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { communityService, type CommunityChannel } from "@/services/community.service";
 
@@ -28,11 +28,11 @@ export type CommunityLayoutContext = {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const PRIMARY_NAV = [
-	{ id: "home", label: "Trang chủ", icon: Home },
-	{ id: "leaderboard", label: "Bảng xếp hạng", icon: Trophy },
-	{ id: "showcase", label: "Showcase dự án", icon: Monitor },
-	{ id: "challenge", label: "Thử thách tháng", icon: Crown },
-	{ id: "code", label: "#30DaysOfCode", icon: Code2 },
+	{ id: "home", label: "Trang chủ", icon: Home, to: "/cong-dong" },
+	{ id: "leaderboard", label: "Bảng xếp hạng", icon: Trophy, to: "/cong-dong" },
+	{ id: "showcase", label: "Showcase dự án", icon: Monitor, to: "/cong-dong" },
+	{ id: "challenge", label: "Thử thách tháng", icon: Crown, to: "/cong-dong" },
+	{ id: "code", label: "#30DaysOfCode", icon: Code2, to: "/cong-dong" },
 ];
 
 const STATIC_CHANNELS = [
@@ -85,6 +85,8 @@ const CommunityLayout: React.FC = () => {
 	const user = outletContext?.user ?? null;
 
 	const { channelSlug } = useParams<{ channelSlug: string }>();
+	const location = useLocation();
+	const isBlogPage = location.pathname.startsWith("/cong-dong/blog");
 
 	const pageMode = channelSlug ? "channel" : "home";
 	const activeChannel = channelSlug ?? "all";
@@ -137,34 +139,39 @@ const CommunityLayout: React.FC = () => {
 	const renderSidebarContent = (isMobile = false) => (
 		<div className={isMobile ? "px-4 py-4" : "px-3 py-4"}>
 			{/* Primary nav */}
-			<nav className='space-y-2'>
-				{PRIMARY_NAV.map((item) => {
-					const Icon = item.icon;
-					const isActive = pageMode === "home" && item.id === "home";
-					return (
-						<Link
-							key={item.id}
-							to='/cong-dong'
-							onClick={() => setIsSidebarOpen(false)}
-							className={`group relative flex w-full items-center text-left font-bold ${
-								isMobile
-									? "gap-3 rounded-xl px-3 py-3 text-base"
-									: "gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px]"
-							} ${
-								isActive
-									? "border-2 border-[var(--color-primary-dark)] bg-primary-100 text-[var(--color-text-primary)]"
-									: "border-2 border-transparent bg-white text-gray-700 hover:bg-gray-100"
-							}`}>
-							<Icon
-								className={`transition-colors duration-200 ${isMobile ? "h-5 w-5" : "h-4 w-4"} ${
-									isActive ? "text-[var(--color-text-primary)]" : "text-gray-700"
-								}`}
-							/>
-							{item.label}
-						</Link>
-					);
-				})}
-			</nav>
+				<nav className='space-y-2'>
+					{PRIMARY_NAV.map((item) => {
+						const Icon = item.icon;
+						const isActive =
+							item.id === "blog"
+								? isBlogPage
+								: item.id === "home"
+									? pageMode === "home" && !isBlogPage
+									: false;
+						return (
+							<Link
+								key={item.id}
+								to={item.to}
+								onClick={() => setIsSidebarOpen(false)}
+								className={`group relative flex w-full items-center text-left font-bold ${
+									isMobile
+										? "gap-3 rounded-xl px-3 py-3 text-base"
+										: "gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px]"
+								} ${
+									isActive
+										? "border-2 border-[var(--color-primary-dark)] bg-primary-100 text-[var(--color-text-primary)]"
+										: "border-2 border-transparent bg-white text-gray-700 hover:bg-gray-100"
+								}`}>
+								<Icon
+									className={`transition-colors duration-200 ${isMobile ? "h-5 w-5" : "h-4 w-4"} ${
+										isActive ? "text-[var(--color-text-primary)]" : "text-gray-700"
+									}`}
+								/>
+								{item.label}
+							</Link>
+						);
+					})}
+				</nav>
 
 			{/* Channel list */}
 			<div

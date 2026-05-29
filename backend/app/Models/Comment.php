@@ -10,7 +10,7 @@ class Comment extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['post_id', 'user_id', 'parent_id', 'content', 'depth', 'is_hidden'];
+    protected $fillable = ['post_id', 'blog_id', 'user_id', 'parent_id', 'content', 'depth', 'is_hidden'];
 
     protected function casts(): array
     {
@@ -25,5 +25,10 @@ class Comment extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
+    }
+
+    public function blog(): BelongsTo
+    {
+        return $this->belongsTo(Blog::class);
     }
 }
