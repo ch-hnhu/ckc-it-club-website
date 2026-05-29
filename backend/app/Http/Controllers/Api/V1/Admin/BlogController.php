@@ -15,7 +15,7 @@ class BlogController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $allowedSorts = ['id', 'title', 'status', 'view_count', 'published_at', 'created_at'];
+        $allowedSorts = ['id', 'title', 'status', 'view_count', 'published_at', 'created_at', 'user_name', 'tags_count'];
         $sort    = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
         $order   = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
         $perPage = (int) $request->query('per_page', 10);
@@ -27,13 +27,16 @@ class BlogController extends BaseApiController
                 'author:id,full_name,email,avatar',
                 'tags:id,name',
             ])
+            ->withCount('tags')
             ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count')
             ->when($search, fn ($q) => $q->where(fn ($s) => $s
                 ->where('blogs.title', 'like', "%{$search}%")
                 ->orWhereHas('author', fn ($u) => $u->where('full_name', 'like', "%{$search}%"))
             ))
             ->when($status && $status !== 'all', fn ($q) => $q->where('blogs.status', $status))
-            ->orderBy("blogs.{$sort}", $order)
+            ->when(in_array($sort, ['id', 'title', 'status', 'view_count', 'published_at', 'created_at']), fn ($q) => $q->orderBy("blogs.{$sort}", $order))
+            ->when($sort === 'tags_count', fn ($q) => $q->orderBy('tags_count', $order))
+            ->when($sort === 'user_name', fn ($q) => $q->orderByRaw("(SELECT COALESCE(full_name, email) FROM users WHERE users.id = blogs.author_id) {$order}"))
             ->paginate($perPage);
 
         $blogs->getCollection()->transform(fn (Blog $blog) => $this->transformBlog($blog));

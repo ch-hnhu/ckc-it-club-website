@@ -13,7 +13,7 @@ class PostController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $allowedSorts = ['id', 'status', 'created_at'];
+        $allowedSorts = ['id', 'status', 'created_at', 'reactions_count', 'user_name', 'channel_name'];
         $sort    = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
         $order   = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
         $perPage = (int) $request->query('per_page', 10);
@@ -30,7 +30,10 @@ class PostController extends BaseApiController
                 ->orWhereHas('user', fn ($u) => $u->where('full_name', 'like', "%{$search}%"))
             ))
             ->when($status && $status !== 'all', fn ($q) => $q->where('posts.status', $status))
-            ->orderBy("posts.{$sort}", $order)
+            ->when(in_array($sort, ['id', 'status', 'created_at']), fn ($q) => $q->orderBy("posts.{$sort}", $order))
+            ->when($sort === 'reactions_count', fn ($q) => $q->orderBy('reactions_count', $order))
+            ->when($sort === 'user_name', fn ($q) => $q->orderByRaw("(SELECT COALESCE(full_name, email) FROM users WHERE users.id = posts.user_id) {$order}"))
+            ->when($sort === 'channel_name', fn ($q) => $q->orderByRaw("(SELECT name FROM channels WHERE channels.id = posts.channel_id) {$order}"))
             ->paginate($perPage);
 
         $posts->getCollection()->transform(fn (Post $post) => $this->transformPost($post));
