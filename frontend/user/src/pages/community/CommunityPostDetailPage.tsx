@@ -482,7 +482,7 @@ const CommunityPostDetailPage: React.FC = () => {
 										{showPostMenu && (
 											<div
 												ref={menuDropdownRef}
-												className='absolute right-0 top-full z-[49] mt-1 min-w-[12rem] rounded-xl border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
+												className='absolute right-0 top-full z-20 mt-1 min-w-[12rem] rounded-xl border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
 												{isOwnPost ? (
 													<>
 														<button
