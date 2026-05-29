@@ -1,13 +1,16 @@
-import React, { useEffect, useState } from "react";
-import { Link, useOutletContext, useParams } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
 	BookOpen,
 	Building2,
 	Calendar,
 	Camera,
+	ChevronLeft,
+	ChevronRight,
 	GraduationCap,
 	Heart,
 	ImagePlus,
+	MessageCircle,
 	Share2,
 	UserCheck,
 	UserPlus,
@@ -16,7 +19,14 @@ import {
 import type { AuthUser } from "@/services/auth.service";
 import { userService } from "@/services/user.service";
 import { postService } from "@/services/post.service";
-import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle } from "@/lib/utils";
+import {
+	buildAvatar,
+	buildProfileUrl,
+	formatRelativeTime,
+	getHandle,
+	isVideoMediaUrl,
+} from "@/lib/utils";
+import { renderMarkdownPreview } from "@/lib/markdown";
 import type { UserProfile } from "@/types/user.types";
 import type { Post } from "@/types/post.types";
 import PostCard from "@/components/community/PostCard";
@@ -306,10 +316,9 @@ const ProfileNotFound: React.FC<{ username: string }> = ({ username }) => (
 interface UserPostsTabProps {
 	username: string;
 	user: AuthUser | null;
-	postsCount: number;
 }
 
-const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, postsCount }) => {
+const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user }) => {
 	const [posts, setPosts] = useState<Post[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);
@@ -368,14 +377,201 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, postsCount 
 	);
 };
 
+// ─── Compact Post Card (for horizontal carousel) ─────────────────────────────
+
+interface PostCardCompactProps {
+	post: Post;
+	user: AuthUser | null;
+}
+
+const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
+	const navigate = useNavigate();
+	const location = useLocation();
+	const authorName = post.user?.full_name ?? "Ẩn danh";
+	const authorAvatar = buildAvatar(post.user?.full_name, post.user?.avatar);
+	const authorProfileUrl = post.user
+		? buildProfileUrl(post.user.username, post.user.email)
+		: null;
+	const detailUrl = `/cong-dong/bai-viet/${post.id}`;
+	const sourceContent = post.content ?? post.excerpt;
+	const preview = sourceContent ? renderMarkdownPreview(sourceContent, 100) : null;
+
+	const [liked, setLiked] = useState(post.my_reaction === "heart");
+	const [heartCount, setHeartCount] = useState(post.reactions_count);
+	const [loading, setLoading] = useState(false);
+
+	const handleLike = async (e: React.MouseEvent) => {
+		e.preventDefault();
+		if (!user) {
+			navigate("/login", { state: { from: location.pathname } });
+			return;
+		}
+		if (loading) return;
+		const wasLiked = liked;
+		setLiked(!wasLiked);
+		setHeartCount((c) => (wasLiked ? Math.max(0, c - 1) : c + 1));
+		setLoading(true);
+		try {
+			const res = await postService.toggleReaction(post.id, "heart");
+			setLiked(res.data.my_reaction === "heart");
+			setHeartCount(res.data.reactions_count);
+		} catch {
+			setLiked(wasLiked);
+			setHeartCount((c) => (wasLiked ? c + 1 : Math.max(0, c - 1)));
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	return (
+		<article className='flex w-68 shrink-0 flex-col rounded-2xl border-2 border-black bg-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+			{/* Header */}
+			<div className='flex items-center gap-2 px-4 pt-4 pb-2'>
+				<Link
+					to={authorProfileUrl ?? "#"}
+					onClick={(e) => !authorProfileUrl && e.preventDefault()}
+					className='shrink-0'>
+					<img
+						src={authorAvatar}
+						alt={authorName}
+						className='h-8 w-8 rounded-full border-2 border-black object-cover'
+					/>
+				</Link>
+				<div className='min-w-0 flex-1'>
+					<Link
+						to={authorProfileUrl ?? "#"}
+						onClick={(e) => !authorProfileUrl && e.preventDefault()}
+						className='block truncate font-heading text-xs font-extrabold text-black hover:underline'>
+						{authorName}
+					</Link>
+					<p className='text-[11px] text-gray-400'>
+						{formatRelativeTime(post.created_at)}
+					</p>
+				</div>
+			</div>
+
+			{post.channel && (
+				<p className='px-4 pb-1 text-[11px] font-bold text-lime-700'>
+					#{post.channel.name}
+				</p>
+			)}
+
+			{/* Body */}
+			<Link to={detailUrl} className='flex min-h-0 flex-1 flex-col px-4 pb-3'>
+				<h3 className='font-heading text-sm font-extrabold leading-snug text-black line-clamp-2 mb-2 hover:underline'>
+					{post.title}
+				</h3>
+
+				{post.featured_image && !isVideoMediaUrl(post.featured_image) ? (
+					<div className='mt-1 overflow-hidden rounded-lg border-2 border-black'>
+						<img
+							src={post.featured_image}
+							alt={post.title}
+							className='aspect-[16/9] w-full object-cover'
+						/>
+					</div>
+				) : preview?.html ? (
+					<div
+						className='community-markdown text-xs text-gray-600 line-clamp-3'
+						dangerouslySetInnerHTML={{ __html: preview.html }}
+					/>
+				) : null}
+			</Link>
+
+			{/* Footer */}
+			<div className='flex items-center gap-3 border-t-2 border-black px-4 py-2.5'>
+				<button
+					onClick={handleLike}
+					disabled={loading}
+					className={`inline-flex items-center gap-1.5 text-xs font-bold transition disabled:opacity-60 ${
+						liked ? "text-red-500" : "text-gray-500 hover:text-red-500"
+					}`}>
+					<Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+					{heartCount}
+				</button>
+				<Link
+					to={detailUrl}
+					className='inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-black'>
+					<MessageCircle className='h-4 w-4' />
+					{post.comments_count}
+				</Link>
+				<button
+					className='ml-auto text-gray-400 transition hover:text-black'
+					aria-label='Chia sẻ'>
+					<Share2 className='h-4 w-4' />
+				</button>
+			</div>
+		</article>
+	);
+};
+
+// ─── Post Carousel ────────────────────────────────────────────────────────────
+
+interface PostCarouselProps {
+	posts: Post[];
+	user: AuthUser | null;
+	onShowAll: () => void;
+}
+
+const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) => {
+	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const scroll = (dir: "left" | "right") => {
+		scrollRef.current?.scrollBy({
+			left: dir === "right" ? 288 : -288,
+			behavior: "smooth",
+		});
+	};
+
+	return (
+		<div>
+			<div className='mb-4 flex items-center justify-between'>
+				<h1 className='font-heading font-extrabold text-black text-2xl'>Posts</h1>
+				<div className='flex items-center gap-2'>
+					<button
+						onClick={() => scroll("left")}
+						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+						aria-label='Cuộn trái'>
+						<ChevronLeft className='h-4 w-4' />
+					</button>
+					<button
+						onClick={() => scroll("right")}
+						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+						aria-label='Cuộn phải'>
+						<ChevronRight className='h-4 w-4' />
+					</button>
+				</div>
+			</div>
+
+			{/* Scrollable row — hidden scrollbar */}
+			<div ref={scrollRef} className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
+				{posts.map((post) => (
+					<PostCardCompact key={post.id} post={post} user={user} />
+				))}
+			</div>
+
+			{/* Show all button */}
+			<div className='mt-5 flex justify-center'>
+				<button
+					onClick={onShowAll}
+					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+					Xem tất cả bài viết
+					<ChevronRight className='h-4 w-4' />
+				</button>
+			</div>
+		</div>
+	);
+};
+
 // ─── Tab Content: Overview ────────────────────────────────────────────────────
 
 interface OverviewTabProps {
 	profile: UserProfile;
 	user: AuthUser | null;
+	onSwitchToPostsTab: () => void;
 }
 
-const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user }) => {
+const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user, onSwitchToPostsTab }) => {
 	const [recentPosts, setRecentPosts] = useState<Post[]>([]);
 	const [loading, setLoading] = useState(true);
 
@@ -386,7 +582,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user }) => {
 		userService
 			.getUserPosts(profile.username ?? profile.email.split("@")[0], 1)
 			.then((res) => {
-				if (!cancelled) setRecentPosts(res.data.slice(0, 3));
+				if (!cancelled) setRecentPosts(res.data.slice(0, 6));
 			})
 			.catch(() => {
 				if (!cancelled) setRecentPosts([]);
@@ -401,38 +597,38 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user }) => {
 	}, [profile]);
 
 	return (
-		<div className='mt-5 space-y-6 px-6 sm:px-0'>
-			{/* Recent posts preview */}
-			<section>
-				<div className='mb-3 flex items-center justify-between'>
-					<h2 className='font-heading text-base font-extrabold text-black'>
-						Bài viết gần đây
-					</h2>
-					<button
-						onClick={() => {}}
-						className='text-xs font-bold text-lime-700 hover:text-black'>
-						Xem tất cả
-					</button>
+		<div className='mt-5 px-6 sm:px-0'>
+			{/* Recent posts carousel */}
+			{loading ? (
+				<div>
+					<div className='mb-4 flex items-center justify-between'>
+						<div className='h-5 w-40 animate-pulse rounded bg-gray-200' />
+						<div className='flex gap-2'>
+							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
+							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
+						</div>
+					</div>
+					<div className='no-scrollbar flex gap-4 overflow-x-hidden pb-2'>
+						{Array.from({ length: 3 }).map((_, i) => (
+							<div
+								key={i}
+								className='h-56 w-68 shrink-0 animate-pulse rounded-2xl border-2 border-black bg-gray-200'
+							/>
+						))}
+					</div>
 				</div>
-
-				{loading ? (
-					<div className='space-y-4'>
-						{Array.from({ length: 2 }).map((_, i) => (
-							<PostSkeleton key={i} />
-						))}
-					</div>
-				) : recentPosts.length > 0 ? (
-					<div className='space-y-4'>
-						{recentPosts.map((post) => (
-							<PostCard key={post.id} post={post} user={user} />
-						))}
-					</div>
-				) : (
-					<div className='rounded-2xl border-2 border-black bg-white px-6 py-10 text-center'>
-						<p className='text-sm font-medium text-gray-500'>Chưa có bài viết nào.</p>
-					</div>
-				)}
-			</section>
+			) : recentPosts.length > 0 ? (
+				<PostCarousel posts={recentPosts} user={user} onShowAll={onSwitchToPostsTab} />
+			) : (
+				<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
+					<p className='font-heading text-base font-extrabold text-black'>
+						Chưa có bài viết nào
+					</p>
+					<p className='mt-1 text-sm text-gray-500'>
+						Người dùng này chưa đăng bài viết nào.
+					</p>
+				</div>
+			)}
 		</div>
 	);
 };
@@ -570,25 +766,31 @@ const UserProfilePage: React.FC = () => {
 						/>
 
 						{/* Tabs */}
-						<div className='mx-6 mt-5 border-b-2 border-black sm:mx-0'>
-							<nav className='flex'>
+						<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
+							<nav className='flex gap-2 sm:gap-4'>
 								{TABS.map((tab) => {
 									const isActive = activeTab === tab.id;
 									return (
 										<button
 											key={tab.id}
 											onClick={() => setActiveTab(tab.id)}
-											className='relative pb-3 pr-6 pt-1 font-heading text-sm font-extrabold transition md:text-base'
-											style={{ color: isActive ? "#111" : "#6b7280" }}>
-											{tab.label}
+											className={`group relative inline-flex min-h-10 shrink-0 items-center justify-center gap-2 px-3 pb-2 text-md transition-colors duration-200 md:text-lg ${
+												isActive
+													? "text-slate-950 font-bold"
+													: "text-slate-500 font-medium hover:text-slate-950"
+											}`}
+											style={{ fontFamily: "var(--font-body)" }}>
+											<span>{tab.label}</span>
 											{tab.id === "posts" && profile.posts_count > 0 && (
-												<span className='ml-1.5 rounded-md border border-black bg-[var(--color-pastel-yellow)] px-1.5 py-0.5 text-xs font-bold'>
+												<span className='inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 px-2 text-xs font-bold leading-none text-slate-500'>
 													{profile.posts_count}
 												</span>
 											)}
-											{isActive && (
-												<span className='absolute -bottom-[3px] left-0 right-6 h-[3px] rounded-t-sm bg-[var(--color-primary)]' />
-											)}
+											<span
+												className={`absolute -bottom-[2px] left-0 h-1 w-full bg-primary transition-transform duration-200 group-hover:scale-x-100 ${
+													isActive ? "scale-x-100" : "scale-x-0"
+												}`}
+											/>
 										</button>
 									);
 								})}
@@ -597,13 +799,13 @@ const UserProfilePage: React.FC = () => {
 
 						{/* Tab content */}
 						{activeTab === "overview" ? (
-							<OverviewTab profile={profile} user={user} />
-						) : (
-							<UserPostsTab
-								username={username}
+							<OverviewTab
+								profile={profile}
 								user={user}
-								postsCount={profile.posts_count}
+								onSwitchToPostsTab={() => setActiveTab("posts")}
 							/>
+						) : (
+							<UserPostsTab username={username} user={user} />
 						)}
 					</div>
 
