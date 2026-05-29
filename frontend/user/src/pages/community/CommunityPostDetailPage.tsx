@@ -2,15 +2,20 @@ import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	ArrowLeft,
+	Archive,
 	Bookmark,
 	Flag,
 	Hash,
 	Heart,
 	List,
+	LockKeyhole,
 	MessageCircle,
 	MoreHorizontal,
+	Pencil,
+	Pin,
 	Send,
 	Share2,
+	Trash2,
 	Zap,
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
@@ -331,6 +336,28 @@ const CommunityPostDetailPage: React.FC = () => {
 	const channelSlug = post?.channel?.slug ?? "general";
 	const createdAt = post?.created_at ? formatRelativeTime(post.created_at) : "";
 	const renderedPostContent = post?.content ? renderMarkdownContent(post.content) : "";
+	const isOwnPost = Boolean(user?.id && post?.user?.id && Number(user.id) === post.user.id);
+
+	const closePostMenu = () => setShowPostMenu(false);
+
+	const requireAuthenticatedUser = () => {
+		if (user) return true;
+		closePostMenu();
+		navigate("/login", { state: { from: location.pathname + location.search } });
+		return false;
+	};
+
+	const handleToggleSaved = () => {
+		if (!requireAuthenticatedUser()) return;
+		const nextSaved = !saved;
+		setSaved(nextSaved);
+		toast.success(nextSaved ? "Đã lưu bài viết." : "Đã bỏ lưu bài viết.");
+	};
+
+	const handleUnavailablePostAction = (message: string) => {
+		closePostMenu();
+		toast.info(message);
+	};
 
 	const handleSubmitComment = async () => {
 		if (!commentText.trim() || submittingComment) return;
@@ -455,18 +482,88 @@ const CommunityPostDetailPage: React.FC = () => {
 										{showPostMenu && (
 											<div
 												ref={menuDropdownRef}
-												className='absolute right-0 top-full z-[49] mt-1 min-w-[10rem] rounded-xl border-2 border-black bg-white shadow-[4px_4px_0_#111] p-2'>
-												<button
-													onClick={() => {
-														setShowPostMenu(false);
-														toast.info(
-															"Chức năng báo cáo đang được phát triển.",
-														);
-													}}
-													className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-50'>
-													<Flag className='h-4 w-4' />
-													Báo cáo
-												</button>
+												className='absolute right-0 top-full z-[49] mt-1 min-w-[12rem] rounded-xl border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
+												{isOwnPost ? (
+													<>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	post.is_pinned
+																		? "Chức năng bỏ ghim bài viết đang được phát triển."
+																		: "Chức năng ghim bài viết đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<Pin className='h-4 w-4' />
+															{post.is_pinned ? "Bỏ ghim" : "Ghim"}
+														</button>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	"Chức năng chỉnh sửa bài viết đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<Pencil className='h-4 w-4' />
+															Chỉnh sửa
+														</button>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	"Chức năng đổi quyền riêng tư đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<LockKeyhole className='h-4 w-4' />
+															Quyền riêng tư
+														</button>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	"Chức năng lưu trữ bài viết đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<Archive className='h-4 w-4' />
+															Lưu trữ
+														</button>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	"Chức năng xóa bài viết đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
+															<Trash2 className='h-4 w-4' />
+															Xóa
+														</button>
+													</>
+												) : (
+													<>
+														<button
+															onClick={() => {
+																closePostMenu();
+																handleToggleSaved();
+															}}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<Bookmark
+																className={`h-4 w-4 ${saved ? "fill-current" : ""}`}
+															/>
+															{saved ? "Bỏ lưu" : "Lưu"}
+														</button>
+														<button
+															onClick={() => {
+																if (!requireAuthenticatedUser()) return;
+																handleUnavailablePostAction(
+																	"Chức năng báo cáo đang được phát triển.",
+																);
+															}}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
+															<Flag className='h-4 w-4' />
+															Báo cáo
+														</button>
+													</>
+												)}
 											</div>
 										)}
 									</div>
@@ -577,7 +674,7 @@ const CommunityPostDetailPage: React.FC = () => {
 									</button>
 
 									<button
-										onClick={() => setSaved((p) => !p)}
+										onClick={handleToggleSaved}
 										className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
 										style={{
 											background: saved ? "var(--color-primary)" : "#fff",

@@ -43,6 +43,7 @@ class PostController extends BaseApiController
                 $channel && $channel !== 'all',
                 fn ($q) => $q->whereHas('channel', fn ($c) => $c->where('slug', $channel))
             )
+            ->orderByDesc('posts.is_pinned')
             ->orderBy(
                 $sort === 'reactions_count' ? 'reactions_count' : "posts.{$sort}",
                 $order
@@ -359,7 +360,7 @@ class PostController extends BaseApiController
             'featured_image' => count($mediaUrls) > 0 ? $mediaUrls[0] : null,
             'status' => $post->status,
             'visibility' => $post->visibility ?? 'public',
-            'is_pinned' => false,
+            'is_pinned' => (bool) $post->is_pinned,
             'comments_count' => $post->comments_count ?? 0,
             'reactions_count' => (int) ($post->reactions_count ?? 0),
             'tags' => [],

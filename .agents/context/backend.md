@@ -263,6 +263,8 @@
 - user-facing community routes expose published channels/posts/blogs, comments, and reactions under `/api/v1/community`.
 - user-facing post list items include `content`, `excerpt`, and `is_excerpt_truncated` so the frontend can render collapsed Markdown and expand the full post content inline without navigating away.
 - authenticated users can create published posts through `POST /api/v1/community/posts` with `channel_slug` or `channel_id`, `title`, `content`, optional `visibility`, and optional `media` image/video upload up to 20 MB. Uploaded post media is stored on the public disk under `community/posts/{post_id}`, mirrored into `posts.media_urls`, and tracked in `media_files`.
+- `posts` now has schema support for global pinning, archiving metadata, soft delete metadata, and `visibility`; user-facing post lists order pinned posts first and serialize the real `is_pinned` value.
+- `post_bookmarks` stores one saved post per user/post pair, while `post_reports` stores report reason/status/resolution metadata.
 - `channels`, `posts`, `post_reports`, and `comments` support topic feeds, reports, nested comments, and soft-deleted comments.
 - `reactions` is polymorphic by `target_type`/`target_id` for posts, comments, and blogs.
 - `chat_rooms`, `chat_members`, and `messages` support direct/group chat, unread tracking through `last_read_at`, message replies, and soft-deleted messages.
