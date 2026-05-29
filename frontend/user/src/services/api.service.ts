@@ -11,6 +11,15 @@ export const api = {
 		return response.data;
 	},
 
+	postForm: async <TResponse>(url: string, body: FormData) => {
+		const response = await apiClient.post<TResponse>(url, body, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+			},
+		});
+		return response.data;
+	},
+
 	put: async <TResponse, TBody = unknown>(url: string, body?: TBody) => {
 		const response = await apiClient.put<TResponse>(url, body);
 		return response.data;

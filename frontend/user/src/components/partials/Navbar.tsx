@@ -27,6 +27,7 @@ import {
 	setAccessToken,
 	type AuthUser,
 } from "../../services/auth.service";
+import { buildProfileUrl } from "@/lib/utils";
 
 type NavbarProps = {
 	user: AuthUser | null;
@@ -179,12 +180,12 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const getNavItemClass = (isActive: boolean, isMobile = false) =>
 		`group relative ${
 			isMobile
-				? "rounded-xl px-4 py-3 text-base font-bold"
-				: "rounded-lg px-4 py-2 text-sm font-semibold"
-		} transition-all duration-200 hover:bg-primary-100 hover:text-[var(--color-text-primary)] ${
+				? "rounded-xl px-4 py-3 text-base font-bold hover:bg-gray-100"
+				: "rounded-lg px-4 py-2 text-sm font-semibold hover:bg-primary-100"
+		} transition-all duration-200 ${
 			isActive
 				? isMobile
-					? "bg-primary-100 text-[var(--color-text-primary)]" // mobile: highlight background như sidebar
+					? "border-2 border-[var(--color-primary-dark)] bg-[var(--color-primary-100)] text-[var(--color-text-primary)]" // mobile: highlight background như sidebar
 					: "text-[var(--color-text-primary)]" // desktop: chỉ đổi màu chữ + underline indicator
 				: "text-gray-700"
 		}`;
@@ -209,7 +210,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 
 	/** Shared class strings for profile menu items */
 	const profileMenuItemClass =
-		"flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-base font-bold text-gray-700 transition-colors hover:bg-[var(--color-primary-100)] hover:text-[var(--color-text-primary)] focus-visible:bg-[var(--color-primary-100)] focus-visible:outline-none active:bg-[var(--color-primary-100)]";
+		"flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-base font-bold text-gray-700 transition-colors hover:bg-gray-100 active:bg-[var(--color-primary-100)]";
 	const profileMenuDangerItemClass = `${profileMenuItemClass} hover:bg-[var(--color-pastel-pink)] focus-visible:bg-[var(--color-pastel-pink)] active:bg-[var(--color-pastel-pink)] disabled:cursor-not-allowed disabled:opacity-60`;
 
 	const renderProfileMenu = (isMobile = false) => {
@@ -225,14 +226,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 				} space-y-1 rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[var(--neo-shadow)]`}
 				role='menu'
 				aria-label='User menu'>
-				<button
-					type='button'
+				<Link
+					to={user ? buildProfileUrl(user.username, user.email ?? "") : "/"}
 					onClick={() => closeProfileMenu(isMobile)}
 					className={profileMenuItemClass}
 					role='menuitem'>
 					<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
 					<span>Trang cá nhân</span>
-				</button>
+				</Link>
 				<button
 					type='button'
 					onClick={() => closeProfileMenu(isMobile)}
@@ -334,8 +335,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 																}
 																className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition-colors ${
 																	subActive
-																		? "bg-[var(--color-primary)] text-black"
-																		: "text-gray-700 hover:bg-[var(--color-primary-100)] hover:text-[var(--color-text-primary)]"
+																		? "border-2 border-[var(--color-primary-dark)] bg-[var(--color-primary-100)] text-[var(--color-text-primary)]"
+																		: "border-2 border-transparent text-gray-700 hover:bg-gray-100"
 																}`}
 																style={{
 																	fontFamily: "var(--font-body)",
@@ -487,7 +488,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 										<button
 											type='button'
 											onClick={() => setMobileMenuView("account")}
-											className='flex w-full items-center gap-3 rounded-[var(--neo-radius-sm)] border-2 border-black bg-[var(--color-pastel-blue)] p-3 text-left transition hover:bg-[var(--color-primary-100)]'>
+											className='flex w-full items-center gap-3 rounded-[var(--neo-radius-sm)] border-2 border-black bg-[var(--color-pastel-blue)] p-3 text-left transition hover:bg-gray-100'>
 											<img
 												src={userAvatar}
 												alt={userDisplayName}
@@ -548,8 +549,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 												onClick={closeMobileMenu}
 												className={`flex items-center gap-3 rounded-xl px-4 py-3 text-base font-bold transition-colors ${
 													subActive
-														? "bg-[var(--color-primary)] text-black"
-														: "text-gray-700 hover:bg-[var(--color-primary-100)] hover:text-[var(--color-text-primary)]"
+														? "border-2 border-[var(--color-primary-dark)] bg-[var(--color-primary-100)] text-[var(--color-text-primary)]"
+														: "border-2 border-transparent text-gray-700 hover:bg-gray-100"
 												}`}
 												style={{ fontFamily: "var(--font-body)" }}>
 												<SubIcon className='h-5 w-5 shrink-0' />
@@ -588,13 +589,13 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 
 								{/* Account options */}
 								<nav className='flex flex-col gap-0.5'>
-									<button
-										type='button'
+									<Link
+										to={user ? buildProfileUrl(user.username, user.email ?? "") : "/"}
 										onClick={closeMobileMenu}
 										className={profileMenuItemClass}>
 										<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
 										<span>Trang cá nhân</span>
-									</button>
+									</Link>
 									<button
 										type='button'
 										onClick={closeMobileMenu}

@@ -18,6 +18,7 @@
 		"clsx": "^2.1.1",
 		"laravel-echo": "^2.3.4",
 		"lucide-react": "^0.563.0",
+		"markdown-it": "^14.2.0",
 		"pusher-js": "^8.5.0",
 		"radix-ui": "^1.4.3",
 		"react": "^19.2.0",
@@ -29,6 +30,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.1",
+		"@types/markdown-it": "^14.1.2",
 		"@types/node": "^24.10.13",
 		"@types/react": "^19.2.7",
 		"@types/react-dom": "^19.2.3",

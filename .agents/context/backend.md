@@ -60,10 +60,16 @@
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/admin/login`
 - `POST /api/v1/contacts`
+- Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /blogs`, `GET /blogs/{slug}`, and `GET /blogs/{id}/comments`.
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/logout-all`
+- `POST /api/v1/community/posts`
+- `POST /api/v1/community/posts/{id}/reactions`
+- `POST /api/v1/community/posts/{id}/comments`
+- `POST /api/v1/community/blogs/{id}/reactions`
+- `POST /api/v1/community/blogs/{id}/comments`
 - `GET /api/v1/`
 - `GET /api/v1/users`
 - `GET /api/v1/faculties`
@@ -253,13 +259,19 @@
 - `academic_structure_imports`
 - admin academic structure import history for uploaded faculty/major/class files.
 - valid imports support `.xlsx` and `.csv`; unsupported uploaded file extensions are stored as `file_type = Other`, `status = failed`, and returned as validation errors so the admin UI can show failed upload history.
-- Community module schema is present but has no API/controllers yet:
+- Community module:
+- user-facing community routes expose published channels/posts/blogs, comments, and reactions under `/api/v1/community`.
+- user-facing post list items include `content`, `excerpt`, and `is_excerpt_truncated` so the frontend can render collapsed Markdown and expand the full post content inline without navigating away.
+- authenticated users can create published posts through `POST /api/v1/community/posts` with `channel_slug` or `channel_id`, `title`, `content`, optional `visibility`, and optional `media` image/video upload up to 20 MB. Uploaded post media is stored on the public disk under `community/posts/{post_id}`, mirrored into `posts.media_urls`, and tracked in `media_files`.
+- `posts` now has schema support for author profile pinning (`is_pinned`, `pinned_at`), author-owned archiving through `status = archived`, soft delete metadata, and `visibility`; pinning is scoped to the post author's profile, not global community feed ordering. The backend must enforce a maximum of 3 pinned posts per author when the pin endpoint is implemented.
+- `post_bookmarks` stores one saved post per user/post pair, while `post_reports` stores report reason/status/resolution metadata.
 - `channels`, `posts`, `post_reports`, and `comments` support topic feeds, reports, nested comments, and soft-deleted comments.
 - `reactions` is polymorphic by `target_type`/`target_id` for posts, comments, and blogs.
 - `chat_rooms`, `chat_members`, and `messages` support direct/group chat, unread tracking through `last_read_at`, message replies, and soft-deleted messages.
 - `blogs`, `tags`, and `blog_tags` support long-form posts with normalized blog tags.
 - `media_files` stores shared uploads for posts, messages, and blogs.
-- Community notification metadata is added as nullable columns on the existing Laravel `notifications` table (`recipient_id`, `actor_id`, `community_type`, `target_type`, `target_id`, `message`) so existing database notifications continue to work through `notifiable_*`, `data`, and `read_at`.
+- Community module tables are defined in separate table-specific migrations dated `2026_05_25_000010` through `2026_05_25_000023`, not one combined community migration.
+- Community notification metadata is included on the Laravel `notifications` table (`recipient_id`, `actor_id`, `community_type`, `target_type`, `target_id`, `message`) so existing database notifications continue to work through `notifiable_*`, `data`, and `read_at`.
 
 ## Recruitment Domain Rules
 

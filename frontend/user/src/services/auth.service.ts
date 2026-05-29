@@ -3,6 +3,7 @@ export interface AuthUser {
 	email?: string;
 	name?: string;
 	picture?: string;
+	username?: string | null;
 }
 
 export type OAuthAuthSuccessPayload = {
@@ -148,6 +149,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 		email: user.email,
 		name: user.full_name,
 		picture: user.avatar,
+		username: user.username ?? null,
 	} as AuthUser;
 }
 

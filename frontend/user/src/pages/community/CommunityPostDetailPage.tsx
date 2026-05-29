@@ -2,22 +2,35 @@ import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	ArrowLeft,
+	Archive,
 	Bookmark,
+	Flag,
 	Hash,
+	Heart,
 	List,
+	LockKeyhole,
 	MessageCircle,
 	MoreHorizontal,
+	Pencil,
+	Pin,
 	Send,
 	Share2,
+	Trash2,
 	Zap,
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
 import type { PostDetail, PostComment } from "@/types/post.types";
-import { Heart } from "lucide-react";
 import type { CommunityLayoutContext } from "./CommunityLayout";
-import { buildAvatar, formatRelativeTime, getHandle } from "@/lib/utils";
+import {
+	buildAvatar,
+	formatRelativeTime,
+	getHandle,
+	isVideoMediaUrl,
+	buildProfileUrl,
+} from "@/lib/utils";
+import { renderMarkdownContent } from "@/lib/markdown";
 
 // ---------------------------------------------------------------------------
 // Skeleton
@@ -34,7 +47,11 @@ const DetailSkeleton: React.FC = () => (
 		</div>
 		<div className='space-y-2'>
 			{Array.from({ length: 6 }).map((_, i) => (
-				<div key={i} className='h-3 rounded bg-gray-200' style={{ width: `${100 - i * 3}%` }} />
+				<div
+					key={i}
+					className='h-3 rounded bg-gray-200'
+					style={{ width: `${100 - i * 3}%` }}
+				/>
 			))}
 		</div>
 		<div className='aspect-[16/9] w-full rounded-xl bg-gray-200' />
@@ -140,7 +157,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
 				<div className='min-w-0 flex-1'>
 					<div className='rounded-[10px] border-2 border-black bg-white px-4 py-3 shadow-[2px_2px_0_#111]'>
 						<div className='mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5'>
-							<span className='font-heading text-sm font-extrabold text-black'>{name}</span>
+							<span className='font-heading text-sm font-extrabold text-black'>
+								{name}
+							</span>
 							<span className='text-xs text-gray-500'>{handle}</span>
 							<span className='text-xs text-gray-400'>· {time}</span>
 						</div>
@@ -156,7 +175,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 								});
 							}}
 							className={`flex items-center gap-1 text-xs font-bold transition ${liked ? "text-red-500" : "text-gray-500 hover:text-red-500"}`}>
-							<span className='text-sm leading-none'>{liked ? "❤️" : "🤍"}</span>
+							<Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
 							{likeCount > 0 && <span>{likeCount}</span>}
 						</button>
 						{depth === 0 && (
@@ -217,7 +236,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 							onClick={() => setShowReplies((p) => !p)}
 							className='mt-2 ml-1 flex items-center gap-1.5 text-xs font-bold text-lime-700 transition hover:text-black'>
 							<MessageCircle className='h-3.5 w-3.5' />
-							{showReplies ? "Ẩn trả lời" : `${comment.replies.length} trả lời`}
+							{showReplies ? "Thu gọn" : `${comment.replies.length} trả lời`}
 						</button>
 					)}
 				</div>
@@ -263,8 +282,28 @@ const CommunityPostDetailPage: React.FC = () => {
 
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
+	const [showPostMenu, setShowPostMenu] = useState(false);
 
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
+	const menuBtnRef = useRef<HTMLButtonElement>(null);
+	const menuDropdownRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!showPostMenu) return;
+		const handleClickOutside = (e: MouseEvent) => {
+			if (menuBtnRef.current?.contains(e.target as Node)) return;
+			if (menuDropdownRef.current?.contains(e.target as Node)) return;
+			setShowPostMenu(false);
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, [showPostMenu]);
+
+	const handleTogglePostMenu = () => {
+		setShowPostMenu((p) => !p);
+	};
 
 	const userDisplayName = user?.name || user?.email || "CKC member";
 	const userAvatar =
@@ -302,6 +341,29 @@ const CommunityPostDetailPage: React.FC = () => {
 	const channelName = post?.channel?.name ?? "Chung";
 	const channelSlug = post?.channel?.slug ?? "general";
 	const createdAt = post?.created_at ? formatRelativeTime(post.created_at) : "";
+	const renderedPostContent = post?.content ? renderMarkdownContent(post.content) : "";
+	const isOwnPost = Boolean(user?.id && post?.user?.id && Number(user.id) === post.user.id);
+
+	const closePostMenu = () => setShowPostMenu(false);
+
+	const requireAuthenticatedUser = () => {
+		if (user) return true;
+		closePostMenu();
+		navigate("/login", { state: { from: location.pathname + location.search } });
+		return false;
+	};
+
+	const handleToggleSaved = () => {
+		if (!requireAuthenticatedUser()) return;
+		const nextSaved = !saved;
+		setSaved(nextSaved);
+		toast.success(nextSaved ? "Đã lưu bài viết." : "Đã bỏ lưu bài viết.");
+	};
+
+	const handleUnavailablePostAction = (message: string) => {
+		closePostMenu();
+		toast.info(message);
+	};
 
 	const handleSubmitComment = async () => {
 		if (!commentText.trim() || submittingComment) return;
@@ -364,7 +426,9 @@ const CommunityPostDetailPage: React.FC = () => {
 
 				{postError && (
 					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
-						<p className='font-heading text-xl font-extrabold text-black'>{postError}</p>
+						<p className='font-heading text-xl font-extrabold text-black'>
+							{postError}
+						</p>
 						<Link
 							to='/cong-dong'
 							className='mt-5 inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
@@ -398,8 +462,12 @@ const CommunityPostDetailPage: React.FC = () => {
 												<p className='font-heading text-base font-extrabold text-black'>
 													{authorName}
 												</p>
-												<span className='text-sm text-gray-500'>{authorHandle}</span>
-												<span className='text-sm text-gray-400'>· {createdAt}</span>
+												<span className='text-sm text-gray-500'>
+													{authorHandle}
+												</span>
+												<span className='text-sm text-gray-400'>
+													· {createdAt}
+												</span>
 											</div>
 											<Link
 												to={`/cong-dong/${channelSlug}`}
@@ -409,11 +477,103 @@ const CommunityPostDetailPage: React.FC = () => {
 											</Link>
 										</div>
 									</div>
-									<button
-										className='shrink-0 rounded-lg border-2 border-transparent p-1.5 transition hover:border-black hover:bg-gray-100'
-										aria-label='Tùy chọn'>
-										<MoreHorizontal className='h-5 w-5 text-gray-500' />
-									</button>
+									<div className='relative shrink-0'>
+										<button
+											ref={menuBtnRef}
+											onClick={handleTogglePostMenu}
+											className={`shrink-0 rounded-lg border-2 p-1.5 transition ${showPostMenu ? "border-black bg-gray-100" : "border-transparent hover:border-black hover:bg-gray-100"}`}
+											aria-label='Tùy chọn'>
+											<MoreHorizontal className='h-5 w-5 text-gray-500' />
+										</button>
+										{showPostMenu && (
+											<div
+												ref={menuDropdownRef}
+												className='absolute right-0 top-full z-20 mt-1 min-w-[12rem] rounded-xl border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
+												{isOwnPost ? (
+													<>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	post.is_pinned
+																		? "Chức năng bỏ ghim khỏi trang cá nhân đang được phát triển."
+																		: "Chức năng ghim lên trang cá nhân đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<Pin className='h-4 w-4' />
+															{post.is_pinned ? "Bỏ ghim" : "Ghim"}
+														</button>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	"Chức năng chỉnh sửa bài viết đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<Pencil className='h-4 w-4' />
+															Chỉnh sửa
+														</button>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	"Chức năng đổi quyền riêng tư đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<LockKeyhole className='h-4 w-4' />
+															Quyền riêng tư
+														</button>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	"Chức năng lưu trữ bài viết đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<Archive className='h-4 w-4' />
+															Lưu trữ
+														</button>
+														<button
+															onClick={() =>
+																handleUnavailablePostAction(
+																	"Chức năng xóa bài viết đang được phát triển.",
+																)
+															}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
+															<Trash2 className='h-4 w-4' />
+															Xóa
+														</button>
+													</>
+												) : (
+													<>
+														<button
+															onClick={() => {
+																closePostMenu();
+																handleToggleSaved();
+															}}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															<Bookmark
+																className={`h-4 w-4 ${saved ? "fill-current" : ""}`}
+															/>
+															{saved ? "Bỏ lưu" : "Lưu"}
+														</button>
+														<button
+															onClick={() => {
+																if (!requireAuthenticatedUser())
+																	return;
+																handleUnavailablePostAction(
+																	"Chức năng báo cáo đang được phát triển.",
+																);
+															}}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
+															<Flag className='h-4 w-4' />
+															Báo cáo
+														</button>
+													</>
+												)}
+											</div>
+										)}
+									</div>
 								</div>
 
 								<h1 className='mb-4 font-heading text-2xl font-extrabold leading-tight text-black md:text-3xl'>
@@ -421,10 +581,14 @@ const CommunityPostDetailPage: React.FC = () => {
 								</h1>
 
 								{post.content && (
-									<div
-										className='prose prose-sm max-w-none leading-7 text-gray-800 [&_a]:text-lime-700 [&_a:hover]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--color-primary)] [&_blockquote]:pl-4 [&_blockquote]:text-gray-600 [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:font-mono [&_code]:text-sm [&_pre]:rounded-xl [&_pre]:border-2 [&_pre]:border-black [&_pre]:bg-gray-900 [&_pre]:p-4 [&_pre]:text-white [&_strong]:font-extrabold'
-										dangerouslySetInnerHTML={{ __html: post.content }}
-									/>
+									<div className='so-editor-outer community-markdown'>
+										<div
+											className='s-prose'
+											dangerouslySetInnerHTML={{
+												__html: renderedPostContent,
+											}}
+										/>
+									</div>
 								)}
 
 								{post.media_urls.length > 0 && (
@@ -432,12 +596,21 @@ const CommunityPostDetailPage: React.FC = () => {
 										{post.media_urls.map((url, i) => (
 											<div
 												key={i}
-												className='overflow-hidden rounded-[10px] border-2 border-black bg-[var(--color-pastel-yellow)]'>
-												<img
-													src={url}
-													alt={`media-${i + 1}`}
-													className='w-full object-cover'
-												/>
+												className='overflow-hidden rounded-[10px] border-2 border-black bg-white'>
+												{isVideoMediaUrl(url) ? (
+													<video
+														src={url}
+														className='w-full bg-black object-cover'
+														controls
+														preload='metadata'
+													/>
+												) : (
+													<img
+														src={url}
+														alt={`media-${i + 1}`}
+														className='w-full object-cover'
+													/>
+												)}
 											</div>
 										))}
 									</div>
@@ -458,27 +631,45 @@ const CommunityPostDetailPage: React.FC = () => {
 								<div className='mt-5 flex flex-wrap items-center gap-2 border-t-2 border-black pt-4'>
 									<button
 										onClick={async () => {
-											if (!user) { navigate("/login", { state: { from: location.pathname + location.search } }); return; }
+											if (!user) {
+												navigate("/login", {
+													state: {
+														from: location.pathname + location.search,
+													},
+												});
+												return;
+											}
 											if (reactionLoading) return;
 											const wasLiked = liked;
 											setLiked(!wasLiked);
-											setHeartCount((c) => wasLiked ? Math.max(0, c - 1) : c + 1);
+											setHeartCount((c) =>
+												wasLiked ? Math.max(0, c - 1) : c + 1,
+											);
 											setReactionLoading(true);
 											try {
-												const res = await postService.toggleReaction(post.id, "heart");
+												const res = await postService.toggleReaction(
+													post.id,
+													"heart",
+												);
 												setLiked(res.data.my_reaction === "heart");
 												setHeartCount(res.data.reactions_count);
 											} catch {
 												setLiked(wasLiked);
-												setHeartCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
+												setHeartCount((c) =>
+													wasLiked ? c + 1 : Math.max(0, c - 1),
+												);
 											} finally {
 												setReactionLoading(false);
 											}
 										}}
 										disabled={reactionLoading}
 										className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
-										style={{ background: liked ? "var(--color-pastel-pink)" : "#fff" }}>
-										<Heart className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`} />
+										style={{
+											background: liked ? "var(--color-pastel-pink)" : "#fff",
+										}}>
+										<Heart
+											className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`}
+										/>
 										{heartCount}
 									</button>
 
@@ -490,11 +681,15 @@ const CommunityPostDetailPage: React.FC = () => {
 									</button>
 
 									<button
-										onClick={() => setSaved((p) => !p)}
+										onClick={handleToggleSaved}
 										className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-										style={{ background: saved ? "var(--color-primary)" : "#fff" }}
+										style={{
+											background: saved ? "var(--color-primary)" : "#fff",
+										}}
 										aria-label='Lưu bài viết'>
-										<Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
+										<Bookmark
+											className={`h-4 w-4 ${saved ? "fill-current" : ""}`}
+										/>
 									</button>
 
 									<button
@@ -595,7 +790,155 @@ const CommunityPostDetailPage: React.FC = () => {
 				)}
 			</main>
 
-			<aside className='community-right-rail hidden' aria-hidden='true' />
+			<aside className='community-right-rail'>
+				<div className='no-scrollbar sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto px-3 py-5'>
+					{/* Author Profile Card */}
+					{postLoading ? (
+						<section className='neo-card neo-card-static animate-pulse bg-white p-5'>
+							<div className='flex flex-col gap-3'>
+								<div className='h-16 w-16 rounded-full bg-gray-200' />
+								<div className='h-4 w-28 rounded bg-gray-200' />
+								<div className='h-3 w-20 rounded bg-gray-200' />
+							</div>
+							<div className='mt-4 space-y-2'>
+								<div className='h-10 w-full rounded-lg bg-gray-200' />
+								<div className='h-10 w-full rounded-lg bg-gray-200' />
+							</div>
+						</section>
+					) : post?.user ? (
+						<section className='neo-card neo-card-static bg-white p-5'>
+							{/* Avatar + Name row */}
+							<div className='flex items-center gap-4'>
+								<img
+									src={authorAvatar}
+									alt={authorName}
+									className='h-14 w-14 shrink-0 rounded-full border-2 border-black object-cover'
+								/>
+								<div className='min-w-0'>
+									<h3 className='font-heading text-base font-extrabold leading-snug text-black'>
+										{authorName}
+									</h3>
+									<p className='text-sm text-gray-500'>{authorHandle}</p>
+								</div>
+							</div>
+
+							{/* Bio / student code */}
+							{post.user.student_code && (
+								<p className='mt-3 text-sm text-gray-700'>
+									{post.user.student_code}
+								</p>
+							)}
+
+							{/* Stats */}
+							<div className='mt-3 flex gap-4 border-t-2 border-gray-200 pt-3 text-sm'>
+								<span className='whitespace-nowrap'>
+									<strong className='font-extrabold text-black'>0</strong>{" "}
+									<span className='text-gray-500'>Bài viết</span>
+								</span>
+								<span className='whitespace-nowrap'>
+									<strong className='font-extrabold text-black'>0</strong>{" "}
+									<span className='text-gray-500'>Theo dõi</span>
+								</span>
+								<span className='whitespace-nowrap'>
+									<strong className='font-extrabold text-black'>0</strong>{" "}
+									<span className='text-gray-500'>Đang theo</span>
+								</span>
+							</div>
+
+							{/* Actions */}
+								<div className='mt-4 space-y-2'>
+									<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+										Theo dõi
+									</button>
+									<Link
+										key={post.user.id}
+										to={buildProfileUrl(post.user.username, post.user.email)}
+										className='flex items-center gap-3'>
+										<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-white font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											Xem trang cá nhân
+										</button>
+								</Link>
+							</div>
+						</section>
+					) : null}
+
+					{/* Community Guidelines */}
+					<button
+						type='button'
+						className='neo-card neo-card-static mt-5 flex w-full cursor-pointer items-center gap-3 bg-white p-3 text-left transition hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2'
+						aria-label='Review our Code of Conduct'>
+						<svg
+							xmlns='http://www.w3.org/2000/svg'
+							width='40'
+							height='41'
+							viewBox='0 0 40 41'
+							fill='none'
+							className='h-10 w-10 shrink-0'
+							aria-hidden='true'>
+							<path
+								d='M10 5.55176H33.3334V8.88509H36.6667V18.8851H33.3334V32.2184H30V35.5518H6.66671V32.2184H3.33337V28.8851V25.5518H6.66671V8.88509H10V5.55176Z'
+								fill='#FEF08A'
+							/>
+							<path
+								fillRule='evenodd'
+								clipRule='evenodd'
+								d='M10 5.55176H33.3334V8.88509H36.6667V18.8851H33.3334V32.2184H30V8.88509H10V5.55176ZM23.3334 28.8851V25.5518H10V8.88509H6.66671V25.5518H3.33337V28.8851V32.2184H6.66671V35.5518H30V32.2184L26.6667 32.2184V28.8851H23.3334ZM23.3334 28.8851V32.2184H6.66671V28.8851H23.3334Z'
+								fill='#713F12'
+							/>
+							<rect
+								x='13.3334'
+								y='18.8853'
+								width='13.3333'
+								height='3.33333'
+								fill='#020617'
+							/>
+							<rect
+								x='13.3334'
+								y='12.2183'
+								width='13.3333'
+								height='3.33333'
+								fill='#020617'
+							/>
+							<rect
+								x='6.66663'
+								y='28.8853'
+								width='16.6667'
+								height='3.33333'
+								fill='#EAB308'
+							/>
+						</svg>
+
+						<span className='min-w-0 flex-1'>
+							<span className='block truncate font-heading text-sm font-extrabold leading-5 text-slate-950'>
+								Quy tắc cộng đồng
+							</span>
+							<span className='block truncate text-xs font-semibold leading-5 text-slate-500'>
+								Hãy tôn trọng lẫn nhau!
+							</span>
+						</span>
+
+						<svg
+							xmlns='http://www.w3.org/2000/svg'
+							width='24'
+							height='25'
+							viewBox='0 0 24 25'
+							fill='none'
+							className='h-6 w-6 shrink-0 rotate-180'
+							aria-hidden='true'>
+							<path
+								fillRule='evenodd'
+								clipRule='evenodd'
+								d='M16 5.55176L16 7.55176L14 7.55176L14 5.55176L16 5.55176ZM12 9.55176L12 7.55176L14 7.55176L14 9.55176L12 9.55176ZM10 11.5518L10 9.55176L12 9.55176L12 11.5518L10 11.5518ZM10 13.5518L8 13.5518L8 11.5518L10 11.5518L10 13.5518ZM12 15.5518L12 13.5518L10 13.5518L10 15.5518L12 15.5518ZM12 15.5518L14 15.5518L14 17.5518L12 17.5518L12 15.5518ZM16 19.5518L16 17.5518L14 17.5518L14 19.5518L16 19.5518Z'
+								fill='#64748B'
+							/>
+						</svg>
+					</button>
+
+					<p className='mt-5 px-1 text-xs text-gray-400 text-center'>
+						© 2026 CKC IT CLUB · Điều khoản · Bảo mật
+					</p>
+				</div>
+			</aside>
 		</div>
 	);
 };

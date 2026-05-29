@@ -1062,6 +1062,69 @@
 	font-family: var(--font-body);
 }
 
+.community-markdown {
+	color: #1f2937;
+	font-family: var(--font-body);
+	font-size: 0.9375rem;
+	font-weight: 500;
+	line-height: 1.75;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+
+.community-markdown .s-prose {
+	max-width: 100%;
+}
+
+.community-markdown .s-prose > :first-child {
+	margin-top: 0;
+}
+
+.community-markdown .s-prose > :last-child {
+	margin-bottom: 0;
+}
+
+.community-markdown .s-prose img {
+	max-width: 100%;
+	border: 2px solid #111;
+	border-radius: 10px;
+}
+
+.community-markdown-excerpt {
+	color: #374151;
+	font-size: 0.875rem;
+	line-height: 1.7;
+}
+
+.community-markdown-excerpt .s-prose p,
+.community-markdown-excerpt .s-prose ul,
+.community-markdown-excerpt .s-prose ol,
+.community-markdown-excerpt .s-prose blockquote,
+.community-markdown-excerpt .s-prose pre {
+	margin-bottom: 0.25rem;
+}
+
+.community-markdown-excerpt .s-prose h1,
+.community-markdown-excerpt .s-prose h2,
+.community-markdown-excerpt .s-prose h3 {
+	font-size: 1rem;
+	line-height: 1.45;
+	margin: 0 0 0.25rem;
+}
+
+.community-markdown-excerpt .s-prose pre,
+.community-markdown-excerpt .s-prose table,
+.community-markdown-excerpt .s-table-container,
+.community-markdown-excerpt .s-prose img {
+	display: none;
+}
+
+.community-markdown-feed-full {
+	color: #374151;
+	font-size: 0.875rem;
+	line-height: 1.7;
+}
+
 /* Placeholder text */
 .so-editor-outer .ProseMirror p.is-editor-empty:first-child::before {
 	color: #9ca3af;

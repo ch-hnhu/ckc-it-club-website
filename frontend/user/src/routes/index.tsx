@@ -4,20 +4,23 @@ import CommunityLayout from "@/pages/community/CommunityLayout";
 import CommunityFeedPage from "@/pages/community/CommunityFeedPage";
 import CommunityCreatePage from "@/pages/community/CommunityCreatePage";
 import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
-import BlogFeedPage from "@/pages/community/BlogFeedPage";
-import BlogDetailPage from "@/pages/community/BlogDetailPage";
+import BlogFeedPage from "@/pages/Blog/BlogFeedPage";
+import BlogDetailPage from "@/pages/Blog/BlogDetailPage";
 import LandingPage from "@/pages/LandingPage";
+import UserProfilePage from "@/pages/UserProfilePage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
 import VerifyOtpPage from "@/pages/auth/VerifyOtpPage";
 import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
+import ErrorPage from "@/pages/ErrorPage";
 import { createBrowserRouter } from "react-router-dom";
 
 const router = createBrowserRouter([
 	{
 		path: "/",
 		element: <MainLayout />,
+		errorElement: <ErrorPage />,
 		children: [
 			{
 				index: true,
@@ -34,6 +37,12 @@ const router = createBrowserRouter([
 			{
 				path: "blog/:slug",
 				element: <BlogDetailPage />,
+			},
+			{
+				// Dynamic catch-all for /@username profile pages — must be last
+				// Static routes above (blog, lien-he, cong-dong) always win on exact match
+				path: ":username",
+				element: <UserProfilePage />,
 			},
 			{
 				path: "cong-dong",
@@ -78,6 +87,10 @@ const router = createBrowserRouter([
 	{
 		path: "/reset-password",
 		element: <ResetPasswordPage />,
+	},
+	{
+		path: "*",
+		element: <ErrorPage />,
 	},
 ]);
 

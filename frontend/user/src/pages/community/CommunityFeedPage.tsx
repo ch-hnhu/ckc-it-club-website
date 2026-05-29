@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Flame, Hash, List, PenSquare, Search, Sparkles } from "lucide-react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
+import { buildProfileUrl } from "@/lib/utils";
 import type { CommunityLayoutContext } from "./CommunityLayout";
 import { postService } from "@/services/post.service";
 import type { Post } from "@/types/post.types";
@@ -117,12 +118,15 @@ const CommunityFeedPage: React.FC = () => {
 	const { channelSlug } = useParams<{ channelSlug: string }>();
 
 	const pageMode: "home" | "channel" = channelSlug ? "channel" : "home";
-	const activeChannel = channelSlug ?? "all";
+	const activeChannel = channelSlug ?? "";
+	// home hoặc "chung" đều load toàn bộ bài viết (không filter channel)
+	const isAllChannel = pageMode === "home" || activeChannel === "chung";
 
 	const [activeSort, setActiveSort] = useState("top");
 	const [posts, setPosts] = useState<Post[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [retryCount, setRetryCount] = useState(0);
 
 	useEffect(() => {
 		setActiveSort("top");
@@ -135,7 +139,7 @@ const CommunityFeedPage: React.FC = () => {
 
 		postService
 			.getPosts({
-				channel: activeChannel === "all" ? undefined : activeChannel,
+				channel: isAllChannel ? undefined : activeChannel,
 				sort: activeSort === "top" ? "reactions_count" : "created_at",
 				order: "desc",
 				per_page: 20,
@@ -153,21 +157,29 @@ const CommunityFeedPage: React.FC = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [activeChannel, activeSort]);
+	}, [activeChannel, activeSort, retryCount]);
 
-	const currentChannel =
-		activeChannel === "all" ? channels[0] : channels.find((ch) => ch.slug === activeChannel);
+	const currentChannel = channels.find((ch) => ch.slug === activeChannel);
 
 	const pageInfo = {
-		image: pageMode === "home" ? COMMUNITY_LOGO : (currentChannel?.image ?? null),
+		image:
+			pageMode === "home"
+				? COMMUNITY_LOGO
+				: isAllChannel
+					? COMMUNITY_LOGO
+					: (currentChannel?.image ?? null),
 		title:
 			pageMode === "home"
 				? "Cộng đồng CKC IT CLUB"
-				: (currentChannel?.label ?? activeChannel),
+				: isAllChannel
+					? "Kênh chung"
+					: (currentChannel?.label ?? activeChannel),
 		description:
 			pageMode === "home"
 				? "Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦"
-				: (currentChannel?.description ?? "Bài viết và thảo luận trong kênh này."),
+				: isAllChannel
+					? "Tất cả bài viết từ mọi kênh trong cộng đồng 🌱✦"
+					: (currentChannel?.description ?? "Bài viết và thảo luận trong kênh này."),
 	};
 
 	const userDisplayName = user?.name || user?.email || "CKC member";
@@ -210,7 +222,7 @@ const CommunityFeedPage: React.FC = () => {
 				{/* Create post prompt */}
 				{user && (
 					<div className='mb-6 flex items-center gap-3 rounded-xl border-2 border-black bg-white px-5 py-4'>
-						<Link to='/profile' className='relative'>
+						<Link to={buildProfileUrl(user.username, user.email ?? "")} className='relative'>
 							<img
 								src={userAvatar}
 								alt={userDisplayName}
@@ -268,7 +280,7 @@ const CommunityFeedPage: React.FC = () => {
 							</p>
 							<p className='mt-2 text-sm text-gray-600'>{error}</p>
 							<button
-								onClick={() => setActiveSort((s) => s)}
+								onClick={() => setRetryCount((count) => count + 1)}
 								className='mt-4 rounded-lg border-2 border-black bg-[var(--color-primary)] px-4 py-2 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 								Thử lại
 							</button>
@@ -337,7 +349,7 @@ const CommunityFeedPage: React.FC = () => {
 							{TOP_CONTRIBUTORS.map((member, index) => (
 								<Link
 									key={member.id}
-									to={`/profile/${member.id}`}
+									to={`/@${member.id}`}
 									className='flex items-center gap-3'>
 									<span className='w-5 text-sm font-extrabold text-gray-600'>
 										#{index + 1}
@@ -360,7 +372,7 @@ const CommunityFeedPage: React.FC = () => {
 						</div>
 					</section>
 
-					<p className='mt-5 text-sm text-gray-500'>
+					<p className='mt-5 text-sm text-center text-gray-500'>
 						© 2026 CKC IT CLUB · Điều khoản · Bảo mật
 					</p>
 				</div>

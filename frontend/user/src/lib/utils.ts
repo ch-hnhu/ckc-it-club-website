@@ -1,8 +1,8 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+	return twMerge(clsx(inputs));
 }
 
 export function formatRelativeTime(isoString: string): string {
@@ -22,8 +22,31 @@ export function getHandle(username: string | null, email: string): string {
 	return `@${email.split("@")[0]}`;
 }
 
-export function buildAvatar(name: string | null | undefined, avatar: string | null | undefined): string {
+export function buildAvatar(
+	name: string | null | undefined,
+	avatar: string | null | undefined,
+): string {
 	if (avatar) return avatar;
 	const n = name || "CKC";
-	return `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=A3E635&color=111111&bold=true`;
+	return `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=d4f2c4&color=111111&bold=true`;
+}
+
+export function buildProfileUrl(
+	username: string | null | undefined,
+	email: string | null | undefined,
+): string {
+	const handle = username || (email ? email.split("@")[0] : "unknown");
+	return `/@${handle}`;
+}
+
+export function isVideoMediaUrl(url: string): boolean {
+	const path = (() => {
+		try {
+			return new URL(url, window.location.origin).pathname;
+		} catch {
+			return url;
+		}
+	})();
+
+	return /\.(mp4|webm|mov|m4v)$/i.test(path);
 }
