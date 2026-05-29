@@ -5,6 +5,7 @@ export interface BlogAuthor {
 	full_name: string;
 	email: string;
 	avatar: string | null;
+	username: string | null;
 }
 
 export interface BlogTag {
@@ -59,6 +60,14 @@ export interface BlogListParams {
 	tag?: string;
 	sort?: "published_at" | "reactions_count" | "view_count" | "created_at";
 	order?: "asc" | "desc";
+}
+
+export interface CreateBlogPayload {
+	title: string;
+	content: string;
+	excerpt?: string;
+	tagIds?: number[];
+	featuredImage?: File | null;
 }
 
 export interface BlogReactionResponse {

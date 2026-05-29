@@ -60,7 +60,7 @@
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/admin/login`
 - `POST /api/v1/contacts`
-- Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /blogs`, `GET /blogs/{slug}`, and `GET /blogs/{id}/comments`.
+- Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /blogs`, `GET /blog-tags`, `GET /blogs/{slug}`, and `GET /blogs/{id}/comments`.
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
@@ -68,6 +68,7 @@
 - `POST /api/v1/community/posts`
 - `POST /api/v1/community/posts/{id}/reactions`
 - `POST /api/v1/community/posts/{id}/comments`
+- `POST /api/v1/community/blogs`
 - `POST /api/v1/community/blogs/{id}/reactions`
 - `POST /api/v1/community/blogs/{id}/comments`
 - `GET /api/v1/`
@@ -267,6 +268,7 @@
 - `post_bookmarks` stores one saved post per user/post pair, while `post_reports` stores report reason/status/resolution metadata.
 - `channels`, `posts`, `post_reports`, and `comments` support topic feeds, reports, nested comments, and soft-deleted comments.
 - `reactions` is polymorphic by `target_type`/`target_id` for posts, comments, and blogs.
+- authenticated users can create published blogs through `POST /api/v1/community/blogs` with `title`, `content`, optional `excerpt`, optional `tag_ids[]`, and optional `featured_image` image upload up to 5 MB. Uploaded blog cover images are stored on the public disk under `blog-covers`.
 - `chat_rooms`, `chat_members`, and `messages` support direct/group chat, unread tracking through `last_read_at`, message replies, and soft-deleted messages.
 - `blogs`, `tags`, and `blog_tags` support long-form posts with normalized blog tags.
 - `media_files` stores shared uploads for posts, messages, and blogs.

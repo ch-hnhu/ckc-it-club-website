@@ -28,6 +28,12 @@ export function buildAvatar(name: string | null | undefined, avatar: string | nu
 	return `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=A3E635&color=111111&bold=true`;
 }
 
+export function readingTime(htmlContent: string): number {
+	const text = htmlContent.replace(/<[^>]*>/g, " ");
+	const words = text.trim().split(/\s+/).filter(Boolean).length;
+	return Math.max(1, Math.ceil(words / 200));
+}
+
 export function isVideoMediaUrl(url: string): boolean {
 	const path = (() => {
 		try {
