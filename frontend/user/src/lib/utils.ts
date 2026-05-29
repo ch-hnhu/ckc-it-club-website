@@ -28,6 +28,11 @@ export function buildAvatar(name: string | null | undefined, avatar: string | nu
 	return `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=A3E635&color=111111&bold=true`;
 }
 
+export function buildProfileUrl(username: string | null | undefined, email: string | null | undefined): string {
+	const handle = username || (email ? email.split("@")[0] : "unknown");
+	return `/@${handle}`;
+}
+
 export function isVideoMediaUrl(url: string): boolean {
 	const path = (() => {
 		try {

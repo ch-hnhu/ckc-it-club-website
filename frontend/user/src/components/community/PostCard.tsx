@@ -18,7 +18,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Post } from "@/types/post.types";
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
-import { buildAvatar, formatRelativeTime, getHandle, isVideoMediaUrl } from "@/lib/utils";
+import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle, isVideoMediaUrl } from "@/lib/utils";
 import { renderMarkdownContent, renderMarkdownPreview } from "@/lib/markdown";
 
 interface PostCardProps {
@@ -32,6 +32,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 	const authorName = post.user?.full_name ?? "Ẩn danh";
 	const authorHandle = post.user ? getHandle(post.user.username, post.user.email) : "@ẩn danh";
 	const authorAvatar = buildAvatar(post.user?.full_name, post.user?.avatar);
+	const authorProfileUrl = post.user ? buildProfileUrl(post.user.username, post.user.email) : null;
 	const detailUrl = `/cong-dong/bai-viet/${post.id}`;
 	const sourceContent = post.content ?? post.excerpt;
 	const preview = sourceContent ? renderMarkdownPreview(sourceContent, 260) : null;
@@ -112,23 +113,29 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 		<article className='rounded-2xl border-2 border-black bg-white p-4'>
 			<div className='mb-3 flex items-start justify-between gap-3'>
 				<div className='flex min-w-0 items-center gap-3'>
-					<div className='relative shrink-0'>
+					<Link
+						to={authorProfileUrl ?? "#"}
+						className='relative shrink-0'
+						onClick={(e) => !authorProfileUrl && e.preventDefault()}>
 						<img
 							src={authorAvatar}
 							alt={authorName}
-							className='h-10 w-10 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
+							className='h-10 w-10 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover transition hover:opacity-80'
 						/>
 						{post.is_pinned && (
 							<span className='absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)] text-black'>
 								<Zap className='h-3 w-3 fill-current' />
 							</span>
 						)}
-					</div>
+					</Link>
 					<div className='min-w-0'>
 						<div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
-							<p className='font-heading text-sm font-extrabold text-black'>
+							<Link
+								to={authorProfileUrl ?? "#"}
+								onClick={(e) => !authorProfileUrl && e.preventDefault()}
+								className='font-heading text-sm font-extrabold text-black hover:underline'>
 								{authorName}
-							</p>
+							</Link>
 							<span className='text-sm font-medium text-gray-500'>
 								{authorHandle}
 							</span>

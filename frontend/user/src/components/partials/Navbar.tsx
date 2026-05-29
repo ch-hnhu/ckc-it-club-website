@@ -27,6 +27,7 @@ import {
 	setAccessToken,
 	type AuthUser,
 } from "../../services/auth.service";
+import { buildProfileUrl } from "@/lib/utils";
 
 type NavbarProps = {
 	user: AuthUser | null;
@@ -225,14 +226,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 				} space-y-1 rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[var(--neo-shadow)]`}
 				role='menu'
 				aria-label='User menu'>
-				<button
-					type='button'
+				<Link
+					to={user ? buildProfileUrl(user.username, user.email ?? "") : "/"}
 					onClick={() => closeProfileMenu(isMobile)}
 					className={profileMenuItemClass}
 					role='menuitem'>
 					<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
 					<span>Trang cá nhân</span>
-				</button>
+				</Link>
 				<button
 					type='button'
 					onClick={() => closeProfileMenu(isMobile)}
@@ -588,13 +589,13 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 
 								{/* Account options */}
 								<nav className='flex flex-col gap-0.5'>
-									<button
-										type='button'
+									<Link
+										to={user ? buildProfileUrl(user.username, user.email ?? "") : "/"}
 										onClick={closeMobileMenu}
 										className={profileMenuItemClass}>
 										<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
 										<span>Trang cá nhân</span>
-									</button>
+									</Link>
 									<button
 										type='button'
 										onClick={closeMobileMenu}

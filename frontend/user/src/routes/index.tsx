@@ -7,6 +7,7 @@ import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
 import BlogFeedPage from "@/pages/Blog/BlogFeedPage";
 import BlogDetailPage from "@/pages/Blog/BlogDetailPage";
 import LandingPage from "@/pages/LandingPage";
+import UserProfilePage from "@/pages/UserProfilePage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
@@ -36,6 +37,12 @@ const router = createBrowserRouter([
 			{
 				path: "blog/:slug",
 				element: <BlogDetailPage />,
+			},
+			{
+				// Dynamic catch-all for /@username profile pages — must be last
+				// Static routes above (blog, lien-he, cong-dong) always win on exact match
+				path: ":username",
+				element: <UserProfilePage />,
 			},
 			{
 				path: "cong-dong",

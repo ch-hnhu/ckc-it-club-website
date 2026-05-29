@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Flame, Hash, List, PenSquare, Search, Sparkles } from "lucide-react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
+import { buildProfileUrl } from "@/lib/utils";
 import type { CommunityLayoutContext } from "./CommunityLayout";
 import { postService } from "@/services/post.service";
 import type { Post } from "@/types/post.types";
@@ -221,7 +222,7 @@ const CommunityFeedPage: React.FC = () => {
 				{/* Create post prompt */}
 				{user && (
 					<div className='mb-6 flex items-center gap-3 rounded-xl border-2 border-black bg-white px-5 py-4'>
-						<Link to='/profile' className='relative'>
+						<Link to={buildProfileUrl(user.username, user.email ?? "")} className='relative'>
 							<img
 								src={userAvatar}
 								alt={userDisplayName}
@@ -348,7 +349,7 @@ const CommunityFeedPage: React.FC = () => {
 							{TOP_CONTRIBUTORS.map((member, index) => (
 								<Link
 									key={member.id}
-									to={`/profile/${member.id}`}
+									to={`/@${member.id}`}
 									className='flex items-center gap-3'>
 									<span className='w-5 text-sm font-extrabold text-gray-600'>
 										#{index + 1}

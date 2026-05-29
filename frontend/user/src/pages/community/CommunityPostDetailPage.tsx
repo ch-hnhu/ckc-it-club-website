@@ -23,7 +23,13 @@ import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
 import type { PostDetail, PostComment } from "@/types/post.types";
 import type { CommunityLayoutContext } from "./CommunityLayout";
-import { buildAvatar, formatRelativeTime, getHandle, isVideoMediaUrl } from "@/lib/utils";
+import {
+	buildAvatar,
+	formatRelativeTime,
+	getHandle,
+	isVideoMediaUrl,
+	buildProfileUrl,
+} from "@/lib/utils";
 import { renderMarkdownContent } from "@/lib/markdown";
 
 // ---------------------------------------------------------------------------
@@ -844,9 +850,14 @@ const CommunityPostDetailPage: React.FC = () => {
 								<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 									Theo dõi
 								</button>
-								<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-white font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-									Xem trang cá nhân
-								</button>
+								<Link
+									key={post?.user.id}
+									to={`/@${post?.user.username || post?.user.email.split("@")[0]}`}
+									className='flex items-center gap-3'>
+									<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-white font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+										Xem trang cá nhân
+									</button>
+								</Link>
 							</div>
 						</section>
 					) : null}
