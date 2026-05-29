@@ -48,7 +48,7 @@ const COMMUNITY_DROPDOWN = [
 	{ id: "showcase", label: "Showcase dự án", to: "/cong-dong", icon: Monitor },
 	{ id: "challenge", label: "Thử thách tháng", to: "/cong-dong", icon: Crown },
 	{ id: "code", label: "#30DaysOfCode", to: "/cong-dong", icon: Code2 },
-	{ id: "blog", label: "Blog", to: "/cong-dong/blog", icon: BookOpen },
+	{ id: "blog", label: "Blog", to: "/blog", icon: BookOpen },
 ];
 
 const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
@@ -113,7 +113,10 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	useEffect(() => {
 		if (!isCommunityOpen) return;
 		const handlePointerDown = (e: PointerEvent) => {
-			if (communityDropdownRef.current && !communityDropdownRef.current.contains(e.target as Node)) {
+			if (
+				communityDropdownRef.current &&
+				!communityDropdownRef.current.contains(e.target as Node)
+			) {
 				setIsCommunityOpen(false);
 			}
 		};
@@ -260,7 +263,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	};
 
 	return (
-		<header className='fixed top-0 left-0 z-50 w-full border-b-2 border-black bg-white/95 shadow-[0_2px_0_0_#111] backdrop-blur-sm transition-all duration-300'>
+		<header className='fixed top-0 left-0 z-50 w-full border-b-2 border-black bg-white shadow-[0_2px_0_0_#111] backdrop-blur-sm transition-all duration-300'>
 			<div className={`neo-container ${navbarContainerClass}`}>
 				<div className={`flex h-16 items-center justify-between gap-4 ${navbarPaddingX}`}>
 					<div className='flex min-w-0 items-center gap-4 lg:gap-8'>
@@ -290,7 +293,10 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 
 								if (item.dropdown) {
 									return (
-										<div key={item.label} ref={communityDropdownRef} className='relative'>
+										<div
+											key={item.label}
+											ref={communityDropdownRef}
+											className='relative'>
 											<button
 												type='button'
 												onClick={() => setIsCommunityOpen((p) => !p)}
@@ -309,23 +315,31 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 											</button>
 
 											{isCommunityOpen && (
-												<div className='absolute top-[calc(100%+10px)] left-0 z-50 w-56 overflow-hidden rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
+												<div className='absolute top-[calc(100%+10px)] left-0 z-50 flex w-56 flex-col gap-1.5 overflow-hidden rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
 													{COMMUNITY_DROPDOWN.map((sub) => {
 														const subActive =
-															(sub.id === "blog" && location.pathname.startsWith("/cong-dong/blog")) ||
-															(sub.id === "home" && location.pathname === "/cong-dong" && !location.pathname.startsWith("/cong-dong/blog"));
+															(sub.id === "blog" &&
+																location.pathname.startsWith(
+																	"/blog",
+																)) ||
+															(sub.id === "home" &&
+																location.pathname === "/cong-dong");
 														const SubIcon = sub.icon;
 														return (
 															<Link
 																key={sub.id}
 																to={sub.to}
-																onClick={() => setIsCommunityOpen(false)}
+																onClick={() =>
+																	setIsCommunityOpen(false)
+																}
 																className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition-colors ${
 																	subActive
 																		? "bg-[var(--color-primary)] text-black"
 																		: "text-gray-700 hover:bg-[var(--color-primary-100)] hover:text-[var(--color-text-primary)]"
 																}`}
-																style={{ fontFamily: "var(--font-body)" }}>
+																style={{
+																	fontFamily: "var(--font-body)",
+																}}>
 																<SubIcon className='h-4 w-4 shrink-0' />
 																{sub.label}
 															</Link>
@@ -488,7 +502,9 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 										<div className='flex flex-col gap-3'>
 											<Link
 												to='/login'
-												state={{ from: location.pathname + location.search }}
+												state={{
+													from: location.pathname + location.search,
+												}}
 												onClick={closeMobileMenu}
 												className='neo-btn neo-btn-secondary w-full justify-center'>
 												<LogIn className='h-4 w-4' /> Đăng nhập
@@ -517,11 +533,13 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 									Quay lại menu
 								</button>
 								<div className='mb-3 border-t border-gray-100' />
-								<nav className='flex flex-col gap-0.5'>
+								<nav className='flex flex-col gap-1.5'>
 									{COMMUNITY_DROPDOWN.map((sub) => {
 										const subActive =
-											(sub.id === "blog" && location.pathname.startsWith("/cong-dong/blog")) ||
-											(sub.id === "home" && location.pathname === "/cong-dong" && !location.pathname.startsWith("/cong-dong/blog"));
+											(sub.id === "blog" &&
+												location.pathname.startsWith("/blog")) ||
+											(sub.id === "home" &&
+												location.pathname === "/cong-dong");
 										const SubIcon = sub.icon;
 										return (
 											<Link

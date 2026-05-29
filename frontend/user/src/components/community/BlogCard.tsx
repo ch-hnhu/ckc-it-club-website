@@ -31,14 +31,12 @@ const Placeholder: React.FC<{ title: string; tall?: boolean }> = ({ title, tall 
 export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) => {
 	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = buildAvatar(blog.user?.full_name, blog.user?.avatar);
-	const detailUrl = `/cong-dong/blog/${blog.slug}`;
+	const detailUrl = `/blog/${blog.slug}`;
 	const date = blog.published_at ?? blog.created_at;
 
 	if (featured) {
 		return (
-			<Link
-				to={detailUrl}
-				className='group neo-card block overflow-hidden bg-white'>
+			<Link to={detailUrl} className='group neo-card block overflow-hidden bg-white'>
 				<div className='aspect-[21/9] overflow-hidden'>
 					{blog.featured_image ? (
 						<img
@@ -105,9 +103,7 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 	}
 
 	return (
-		<Link
-			to={detailUrl}
-			className='group neo-card flex flex-col overflow-hidden bg-white'>
+		<Link to={detailUrl} className='group neo-card flex flex-col overflow-hidden bg-white'>
 			<div className='overflow-hidden'>
 				{blog.featured_image ? (
 					<img
@@ -123,9 +119,7 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 				{blog.tags.length > 0 && (
 					<div className='mb-3 flex flex-wrap gap-1.5'>
 						{blog.tags.slice(0, 2).map((tag, i) => (
-							<span
-								key={tag.id}
-								className={`neo-tag ${TAG_BG[i % TAG_BG.length]}`}>
+							<span key={tag.id} className={`neo-tag ${TAG_BG[i % TAG_BG.length]}`}>
 								{tag.name}
 							</span>
 						))}

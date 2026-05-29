@@ -54,7 +54,7 @@
 - community content fills the available desktop width up to a 76rem cap with reduced feed-side padding, and its right rail uses a custom `70rem` breakpoint so it remains visible below Tailwind `xl`
 - on mobile/tablet below `lg`, the community page shows a sticky community sub-header and turns the left sidebar into an overlay drawer
 - community channels are fetched in `CommunityPage` from public `GET /community/channels` through `communityService`; the page keeps a seeded local fallback list if the request fails.
-- `/cong-dong/dang-bai` is also treated as a community layout exception and shows a standalone create-post page instead of a modal.
+- `/cong-dong/dang-bai` lives inside `CommunityLayout` and renders only the create-post form content.
 
 ## Route Surface
 
@@ -62,10 +62,14 @@
 - landing page composed from multiple section components
 - `/lien-he`
 - contact page
+- `/blog`
+- standalone blog feed page linked from the community dropdown in the navbar
+- `/blog/:slug`
+- standalone blog detail page
 - `/cong-dong`
 - dense community page with sidebar, feed, and right rail
 - `/cong-dong/dang-bai`
-- standalone community create-post page linked from the composer entry and post button
+- community create-post form linked from the composer entry and post button
 - `/login`
 - credential login page with Google/GitHub OAuth popup buttons.
 - `/register`
@@ -247,6 +251,8 @@ npm run dev
 
 ## Change Log
 
+- `2026-05-29`: Community create post page now relies on `CommunityLayout` for community chrome and renders only the main create-post form content.
+- `2026-05-29`: Blog routes are standalone `/blog` pages, not community-layout pages; community layout no longer contains blog-specific state or active checks.
 - `2026-05-27`: Community create Stacks editor table toolbar now shows a single table control: insert table outside tables, and table-format dropdown when the selection is inside a table.
 - `2026-05-27`: `StacksEditorWrapper` now syncs the Heading toolbar state with the active rich-text selection and shows `H1`/`H2`/`H3` only when the selected text is inside a heading.
 - `2026-04-08`: Replaced scaffold with full user frontend audit. Added landing-page structure, neo-brutalist design assumptions, auth/session model, service conventions, env notes, and known gap inventory.

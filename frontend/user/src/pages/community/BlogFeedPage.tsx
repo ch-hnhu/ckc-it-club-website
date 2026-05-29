@@ -59,7 +59,7 @@ const FeaturedArticle: React.FC<{ blog: Blog }> = ({ blog }) => {
 	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = buildAvatar(blog.user?.full_name, blog.user?.avatar);
 	const date = blog.published_at ?? blog.created_at;
-	const detailUrl = `/cong-dong/blog/${blog.slug}`;
+	const detailUrl = `/blog/${blog.slug}`;
 
 	const formattedDate = new Date(date).toLocaleDateString("vi-VN", {
 		day: "2-digit",
@@ -114,7 +114,9 @@ const FeaturedArticle: React.FC<{ blog: Blog }> = ({ blog }) => {
 									alt={authorName}
 									className='h-5 w-5 rounded-full border border-gray-300 object-cover'
 								/>
-								<span className='text-xs font-semibold text-gray-600'>{authorName}</span>
+								<span className='text-xs font-semibold text-gray-600'>
+									{authorName}
+								</span>
 							</>
 						)}
 					</div>
@@ -222,12 +224,24 @@ const BlogFeedPage: React.FC = () => {
 
 			{/* ── Hero banner ── */}
 			<div className='relative flex min-h-[260px] flex-col items-center justify-center overflow-hidden border-b-2 border-black bg-[#111] px-6 py-14 md:min-h-[300px] md:py-20'>
-				<span className='pointer-events-none absolute top-4 left-8 select-none text-2xl text-[var(--color-primary)] opacity-60'>✦</span>
-				<span className='pointer-events-none absolute top-7 right-14 select-none text-sm text-white opacity-20'>+</span>
-				<span className='pointer-events-none absolute right-1/4 bottom-4 select-none text-base text-white opacity-15'>✦</span>
-				<span className='pointer-events-none absolute top-1/2 right-6 -translate-y-1/2 select-none text-4xl text-[var(--color-primary)] opacity-20'>✦</span>
-				<span className='pointer-events-none absolute bottom-5 left-1/3 select-none text-sm text-white opacity-15'>+</span>
-				<span className='pointer-events-none absolute top-3 left-1/2 select-none text-xs text-[var(--color-primary)] opacity-30'>✦</span>
+				<span className='pointer-events-none absolute top-4 left-8 select-none text-2xl text-[var(--color-primary)] opacity-60'>
+					✦
+				</span>
+				<span className='pointer-events-none absolute top-7 right-14 select-none text-sm text-white opacity-20'>
+					+
+				</span>
+				<span className='pointer-events-none absolute right-1/4 bottom-4 select-none text-base text-white opacity-15'>
+					✦
+				</span>
+				<span className='pointer-events-none absolute top-1/2 right-6 -translate-y-1/2 select-none text-4xl text-[var(--color-primary)] opacity-20'>
+					✦
+				</span>
+				<span className='pointer-events-none absolute bottom-5 left-1/3 select-none text-sm text-white opacity-15'>
+					+
+				</span>
+				<span className='pointer-events-none absolute top-3 left-1/2 select-none text-xs text-[var(--color-primary)] opacity-30'>
+					✦
+				</span>
 
 				<div className='relative text-center'>
 					<div className='inline-block rounded-xl border-2 border-[var(--color-primary)] bg-[#1d1d0f] px-7 py-3.5 shadow-[4px_4px_0_var(--color-primary)]'>

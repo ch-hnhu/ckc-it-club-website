@@ -28,15 +28,11 @@ const router = createBrowserRouter([
 				element: <ContactPage />,
 			},
 			{
-				path: "cong-dong/dang-bai",
-				element: <CommunityCreatePage />,
-			},
-			{
-				path: "cong-dong/blog",
+				path: "blog",
 				element: <BlogFeedPage />,
 			},
 			{
-				path: "cong-dong/blog/:slug",
+				path: "blog/:slug",
 				element: <BlogDetailPage />,
 			},
 			{
@@ -50,6 +46,10 @@ const router = createBrowserRouter([
 					{
 						path: "bai-viet/:id",
 						element: <CommunityPostDetailPage />,
+					},
+					{
+						path: "dang-bai",
+						element: <CommunityCreatePage />,
 					},
 					{
 						path: ":channelSlug",

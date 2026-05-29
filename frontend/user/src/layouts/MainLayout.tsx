@@ -9,9 +9,7 @@ import { Toaster } from "sonner";
 const MainLayout: React.FC = () => {
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const { pathname } = useLocation();
-	const isCommunityPage =
-		(pathname.startsWith("/cong-dong") || pathname.startsWith("/community")) &&
-		!pathname.startsWith("/cong-dong/blog");
+	const isCommunityPage = pathname.startsWith("/cong-dong") || pathname.startsWith("/community");
 
 	const refreshUser = useCallback(async () => {
 		const currentUser = await getCurrentUser();

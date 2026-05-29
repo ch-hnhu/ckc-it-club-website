@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { BookOpen, Code2, Crown, Hash, Home, Monitor, Trophy, X } from "lucide-react";
-import { Link, Outlet, useLocation, useOutletContext, useParams } from "react-router-dom";
+import { Code2, Crown, Hash, Home, Monitor, Trophy, X } from "lucide-react";
+import { Link, Outlet, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { communityService, type CommunityChannel } from "@/services/community.service";
 
@@ -46,27 +46,27 @@ const STATIC_CHANNELS = [
 	{ id: "bugs", label: "Báo lỗi", count: 7 },
 ];
 
-export const COMMUNITY_LOGO = "https://www.codedex.io/images/community/bouncer.gif";
+const COMMUNITY_LOGO = "https://www.codedex.io/images/community/bouncer.gif";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-export const buildChannelItems = (sourceChannels: ChannelItem[]): ChannelItem[] => {
+const buildChannelItems = (sourceChannels: ChannelItem[]): ChannelItem[] => {
 	const sorted = [...sourceChannels].sort((a, b) => b.count - a.count);
 	const totalPostsCount = sorted.reduce((sum, ch) => sum + ch.count, 0);
 	return [
 		{
-			id: "chung",
+			id: "all",
 			label: "Kênh chung",
 			count: totalPostsCount,
 			description: "Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦",
 			image: COMMUNITY_LOGO,
-			slug: "chung",
+			slug: "all",
 		},
 		...sorted,
 	];
 };
 
-export const buildFallbackChannels = (): ChannelItem[] =>
+const buildFallbackChannels = (): ChannelItem[] =>
 	buildChannelItems(
 		STATIC_CHANNELS.map((ch) => ({
 			id: ch.id,
@@ -85,8 +85,6 @@ const CommunityLayout: React.FC = () => {
 	const user = outletContext?.user ?? null;
 
 	const { channelSlug } = useParams<{ channelSlug: string }>();
-	const location = useLocation();
-	const isBlogPage = location.pathname.startsWith("/cong-dong/blog");
 
 	const pageMode = channelSlug ? "channel" : "home";
 	const activeChannel = channelSlug ?? "all";
@@ -139,39 +137,34 @@ const CommunityLayout: React.FC = () => {
 	const renderSidebarContent = (isMobile = false) => (
 		<div className={isMobile ? "px-4 py-4" : "px-3 py-4"}>
 			{/* Primary nav */}
-				<nav className='space-y-2'>
-					{PRIMARY_NAV.map((item) => {
-						const Icon = item.icon;
-						const isActive =
-							item.id === "blog"
-								? isBlogPage
-								: item.id === "home"
-									? pageMode === "home" && !isBlogPage
-									: false;
-						return (
-							<Link
-								key={item.id}
-								to={item.to}
-								onClick={() => setIsSidebarOpen(false)}
-								className={`group relative flex w-full items-center text-left font-bold ${
-									isMobile
-										? "gap-3 rounded-xl px-3 py-3 text-base"
-										: "gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px]"
-								} ${
-									isActive
-										? "border-2 border-[var(--color-primary-dark)] bg-primary-100 text-[var(--color-text-primary)]"
-										: "border-2 border-transparent bg-white text-gray-700 hover:bg-gray-100"
-								}`}>
-								<Icon
-									className={`transition-colors duration-200 ${isMobile ? "h-5 w-5" : "h-4 w-4"} ${
-										isActive ? "text-[var(--color-text-primary)]" : "text-gray-700"
-									}`}
-								/>
-								{item.label}
-							</Link>
-						);
-					})}
-				</nav>
+			<nav className='space-y-2'>
+				{PRIMARY_NAV.map((item) => {
+					const Icon = item.icon;
+					const isActive = item.id === "home" && pageMode === "home";
+					return (
+						<Link
+							key={item.id}
+							to={item.to}
+							onClick={() => setIsSidebarOpen(false)}
+							className={`group relative flex w-full items-center text-left font-bold ${
+								isMobile
+									? "gap-3 rounded-xl px-3 py-3 text-base"
+									: "gap-2.5 rounded-lg px-2.5 py-2.5 text-[13px]"
+							} ${
+								isActive
+									? "border-2 border-[var(--color-primary-dark)] bg-primary-100 text-[var(--color-text-primary)]"
+									: "border-2 border-transparent bg-white text-gray-700 hover:bg-gray-100"
+							}`}>
+							<Icon
+								className={`transition-colors duration-200 ${isMobile ? "h-5 w-5" : "h-4 w-4"} ${
+									isActive ? "text-[var(--color-text-primary)]" : "text-gray-700"
+								}`}
+							/>
+							{item.label}
+						</Link>
+					);
+				})}
+			</nav>
 
 			{/* Channel list */}
 			<div

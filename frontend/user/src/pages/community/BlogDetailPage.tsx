@@ -72,7 +72,7 @@ interface CommentItemProps {
 	comment: BlogComment;
 	depth?: number;
 	blogId: number;
-	user: CommunityLayoutContext["user"];
+	user: AuthUser | null;
 	onReplyAdded: (parentId: number, reply: BlogComment) => void;
 }
 
@@ -141,7 +141,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
 				<div className='min-w-0 flex-1'>
 					<div className='rounded-[10px] border-2 border-black bg-white px-4 py-3 shadow-[2px_2px_0_#111]'>
 						<div className='mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5'>
-							<span className='font-heading text-sm font-extrabold text-black'>{name}</span>
+							<span className='font-heading text-sm font-extrabold text-black'>
+								{name}
+							</span>
 							<span className='text-xs text-gray-500'>{handle}</span>
 							<span className='text-xs text-gray-400'>· {time}</span>
 						</div>
@@ -162,7 +164,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
 						{depth === 0 && (
 							<button
 								onClick={() => {
-									if (!user) { navigate("/login"); return; }
+									if (!user) {
+										navigate("/login");
+										return;
+									}
 									setShowReplyForm((p) => !p);
 								}}
 								className={`text-xs font-bold transition ${showReplyForm ? "text-black" : "text-gray-500 hover:text-black"}`}>
@@ -185,7 +190,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 									value={replyText}
 									onChange={(e) => setReplyText(e.target.value)}
 									onKeyDown={(e) => {
-										if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSubmitReply();
+										if (e.key === "Enter" && (e.ctrlKey || e.metaKey))
+											handleSubmitReply();
 										if (e.key === "Escape") setShowReplyForm(false);
 									}}
 									placeholder={`Trả lời ${name}...`}
@@ -193,7 +199,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
 								/>
 								<div className='flex justify-end gap-2'>
 									<button
-										onClick={() => { setShowReplyForm(false); setReplyText(""); }}
+										onClick={() => {
+											setShowReplyForm(false);
+											setReplyText("");
+										}}
 										className='inline-flex h-8 items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 text-xs font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 										Hủy
 									</button>
@@ -303,7 +312,7 @@ const BlogDetailPage: React.FC = () => {
 			const newComment: BlogComment = { ...res.data, replies: [] };
 			setComments((prev) => [...prev, newComment]);
 			setCommentText("");
-			setBlog((prev) => prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev);
+			setBlog((prev) => (prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev));
 			toast.success("Đã đăng bình luận!");
 		} catch {
 			toast.error("Không thể gửi bình luận. Vui lòng thử lại.");
@@ -318,7 +327,7 @@ const BlogDetailPage: React.FC = () => {
 				c.id === parentId ? { ...c, replies: [...(c.replies ?? []), reply] } : c,
 			),
 		);
-		setBlog((prev) => prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev);
+		setBlog((prev) => (prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev));
 	};
 
 	return (
@@ -332,7 +341,9 @@ const BlogDetailPage: React.FC = () => {
 						aria-label='Quay lại'>
 						<ArrowLeft className='h-5 w-5' />
 					</button>
-					<h1 className='min-w-0 truncate font-heading text-sm font-bold text-black'>Blog</h1>
+					<h1 className='min-w-0 truncate font-heading text-sm font-bold text-black'>
+						Blog
+					</h1>
 				</div>
 
 				{/* Desktop back */}
@@ -344,7 +355,7 @@ const BlogDetailPage: React.FC = () => {
 						<ArrowLeft className='h-5 w-5' />
 					</button>
 					<Link
-						to='/cong-dong/blog'
+						to='/blog'
 						className='font-heading text-sm font-bold text-gray-500 hover:text-black'>
 						← Blog
 					</Link>
@@ -352,9 +363,11 @@ const BlogDetailPage: React.FC = () => {
 
 				{blogError && (
 					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
-						<p className='font-heading text-xl font-extrabold text-black'>{blogError}</p>
+						<p className='font-heading text-xl font-extrabold text-black'>
+							{blogError}
+						</p>
 						<Link
-							to='/cong-dong/blog'
+							to='/blog'
 							className='mt-5 inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 							Quay lại Blog
 						</Link>
@@ -412,7 +425,11 @@ const BlogDetailPage: React.FC = () => {
 													{authorName}
 												</p>
 												<div className='flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-gray-500'>
-													<span>{publishedAt ? formatRelativeTime(publishedAt) : ""}</span>
+													<span>
+														{publishedAt
+															? formatRelativeTime(publishedAt)
+															: ""}
+													</span>
 													<span className='flex items-center gap-1'>
 														<Eye className='h-3.5 w-3.5' />
 														{blog.view_count} lượt xem
@@ -439,27 +456,43 @@ const BlogDetailPage: React.FC = () => {
 									<div className='mt-7 flex flex-wrap items-center gap-2 border-t-2 border-black pt-5'>
 										<button
 											onClick={async () => {
-												if (!user) { navigate("/login"); return; }
+												if (!user) {
+													navigate("/login");
+													return;
+												}
 												if (reactionLoading) return;
 												const wasLiked = liked;
 												setLiked(!wasLiked);
-												setHeartCount((c) => (wasLiked ? Math.max(0, c - 1) : c + 1));
+												setHeartCount((c) =>
+													wasLiked ? Math.max(0, c - 1) : c + 1,
+												);
 												setReactionLoading(true);
 												try {
-													const res = await blogService.toggleReaction(blog.id, "heart");
+													const res = await blogService.toggleReaction(
+														blog.id,
+														"heart",
+													);
 													setLiked(res.data.my_reaction === "heart");
 													setHeartCount(res.data.reactions_count);
 												} catch {
 													setLiked(wasLiked);
-													setHeartCount((c) => (wasLiked ? c + 1 : Math.max(0, c - 1)));
+													setHeartCount((c) =>
+														wasLiked ? c + 1 : Math.max(0, c - 1),
+													);
 												} finally {
 													setReactionLoading(false);
 												}
 											}}
 											disabled={reactionLoading}
 											className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
-											style={{ background: liked ? "var(--color-pastel-pink)" : "#fff" }}>
-											<Heart className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`} />
+											style={{
+												background: liked
+													? "var(--color-pastel-pink)"
+													: "#fff",
+											}}>
+											<Heart
+												className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`}
+											/>
 											{heartCount}
 										</button>
 
@@ -473,9 +506,13 @@ const BlogDetailPage: React.FC = () => {
 										<button
 											onClick={() => setSaved((p) => !p)}
 											className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-											style={{ background: saved ? "var(--color-primary)" : "#fff" }}
+											style={{
+												background: saved ? "var(--color-primary)" : "#fff",
+											}}
 											aria-label='Lưu bài viết'>
-											<Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
+											<Bookmark
+												className={`h-4 w-4 ${saved ? "fill-current" : ""}`}
+											/>
 										</button>
 
 										<button
@@ -514,7 +551,8 @@ const BlogDetailPage: React.FC = () => {
 										value={commentText}
 										onChange={(e) => setCommentText(e.target.value)}
 										onKeyDown={(e) => {
-											if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSubmitComment();
+											if (e.key === "Enter" && (e.ctrlKey || e.metaKey))
+												handleSubmitComment();
 										}}
 										placeholder='Viết bình luận của bạn... (Ctrl+Enter để gửi)'
 										className='w-full resize-none rounded-[10px] border-2 border-black bg-white px-4 py-3 text-sm font-medium leading-6 text-black outline-none transition placeholder:text-gray-400 focus:shadow-[0_0_0_3px_#A3E635]'
@@ -533,7 +571,9 @@ const BlogDetailPage: React.FC = () => {
 						) : (
 							<div className='mb-6 rounded-[10px] border-2 border-dashed border-black bg-white px-5 py-4 text-center'>
 								<p className='text-sm font-semibold text-gray-600'>
-									<Link to='/login' className='font-extrabold text-lime-700 hover:underline'>
+									<Link
+										to='/login'
+										className='font-extrabold text-lime-700 hover:underline'>
 										Đăng nhập
 									</Link>{" "}
 									để tham gia bình luận
