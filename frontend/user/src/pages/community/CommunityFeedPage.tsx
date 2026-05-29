@@ -125,6 +125,7 @@ const CommunityFeedPage: React.FC = () => {
 	const [posts, setPosts] = useState<Post[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [retryCount, setRetryCount] = useState(0);
 
 	useEffect(() => {
 		setActiveSort("top");
@@ -155,7 +156,7 @@ const CommunityFeedPage: React.FC = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [activeChannel, activeSort]);
+	}, [activeChannel, activeSort, retryCount]);
 
 	const currentChannel = channels.find((ch) => ch.slug === activeChannel);
 
@@ -278,7 +279,7 @@ const CommunityFeedPage: React.FC = () => {
 							</p>
 							<p className='mt-2 text-sm text-gray-600'>{error}</p>
 							<button
-								onClick={() => setActiveSort((s) => s)}
+								onClick={() => setRetryCount((count) => count + 1)}
 								className='mt-4 rounded-lg border-2 border-black bg-[var(--color-primary)] px-4 py-2 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 								Thử lại
 							</button>
