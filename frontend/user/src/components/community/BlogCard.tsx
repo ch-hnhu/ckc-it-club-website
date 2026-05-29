@@ -120,7 +120,7 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 			<div className='flex flex-1 flex-col p-5'>
 				{blog.tags.length > 0 && (
 					<div className='mb-3 flex flex-wrap gap-1.5'>
-						{blog.tags.slice(0, 2).map((tag, i) => (
+						{blog.tags.slice(0, 2).map((tag) => (
 							<span
 								key={tag.id}
 								className={`inline-block neo-tag uppercase text-[10px] bg-green-50`}>
@@ -129,7 +129,7 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 						))}
 					</div>
 				)}
-				<h3 className='line-clamp-2 font-heading text-lg font-extrabold leading-snug text-black group-hover:text-[var(--color-text-primary)]'>
+				<h3 className='line-clamp-2 font-heading text-lg font-extrabold leading-snug text-black group-hover:text-[var(--color-text-primary)] group-hover:underline'>
 					{blog.title}
 				</h3>
 				{blog.excerpt && (
@@ -151,6 +151,10 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 						<span className='flex items-center gap-1'>
 							<Heart className='h-3.5 w-3.5' />
 							{blog.reactions_count}
+						</span>
+						<span className='flex items-center gap-1'>
+							<MessageCircle className='h-3.5 w-3.5' />
+							{blog.comments_count}
 						</span>
 						<span className='flex items-center gap-1'>
 							<Eye className='h-3.5 w-3.5' />
