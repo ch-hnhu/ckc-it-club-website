@@ -35,26 +35,96 @@ import PostCard from "@/components/community/PostCard";
 
 const ProfileSkeleton: React.FC = () => (
 	<div className='animate-pulse'>
-		<div className='h-48 rounded-t-2xl bg-gray-200' />
-		<div className='rounded-b-2xl border-2 border-t-0 border-black bg-white px-6 pb-6 pt-14'>
-			<div className='flex items-start justify-between'>
-				<div className='space-y-2'>
-					<div className='h-5 w-40 rounded bg-gray-200' />
-					<div className='h-4 w-24 rounded bg-gray-200' />
+		<div className='h-40 bg-gray-200 sm:h-48 sm:rounded-2xl md:h-55' />
+
+		<div className='bg-white pb-5'>
+			<div className='relative -mt-12 flex items-end justify-between gap-3 sm:-mt-16 md:-mt-[5rem]'>
+				<div className='px-6'>
+					<div className='h-24 w-24 rounded-full border-4 border-white bg-gray-200 sm:h-32 sm:w-32 md:h-36 md:w-36' />
 				</div>
-				<div className='h-10 w-28 rounded-xl bg-gray-200' />
+				<div className='absolute bottom-0 right-6 h-9 w-28 rounded-xl border-2 border-black bg-white shadow-[3px_3px_0_#111] sm:static sm:w-36' />
 			</div>
-			<div className='mt-3 space-y-2'>
-				<div className='h-3 w-full rounded bg-gray-200' />
-				<div className='h-3 w-3/4 rounded bg-gray-200' />
+
+			<div className='mt-5 space-y-3 px-6 sm:px-0'>
+				<div className='h-7 w-44 rounded bg-gray-200' />
+				<div className='h-4 w-28 rounded bg-gray-200' />
+				<div className='hidden h-4 w-64 rounded bg-gray-200 sm:block' />
+				<div className='flex flex-wrap gap-3'>
+					<div className='h-4 w-32 rounded bg-gray-200' />
+					<div className='hidden h-4 w-36 rounded bg-gray-200 sm:block' />
+					<div className='hidden h-4 w-28 rounded bg-gray-200 sm:block' />
+				</div>
+				<div className='flex gap-5'>
+					<div className='h-4 w-28 rounded bg-gray-200' />
+					<div className='h-4 w-28 rounded bg-gray-200' />
+				</div>
 			</div>
-			<div className='mt-4 flex gap-6'>
-				<div className='h-3 w-20 rounded bg-gray-200' />
-				<div className='h-3 w-20 rounded bg-gray-200' />
-				<div className='h-3 w-20 rounded bg-gray-200' />
+		</div>
+
+		<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
+			<div className='flex gap-2 sm:gap-4'>
+				<div className='relative h-10 w-32 pb-4'>
+					<div className='h-7 w-28 rounded bg-gray-200' />
+					<div className='absolute -bottom-[2px] left-0 h-1 w-full bg-primary' />
+				</div>
+				<div className='flex h-10 w-28 items-start gap-2'>
+					<div className='h-7 w-20 rounded bg-gray-200' />
+					<div className='h-5 w-5 rounded-full bg-gray-200' />
+				</div>
+			</div>
+		</div>
+
+		<div className='mt-5 space-y-6 px-6 sm:px-0'>
+			<div>
+				<div className='mb-4 flex items-center justify-between'>
+					<div className='h-7 w-20 rounded bg-gray-200' />
+					<div className='flex gap-2'>
+						<div className='h-8 w-8 rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111]' />
+						<div className='h-8 w-8 rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111]' />
+					</div>
+				</div>
+				<div className='flex gap-4 overflow-hidden'>
+					{Array.from({ length: 2 }).map((_, i) => (
+						<div
+							key={i}
+							className='h-64 min-w-[260px] rounded-2xl border-2 border-black bg-white p-4 sm:min-w-[300px]'>
+							<div className='mb-5 flex items-center gap-3'>
+								<div className='h-10 w-10 rounded-full bg-gray-200' />
+								<div className='space-y-2'>
+									<div className='h-4 w-28 rounded bg-gray-200' />
+									<div className='h-3 w-36 rounded bg-gray-200' />
+								</div>
+							</div>
+							<div className='mb-4 h-5 w-4/5 rounded bg-gray-200' />
+							<div className='space-y-2'>
+								<div className='h-3 w-full rounded bg-gray-200' />
+								<div className='h-3 w-5/6 rounded bg-gray-200' />
+								<div className='h-28 w-full rounded-lg bg-gray-200' />
+							</div>
+						</div>
+					))}
+				</div>
 			</div>
 		</div>
 	</div>
+);
+
+const ProfileSidebarSkeleton: React.FC = () => (
+	<aside className='hidden w-72 shrink-0 animate-pulse space-y-5 lg:block'>
+		{[0, 1, 2].map((item) => (
+			<div
+				key={item}
+				className='rounded-2xl border-2 border-black bg-white p-4 shadow-[4px_4px_0_#111]'>
+				<div className='mb-4 h-5 w-32 rounded bg-gray-200' />
+				<div className='space-y-3'>
+					<div className='h-4 w-full rounded bg-gray-200' />
+					<div className='h-4 w-5/6 rounded bg-gray-200' />
+					<div className='h-4 w-3/4 rounded bg-gray-200' />
+				</div>
+			</div>
+		))}
+		<div className='h-11 rounded-xl border-2 border-black bg-white shadow-[3px_3px_0_#111]' />
+	</aside>
 );
 
 const PostSkeleton: React.FC = () => (
@@ -105,9 +175,9 @@ const StatsCard: React.FC<StatsCardProps> = ({ profile }) => (
 			<div className='flex items-center justify-between'>
 				<span className='flex items-center gap-2 text-sm font-medium text-gray-600'>
 					<Heart className='h-4 w-4' />
-					Tổng lượt thích
+					Lượt thích
 				</span>
-				<span className='font-heading text-sm font-extrabold text-black'>—</span>
+				<span className='font-heading text-sm font-extrabold text-black'>67</span>
 			</div>
 		</div>
 	</div>
@@ -761,10 +831,7 @@ const UserProfilePage: React.FC = () => {
 						<div className='min-w-0 flex-1'>
 							<ProfileSkeleton />
 						</div>
-						<aside className='hidden w-72 shrink-0 space-y-5 lg:block'>
-							<div className='h-48 animate-pulse rounded-2xl border-2 border-black bg-gray-200' />
-							<div className='h-36 animate-pulse rounded-2xl border-2 border-black bg-gray-200' />
-						</aside>
+						<ProfileSidebarSkeleton />
 					</div>
 				</div>
 			</div>
