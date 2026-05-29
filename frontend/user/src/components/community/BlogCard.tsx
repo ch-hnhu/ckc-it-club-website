@@ -54,7 +54,7 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 							{blog.tags.slice(0, 3).map((tag, i) => (
 								<span
 									key={tag.id}
-									className={`neo-tag ${TAG_BG[i % TAG_BG.length]}`}>
+									className={`inline-block neo-tag uppercase text-[10px] bg-white ${TAG_BG[i % TAG_BG.length]}`}>
 									{tag.name}
 								</span>
 							))}
@@ -103,7 +103,9 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 	}
 
 	return (
-		<Link to={detailUrl} className='group neo-card flex flex-col overflow-hidden bg-white'>
+		<Link
+			to={detailUrl}
+			className='group flex h-full flex-col overflow-hidden rounded-2xl border-2 border-black bg-white'>
 			<div className='overflow-hidden'>
 				{blog.featured_image ? (
 					<img
@@ -118,22 +120,25 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 			<div className='flex flex-1 flex-col p-5'>
 				{blog.tags.length > 0 && (
 					<div className='mb-3 flex flex-wrap gap-1.5'>
-						{blog.tags.slice(0, 2).map((tag, i) => (
-							<span key={tag.id} className={`neo-tag ${TAG_BG[i % TAG_BG.length]}`}>
+						{blog.tags.slice(0, 2).map((tag) => (
+							<span
+								key={tag.id}
+								className={`inline-block neo-tag uppercase text-[10px] bg-green-50`}>
 								{tag.name}
 							</span>
 						))}
 					</div>
 				)}
-				<h3 className='line-clamp-2 font-heading text-lg font-extrabold leading-snug text-black group-hover:text-[var(--color-text-primary)]'>
+				<h3 className='line-clamp-2 font-heading text-lg font-extrabold leading-snug text-black group-hover:text-[var(--color-text-primary)] group-hover:underline'>
 					{blog.title}
 				</h3>
 				{blog.excerpt && (
-					<p className='mt-2 line-clamp-3 flex-1 text-sm leading-6 text-gray-600'>
+					<p className='mt-2 line-clamp-3 text-sm leading-6 text-gray-600'>
 						{blog.excerpt}
 					</p>
 				)}
-				<div className='mt-4 flex items-center justify-between border-t-2 border-black pt-3'>
+				<div className='min-h-5 flex-1' />
+				<div className='flex items-center justify-between border-t-2 border-black pt-3'>
 					<div className='flex min-w-0 items-center gap-2'>
 						<img
 							src={authorAvatar}
@@ -146,6 +151,10 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 						<span className='flex items-center gap-1'>
 							<Heart className='h-3.5 w-3.5' />
 							{blog.reactions_count}
+						</span>
+						<span className='flex items-center gap-1'>
+							<MessageCircle className='h-3.5 w-3.5' />
+							{blog.comments_count}
 						</span>
 						<span className='flex items-center gap-1'>
 							<Eye className='h-3.5 w-3.5' />

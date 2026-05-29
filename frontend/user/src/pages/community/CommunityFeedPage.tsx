@@ -117,7 +117,9 @@ const CommunityFeedPage: React.FC = () => {
 	const { channelSlug } = useParams<{ channelSlug: string }>();
 
 	const pageMode: "home" | "channel" = channelSlug ? "channel" : "home";
-	const activeChannel = channelSlug ?? "all";
+	const activeChannel = channelSlug ?? "";
+	// home hoặc "chung" đều load toàn bộ bài viết (không filter channel)
+	const isAllChannel = pageMode === "home" || activeChannel === "chung";
 
 	const [activeSort, setActiveSort] = useState("top");
 	const [posts, setPosts] = useState<Post[]>([]);
@@ -136,7 +138,7 @@ const CommunityFeedPage: React.FC = () => {
 
 		postService
 			.getPosts({
-				channel: activeChannel === "all" ? undefined : activeChannel,
+				channel: isAllChannel ? undefined : activeChannel,
 				sort: activeSort === "top" ? "reactions_count" : "created_at",
 				order: "desc",
 				per_page: 20,
@@ -156,19 +158,27 @@ const CommunityFeedPage: React.FC = () => {
 		};
 	}, [activeChannel, activeSort, retryCount]);
 
-	const currentChannel =
-		activeChannel === "all" ? channels[0] : channels.find((ch) => ch.slug === activeChannel);
+	const currentChannel = channels.find((ch) => ch.slug === activeChannel);
 
 	const pageInfo = {
-		image: pageMode === "home" ? COMMUNITY_LOGO : (currentChannel?.image ?? null),
+		image:
+			pageMode === "home"
+				? COMMUNITY_LOGO
+				: isAllChannel
+					? COMMUNITY_LOGO
+					: (currentChannel?.image ?? null),
 		title:
 			pageMode === "home"
 				? "Cộng đồng CKC IT CLUB"
-				: (currentChannel?.label ?? activeChannel),
+				: isAllChannel
+					? "Kênh chung"
+					: (currentChannel?.label ?? activeChannel),
 		description:
 			pageMode === "home"
 				? "Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦"
-				: (currentChannel?.description ?? "Bài viết và thảo luận trong kênh này."),
+				: isAllChannel
+					? "Tất cả bài viết từ mọi kênh trong cộng đồng 🌱✦"
+					: (currentChannel?.description ?? "Bài viết và thảo luận trong kênh này."),
 	};
 
 	const userDisplayName = user?.name || user?.email || "CKC member";
