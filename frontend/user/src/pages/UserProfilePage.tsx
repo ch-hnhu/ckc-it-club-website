@@ -515,6 +515,17 @@ interface PostCarouselProps {
 
 const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) => {
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const [canScrollLeft, setCanScrollLeft] = useState(false);
+	const [canScrollRight, setCanScrollRight] = useState(false);
+
+	const updateScrollShadows = () => {
+		const el = scrollRef.current;
+		if (!el) return;
+
+		const maxScrollLeft = el.scrollWidth - el.clientWidth;
+		setCanScrollLeft(el.scrollLeft > 4);
+		setCanScrollRight(el.scrollLeft < maxScrollLeft - 4);
+	};
 
 	const scroll = (dir: "left" | "right") => {
 		scrollRef.current?.scrollBy({
@@ -522,6 +533,15 @@ const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) =
 			behavior: "smooth",
 		});
 	};
+
+	useEffect(() => {
+		updateScrollShadows();
+		window.addEventListener("resize", updateScrollShadows);
+
+		return () => {
+			window.removeEventListener("resize", updateScrollShadows);
+		};
+	}, [posts]);
 
 	return (
 		<div>
@@ -544,10 +564,21 @@ const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) =
 			</div>
 
 			{/* Scrollable row — hidden scrollbar */}
-			<div ref={scrollRef} className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
-				{posts.map((post) => (
-					<PostCardCompact key={post.id} post={post} user={user} />
-				))}
+			<div className='relative'>
+				{canScrollLeft && (
+					<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
+				)}
+				{canScrollRight && (
+					<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
+				)}
+				<div
+					ref={scrollRef}
+					onScroll={updateScrollShadows}
+					className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
+					{posts.map((post) => (
+						<PostCardCompact key={post.id} post={post} user={user} />
+					))}
+				</div>
 			</div>
 
 			{/* Show all button */}
