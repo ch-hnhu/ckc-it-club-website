@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ReactionType;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,7 @@ class ReactionSeeder extends Seeder
 
     public function run(): void
     {
-        $admin    = User::where('email', 'admin@gmail.com')->first();
+        $admin = User::where('email', 'admin@gmail.com')->first();
         $students = User::where('email', 'like', 'student%@gmail.com')->pluck('id')->toArray();
 
         if (! $admin || empty($students)) {
@@ -21,8 +22,8 @@ class ReactionSeeder extends Seeder
 
         $allUserIds = array_merge($students, [$admin->id]);
 
-        $postIds    = DB::table('posts')->where('status', 'published')->pluck('id')->toArray();
-        $blogIds    = DB::table('blogs')->where('status', 'published')->pluck('id')->toArray();
+        $postIds = DB::table('posts')->where('status', 'published')->pluck('id')->toArray();
+        $blogIds = DB::table('blogs')->where('status', 'published')->pluck('id')->toArray();
         $commentIds = DB::table('comments')->pluck('id')->toArray();
 
         foreach ($postIds as $postId) {
@@ -58,6 +59,7 @@ class ReactionSeeder extends Seeder
 
     private function randomType(): string
     {
-        return $this->types[array_rand($this->types)];
+        $cases = ReactionType::cases();
+        return $cases[array_rand($cases)]->value;
     }
 }

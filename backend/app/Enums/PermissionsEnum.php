@@ -63,6 +63,7 @@ enum PermissionsEnum: string
     case COMMUNITY_NOTIFICATIONS_SEND = 'community.notifications.send';
     case COMMUNITY_CHAT_VIEW          = 'community.chat.view';
     case COMMUNITY_CHAT_MANAGE        = 'community.chat.manage';
+    case COMMUNITY_MEDIA_VIEW         = 'community.media.view';
 
     public static function values(): array
     {

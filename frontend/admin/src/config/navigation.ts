@@ -183,6 +183,11 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/community/notifications",
 				permission: "community.notifications.send",
 			},
+			{
+				title: "Tài nguyên",
+				url: "/community/media",
+				permission: "community.media.view",
+			},
 		],
 	},
 	{
@@ -238,6 +243,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/community\/tags$/, permission: "community.tags.manage" },
 	{ pattern: /^\/community\/chat$/, permission: "community.chat.view" },
 	{ pattern: /^\/community\/notifications$/, permission: "community.notifications.send" },
+	{ pattern: /^\/community\/media$/, permission: "community.media.view" },
 ];
 
 export function getRequiredPermissionForPath(pathname: string): string | null {

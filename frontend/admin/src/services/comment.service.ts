@@ -19,6 +19,10 @@ const commentService = {
 		return api.get("/comments/stats");
 	},
 
+	async updateVisibility(id: number | string, isHidden: boolean): Promise<ApiResponse<{ is_hidden: boolean }>> {
+		return api.patch(`/comments/${id}/visibility`, { is_hidden: isHidden });
+	},
+
 	async deleteComment(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/comments/${id}`);
 	},

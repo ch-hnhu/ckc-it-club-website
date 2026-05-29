@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\ApiMessage;
+use App\Enums\ReactionType;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Comment;
 use App\Models\Post;
@@ -105,7 +106,7 @@ class PostController extends BaseApiController
     public function react(Request $request, int $id): JsonResponse
     {
         $request->validate([
-            'type' => ['required', Rule::in(['heart', 'like', 'haha', 'wow', 'sad'])],
+            'type' => ['required', Rule::enum(ReactionType::class)],
         ]);
 
         Post::where('status', 'published')->findOrFail($id);
@@ -198,10 +199,11 @@ class PostController extends BaseApiController
         // Ensure post exists and is published
         Post::where('status', 'published')->findOrFail($id);
 
-        // Load ALL comments for this post ordered by date
+        // Load ALL visible (non-hidden, non-deleted) comments for this post ordered by date
         $allComments = Comment::with('user:id,full_name,username,email,avatar')
             ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count')
             ->where('post_id', $id)
+            ->where('is_hidden', false)
             ->whereNull('deleted_at')
             ->orderBy('created_at', 'asc')
             ->get();

@@ -7,7 +7,9 @@ use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
+use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
+use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use Illuminate\Support\Facades\Route;
@@ -55,10 +57,17 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{id}/comments',           [UserPostController::class, 'comments']);
         Route::get('/channels',                      [UserChannelController::class, 'index']);
 
+        // Public blog routes
+        Route::get('/blogs',                         [UserBlogController::class, 'index']);
+        Route::get('/blogs/{slug}',                  [UserBlogController::class, 'show']);
+        Route::get('/blogs/{id}/comments',           [UserBlogController::class, 'comments']);
+
         // Authenticated actions
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/posts/{id}/reactions',     [UserPostController::class, 'react']);
             Route::post('/posts/{id}/comments',      [UserPostController::class, 'comment']);
+            Route::post('/blogs/{id}/reactions',     [UserBlogController::class, 'react']);
+            Route::post('/blogs/{id}/comments',      [UserBlogController::class, 'comment']);
         });
     });
 
@@ -260,6 +269,7 @@ Route::prefix('v1')->group(function () {
             Route::get('comments', [CommentController::class, 'index']);
         });
         Route::middleware('permission:community.comments.manage')->group(function () {
+            Route::patch('comments/{comment}/visibility', [CommentController::class, 'updateVisibility']);
             Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
         });
 
@@ -280,6 +290,13 @@ Route::prefix('v1')->group(function () {
             Route::put('tags/{tag}', [TagController::class, 'update']);
             Route::patch('tags/{tag}', [TagController::class, 'update']);
             Route::delete('tags/{tag}', [TagController::class, 'destroy']);
+        });
+
+        // media files
+        Route::middleware('permission:community.media.view')->group(function () {
+            Route::get('media-files/stats', [MediaFileController::class, 'stats']);
+            Route::get('media-files', [MediaFileController::class, 'index']);
+            Route::delete('media-files/{mediaFile}', [MediaFileController::class, 'destroy']);
         });
     });
 });
