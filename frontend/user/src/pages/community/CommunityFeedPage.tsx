@@ -371,7 +371,7 @@ const CommunityFeedPage: React.FC = () => {
 						</div>
 					</section>
 
-					<p className='mt-5 text-sm text-gray-500'>
+					<p className='mt-5 text-sm text-center text-gray-500'>
 						© 2026 CKC IT CLUB · Điều khoản · Bảo mật
 					</p>
 				</div>

@@ -1,34 +1,34 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AcademicStructureController;
+use App\Http\Controllers\Api\V1\Admin\ApplicationQuestionController;
 use App\Http\Controllers\Api\V1\Admin\BlogController;
 use App\Http\Controllers\Api\V1\Admin\ChannelController;
 use App\Http\Controllers\Api\V1\Admin\ChatRoomController;
-use App\Http\Controllers\Api\V1\Admin\CommentController;
-use App\Http\Controllers\Api\V1\Admin\NotificationController;
-use App\Http\Controllers\Api\V1\Admin\PermissionController;
-use App\Http\Controllers\Api\V1\Admin\PostController;
-use App\Http\Controllers\Api\V1\Admin\MediaFileController;
-use App\Http\Controllers\Api\V1\Admin\TagController;
-use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
-use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
-use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\Admin\ClubInformationController;
-use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
-use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
-use App\Http\Controllers\Api\V1\Admin\ApplicationQuestionController;
-use App\Http\Controllers\Api\V1\Admin\AcademicStructureController;
 use App\Http\Controllers\Api\V1\Admin\ClubApplicationController;
+use App\Http\Controllers\Api\V1\Admin\ClubInformationController;
+use App\Http\Controllers\Api\V1\Admin\CommentController;
+use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\MajorController;
+use App\Http\Controllers\Api\V1\Admin\MediaFileController;
+use App\Http\Controllers\Api\V1\Admin\NotificationController;
+use App\Http\Controllers\Api\V1\Admin\PermissionController;
+use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
+use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
+use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
+use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
+use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
+use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
@@ -52,22 +52,23 @@ Route::prefix('v1')->group(function () {
     // Community routes
     Route::prefix('community')->group(function () {
         // Public (read-only, published posts only)
-        Route::get('/posts',                         [UserPostController::class, 'index']);
-        Route::get('/posts/{id}',                    [UserPostController::class, 'show']);
-        Route::get('/posts/{id}/comments',           [UserPostController::class, 'comments']);
-        Route::get('/channels',                      [UserChannelController::class, 'index']);
+        Route::get('/posts', [UserPostController::class, 'index']);
+        Route::get('/posts/{id}', [UserPostController::class, 'show']);
+        Route::get('/posts/{id}/comments', [UserPostController::class, 'comments']);
+        Route::get('/channels', [UserChannelController::class, 'index']);
 
         // Public blog routes
-        Route::get('/blogs',                         [UserBlogController::class, 'index']);
-        Route::get('/blogs/{slug}',                  [UserBlogController::class, 'show']);
-        Route::get('/blogs/{id}/comments',           [UserBlogController::class, 'comments']);
+        Route::get('/blogs', [UserBlogController::class, 'index']);
+        Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
+        Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
 
         // Authenticated actions
         Route::middleware('auth:sanctum')->group(function () {
-            Route::post('/posts/{id}/reactions',     [UserPostController::class, 'react']);
-            Route::post('/posts/{id}/comments',      [UserPostController::class, 'comment']);
-            Route::post('/blogs/{id}/reactions',     [UserBlogController::class, 'react']);
-            Route::post('/blogs/{id}/comments',      [UserBlogController::class, 'comment']);
+            Route::post('/posts', [UserPostController::class, 'store']);
+            Route::post('/posts/{id}/reactions', [UserPostController::class, 'react']);
+            Route::post('/posts/{id}/comments', [UserPostController::class, 'comment']);
+            Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
+            Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
         });
     });
 

@@ -1,6 +1,7 @@
 import { api } from "@/services/api.service";
 import type { PaginatedResponse, ApiResponse } from "@/types/api.types";
 import type {
+	CreatePostPayload,
 	Post,
 	PostDetail,
 	PostComment,
@@ -20,6 +21,21 @@ export const postService = {
 
 	/** Fetch a single published post with full content. */
 	getPost: (id: number) => api.get<ApiResponse<PostDetail>>(`/community/posts/${id}`),
+
+	/** Create a published community post with optional image/video media. */
+	createPost: (payload: CreatePostPayload) => {
+		const formData = new FormData();
+		formData.append("channel_slug", payload.channelSlug);
+		formData.append("title", payload.title);
+		formData.append("content", payload.content);
+		formData.append("visibility", payload.visibility ?? "public");
+
+		if (payload.media) {
+			formData.append("media", payload.media);
+		}
+
+		return api.postForm<ApiResponse<PostDetail>>("/community/posts", formData);
+	},
 
 	/** Fetch top-level comments (with nested replies) for a post. */
 	getPostComments: (id: number) =>

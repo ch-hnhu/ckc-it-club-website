@@ -60,10 +60,16 @@
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/admin/login`
 - `POST /api/v1/contacts`
+- Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /blogs`, `GET /blogs/{slug}`, and `GET /blogs/{id}/comments`.
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/logout-all`
+- `POST /api/v1/community/posts`
+- `POST /api/v1/community/posts/{id}/reactions`
+- `POST /api/v1/community/posts/{id}/comments`
+- `POST /api/v1/community/blogs/{id}/reactions`
+- `POST /api/v1/community/blogs/{id}/comments`
 - `GET /api/v1/`
 - `GET /api/v1/users`
 - `GET /api/v1/faculties`
@@ -253,7 +259,10 @@
 - `academic_structure_imports`
 - admin academic structure import history for uploaded faculty/major/class files.
 - valid imports support `.xlsx` and `.csv`; unsupported uploaded file extensions are stored as `file_type = Other`, `status = failed`, and returned as validation errors so the admin UI can show failed upload history.
-- Community module schema is present but has no API/controllers yet:
+- Community module:
+- user-facing community routes expose published channels/posts/blogs, comments, and reactions under `/api/v1/community`.
+- user-facing post list items include `content`, `excerpt`, and `is_excerpt_truncated` so the frontend can render collapsed Markdown and expand the full post content inline without navigating away.
+- authenticated users can create published posts through `POST /api/v1/community/posts` with `channel_slug` or `channel_id`, `title`, `content`, optional `visibility`, and optional `media` image/video upload up to 20 MB. Uploaded post media is stored on the public disk under `community/posts/{post_id}`, mirrored into `posts.media_urls`, and tracked in `media_files`.
 - `channels`, `posts`, `post_reports`, and `comments` support topic feeds, reports, nested comments, and soft-deleted comments.
 - `reactions` is polymorphic by `target_type`/`target_id` for posts, comments, and blogs.
 - `chat_rooms`, `chat_members`, and `messages` support direct/group chat, unread tracking through `last_read_at`, message replies, and soft-deleted messages.

@@ -27,3 +27,15 @@ export function buildAvatar(name: string | null | undefined, avatar: string | nu
 	const n = name || "CKC";
 	return `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=A3E635&color=111111&bold=true`;
 }
+
+export function isVideoMediaUrl(url: string): boolean {
+	const path = (() => {
+		try {
+			return new URL(url, window.location.origin).pathname;
+		} catch {
+			return url;
+		}
+	})();
+
+	return /\.(mp4|webm|mov|m4v)$/i.test(path);
+}
