@@ -4,6 +4,8 @@ import CommunityLayout from "@/pages/community/CommunityLayout";
 import CommunityFeedPage from "@/pages/community/CommunityFeedPage";
 import CommunityCreatePage from "@/pages/community/CommunityCreatePage";
 import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
+import BlogFeedPage from "@/pages/community/BlogFeedPage";
+import BlogDetailPage from "@/pages/community/BlogDetailPage";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
@@ -26,8 +28,12 @@ const router = createBrowserRouter([
 				element: <ContactPage />,
 			},
 			{
-				path: "cong-dong/dang-bai",
-				element: <CommunityCreatePage />,
+				path: "blog",
+				element: <BlogFeedPage />,
+			},
+			{
+				path: "blog/:slug",
+				element: <BlogDetailPage />,
 			},
 			{
 				path: "cong-dong",
@@ -40,6 +46,10 @@ const router = createBrowserRouter([
 					{
 						path: "bai-viet/:id",
 						element: <CommunityPostDetailPage />,
+					},
+					{
+						path: "dang-bai",
+						element: <CommunityCreatePage />,
 					},
 					{
 						path: ":channelSlug",

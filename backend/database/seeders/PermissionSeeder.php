@@ -45,6 +45,7 @@ class PermissionSeeder extends Seeder
         'community.notifications.send' => 'Gửi thông báo hàng loạt đến người dùng',
         'community.chat.view'          => 'Xem danh sách phòng chat và nhật ký sự kiện',
         'community.chat.manage'        => 'Xóa sự kiện hệ thống trong phòng chat',
+        'community.media.view'         => 'Xem và quản lý tài nguyên media cộng đồng',
     ];
 
     /**
@@ -72,6 +73,7 @@ class PermissionSeeder extends Seeder
             'community.tags.manage',
             'community.notifications.send',
             'community.chat.view', 'community.chat.manage',
+            'community.media.view',
         ],
 
         // Chủ nhiệm — hầu hết, không quản lý roles/permissions hệ thống
@@ -95,6 +97,7 @@ class PermissionSeeder extends Seeder
             'community.tags.manage',
             'community.notifications.send',
             'community.chat.view', 'community.chat.manage',
+            'community.media.view',
         ],
 
         // Phó Chủ nhiệm — quản lý vận hành, không quản lý phân quyền
@@ -117,6 +120,7 @@ class PermissionSeeder extends Seeder
             'community.tags.manage',
             'community.notifications.send',
             'community.chat.view', 'community.chat.manage',
+            'community.media.view',
         ],
 
         // Trưởng ban Học thuật — quản lý xét tuyển và cơ cấu học thuật
@@ -134,6 +138,7 @@ class PermissionSeeder extends Seeder
             'community.blogs.view',
             'community.comments.view',
             'community.chat.view',
+            'community.media.view',
         ],
 
         // Trưởng ban Truyền thông — quản lý thông tin CLB, liên hệ và cộng đồng
@@ -153,6 +158,7 @@ class PermissionSeeder extends Seeder
             'community.tags.manage',
             'community.notifications.send',
             'community.chat.view', 'community.chat.manage',
+            'community.media.view',
         ],
 
         // Trưởng ban Tình nguyện — quản lý đơn xét tuyển
@@ -168,6 +174,7 @@ class PermissionSeeder extends Seeder
             'community.blogs.view',
             'community.comments.view',
             'community.chat.view',
+            'community.media.view',
         ],
     ];
 

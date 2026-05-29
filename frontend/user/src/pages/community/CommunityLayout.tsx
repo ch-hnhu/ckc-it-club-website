@@ -28,11 +28,11 @@ export type CommunityLayoutContext = {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const PRIMARY_NAV = [
-	{ id: "home", label: "Trang chủ", icon: Home },
-	{ id: "leaderboard", label: "Bảng xếp hạng", icon: Trophy },
-	{ id: "showcase", label: "Showcase dự án", icon: Monitor },
-	{ id: "challenge", label: "Thử thách tháng", icon: Crown },
-	{ id: "code", label: "#30DaysOfCode", icon: Code2 },
+	{ id: "home", label: "Trang chủ", icon: Home, to: "/cong-dong" },
+	{ id: "leaderboard", label: "Bảng xếp hạng", icon: Trophy, to: "/cong-dong" },
+	{ id: "showcase", label: "Showcase dự án", icon: Monitor, to: "/cong-dong" },
+	{ id: "challenge", label: "Thử thách tháng", icon: Crown, to: "/cong-dong" },
+	{ id: "code", label: "#30DaysOfCode", icon: Code2, to: "/cong-dong" },
 ];
 
 const STATIC_CHANNELS = [
@@ -46,27 +46,27 @@ const STATIC_CHANNELS = [
 	{ id: "bugs", label: "Báo lỗi", count: 7 },
 ];
 
-export const COMMUNITY_LOGO = "https://www.codedex.io/images/community/bouncer.gif";
+const COMMUNITY_LOGO = "https://www.codedex.io/images/community/bouncer.gif";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-export const buildChannelItems = (sourceChannels: ChannelItem[]): ChannelItem[] => {
+const buildChannelItems = (sourceChannels: ChannelItem[]): ChannelItem[] => {
 	const sorted = [...sourceChannels].sort((a, b) => b.count - a.count);
 	const totalPostsCount = sorted.reduce((sum, ch) => sum + ch.count, 0);
 	return [
 		{
-			id: "chung",
+			id: "all",
 			label: "Kênh chung",
 			count: totalPostsCount,
 			description: "Nơi chia sẻ kiến thức và phát triển cùng nhau 🌱✦",
 			image: COMMUNITY_LOGO,
-			slug: "chung",
+			slug: "all",
 		},
 		...sorted,
 	];
 };
 
-export const buildFallbackChannels = (): ChannelItem[] =>
+const buildFallbackChannels = (): ChannelItem[] =>
 	buildChannelItems(
 		STATIC_CHANNELS.map((ch) => ({
 			id: ch.id,
@@ -140,11 +140,11 @@ const CommunityLayout: React.FC = () => {
 			<nav className='space-y-2'>
 				{PRIMARY_NAV.map((item) => {
 					const Icon = item.icon;
-					const isActive = pageMode === "home" && item.id === "home";
+					const isActive = item.id === "home" && pageMode === "home";
 					return (
 						<Link
 							key={item.id}
-							to='/cong-dong'
+							to={item.to}
 							onClick={() => setIsSidebarOpen(false)}
 							className={`group relative flex w-full items-center text-left font-bold ${
 								isMobile

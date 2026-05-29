@@ -25,7 +25,7 @@ class ChannelController extends BaseApiController
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('slug', 'like', "%{$search}%")
             ))
-            ->orderBy($sort === 'posts_count' ? 'posts_count' : $sort, $order)
+            ->orderBy($sort, $order)
             ->paginate($perPage);
 
         $channels->getCollection()->transform(fn (Channel $c) => $this->transformChannel($c));

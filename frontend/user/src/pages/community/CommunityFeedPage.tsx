@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Flame, Hash, List, PenSquare, Search, Sparkles } from "lucide-react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import type { CommunityLayoutContext } from "./CommunityLayout";
-import { COMMUNITY_LOGO } from "./CommunityLayout";
 import { postService } from "@/services/post.service";
 import type { Post } from "@/types/post.types";
 import PostCard from "@/components/community/PostCard";
 
 // ─── Static sidebar data ──────────────────────────────────────────────────────
+
+const COMMUNITY_LOGO = "https://www.codedex.io/images/community/bouncer.gif";
 
 const SORT_OPTIONS = [
 	{ id: "top", label: "Top bài viết", icon: Flame },
