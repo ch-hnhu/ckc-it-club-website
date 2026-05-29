@@ -13,7 +13,7 @@ class PostController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $allowedSorts = ['id', 'status', 'created_at', 'reactions_count', 'user_name', 'channel_name'];
+        $allowedSorts = ['id', 'status', 'created_at', 'reactions_count', 'user_name', 'channel_name', 'is_pinned'];
         $sort    = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
         $order   = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
         $perPage = (int) $request->query('per_page', 10);
@@ -30,7 +30,7 @@ class PostController extends BaseApiController
                 ->orWhereHas('user', fn ($u) => $u->where('full_name', 'like', "%{$search}%"))
             ))
             ->when($status && $status !== 'all', fn ($q) => $q->where('posts.status', $status))
-            ->when(in_array($sort, ['id', 'status', 'created_at']), fn ($q) => $q->orderBy("posts.{$sort}", $order))
+            ->when(in_array($sort, ['id', 'status', 'created_at', 'is_pinned']), fn ($q) => $q->orderBy("posts.{$sort}", $order))
             ->when($sort === 'reactions_count', fn ($q) => $q->orderBy('reactions_count', $order))
             ->when($sort === 'user_name', fn ($q) => $q->orderByRaw("(SELECT COALESCE(full_name, email) FROM users WHERE users.id = posts.user_id) {$order}"))
             ->when($sort === 'channel_name', fn ($q) => $q->orderByRaw("(SELECT name FROM channels WHERE channels.id = posts.channel_id) {$order}"))
@@ -52,21 +52,30 @@ class PostController extends BaseApiController
             'total'     => $counts->sum(),
             'published' => (int) ($counts['published'] ?? 0),
             'hidden'    => (int) ($counts['hidden'] ?? 0),
-            'pinned'    => 0,
+            'archived'  => (int) ($counts['archived'] ?? 0),
+            'pinned'    => (int) Post::where('is_pinned', true)->count(),
         ], ApiMessage::RETRIEVED);
     }
 
     public function updateStatus(Request $request, Post $post): JsonResponse
     {
-        $request->validate(['status' => 'required|in:published,hidden,draft']);
+        $request->validate(['status' => 'required|in:published,hidden,draft,archived']);
 
-        $post->update(['status' => $request->string('status')->value()]);
+        $status = $request->string('status')->value();
+
+        $post->update([
+            'status' => $status,
+            'archived_at' => $status === 'archived' ? now() : null,
+            'archived_by' => $status === 'archived' ? $request->user()?->id : null,
+        ]);
 
         return $this->successResponse(true, ['status' => $post->status], 'Cập nhật trạng thái bài đăng thành công.');
     }
 
     public function destroy(Post $post): JsonResponse
     {
+        $post->deleted_by = request()->user()?->id;
+        $post->save();
         $post->delete();
 
         return $this->successResponse(true, null, 'Xóa bài đăng thành công.');
@@ -88,7 +97,7 @@ class PostController extends BaseApiController
             'content'         => $post->content,
             'status'          => $post->status,
             'visibility'      => $post->visibility ?? 'public',
-            'is_pinned'       => false,
+            'is_pinned'       => (bool) $post->is_pinned,
             'comments_count'  => $post->comments_count ?? 0,
             'reactions_count' => (int) ($post->reactions_count ?? 0),
             'channel'         => $post->channel ? [

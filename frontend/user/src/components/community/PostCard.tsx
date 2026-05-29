@@ -4,7 +4,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Post } from "@/types/post.types";
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
-import { buildAvatar, formatRelativeTime, getHandle } from "@/lib/utils";
+import { buildAvatar, formatRelativeTime, getHandle, isVideoMediaUrl } from "@/lib/utils";
+import { renderMarkdownContent, renderMarkdownPreview } from "@/lib/markdown";
 
 interface PostCardProps {
 	post: Post;
@@ -18,10 +19,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 	const authorHandle = post.user ? getHandle(post.user.username, post.user.email) : "@ẩn danh";
 	const authorAvatar = buildAvatar(post.user?.full_name, post.user?.avatar);
 	const detailUrl = `/cong-dong/bai-viet/${post.id}`;
+	const sourceContent = post.content ?? post.excerpt;
+	const preview = sourceContent ? renderMarkdownPreview(sourceContent, 260) : null;
+	const hasExpandableContent = Boolean(preview?.didTruncate && post.content);
 
 	const [liked, setLiked] = useState(post.my_reaction === "heart");
 	const [heartCount, setHeartCount] = useState(post.reactions_count);
 	const [loading, setLoading] = useState(false);
+	const [isExpanded, setIsExpanded] = useState(false);
+
+	const renderedDisplayContent =
+		isExpanded && post.content
+			? renderMarkdownContent(post.content)
+			: (preview?.html ?? "");
 
 	const handleLike = async () => {
 		if (!user) {
@@ -65,7 +75,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 				</div>
 				<div className='min-w-0'>
 					<div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
-						<p className='font-heading text-sm font-extrabold text-black'>{authorName}</p>
+						<p className='font-heading text-sm font-extrabold text-black'>
+							{authorName}
+						</p>
 						<span className='text-sm font-medium text-gray-500'>{authorHandle}</span>
 						<span className='text-sm text-gray-400'>
 							· {formatRelativeTime(post.created_at)}
@@ -83,21 +95,47 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 				</h2>
 			</Link>
 
-			{post.excerpt && (
-				<p className='max-w-3xl text-sm leading-6 text-gray-700'>{post.excerpt}</p>
+			{sourceContent && renderedDisplayContent && (
+				<div
+					className={`so-editor-outer community-markdown ${
+						isExpanded ? "community-markdown-feed-full" : "community-markdown-excerpt"
+					}`}>
+					<div
+						className='s-prose'
+						dangerouslySetInnerHTML={{ __html: renderedDisplayContent }}
+					/>
+					{hasExpandableContent && (
+						<button
+							type='button'
+							onClick={() => setIsExpanded((current) => !current)}
+							className='mt-1 inline-flex text-sm font-extrabold text-lime-700 transition hover:text-black'>
+							{isExpanded ? "Thu gọn" : "Xem thêm"}
+						</button>
+					)}
+				</div>
 			)}
 
-			{post.featured_image && (
-				<Link to={detailUrl}>
-					<div className='mt-4 overflow-hidden rounded-[10px] border-2 border-black bg-[var(--color-pastel-yellow)]'>
-						<img
+			{post.featured_image &&
+				(isVideoMediaUrl(post.featured_image) ? (
+					<div className='mt-4 overflow-hidden rounded-[10px] border-2 border-black bg-white'>
+						<video
 							src={post.featured_image}
-							alt={post.title}
-							className='aspect-[16/9] w-full object-cover'
+							className='aspect-[16/9] w-full bg-black object-cover'
+							controls
+							preload='metadata'
 						/>
 					</div>
-				</Link>
-			)}
+				) : (
+					<Link to={detailUrl}>
+						<div className='mt-4 overflow-hidden rounded-[10px] border-2 border-black bg-white'>
+							<img
+								src={post.featured_image}
+								alt={post.title}
+								className='aspect-[16/9] w-full object-cover'
+							/>
+						</div>
+					</Link>
+				))}
 
 			{post.tags.length > 0 && (
 				<div className='mt-4 flex flex-wrap gap-2'>

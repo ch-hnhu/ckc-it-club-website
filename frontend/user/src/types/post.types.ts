@@ -38,7 +38,9 @@ export interface Post {
 	user: PostUser | null;
 	channel: PostChannel | null;
 	title: string;
+	content?: string;
 	excerpt: string;
+	is_excerpt_truncated?: boolean;
 	featured_image: string | null;
 	status: string;
 	visibility: string;
@@ -66,6 +68,14 @@ export interface PostListParams {
 	/** Sort by reactions (top) or date (newest). Default: created_at */
 	sort?: "created_at" | "reactions_count";
 	order?: "asc" | "desc";
+}
+
+export interface CreatePostPayload {
+	channelSlug: string;
+	title: string;
+	content: string;
+	visibility?: "public" | "members" | "private";
+	media?: File | null;
 }
 
 // ---------------------------------------------------------------------------

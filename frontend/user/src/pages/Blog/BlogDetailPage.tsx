@@ -362,15 +362,20 @@ const BlogDetailPage: React.FC = () => {
 				</div>
 
 				{blogError && (
-					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
-						<p className='font-heading text-xl font-extrabold text-black'>
-							{blogError}
-						</p>
-						<Link
-							to='/blog'
-							className='mt-5 inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-							Quay lại Blog
-						</Link>
+					<div className='flex min-h-[calc(100vh-14rem)] flex-col items-center justify-center py-12'>
+						<div className='w-full max-w-sm rounded-2xl border-2 border-black bg-white px-8 py-12 text-center shadow-[4px_4px_0_#111]'>
+							<p className='font-heading text-xl font-extrabold text-black'>
+								{blogError}
+							</p>
+							<p className='mt-2 text-sm text-gray-500'>
+								Bài viết bạn tìm không tồn tại hoặc đã bị xóa.
+							</p>
+							<Link
+								to='/blog'
+								className='mt-6 inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+								Quay lại Blog
+							</Link>
+						</div>
 					</div>
 				)}
 

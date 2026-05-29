@@ -35,6 +35,8 @@
 - Icons: `lucide-react`.
 - HTTP client: Axios exists, but auth flow mainly uses `fetch`.
 - Utility libraries: `clsx`, `class-variance-authority`, `tailwind-merge`.
+- Markdown rendering: community post detail uses `markdown-it` plus a local sanitizer in `src/lib/markdown.ts`, then displays content with Stacks-style `s-prose` classes so saved Markdown matches the editor preview more closely.
+- Community feed cards use the same Markdown renderer for collapsed excerpts. Long posts are truncated by rendered text nodes, not CSS height, show `...` plus `Xem thêm`, and expand full rendered Markdown inline while title clicks still navigate to detail.
 - Redux Toolkit is installed but not actively used.
 
 ## App Boot Flow
@@ -54,7 +56,8 @@
 - community content fills the available desktop width up to a 76rem cap with reduced feed-side padding, and its right rail uses a custom `70rem` breakpoint so it remains visible below Tailwind `xl`
 - on mobile/tablet below `lg`, the community page shows a sticky community sub-header and turns the left sidebar into an overlay drawer
 - community channels are fetched in `CommunityPage` from public `GET /community/channels` through `communityService`; the page keeps a seeded local fallback list if the request fails.
-- `/cong-dong/dang-bai` lives inside `CommunityLayout` and renders only the create-post form content.
+- `/cong-dong/dang-bai` lives inside `CommunityLayout`, renders only the create-post form content, and submits authenticated posts to `POST /community/posts` through `postService.createPost`.
+- Community post detail renders the post overflow menu dynamically: authors see pin/edit/privacy/archive/delete actions, while other viewers see save/report actions. Save is currently local UI state until the bookmark endpoint is wired.
 
 ## Route Surface
 
@@ -193,6 +196,7 @@
 
 - It keeps form state locally, submits to the backend through `contact.service.ts`, and resets the form after a successful response.
 - Contact submissions are stored in the backend `contacts` table through the public API.
+- Community create-post submissions require an authenticated user, a real channel slug, title, editor content, and optional image/video media up to 20 MB. Successful submissions redirect to `/cong-dong/bai-viet/{id}`.
 
 ## Environment Variables
 
@@ -251,6 +255,10 @@ npm run dev
 
 ## Change Log
 
+- `2026-05-29`: Community create post form now submits to the backend, supports optional image/video upload, validates required fields, and redirects to the created post detail page.
+- `2026-05-29`: Community post detail overflow menu now switches options by ownership: own posts show pin/edit/privacy/archive/delete; other posts show save/report.
+- `2026-05-29`: Community post detail now renders saved Markdown through `markdown-it` with Stacks-style prose styling instead of showing raw Markdown markers.
+- `2026-05-29`: Community feed post excerpts now render Markdown, truncate by text with `...`, and support inline `Xem thêm` expansion for long content.
 - `2026-05-29`: Community create post page now relies on `CommunityLayout` for community chrome and renders only the main create-post form content.
 - `2026-05-29`: Blog routes are standalone `/blog` pages, not community-layout pages; community layout no longer contains blog-specific state or active checks.
 - `2026-05-27`: Community create Stacks editor table toolbar now shows a single table control: insert table outside tables, and table-format dropdown when the selection is inside a table.
