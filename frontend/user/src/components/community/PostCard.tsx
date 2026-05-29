@@ -60,9 +60,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 	}, [showPostMenu]);
 
 	const renderedDisplayContent =
-		isExpanded && post.content
-			? renderMarkdownContent(post.content)
-			: (preview?.html ?? "");
+		isExpanded && post.content ? renderMarkdownContent(post.content) : (preview?.html ?? "");
 
 	const handleLike = async () => {
 		if (!user) {
@@ -139,9 +137,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 							</span>
 						</div>
 						{post.channel && (
-							<p className='text-xs font-bold text-lime-700'>
-								# {post.channel.name}
-							</p>
+							<p className='text-xs font-bold text-lime-700'># {post.channel.name}</p>
 						)}
 					</div>
 				</div>
@@ -168,8 +164,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 										onClick={() =>
 											handleUnavailablePostAction(
 												post.is_pinned
-													? "Chức năng bỏ ghim bài viết đang được phát triển."
-													: "Chức năng ghim bài viết đang được phát triển.",
+													? "Chức năng bỏ ghim khỏi trang cá nhân đang được phát triển."
+													: "Chức năng ghim lên trang cá nhân đang được phát triển.",
 											)
 										}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>

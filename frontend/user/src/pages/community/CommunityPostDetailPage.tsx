@@ -489,8 +489,8 @@ const CommunityPostDetailPage: React.FC = () => {
 															onClick={() =>
 																handleUnavailablePostAction(
 																	post.is_pinned
-																		? "Chức năng bỏ ghim bài viết đang được phát triển."
-																		: "Chức năng ghim bài viết đang được phát triển.",
+																		? "Chức năng bỏ ghim khỏi trang cá nhân đang được phát triển."
+																		: "Chức năng ghim lên trang cá nhân đang được phát triển.",
 																)
 															}
 															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
@@ -553,7 +553,8 @@ const CommunityPostDetailPage: React.FC = () => {
 														</button>
 														<button
 															onClick={() => {
-																if (!requireAuthenticatedUser()) return;
+																if (!requireAuthenticatedUser())
+																	return;
 																handleUnavailablePostAction(
 																	"Chức năng báo cáo đang được phát triển.",
 																);

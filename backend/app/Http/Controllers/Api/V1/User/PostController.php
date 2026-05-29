@@ -43,7 +43,6 @@ class PostController extends BaseApiController
                 $channel && $channel !== 'all',
                 fn ($q) => $q->whereHas('channel', fn ($c) => $c->where('slug', $channel))
             )
-            ->orderByDesc('posts.is_pinned')
             ->orderBy(
                 $sort === 'reactions_count' ? 'reactions_count' : "posts.{$sort}",
                 $order

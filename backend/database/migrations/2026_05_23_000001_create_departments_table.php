@@ -17,7 +17,9 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->foreignId('created_by')->nullable()->constrained('users');
             $table->foreignId('updated_by')->nullable()->constrained('users');
+            $table->foreignId('deleted_by')->nullable()->constrained('users');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->foreign('head_role_id')
                 ->references('id')

@@ -61,13 +61,7 @@ class PostController extends BaseApiController
     {
         $request->validate(['status' => 'required|in:published,hidden,draft,archived']);
 
-        $status = $request->string('status')->value();
-
-        $post->update([
-            'status' => $status,
-            'archived_at' => $status === 'archived' ? now() : null,
-            'archived_by' => $status === 'archived' ? $request->user()?->id : null,
-        ]);
+        $post->update(['status' => $request->string('status')->value()]);
 
         return $this->successResponse(true, ['status' => $post->status], 'Cập nhật trạng thái bài đăng thành công.');
     }
