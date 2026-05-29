@@ -22,9 +22,6 @@ class Post extends Model
         'status',
         'is_pinned',
         'pinned_at',
-        'pinned_by',
-        'archived_at',
-        'archived_by',
         'deleted_by',
     ];
 
@@ -34,7 +31,6 @@ class Post extends Model
             'media_urls' => 'array',
             'is_pinned' => 'boolean',
             'pinned_at' => 'datetime',
-            'archived_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
     }
