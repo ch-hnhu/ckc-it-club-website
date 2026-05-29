@@ -247,6 +247,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-05-29`: Community feed error retry button now triggers a real post list refetch for the current channel and sort.
 - `2026-05-27`: Community create Stacks editor table toolbar now shows a single table control: insert table outside tables, and table-format dropdown when the selection is inside a table.
 - `2026-05-27`: `StacksEditorWrapper` now syncs the Heading toolbar state with the active rich-text selection and shows `H1`/`H2`/`H3` only when the selected text is inside a heading.
 - `2026-04-08`: Replaced scaffold with full user frontend audit. Added landing-page structure, neo-brutalist design assumptions, auth/session model, service conventions, env notes, and known gap inventory.
