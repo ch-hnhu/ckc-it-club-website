@@ -846,17 +846,17 @@ const CommunityPostDetailPage: React.FC = () => {
 							</div>
 
 							{/* Actions */}
-							<div className='mt-4 space-y-2'>
-								<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-									Theo dõi
-								</button>
-								<Link
-									key={post?.user.id}
-									to={`/@${post?.user.username || post?.user.email.split("@")[0]}`}
-									className='flex items-center gap-3'>
-									<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-white font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-										Xem trang cá nhân
+								<div className='mt-4 space-y-2'>
+									<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+										Theo dõi
 									</button>
+									<Link
+										key={post.user.id}
+										to={buildProfileUrl(post.user.username, post.user.email)}
+										className='flex items-center gap-3'>
+										<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-white font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											Xem trang cá nhân
+										</button>
 								</Link>
 							</div>
 						</section>
