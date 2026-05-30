@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
+use App\Http\Controllers\Api\V1\Admin\SkillController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\User\AcademicController;
@@ -331,6 +332,17 @@ Route::prefix('v1')->group(function () {
             Route::get('media-files/stats', [MediaFileController::class, 'stats']);
             Route::get('media-files', [MediaFileController::class, 'index']);
             Route::delete('media-files/{mediaFile}', [MediaFileController::class, 'destroy']);
+        });
+
+        // skills
+        Route::middleware('permission:community.skills.manage')->group(function () {
+            Route::get('skills', [SkillController::class, 'index']);
+            Route::post('skills', [SkillController::class, 'store']);
+            Route::patch('skills/reorder', [SkillController::class, 'reorder']);
+            Route::put('skills/{skill}', [SkillController::class, 'update']);
+            Route::patch('skills/{skill}', [SkillController::class, 'update']);
+            Route::patch('skills/{skill}/toggle-status', [SkillController::class, 'toggleStatus']);
+            Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
         });
     });
 });
