@@ -188,6 +188,11 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/community/media",
 				permission: "community.media.view",
 			},
+			{
+				title: "Skills",
+				url: "/community/skills",
+				permission: "community.skills.manage",
+			},
 		],
 	},
 	{
@@ -244,6 +249,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/community\/chat$/, permission: "community.chat.view" },
 	{ pattern: /^\/community\/notifications$/, permission: "community.notifications.send" },
 	{ pattern: /^\/community\/media$/, permission: "community.media.view" },
+	{ pattern: /^\/community\/skills$/, permission: "community.skills.manage" },
 ];
 
 export function getRequiredPermissionForPath(pathname: string): string | null {
