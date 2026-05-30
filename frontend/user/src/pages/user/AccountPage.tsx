@@ -20,6 +20,7 @@ import { buildAvatar } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api.types";
 import type { UserProfile } from "@/types/user.types";
 import NeoSelect, { type NeoSelectOption } from "@/components/ui/NeoSelect";
+import NeoDatePicker from "@/components/ui/NeoDatePicker";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -190,6 +191,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 		major: "",
 		class_name: "",
 		gender: "",
+		date_of_birth: "",
 		github: "",
 		twitter: "",
 		linkedin: "",
@@ -244,6 +246,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 			major: profile.major ?? "",
 			class_name: profile.class_name ?? "",
 			gender: profile.gender ?? "",
+			date_of_birth: profile.date_of_birth ?? "",
 			github: "",
 			twitter: "",
 			linkedin: "",
@@ -490,6 +493,17 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 							placeholder='Chọn giới tính..'
 						/>
 					</div>
+
+					<div>
+						<label className='mb-1.5 block text-sm font-bold text-black'>
+							Ngày sinh
+						</label>
+						<NeoDatePicker
+							value={form.date_of_birth}
+							onChange={setField("date_of_birth")}
+							placeholder='Chọn ngày sinh..'
+						/>
+					</div>
 				</div>
 
 				<div className='mt-4'>
@@ -633,12 +647,13 @@ const ProfileTabSkeleton: React.FC = () => (
 			{/* Divider */}
 			<div className='my-6 border-t-2 border-dashed border-gray-200' />
 
-			{/* MSSV / Khoa / Ngành / Lớp / Giới tính */}
+			{/* MSSV / Khoa / Ngành / Lớp / Giới tính / Ngày sinh */}
 			<div className='space-y-4'>
 				<FieldSkeleton labelW='w-10' />
 				<FieldSkeleton labelW='w-8' />
 				<FieldSkeleton labelW='w-12' />
 				<FieldSkeleton labelW='w-6' />
+				<FieldSkeleton labelW='w-16' />
 				<FieldSkeleton labelW='w-16' />
 			</div>
 
