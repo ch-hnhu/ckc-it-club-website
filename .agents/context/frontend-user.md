@@ -67,6 +67,8 @@
 - contact page
 - `/blog`
 - standalone blog feed page linked from the community dropdown in the navbar
+- `/blog/dang-bai`
+- standalone authenticated blog create page with title, excerpt, tag chips, Stacks editor content, and a cover-image upload.
 - `/blog/:slug`
 - standalone blog detail page
 - `/cong-dong`
@@ -255,6 +257,9 @@ npm run dev
 
 ## Change Log
 
+- `2026-05-30`: Added user-facing blog creation at `/blog/dang-bai`; blog feed create buttons now route there, and the form submits title/content/excerpt/tag IDs plus optional cover image to authenticated `POST /community/blogs`.
+- `2026-05-30`: Blog feed filter bar now shows a desktop-only `Thêm` button and places search on the right from laptop/tablet width while keeping mobile search/tag layout compact.
+- `2026-05-30`: Blog detail now shows a top cover-image block, moves blog tags into the breadcrumb, and renders post suggestions below the author bio: more posts by the same author and related posts sharing tags.
 - `2026-05-29`: Community create post form now submits to the backend, supports optional image/video upload, validates required fields, and redirects to the created post detail page.
 - `2026-05-29`: Community post card/detail overflow menus now switch options by ownership: own posts show pin/edit/privacy/archive/delete; other posts show save/report.
 - `2026-05-29`: Community post detail now renders saved Markdown through `markdown-it` with Stacks-style prose styling instead of showing raw Markdown markers.

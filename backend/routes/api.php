@@ -59,6 +59,7 @@ Route::prefix('v1')->group(function () {
 
         // Public blog routes
         Route::get('/blogs', [UserBlogController::class, 'index']);
+        Route::get('/blog-tags', [UserBlogController::class, 'tags']);
         Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
 
@@ -67,6 +68,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/posts', [UserPostController::class, 'store']);
             Route::post('/posts/{id}/reactions', [UserPostController::class, 'react']);
             Route::post('/posts/{id}/comments', [UserPostController::class, 'comment']);
+            Route::post('/blogs', [UserBlogController::class, 'store']);
             Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
         });

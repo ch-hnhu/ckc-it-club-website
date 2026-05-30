@@ -3,24 +3,32 @@ import { toast } from "sonner";
 import {
 	ArrowLeft,
 	Bookmark,
+	Clock,
 	Eye,
 	Heart,
 	MessageCircle,
-	MoreHorizontal,
 	Send,
 	Share2,
+	User,
+	UserPlus,
 } from "lucide-react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
-import type { BlogDetail, BlogComment } from "@/types/blog.types";
-import { buildAvatar, formatRelativeTime, getHandle } from "@/lib/utils";
+import type { Blog, BlogDetail, BlogComment } from "@/types/blog.types";
+import { buildAvatar, formatRelativeTime, getHandle, readingTime } from "@/lib/utils";
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
 const DetailSkeleton: React.FC = () => (
 	<div className='animate-pulse space-y-5'>
-		<div className='aspect-[21/9] w-full rounded-xl bg-gray-200' />
 		<div className='flex gap-2'>
 			<div className='h-6 w-20 rounded-lg bg-gray-200' />
 			<div className='h-6 w-16 rounded-lg bg-gray-200' />
@@ -45,6 +53,53 @@ const DetailSkeleton: React.FC = () => (
 	</div>
 );
 
+const CoverSkeleton: React.FC = () => (
+	<div className='mb-6 aspect-[16/9] w-full animate-pulse rounded-2xl bg-gray-200 md:aspect-[21/10]' />
+);
+
+interface BlogCoverProps {
+	loading: boolean;
+	title?: string;
+	imageUrl?: string | null;
+}
+
+const BlogCover: React.FC<BlogCoverProps> = ({ loading, title, imageUrl }) => {
+	const [imageLoaded, setImageLoaded] = useState(false);
+	const [imageFailed, setImageFailed] = useState(false);
+
+	useEffect(() => {
+		setImageLoaded(false);
+		setImageFailed(false);
+	}, [imageUrl]);
+
+	if (loading) return <CoverSkeleton />;
+
+	if (!imageUrl || imageFailed) {
+		return (
+			<div className='mb-6 flex aspect-[16/9] w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--color-pastel-blue)] px-6 text-center md:aspect-[21/10]'>
+				<span className='font-heading text-5xl font-extrabold uppercase leading-none text-black/20 md:text-7xl'>
+					{title?.trim().charAt(0) || "B"}
+				</span>
+			</div>
+		);
+	}
+
+	return (
+		<div className='relative mb-6 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-gray-200 md:aspect-[21/10]'>
+			{!imageLoaded && <div className='absolute inset-0 animate-pulse bg-gray-200' />}
+			<img
+				src={imageUrl}
+				alt={title || "Ảnh bìa blog"}
+				className={`h-full w-full object-cover transition-opacity duration-300 ${
+					imageLoaded ? "opacity-100" : "opacity-0"
+				}`}
+				onLoad={() => setImageLoaded(true)}
+				onError={() => setImageFailed(true)}
+			/>
+		</div>
+	);
+};
+
 const CommentSkeleton: React.FC = () => (
 	<div className='flex animate-pulse gap-3'>
 		<div className='h-9 w-9 shrink-0 rounded-full bg-gray-200' />
@@ -56,15 +111,144 @@ const CommentSkeleton: React.FC = () => (
 	</div>
 );
 
-// ─── Tag colors ───────────────────────────────────────────────────────────────
+const BlogSuggestionSkeleton: React.FC = () => (
+	<div className='animate-pulse'>
+		<div className='aspect-[16/9] rounded-xl bg-gray-200' />
+		<div className='mt-4 h-3 w-36 rounded bg-gray-200' />
+		<div className='mt-4 h-5 w-full rounded bg-gray-200' />
+		<div className='mt-2 h-5 w-4/5 rounded bg-gray-200' />
+		<div className='mt-5 flex gap-2'>
+			<div className='h-7 w-24 rounded-full bg-gray-200' />
+			<div className='h-7 w-28 rounded-full bg-gray-200' />
+		</div>
+	</div>
+);
 
-const TAG_BG = [
-	"bg-[var(--color-pastel-green)]",
-	"bg-[var(--color-pastel-blue)]",
-	"bg-[var(--color-pastel-pink)]",
-	"bg-[var(--color-pastel-yellow)]",
-	"bg-[var(--color-pastel-purple)]",
-];
+const formatBlogDate = (date: string): string =>
+	new Date(date).toLocaleDateString("vi-VN", {
+		day: "2-digit",
+		month: "short",
+		year: "numeric",
+	});
+
+const BlogSuggestionCard: React.FC<{ blog: Blog }> = ({ blog }) => {
+	const date = blog.published_at ?? blog.created_at;
+	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
+
+	return (
+		<Link to={`/blog/${blog.slug}`} className='group block'>
+			<div className='aspect-[16/9] overflow-hidden rounded-xl bg-[var(--color-pastel-green)]'>
+				{blog.featured_image ? (
+					<img
+						src={blog.featured_image}
+						alt={blog.title}
+						className='h-full w-full object-cover transition-transform duration-500 group-hover:scale-105'
+					/>
+				) : (
+					<div className='flex h-full w-full items-center justify-center'>
+						<span className='font-heading text-4xl font-extrabold uppercase text-black/20'>
+							{blog.title.charAt(0)}
+						</span>
+					</div>
+				)}
+			</div>
+			<p className='mt-4 text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500'>
+				{formatBlogDate(date)} · {authorName}
+			</p>
+			<h3 className='mt-3 line-clamp-2 font-heading text-base font-extrabold leading-snug text-black group-hover:text-[var(--color-text-primary)] group-hover:underline'>
+				{blog.title}
+			</h3>
+			{blog.tags.length > 0 && (
+				<div className='mt-5 flex flex-wrap gap-2'>
+					{blog.tags.slice(0, 2).map((tag) => (
+						<span
+							key={tag.id}
+							className='rounded-full bg-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-600'>
+							{tag.name}
+						</span>
+					))}
+				</div>
+			)}
+		</Link>
+	);
+};
+
+interface BlogSuggestionSectionProps {
+	title: string;
+	blogs: Blog[];
+	loading: boolean;
+}
+
+const BlogSuggestionSection: React.FC<BlogSuggestionSectionProps> = ({
+	title,
+	blogs,
+	loading,
+}) => {
+	if (!loading && blogs.length === 0) return null;
+
+	return (
+		<section className='mt-10 border-t-2 border-gray-200 pt-8'>
+			<h2 className='font-heading text-2xl font-extrabold leading-tight text-black'>
+				{title}
+			</h2>
+			<div className='mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
+				{loading
+					? Array.from({ length: 3 }).map((_, i) => <BlogSuggestionSkeleton key={i} />)
+					: blogs.map((item) => <BlogSuggestionCard key={item.id} blog={item} />)}
+			</div>
+		</section>
+	);
+};
+
+// ─── AuthorBioCard ────────────────────────────────────────────────────────────
+
+interface AuthorBioCardProps {
+	author: NonNullable<BlogDetail["user"]>;
+}
+
+const AuthorBioCard: React.FC<AuthorBioCardProps> = ({ author }) => {
+	const avatar = buildAvatar(author.full_name, author.avatar);
+	const handle = getHandle(author.username, author.email);
+
+	return (
+		<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[3px_3px_0_#111] md:p-8'>
+			<p className='mb-5 text-xs font-bold uppercase tracking-widest text-gray-400'>
+				Viết bởi
+			</p>
+			<div className='flex flex-col gap-5 sm:flex-row sm:items-start'>
+				<div className='shrink-0'>
+					<img
+						src={avatar}
+						alt={author.full_name}
+						className='h-20 w-20 rounded-full border-2 border-black object-cover shadow-[3px_3px_0_#111]'
+					/>
+				</div>
+				<div className='min-w-0 flex-1'>
+					<p className='font-heading text-xl font-extrabold leading-tight text-black'>
+						{author.full_name}
+					</p>
+					<p className='mt-1 flex items-center gap-1.5 text-sm text-gray-500'>
+						<User className='h-3.5 w-3.5 shrink-0' />
+						{handle} · Thành viên CKC IT Club
+					</p>
+					<div className='mt-5 flex flex-wrap gap-3'>
+						<button
+							disabled
+							className='inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-lg border-2 border-black bg-sky-400 px-5 font-heading text-sm font-extrabold text-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-90'>
+							<UserPlus className='h-4 w-4' strokeWidth={2.5} />
+							Follow
+						</button>
+						<button
+							disabled
+							className='inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-lg border-2 border-black bg-gray-900 px-5 font-heading text-sm font-extrabold text-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-90'>
+							View profile
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+};
 
 // ─── CommentItem ──────────────────────────────────────────────────────────────
 
@@ -269,6 +453,8 @@ const BlogDetailPage: React.FC = () => {
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
+	const [suggestedBlogs, setSuggestedBlogs] = useState<Blog[]>([]);
+	const [suggestedBlogsLoading, setSuggestedBlogsLoading] = useState(false);
 
 	const userDisplayName = user?.name || user?.email || "CKC member";
 	const userAvatar =
@@ -300,9 +486,46 @@ const BlogDetailPage: React.FC = () => {
 			.finally(() => setCommentsLoading(false));
 	}, [blog?.id]);
 
+	useEffect(() => {
+		if (!blog?.id) return;
+
+		let cancelled = false;
+		setSuggestedBlogsLoading(true);
+
+		blogService
+			.getBlogs({
+				sort: "published_at",
+				order: "desc",
+				per_page: 18,
+			})
+			.then((res) => {
+				if (!cancelled) {
+					setSuggestedBlogs(res.data.filter((item) => item.id !== blog.id));
+				}
+			})
+			.catch(() => {
+				if (!cancelled) setSuggestedBlogs([]);
+			})
+			.finally(() => {
+				if (!cancelled) setSuggestedBlogsLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [blog?.id]);
+
 	const authorName = blog?.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = buildAvatar(blog?.user?.full_name, blog?.user?.avatar);
 	const publishedAt = blog?.published_at ?? blog?.created_at ?? "";
+	const tagNames = new Set(blog?.tags.map((tag) => tag.name) ?? []);
+	const moreByAuthor = suggestedBlogs
+		.filter((item) => blog?.user?.id && item.user?.id === blog.user.id)
+		.slice(0, 3);
+	const relatedBlogs = suggestedBlogs
+		.filter((item) => item.tags.some((tag) => tagNames.has(tag.name)))
+		.filter((item) => !moreByAuthor.some((authorBlog) => authorBlog.id === item.id))
+		.slice(0, 3);
 
 	const handleSubmitComment = async () => {
 		if (!commentText.trim() || submittingComment || !blog) return;
@@ -331,7 +554,7 @@ const BlogDetailPage: React.FC = () => {
 	};
 
 	return (
-		<div className='w-full min-h-screen pb-12'>
+		<div className='w-full min-h-screen pb-12 pt-16'>
 			<main className='mx-auto w-full max-w-3xl px-4 pt-4 pb-12 md:px-6'>
 				{/* Mobile top bar */}
 				<div className='sticky top-16 z-30 -mx-4 mb-3 flex h-14 items-center gap-2 border-b border-gray-200 bg-[var(--color-surface)] px-3 md:hidden'>
@@ -346,19 +569,39 @@ const BlogDetailPage: React.FC = () => {
 					</h1>
 				</div>
 
-				{/* Desktop back */}
-				<div className='mb-5 hidden items-center gap-3 md:flex'>
-					<button
-						onClick={() => navigate(-1)}
-						className='inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-						aria-label='Quay lại'>
-						<ArrowLeft className='h-5 w-5' />
-					</button>
-					<Link
-						to='/blog'
-						className='font-heading text-sm font-bold text-gray-500 hover:text-black'>
-						← Blog
-					</Link>
+				{/* Breadcrumb */}
+				<div className='mb-6'>
+					<Breadcrumb>
+						<BreadcrumbList>
+							<BreadcrumbItem>
+								<BreadcrumbLink asChild>
+									<Link
+										to='/blog'
+										className='text-sm font-semibold text-gray-500 hover:text-black'>
+										Blog
+									</Link>
+								</BreadcrumbLink>
+							</BreadcrumbItem>
+							<BreadcrumbSeparator>
+								<span className='text-gray-400'>/</span>
+							</BreadcrumbSeparator>
+							{blog?.tags?.length ? (
+								blog.tags.map((tag) => (
+									<BreadcrumbItem key={tag.id}>
+										<span className='rounded-full bg-gray-100 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-gray-600'>
+											{tag.name}
+										</span>
+									</BreadcrumbItem>
+								))
+							) : (
+								<BreadcrumbItem>
+									<span className='rounded-full bg-gray-100 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-gray-600'>
+										Bài viết
+									</span>
+								</BreadcrumbItem>
+							)}
+						</BreadcrumbList>
+					</Breadcrumb>
 				</div>
 
 				{blogError && (
@@ -380,38 +623,22 @@ const BlogDetailPage: React.FC = () => {
 				)}
 
 				{!blogError && (
-					<article className='overflow-hidden rounded-2xl border-2 border-black bg-white'>
+					<BlogCover
+						loading={blogLoading}
+						title={blog?.title}
+						imageUrl={blog?.featured_image}
+					/>
+				)}
+
+				{!blogError && (
+					<article className='overflow-hidden rounded-2xl bg-white'>
 						{blogLoading ? (
 							<div className='p-5 md:p-7'>
 								<DetailSkeleton />
 							</div>
 						) : blog ? (
 							<>
-								{/* Cover image */}
-								{blog.featured_image && (
-									<div className='aspect-[21/9] w-full overflow-hidden border-b-2 border-black'>
-										<img
-											src={blog.featured_image}
-											alt={blog.title}
-											className='h-full w-full object-cover'
-										/>
-									</div>
-								)}
-
 								<div className='p-5 md:p-8'>
-									{/* Tags */}
-									{blog.tags.length > 0 && (
-										<div className='mb-4 flex flex-wrap gap-2'>
-											{blog.tags.map((tag, i) => (
-												<span
-													key={tag.id}
-													className={`neo-tag ${TAG_BG[i % TAG_BG.length]}`}>
-													{tag.name}
-												</span>
-											))}
-										</div>
-									)}
-
 									{/* Title */}
 									<h1 className='font-heading text-2xl font-extrabold leading-tight text-black md:text-3xl lg:text-4xl'>
 										{blog.title}
@@ -436,18 +663,17 @@ const BlogDetailPage: React.FC = () => {
 															: ""}
 													</span>
 													<span className='flex items-center gap-1'>
+														<Clock className='h-3.5 w-3.5' />
+														{readingTime(blog.content)} phút đọc
+													</span>
+													<span className='flex items-center gap-1'>
 														<Eye className='h-3.5 w-3.5' />
 														{blog.view_count} lượt xem
 													</span>
 												</div>
 											</div>
 										</div>
-										<button
-											className='shrink-0 rounded-lg border-2 border-transparent p-1.5 transition hover:border-black hover:bg-gray-100'
-											aria-label='Tùy chọn'>
-											<MoreHorizontal className='h-5 w-5 text-gray-500' />
-										</button>
-									</div>
+													</div>
 
 									{/* Content */}
 									{blog.content && (
@@ -535,7 +761,7 @@ const BlogDetailPage: React.FC = () => {
 				{/* Comments section */}
 				{!blogError && (
 					<section id='comments' className='mt-6'>
-						<div className='mb-4 flex items-center gap-3'>
+						<div className='mb-6 flex items-center gap-3'>
 							<MessageCircle className='h-5 w-5 text-black' />
 							<h2 className='font-heading text-lg font-extrabold text-black'>
 								{commentsLoading ? "Bình luận" : `${comments.length} bình luận`}
@@ -616,6 +842,28 @@ const BlogDetailPage: React.FC = () => {
 							)}
 						</div>
 					</section>
+				)}
+
+				{/* Author bio */}
+				{!blogError && blog?.user && (
+					<div className='mt-6'>
+						<AuthorBioCard author={blog.user} />
+					</div>
+				)}
+
+				{!blogError && blog && (
+					<>
+						<BlogSuggestionSection
+							title={`Bài viết khác của ${authorName}`}
+							blogs={moreByAuthor}
+							loading={suggestedBlogsLoading}
+						/>
+						<BlogSuggestionSection
+							title='Bài viết liên quan'
+							blogs={relatedBlogs}
+							loading={suggestedBlogsLoading}
+						/>
+					</>
 				)}
 			</main>
 		</div>

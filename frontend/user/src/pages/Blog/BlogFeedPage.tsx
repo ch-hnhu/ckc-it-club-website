@@ -90,15 +90,6 @@ const FeaturedArticle: React.FC<{ blog: Blog }> = ({ blog }) => {
 							</span>
 						</div>
 					)}
-					{/* Tag badge over image */}
-					{blog.tags.length > 0 && (
-						<div className='absolute bottom-4 left-4'>
-							<span
-								className={`inline-block neo-tag uppercase text-[10px] bg-white ${TAG_BG[0]}`}>
-								{blog.tags[0].name}
-							</span>
-						</div>
-					)}
 				</div>
 
 				{/* Text — 42% width on desktop */}
@@ -146,6 +137,17 @@ const FeaturedArticle: React.FC<{ blog: Blog }> = ({ blog }) => {
 							<ArrowRight className='h-4 w-4' />
 						</span>
 					</div>
+					{blog.tags.length > 0 && (
+						<div className='mt-5 flex flex-wrap gap-2'>
+							{blog.tags.slice(0, 3).map((tag, i) => (
+								<span
+									key={tag.id}
+									className={`inline-block neo-tag uppercase text-[10px] bg-white ${TAG_BG[i % TAG_BG.length]}`}>
+									{tag.name}
+								</span>
+							))}
+						</div>
+					)}
 				</div>
 			</div>
 		</Link>
@@ -249,6 +251,10 @@ const BlogFeedPage: React.FC = () => {
 	const isFiltered = Boolean(search || activeTag);
 	const featuredBlog = !isFiltered && blogs.length > 0 ? blogs[0] : null;
 	const gridBlogs = featuredBlog ? blogs.slice(1) : blogs;
+	const tagButtonClass =
+		"inline-flex h-10 shrink-0 items-center justify-center rounded-full border-2 border-black px-5 text-sm font-bold leading-none shadow-[3px_3px_0_#111] transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none";
+	const tagArrowButtonClass =
+		"pointer-events-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-black bg-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none";
 
 	return (
 		<div className='w-full min-h-screen pb-12 pt-16'>
@@ -257,7 +263,7 @@ const BlogFeedPage: React.FC = () => {
 				<h1 className='font-heading text-sm font-bold text-black'>✦ Blog</h1>
 				{user && (
 					<Link
-						to='/cong-dong/dang-bai'
+						to='/blog/dang-bai'
 						className='inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-primary)] px-3 font-heading text-xs font-extrabold text-dark shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 						<PenSquare className='h-3.5 w-3.5' strokeWidth={3} />
 						Viết bài
@@ -284,9 +290,15 @@ const BlogFeedPage: React.FC = () => {
 
 			{/* ── Filter row ── */}
 			<div className='border-b-2 border-black bg-white py-4'>
-				<div className='neo-container flex flex-col gap-3 px-6 sm:flex-row sm:items-center'>
+				<div className='neo-container flex flex-col gap-3 px-6 md:flex-row md:items-center'>
+					<Link
+						to={user ? "/blog/dang-bai" : "/login"}
+						className='hidden h-10 shrink-0 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none md:order-1 md:inline-flex'>
+						<PenSquare className='h-4 w-4' strokeWidth={3} />
+						Thêm
+					</Link>
 					{/* Search with focus glow */}
-					<div className='group/search relative shrink-0 sm:w-64'>
+					<div className='group/search relative order-1 shrink-0 md:order-2 md:w-72'>
 						<Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-focus-within/search:text-[var(--color-primary)]' />
 						<input
 							type='text'
@@ -308,15 +320,15 @@ const BlogFeedPage: React.FC = () => {
 					</div>
 
 					{/* Divider */}
-					<div className='hidden h-6 w-px bg-gray-200 sm:block' />
+					<div className='hidden h-6 w-px bg-gray-200 md:order-3 md:block' />
 
 					{/* Tag chips + scroll buttons */}
-					<div className='relative flex min-w-0 flex-1'>
+					<div className='relative order-2 flex min-w-0 flex-1 md:order-4'>
 						{canScrollLeft && (
 							<div className='pointer-events-none absolute -inset-y-1 left-0 z-10 flex items-center bg-gradient-to-r from-white via-white/90 to-transparent pr-8 pl-0'>
 								<button
 									onClick={scrollTagsLeft}
-									className='pointer-events-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+									className={tagArrowButtonClass}>
 									<ArrowRight className='h-4 w-4 rotate-180' />
 								</button>
 							</div>
@@ -326,10 +338,10 @@ const BlogFeedPage: React.FC = () => {
 							className='no-scrollbar flex flex-1 gap-2 overflow-x-auto px-0.5 pb-1 pt-0.5'>
 							<button
 								onClick={() => setActiveTag(null)}
-								className={`inline-flex shrink-0 items-center rounded-full border-2 border-black px-4 py-1.5 text-xs font-bold transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${
+								className={`${tagButtonClass} ${
 									!activeTag
-										? "bg-[var(--color-primary)] shadow-[2px_2px_0_#111]"
-										: "bg-white text-gray-700 shadow-[2px_2px_0_#111] hover:bg-gray-50"
+										? "bg-[var(--color-primary)] text-black"
+										: "bg-white text-gray-700 hover:bg-gray-50"
 								}`}>
 								Tất cả
 							</button>
@@ -339,10 +351,10 @@ const BlogFeedPage: React.FC = () => {
 									onClick={() =>
 										setActiveTag(activeTag === tag.name ? null : tag.name)
 									}
-									className={`inline-flex shrink-0 items-center rounded-full border-2 border-black px-4 py-1.5 text-xs font-bold transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${
+									className={`${tagButtonClass} ${
 										activeTag === tag.name
-											? "bg-[var(--color-primary)] shadow-[2px_2px_0_#111]"
-											: "bg-white text-gray-700 shadow-[2px_2px_0_#111] hover:bg-gray-50"
+											? "bg-[var(--color-primary)] text-black"
+											: "bg-white text-gray-700 hover:bg-gray-50"
 									}`}>
 									{tag.name}
 								</button>
@@ -352,7 +364,7 @@ const BlogFeedPage: React.FC = () => {
 							<div className='pointer-events-none absolute -inset-y-1 right-0 z-10 flex items-center bg-gradient-to-l from-white via-white/90 to-transparent pl-8 pr-0'>
 								<button
 									onClick={scrollTagsRight}
-									className='pointer-events-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+									className={tagArrowButtonClass}>
 									<ArrowRight className='h-4 w-4' />
 								</button>
 							</div>
@@ -397,7 +409,7 @@ const BlogFeedPage: React.FC = () => {
 						</p>
 						{user && !isFiltered && (
 							<Link
-								to='/cong-dong/dang-bai'
+								to='/blog/dang-bai'
 								className='mt-5 inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 								<PenSquare className='h-4 w-4' strokeWidth={3} />
 								Viết bài đầu tiên
