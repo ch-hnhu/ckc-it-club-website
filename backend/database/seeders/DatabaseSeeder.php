@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             ReactionSeeder::class,
             MediaFileSeeder::class,
             ChatRoomSeeder::class,
+            SkillSeeder::class,
         ]);
     }
 }

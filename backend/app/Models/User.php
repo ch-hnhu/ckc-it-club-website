@@ -12,6 +12,7 @@ use App\Enums\RolesEnum;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $id
@@ -42,6 +43,7 @@ class User extends Authenticatable
         'password',
         'student_code',
         'gender',
+        'date_of_birth',
         'is_active',
         'faculty_id',
         'major_id',
@@ -49,12 +51,21 @@ class User extends Authenticatable
         'provider',
         'provider_id',
         'avatar',
+        'cover_image',
+        'bio',
+        'social_github',
+        'social_linkedin',
+        'social_instagram',
+        'social_youtube',
+        'social_tiktok',
+        'social_twitch',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'date_of_birth' => 'date:Y-m-d',
             'created_at' => 'datetime:d/m/Y',
             'updated_at' => 'datetime:d/m/Y',
         ];
@@ -73,6 +84,11 @@ class User extends Authenticatable
     public function class()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    public function skills(): BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class, 'user_skills');
     }
 
     public function departments(): BelongsToMany
@@ -127,6 +143,15 @@ class User extends Authenticatable
 
         if (Str::startsWith($value, ['http://', 'https://'])) {
             return $value;
+        }
+
+        return Storage::disk('public')->url($value);
+    }
+
+    public function getCoverImageAttribute(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
         }
 
         return Storage::disk('public')->url($value);
