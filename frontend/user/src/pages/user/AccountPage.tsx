@@ -581,6 +581,90 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 	);
 };
 
+// ─── Profile Tab Skeleton ─────────────────────────────────────────────────────
+
+const Bone: React.FC<{ className?: string }> = ({ className = "" }) => (
+	<div className={`animate-pulse rounded-lg bg-gray-200 ${className}`} />
+);
+
+const FieldSkeleton: React.FC<{ labelW?: string }> = ({ labelW = "w-16" }) => (
+	<div>
+		<Bone className={`mb-1.5 h-4 ${labelW}`} />
+		<Bone className='h-[3.25rem] w-full rounded-xl' />
+	</div>
+);
+
+const ProfileTabSkeleton: React.FC = () => (
+	<div className='space-y-6'>
+		{/* ── Profile card ── */}
+		<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
+			{/* Heading */}
+			<Bone className='h-6 w-14' />
+			<Bone className='mt-1.5 mb-6 h-4 w-52 bg-gray-100' />
+
+			{/* Top row: avatar + name/username/email */}
+			<div className='flex flex-col gap-6 sm:flex-row sm:items-start'>
+				{/* Avatar column */}
+				<div className='flex flex-col items-center gap-3 sm:w-52 sm:shrink-0'>
+					<Bone className='h-40 w-40 rounded-full' />
+					<Bone className='h-3 w-28 bg-gray-100' />
+					<Bone className='h-3 w-20 bg-gray-100' />
+				</div>
+
+				{/* Name + Username + Email */}
+				<div className='min-w-0 flex-1 space-y-4'>
+					<FieldSkeleton labelW='w-20' />
+					<FieldSkeleton labelW='w-24' />
+					<FieldSkeleton labelW='w-12' />
+				</div>
+			</div>
+
+			{/* Divider */}
+			<div className='my-6 border-t-2 border-dashed border-gray-200' />
+
+			{/* MSSV / Khoa / Ngành / Lớp / Giới tính */}
+			<div className='space-y-4'>
+				<FieldSkeleton labelW='w-10' />
+				<FieldSkeleton labelW='w-8' />
+				<FieldSkeleton labelW='w-12' />
+				<FieldSkeleton labelW='w-6' />
+				<FieldSkeleton labelW='w-16' />
+			</div>
+
+			{/* Bio */}
+			<div className='mt-4'>
+				<Bone className='mb-1.5 h-4 w-16' />
+				<Bone className='h-[6.5rem] w-full rounded-xl' />
+			</div>
+
+			{/* Skills */}
+			<div className='mt-6'>
+				<Bone className='mb-4 h-5 w-14' />
+				<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4'>
+					{Array.from({ length: 16 }).map((_, i) => (
+						<Bone key={i} className='h-10 rounded-xl border-2 border-gray-300 bg-gray-100' />
+					))}
+				</div>
+			</div>
+		</div>
+
+		{/* ── Social card ── */}
+		<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
+			<Bone className='mb-5 h-5 w-28' />
+			<div className='space-y-4'>
+				{(['w-14', 'w-16', 'w-20', 'w-16', 'w-12'] as const).map((w, i) => (
+					<FieldSkeleton key={i} labelW={w} />
+				))}
+			</div>
+		</div>
+
+		{/* ── Save button ── */}
+		<div className='flex justify-end pb-4'>
+			<Bone className='h-10 w-36 rounded-xl' />
+		</div>
+	</div>
+);
+
 // ─── Placeholder tabs ─────────────────────────────────────────────────────────
 
 const TAB_DESCRIPTIONS: Record<string, string> = {
@@ -676,14 +760,7 @@ const AccountPage: React.FC = () => {
 					<main className='min-w-0 flex-1'>
 						{activeTabId === "profile" ? (
 							loadingProfile ? (
-								<div className='space-y-6'>
-									{[1, 2, 3].map((i) => (
-										<div
-											key={i}
-											className='h-48 animate-pulse rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111]'
-										/>
-									))}
-								</div>
+								<ProfileTabSkeleton />
 							) : (
 								<ProfileTab
 									user={user}
