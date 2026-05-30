@@ -58,6 +58,7 @@ export interface BlogListParams {
 	per_page?: number;
 	search?: string;
 	tag?: string;
+	username?: string;
 	sort?: "published_at" | "reactions_count" | "view_count" | "created_at";
 	order?: "asc" | "desc";
 }

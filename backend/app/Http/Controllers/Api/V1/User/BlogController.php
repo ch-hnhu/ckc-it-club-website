@@ -45,6 +45,7 @@ class BlogController extends BaseApiController
         $perPage = min((int) $request->query('per_page', 12), 50);
         $search  = $request->query('search');
         $tag     = $request->query('tag');
+        $username = $request->query('username');
 
         $blogs = Blog::query()
             ->with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
@@ -52,6 +53,10 @@ class BlogController extends BaseApiController
             ->where('blogs.status', 'published')
             ->when($search, fn ($q) => $q->where('blogs.title', 'like', "%{$search}%"))
             ->when($tag, fn ($q) => $q->whereHas('tags', fn ($t) => $t->where('name', $tag)))
+            ->when($username, fn ($q) => $q->whereHas('author', fn ($author) => $author
+                ->where('username', $username)
+                ->orWhere('email', 'like', "{$username}@%")
+            ))
             ->when(
                 $sort === 'reactions_count',
                 fn ($q) => $q->orderBy('reactions_count', $order),

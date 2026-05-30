@@ -17,8 +17,12 @@ export interface UserProfile {
 	date_of_birth: string | null;
 	is_active: boolean;
 	posts_count: number;
+	blogs_count: number;
+	content_count: number;
+	likes_count: number;
 	followers_count: number;
 	following_count: number;
+	is_following: boolean;
 	skills: string[];
 	social_github: string | null;
 	social_linkedin: string | null;

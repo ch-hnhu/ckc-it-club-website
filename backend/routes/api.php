@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
+use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
@@ -52,19 +53,20 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
     Route::get('/community/channels', [ChannelController::class, 'index']);
+    Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
+    Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
+    Route::get('/users/{username}/following', [FollowController::class, 'following']);
 
     // Community routes
     Route::prefix('community')->group(function () {
         // Public (read-only, published posts only)
         Route::get('/posts', [UserPostController::class, 'index']);
-        Route::get('/posts/{id}', [UserPostController::class, 'show']);
         Route::get('/posts/{id}/comments', [UserPostController::class, 'comments']);
         Route::get('/channels', [UserChannelController::class, 'index']);
 
         // Public blog routes
         Route::get('/blogs', [UserBlogController::class, 'index']);
         Route::get('/blog-tags', [UserBlogController::class, 'tags']);
-        Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
 
         // Chat rooms (public list, auth for messages, admin-only create)
@@ -79,13 +81,19 @@ Route::prefix('v1')->group(function () {
 
         // Authenticated actions
         Route::middleware('auth:sanctum')->group(function () {
+            Route::get('/posts/bookmarks', [UserPostController::class, 'bookmarks']);
             Route::post('/posts', [UserPostController::class, 'store']);
             Route::post('/posts/{id}/reactions', [UserPostController::class, 'react']);
             Route::post('/posts/{id}/comments', [UserPostController::class, 'comment']);
+            Route::post('/posts/{id}/bookmark', [UserPostController::class, 'bookmark']);
             Route::post('/blogs', [UserBlogController::class, 'store']);
             Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
         });
+
+        // Wildcard routes registered last to avoid masking specific paths above
+        Route::get('/posts/{id}', [UserPostController::class, 'show']);
+        Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
     });
 
     // Forgot password (throttled: 5 attempts per minute per IP)
@@ -117,6 +125,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/check-username', [ProfileController::class, 'checkUsername']);
             Route::get('/profile', [ProfileController::class, 'show']);
             Route::post('/profile', [ProfileController::class, 'update']);
+            Route::post('/{username}/follow', [FollowController::class, 'toggle']);
         });
     });
 
