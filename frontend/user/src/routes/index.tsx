@@ -2,13 +2,15 @@ import MainLayout from "@/layouts/MainLayout";
 import ContactPage from "@/pages/ContactPage";
 import CommunityLayout from "@/pages/community/CommunityLayout";
 import CommunityFeedPage from "@/pages/community/CommunityFeedPage";
+import CommunityChatPage from "@/pages/community/CommunityChatPage";
 import CommunityCreatePage from "@/pages/community/CommunityCreatePage";
 import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
-import BlogFeedPage from "@/pages/Blog/BlogFeedPage";
-import BlogCreatePage from "@/pages/Blog/BlogCreatePage";
-import BlogDetailPage from "@/pages/Blog/BlogDetailPage";
+import BlogFeedPage from "@/pages/blog/BlogFeedPage";
+import BlogCreatePage from "@/pages/blog/BlogCreatePage";
+import BlogDetailPage from "@/pages/blog/BlogDetailPage";
 import LandingPage from "@/pages/LandingPage";
-import UserProfilePage from "@/pages/UserProfilePage";
+import UserProfilePage from "@/pages/user/UserProfilePage";
+import AccountPage from "@/pages/user/AccountPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
@@ -30,6 +32,10 @@ const router = createBrowserRouter([
 			{
 				path: "lien-he",
 				element: <ContactPage />,
+			},
+			{
+				path: "tai-khoan",
+				element: <AccountPage />,
 			},
 			{
 				path: "blog",
@@ -60,6 +66,10 @@ const router = createBrowserRouter([
 					{
 						path: "bai-viet/:id",
 						element: <CommunityPostDetailPage />,
+					},
+					{
+						path: "chat",
+						element: <CommunityChatPage />,
 					},
 					{
 						path: "dang-bai",

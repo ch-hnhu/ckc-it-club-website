@@ -1,18 +1,22 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import {
+	Bookmark,
 	BookOpen,
 	Building2,
 	Calendar,
 	Camera,
 	ChevronLeft,
 	ChevronRight,
+	FileText,
 	GraduationCap,
 	Heart,
 	ImagePlus,
+	LayoutGrid,
 	MessageCircle,
 	Share2,
 	UserCheck,
+	UserPen,
 	UserPlus,
 	Users,
 } from "lucide-react";
@@ -261,7 +265,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 				<div className='relative -mt-12 flex items-end justify-between gap-3 sm:-mt-16 md:-mt-[5rem]'>
 					{/* Avatar with edit overlay */}
 					<div className='px-6'>
-						<div className='relative rounded-full border-4 border-white shrink-0 group'>
+						<div className='relative rounded-full border-6 border-white shrink-0 group'>
 							<img
 								src={avatar}
 								alt={profile.full_name}
@@ -282,9 +286,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 						{/* Edit / Follow button */}
 						{isOwnProfile ? (
 							<Link
-								to='/cai-dat'
+								to='/tai-khoan?tabIndex=0'
 								className='inline-flex shrink-0 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 py-2 text-xs font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:px-4 sm:text-sm'>
-								<Camera className='h-4 w-4' />
+								<UserPen className='h-4 w-4' />
 								Chỉnh sửa hồ sơ
 							</Link>
 						) : (
@@ -427,12 +431,13 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user }) => {
 
 	if (error || posts.length === 0) {
 		return (
-			<div className='mx-6 mt-5 rounded-2xl border-2 border-black bg-white px-6 py-16 text-center sm:mx-0'>
-				<p className='font-heading text-lg font-extrabold text-black'>
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<FileText className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
 					{error ? "Không thể tải bài viết" : "Chưa có bài viết nào"}
 				</p>
-				<p className='mt-2 text-sm text-gray-500'>
-					{error ? "Vui lòng thử lại sau." : `Người dùng này chưa đăng bài viết nào.`}
+				<p className='mt-1 text-sm text-gray-400'>
+					{error ? "Vui lòng thử lại sau." : "Người dùng này chưa đăng bài viết nào."}
 				</p>
 			</div>
 		);
@@ -721,11 +726,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user, onSwitchToPost
 			) : recentPosts.length > 0 ? (
 				<PostCarousel posts={recentPosts} user={user} onShowAll={onSwitchToPostsTab} />
 			) : (
-				<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
+				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
+					<LayoutGrid className='mx-auto mb-4 h-10 w-10 text-gray-300' />
 					<p className='font-heading text-base font-extrabold text-black'>
 						Chưa có bài viết nào
 					</p>
-					<p className='mt-1 text-sm text-gray-500'>
+					<p className='mt-1 text-sm text-gray-400'>
 						Người dùng này chưa đăng bài viết nào.
 					</p>
 				</div>
@@ -734,14 +740,32 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user, onSwitchToPost
 	);
 };
 
+// ─── Tab Content: Saved ───────────────────────────────────────────────────────
+
+const BookmarksTab: React.FC = () => (
+	<div className='mt-5 mb-5 px-6 sm:px-0'>
+		<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
+			<Bookmark className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+			<p className='font-heading text-base font-extrabold text-black'>
+				Chưa có bài viết nào được lưu
+			</p>
+			<p className='mt-1 text-sm text-gray-400'>Những bài viết được lưu sẽ hiển thị ở đây.</p>
+		</div>
+	</div>
+);
+
 // ─── UserProfilePage ──────────────────────────────────────────────────────────
 
-type Tab = "overview" | "posts";
+type Tab = "overview" | "posts" | "bookmarks";
 
-const TABS: { id: Tab; label: string }[] = [
-	{ id: "overview", label: "Tổng quan" },
-	{ id: "posts", label: "Posts" },
+type TabDef = { id: Tab; label: string; icon: React.ElementType };
+
+const BASE_TABS: TabDef[] = [
+	{ id: "overview", label: "Tổng quan", icon: LayoutGrid },
+	{ id: "posts", label: "Posts", icon: FileText },
 ];
+
+const BOOKMARKS_TAB: TabDef = { id: "bookmarks", label: "Đã lưu", icon: Bookmark };
 
 const UserProfilePage: React.FC = () => {
 	const { username: rawParam } = useParams<{ username: string }>();
@@ -752,8 +776,24 @@ const UserProfilePage: React.FC = () => {
 	const [profile, setProfile] = useState<UserProfile | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [notFound, setNotFound] = useState(false);
-	const [activeTab, setActiveTab] = useState<Tab>("overview");
 	const [followed, setFollowed] = useState(false);
+
+	// ── Tab state synced with URL ?tab= query param ──────────────────────────
+	const [searchParams, setSearchParams] = useSearchParams();
+	const tabParam = searchParams.get("tab") ?? "";
+	const activeTab: Tab =
+		tabParam === "posts" ? "posts" :
+		tabParam === "bookmarks" ? "bookmarks" :
+		"overview";
+	const previousUsernameRef = useRef<string | undefined>(undefined);
+
+	const setActiveTab = (tab: Tab) => {
+		if (tab === "overview") {
+			setSearchParams({}, { replace: true });
+		} else {
+			setSearchParams({ tab }, { replace: true });
+		}
+	};
 
 	// Derive the handle the current user would own (same logic as buildProfileUrl / Navbar links)
 	const myHandle = user ? buildProfileUrl(user.username, user.email).replace(/^\/@/, "") : null;
@@ -765,6 +805,22 @@ const UserProfilePage: React.FC = () => {
 			// DB-level match: works once the real profile is loaded
 			(profile && (String(user.id) === String(profile.id) || user.email === profile.email))),
 	);
+
+	// When navigating to a different profile, clear ?tab= so overview is shown.
+	useEffect(() => {
+		if (previousUsernameRef.current && previousUsernameRef.current !== username) {
+			setSearchParams({}, { replace: true });
+		}
+		previousUsernameRef.current = username;
+	}, [username]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Guard: if someone manually types ?tab=bookmarks on another user's profile,
+	// redirect to overview once we know it's not their own profile.
+	useEffect(() => {
+		if (!loading && activeTab === "bookmarks" && !isOwnProfile) {
+			setSearchParams({}, { replace: true });
+		}
+	}, [loading, activeTab, isOwnProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		if (!username) return;
@@ -800,15 +856,25 @@ const UserProfilePage: React.FC = () => {
 							cover_image: null,
 							bio: "Thành viên CKC IT CLUB.",
 							student_code: "2200000",
+							faculty_id: null,
 							faculty: "Công nghệ thông tin",
+							major_id: null,
 							major: "Lập trình máy tính",
+							class_id: null,
 							class_name: "22CNTT1",
 							gender: null,
+							date_of_birth: null,
 							is_active: true,
 							posts_count: 12,
 							followers_count: 85,
 							following_count: 3,
 							skills: ["JavaScript", "React", "Laravel", "Python"],
+							social_github: null,
+							social_linkedin: null,
+							social_instagram: null,
+							social_youtube: null,
+							social_tiktok: null,
+							social_twitch: null,
 							created_at: "2022-09-01T00:00:00Z",
 						});
 					}
@@ -863,37 +929,50 @@ const UserProfilePage: React.FC = () => {
 							onFollow={() => setFollowed((f) => !f)}
 						/>
 
-						{/* Tabs */}
-						<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
-							<nav className='flex gap-2 sm:gap-4'>
-								{TABS.map((tab) => {
-									const isActive = activeTab === tab.id;
-									return (
-										<button
-											key={tab.id}
-											onClick={() => setActiveTab(tab.id)}
-											className={`group relative inline-flex min-h-10 shrink-0 items-center justify-center gap-2 px-3 pb-2 text-md transition-colors duration-200 md:text-lg ${
-												isActive
-													? "text-slate-950 font-bold"
-													: "text-slate-500 font-medium hover:text-slate-950"
-											}`}
-											style={{ fontFamily: "var(--font-body)" }}>
-											<span>{tab.label}</span>
-											{tab.id === "posts" && profile.posts_count > 0 && (
-												<span className='inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 px-2 text-xs font-bold leading-none text-slate-500'>
-													{profile.posts_count}
-												</span>
-											)}
-											<span
-												className={`absolute -bottom-[2px] left-0 h-1 w-full bg-primary transition-transform duration-200 group-hover:scale-x-100 ${
-													isActive ? "scale-x-100" : "scale-x-0"
-												}`}
-											/>
-										</button>
-									);
-								})}
-							</nav>
-						</div>
+						{/* Tabs — "Đã lưu" only visible on own profile */}
+						{(() => {
+							const tabs: TabDef[] = isOwnProfile
+								? [...BASE_TABS, BOOKMARKS_TAB]
+								: BASE_TABS;
+							const badgeCount: Partial<Record<Tab, number>> = {
+								posts: profile.posts_count,
+							};
+							return (
+								<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
+									<nav className='flex gap-2 sm:gap-4'>
+										{tabs.map((tab) => {
+											const isActive = activeTab === tab.id;
+											const Icon = tab.icon;
+											const count = badgeCount[tab.id];
+											return (
+												<button
+													key={tab.id}
+													onClick={() => setActiveTab(tab.id)}
+													className={`group relative inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 px-3 pb-2 text-md transition-colors duration-200 md:text-lg ${
+														isActive
+															? "font-bold text-slate-950"
+															: "font-medium text-slate-500 hover:text-slate-950"
+													}`}
+													style={{ fontFamily: "var(--font-body)" }}>
+													<Icon className='h-4 w-4 shrink-0' />
+													<span>{tab.label}</span>
+													{count !== undefined && count > 0 && (
+														<span className='inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-200 px-1.5 text-xs font-bold leading-none text-slate-500'>
+															{count}
+														</span>
+													)}
+													<span
+														className={`absolute -bottom-[2px] left-0 h-1 w-full bg-primary transition-transform duration-200 group-hover:scale-x-100 ${
+															isActive ? "scale-x-100" : "scale-x-0"
+														}`}
+													/>
+												</button>
+											);
+										})}
+									</nav>
+								</div>
+							);
+						})()}
 
 						{/* Tab content */}
 						{activeTab === "overview" ? (
@@ -902,6 +981,8 @@ const UserProfilePage: React.FC = () => {
 								user={user}
 								onSwitchToPostsTab={() => setActiveTab("posts")}
 							/>
+						) : activeTab === "bookmarks" ? (
+							<BookmarksTab />
 						) : (
 							<UserPostsTab username={username} user={user} />
 						)}

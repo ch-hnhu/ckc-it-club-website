@@ -72,7 +72,10 @@ clientApi.interceptors.response.use(
 					break;
 
 				default:
-					console.error("Error:", status, error.message);
+					console.error(
+						`[API ${status}] ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+						(error.response?.data as { message?: string })?.message ?? error.message,
+					);
 			}
 		} else if (error.request) {
 			// Request made but no response

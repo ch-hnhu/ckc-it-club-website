@@ -19,12 +19,16 @@ use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
+use App\Http\Controllers\Api\V1\Admin\SkillController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
+use App\Http\Controllers\Api\V1\User\AcademicController;
 use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
+use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
+use App\Http\Controllers\Api\V1\User\ProfileController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
@@ -63,6 +67,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
 
+        // Chat rooms (public list, auth for messages, admin-only create)
+        Route::get('/chat-rooms', [UserChatController::class, 'index']);
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::middleware('permission:community.chat.manage')
+                ->post('/chat-rooms', [UserChatController::class, 'store']);
+            Route::get('/chat-rooms/{room}/messages', [UserChatController::class, 'messages']);
+            Route::get('/chat-rooms/{room}/poll', [UserChatController::class, 'poll']);
+            Route::post('/chat-rooms/{room}/messages', [UserChatController::class, 'send']);
+        });
+
         // Authenticated actions
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/posts', [UserPostController::class, 'store']);
@@ -86,6 +100,24 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/logout-all', [AuthController::class, 'logoutAll']);
+    });
+
+    // user logged-in routes
+    Route::middleware('auth:sanctum')->group(function () {
+        // academic structure
+        Route::prefix('academic')->group(function () {
+            Route::get('/faculties', [AcademicController::class, 'faculties']);
+            Route::get('/majors', [AcademicController::class, 'majors']);
+            Route::get('/school-classes', [AcademicController::class, 'schoolClasses']);
+        });
+
+        // user profile
+        Route::prefix('users')->group(function () {
+            Route::get('/skills', [ProfileController::class, 'skills']);
+            Route::get('/check-username', [ProfileController::class, 'checkUsername']);
+            Route::get('/profile', [ProfileController::class, 'show']);
+            Route::post('/profile', [ProfileController::class, 'update']);
+        });
     });
 
     // admin routes
@@ -300,6 +332,17 @@ Route::prefix('v1')->group(function () {
             Route::get('media-files/stats', [MediaFileController::class, 'stats']);
             Route::get('media-files', [MediaFileController::class, 'index']);
             Route::delete('media-files/{mediaFile}', [MediaFileController::class, 'destroy']);
+        });
+
+        // skills
+        Route::middleware('permission:community.skills.manage')->group(function () {
+            Route::get('skills', [SkillController::class, 'index']);
+            Route::post('skills', [SkillController::class, 'store']);
+            Route::patch('skills/reorder', [SkillController::class, 'reorder']);
+            Route::put('skills/{skill}', [SkillController::class, 'update']);
+            Route::patch('skills/{skill}', [SkillController::class, 'update']);
+            Route::patch('skills/{skill}/toggle-status', [SkillController::class, 'toggleStatus']);
+            Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
         });
     });
 });
