@@ -16,6 +16,7 @@ import {
 	MessageCircle,
 	Share2,
 	UserCheck,
+	UserPen,
 	UserPlus,
 	Users,
 } from "lucide-react";
@@ -264,7 +265,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 				<div className='relative -mt-12 flex items-end justify-between gap-3 sm:-mt-16 md:-mt-[5rem]'>
 					{/* Avatar with edit overlay */}
 					<div className='px-6'>
-						<div className='relative rounded-full border-4 border-white shrink-0 group'>
+						<div className='relative rounded-full border-6 border-white shrink-0 group'>
 							<img
 								src={avatar}
 								alt={profile.full_name}
@@ -285,9 +286,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 						{/* Edit / Follow button */}
 						{isOwnProfile ? (
 							<Link
-								to='/cai-dat'
+								to='/tai-khoan?tabIndex=0'
 								className='inline-flex shrink-0 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 py-2 text-xs font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:px-4 sm:text-sm'>
-								<Camera className='h-4 w-4' />
+								<UserPen className='h-4 w-4' />
 								Chỉnh sửa hồ sơ
 							</Link>
 						) : (
