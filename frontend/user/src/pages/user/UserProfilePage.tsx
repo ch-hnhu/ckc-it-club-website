@@ -13,6 +13,7 @@ import {
 	BookOpenText,
 	Calendar,
 	Camera,
+	Check,
 	ChevronLeft,
 	ChevronRight,
 	FileText,
@@ -35,6 +36,7 @@ import { api } from "@/services/api.service";
 import { userService } from "@/services/user.service";
 import { postService } from "@/services/post.service";
 import type { ApiResponse } from "@/types/api.types";
+import type { Blog } from "@/types/blog.types";
 import {
 	buildAvatar,
 	buildProfileUrl,
@@ -45,6 +47,7 @@ import {
 import { renderMarkdownPreview } from "@/lib/markdown";
 import type { UserProfile } from "@/types/user.types";
 import type { Post } from "@/types/post.types";
+import BlogCard from "@/components/community/BlogCard";
 import PostCard from "@/components/community/PostCard";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -176,7 +179,7 @@ const StatsCard: React.FC<StatsCardProps> = ({ profile }) => (
 					Bài viết
 				</span>
 				<span className='font-heading text-sm font-extrabold text-black'>
-					{profile.posts_count}
+					{profile.content_count}
 				</span>
 			</div>
 			<div className='flex items-center justify-between'>
@@ -488,9 +491,10 @@ const ProfileNotFound: React.FC<{ username: string }> = ({ username }) => {
 interface UserPostsTabProps {
 	username: string;
 	user: AuthUser | null;
+	isOwnProfile: boolean;
 }
 
-const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user }) => {
+const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfile }) => {
 	const [posts, setPosts] = useState<Post[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);
@@ -535,7 +539,11 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user }) => {
 					{error ? "Không thể tải bài viết" : "Chưa có bài viết nào"}
 				</p>
 				<p className='mt-1 text-sm text-gray-400'>
-					{error ? "Vui lòng thử lại sau." : "Người dùng này chưa đăng bài viết nào."}
+					{error
+						? "Vui lòng thử lại sau."
+						: isOwnProfile
+							? "Bạn chưa đăng bài viết nào."
+							: "Người dùng này chưa đăng bài viết nào."}
 				</p>
 			</div>
 		);
@@ -545,6 +553,80 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user }) => {
 		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
 			{posts.map((post) => (
 				<PostCard key={post.id} post={post} user={user} />
+			))}
+		</div>
+	);
+};
+
+// ─── Tab Content: Blogs ───────────────────────────────────────────────────────
+
+interface UserBlogsTabProps {
+	username: string;
+	isOwnProfile: boolean;
+}
+
+const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) => {
+	const [blogs, setBlogs] = useState<Blog[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+		setLoading(true);
+		setError(false);
+
+		userService
+			.getUserBlogs(username)
+			.then((res) => {
+				if (!cancelled) setBlogs(res.data);
+			})
+			.catch(() => {
+				if (!cancelled) setError(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [username]);
+
+	if (loading) {
+		return (
+			<div className='mt-5 grid gap-5 px-6 sm:grid-cols-2 sm:px-0'>
+				{Array.from({ length: 4 }).map((_, i) => (
+					<div
+						key={i}
+						className='h-80 animate-pulse rounded-2xl border-2 border-black bg-gray-200'
+					/>
+				))}
+			</div>
+		);
+	}
+
+	if (error || blogs.length === 0) {
+		return (
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<BookOpen className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
+					{error ? "Không thể tải blog" : "Chưa có blog nào"}
+				</p>
+				<p className='mt-1 text-sm text-gray-400'>
+					{error
+						? "Vui lòng thử lại sau."
+						: isOwnProfile
+							? "Bạn chưa đăng blog nào."
+							: "Người dùng này chưa đăng blog nào."}
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className='mt-5 mb-5 grid gap-5 px-6 sm:grid-cols-2 sm:px-0'>
+			{blogs.map((blog) => (
+				<BlogCard key={blog.id} blog={blog} />
 			))}
 		</div>
 	);
@@ -767,24 +849,123 @@ const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) =
 	);
 };
 
+// ─── Blog Carousel ────────────────────────────────────────────────────────────
+
+interface BlogCarouselProps {
+	blogs: Blog[];
+	onShowAll: () => void;
+}
+
+const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, onShowAll }) => {
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const [canScrollLeft, setCanScrollLeft] = useState(false);
+	const [canScrollRight, setCanScrollRight] = useState(false);
+
+	const updateScrollShadows = () => {
+		const el = scrollRef.current;
+		if (!el) return;
+
+		const maxScrollLeft = el.scrollWidth - el.clientWidth;
+		setCanScrollLeft(el.scrollLeft > 4);
+		setCanScrollRight(el.scrollLeft < maxScrollLeft - 4);
+	};
+
+	const scroll = (dir: "left" | "right") => {
+		scrollRef.current?.scrollBy({
+			left: dir === "right" ? 336 : -336,
+			behavior: "smooth",
+		});
+	};
+
+	useEffect(() => {
+		updateScrollShadows();
+		window.addEventListener("resize", updateScrollShadows);
+
+		return () => {
+			window.removeEventListener("resize", updateScrollShadows);
+		};
+	}, [blogs]);
+
+	return (
+		<div>
+			<div className='mb-4 flex items-center justify-between'>
+				<h1 className='font-heading font-extrabold text-black text-2xl'>Blog</h1>
+				<div className='flex items-center gap-2'>
+					<button
+						onClick={() => scroll("left")}
+						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+						aria-label='Cuộn trái'>
+						<ChevronLeft className='h-4 w-4' />
+					</button>
+					<button
+						onClick={() => scroll("right")}
+						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+						aria-label='Cuộn phải'>
+						<ChevronRight className='h-4 w-4' />
+					</button>
+				</div>
+			</div>
+
+			<div className='relative'>
+				{canScrollLeft && (
+					<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
+				)}
+				{canScrollRight && (
+					<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
+				)}
+				<div
+					ref={scrollRef}
+					onScroll={updateScrollShadows}
+					className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
+					{blogs.map((blog) => (
+						<div key={blog.id} className='w-72 shrink-0 sm:w-80'>
+							<BlogCard blog={blog} />
+						</div>
+					))}
+				</div>
+			</div>
+
+			<div className='mt-5 flex justify-center'>
+				<button
+					onClick={onShowAll}
+					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+					Xem tất cả Blog
+					<ChevronRight className='h-4 w-4' />
+				</button>
+			</div>
+		</div>
+	);
+};
+
 // ─── Tab Content: Overview ────────────────────────────────────────────────────
 
 interface OverviewTabProps {
 	profile: UserProfile;
 	user: AuthUser | null;
+	isOwnProfile: boolean;
 	onSwitchToPostsTab: () => void;
+	onSwitchToBlogTab: () => void;
 }
 
-const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user, onSwitchToPostsTab }) => {
+const OverviewTab: React.FC<OverviewTabProps> = ({
+	profile,
+	user,
+	isOwnProfile,
+	onSwitchToPostsTab,
+	onSwitchToBlogTab,
+}) => {
+	const profileHandle = profile.username ?? profile.email.split("@")[0];
 	const [recentPosts, setRecentPosts] = useState<Post[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [recentBlogs, setRecentBlogs] = useState<Blog[]>([]);
+	const [loadingPosts, setLoadingPosts] = useState(true);
+	const [loadingBlogs, setLoadingBlogs] = useState(true);
 
 	useEffect(() => {
 		let cancelled = false;
-		setLoading(true);
+		setLoadingPosts(true);
 
 		userService
-			.getUserPosts(profile.username ?? profile.email.split("@")[0], 1)
+			.getUserPosts(profileHandle, 1)
 			.then((res) => {
 				if (!cancelled) setRecentPosts(res.data.slice(0, 6));
 			})
@@ -792,18 +973,39 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user, onSwitchToPost
 				if (!cancelled) setRecentPosts([]);
 			})
 			.finally(() => {
-				if (!cancelled) setLoading(false);
+				if (!cancelled) setLoadingPosts(false);
 			});
 
 		return () => {
 			cancelled = true;
 		};
-	}, [profile]);
+	}, [profileHandle]);
+
+	useEffect(() => {
+		let cancelled = false;
+		setLoadingBlogs(true);
+
+		userService
+			.getUserBlogs(profileHandle, 1)
+			.then((res) => {
+				if (!cancelled) setRecentBlogs(res.data.slice(0, 6));
+			})
+			.catch(() => {
+				if (!cancelled) setRecentBlogs([]);
+			})
+			.finally(() => {
+				if (!cancelled) setLoadingBlogs(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [profileHandle]);
 
 	return (
-		<div className='mt-5 mb-5 px-6 sm:px-0'>
+		<div className='mt-5 mb-5 space-y-10 px-6 sm:px-0'>
 			{/* Recent posts carousel */}
-			{loading ? (
+			{loadingPosts ? (
 				<div>
 					<div className='mb-4 flex items-center justify-between'>
 						<div className='h-5 w-40 animate-pulse rounded bg-gray-200' />
@@ -825,12 +1027,49 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user, onSwitchToPost
 				<PostCarousel posts={recentPosts} user={user} onShowAll={onSwitchToPostsTab} />
 			) : (
 				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
-					<LayoutGrid className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+					<FileText className='mx-auto mb-4 h-10 w-10 text-gray-300' />
 					<p className='font-heading text-base font-extrabold text-black'>
 						Chưa có bài viết nào
 					</p>
 					<p className='mt-1 text-sm text-gray-400'>
-						Người dùng này chưa đăng bài viết nào.
+						{isOwnProfile
+							? "Bạn chưa đăng bài viết nào."
+							: "Người dùng này chưa đăng bài viết nào."}
+					</p>
+				</div>
+			)}
+
+			{/* Recent blogs carousel */}
+			{loadingBlogs ? (
+				<div>
+					<div className='mb-4 flex items-center justify-between'>
+						<div className='h-5 w-32 animate-pulse rounded bg-gray-200' />
+						<div className='flex gap-2'>
+							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
+							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
+						</div>
+					</div>
+					<div className='no-scrollbar flex gap-4 overflow-x-hidden pb-2'>
+						{Array.from({ length: 3 }).map((_, i) => (
+							<div
+								key={i}
+								className='h-80 w-72 shrink-0 animate-pulse rounded-2xl border-2 border-black bg-gray-200 sm:w-80'
+							/>
+						))}
+					</div>
+				</div>
+			) : recentBlogs.length > 0 ? (
+				<BlogCarousel blogs={recentBlogs} onShowAll={onSwitchToBlogTab} />
+			) : (
+				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
+					<BookOpen className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+					<p className='font-heading text-base font-extrabold text-black'>
+						Chưa có blog nào
+					</p>
+					<p className='mt-1 text-sm text-gray-400'>
+						{isOwnProfile
+							? "Bạn chưa đăng blog nào."
+							: "Người dùng này chưa đăng blog nào."}
 					</p>
 				</div>
 			)}
@@ -840,30 +1079,113 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user, onSwitchToPost
 
 // ─── Tab Content: Saved ───────────────────────────────────────────────────────
 
-const BookmarksTab: React.FC = () => (
-	<div className='mt-5 mb-5 px-6 sm:px-0'>
-		<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
-			<Bookmark className='mx-auto mb-4 h-10 w-10 text-gray-300' />
-			<p className='font-heading text-base font-extrabold text-black'>
-				Chưa có bài viết nào được lưu
-			</p>
-			<p className='mt-1 text-sm text-gray-400'>Những bài viết được lưu sẽ hiển thị ở đây.</p>
+const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
+	const [posts, setPosts] = useState<Post[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+		setLoading(true);
+		setError(false);
+
+		userService
+			.getBookmarks()
+			.then((res) => {
+				if (!cancelled) setPosts(res.data);
+			})
+			.catch(() => {
+				if (!cancelled) setError(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	if (loading) {
+		return (
+			<div className='mt-5 space-y-5 px-6 sm:px-0'>
+				{Array.from({ length: 3 }).map((_, i) => (
+					<PostSkeleton key={i} />
+				))}
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<Bookmark className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
+					Không thể tải danh sách đã lưu
+				</p>
+				<p className='mt-1 text-sm text-gray-400'>Vui lòng thử lại sau.</p>
+			</div>
+		);
+	}
+
+	if (posts.length === 0) {
+		return (
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<Bookmark className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
+					Chưa có bài viết nào được lưu
+				</p>
+				<p className='mt-1 text-sm text-gray-400'>
+					Những bài viết bạn lưu sẽ hiển thị ở đây.
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
+			{posts.map((post) => (
+				<PostCard key={post.id} post={post} user={user} />
+			))}
 		</div>
-	</div>
-);
+	);
+};
 
 // ─── UserProfilePage ──────────────────────────────────────────────────────────
 
-type Tab = "overview" | "posts" | "bookmarks";
+type Tab = "overview" | "posts" | "blog" | "bookmarks";
 
 type TabDef = { id: Tab; label: string; icon: React.ElementType };
 
 const BASE_TABS: TabDef[] = [
 	{ id: "overview", label: "Tổng quan", icon: LayoutGrid },
 	{ id: "posts", label: "Posts", icon: FileText },
+	{ id: "blog", label: "Blog", icon: BookOpen },
 ];
 
 const BOOKMARKS_TAB: TabDef = { id: "bookmarks", label: "Đã lưu", icon: Bookmark };
+
+const writeClipboardText = async (text: string) => {
+	if (navigator.clipboard?.writeText) {
+		await navigator.clipboard.writeText(text);
+		return;
+	}
+
+	const textarea = document.createElement("textarea");
+	textarea.value = text;
+	textarea.setAttribute("readonly", "");
+	textarea.style.position = "fixed";
+	textarea.style.top = "-9999px";
+	document.body.appendChild(textarea);
+	textarea.select();
+
+	try {
+		const copied = document.execCommand("copy");
+		if (!copied) throw new Error("Copy command failed");
+	} finally {
+		document.body.removeChild(textarea);
+	}
+};
 
 const UserProfilePage: React.FC = () => {
 	const { username: rawParam } = useParams<{ username: string }>();
@@ -876,12 +1198,20 @@ const UserProfilePage: React.FC = () => {
 	const [notFound, setNotFound] = useState(false);
 	const [followed, setFollowed] = useState(false);
 	const [followLoading, setFollowLoading] = useState(false);
+	const [copiedProfileLink, setCopiedProfileLink] = useState(false);
+	const copyResetTimeoutRef = useRef<number | null>(null);
 
 	// ── Tab state synced with URL ?tab= query param ──────────────────────────
 	const [searchParams, setSearchParams] = useSearchParams();
 	const tabParam = searchParams.get("tab") ?? "";
 	const activeTab: Tab =
-		tabParam === "posts" ? "posts" : tabParam === "bookmarks" ? "bookmarks" : "overview";
+		tabParam === "posts"
+			? "posts"
+			: tabParam === "blog"
+				? "blog"
+				: tabParam === "bookmarks"
+					? "bookmarks"
+					: "overview";
 	const previousUsernameRef = useRef<string | undefined>(undefined);
 
 	const setActiveTab = (tab: Tab) => {
@@ -918,6 +1248,14 @@ const UserProfilePage: React.FC = () => {
 			setSearchParams({}, { replace: true });
 		}
 	}, [loading, activeTab, isOwnProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	useEffect(() => {
+		return () => {
+			if (copyResetTimeoutRef.current) {
+				window.clearTimeout(copyResetTimeoutRef.current);
+			}
+		};
+	}, []);
 
 	useEffect(() => {
 		if (!username) return;
@@ -966,9 +1304,12 @@ const UserProfilePage: React.FC = () => {
 							date_of_birth: null,
 							is_active: true,
 							posts_count: 12,
+							blogs_count: 0,
+							content_count: 12,
 							likes_count: 0,
 							followers_count: 85,
 							following_count: 3,
+							is_following: false,
 							skills: ["JavaScript", "React", "Laravel", "Python"],
 							social_github: null,
 							social_linkedin: null,
@@ -1061,6 +1402,29 @@ const UserProfilePage: React.FC = () => {
 		}
 	};
 
+	const handleCopyProfileLink = async () => {
+		const profileUrl = `${window.location.origin}${buildProfileUrl(
+			profile.username,
+			profile.email,
+		)}`;
+
+		try {
+			await writeClipboardText(profileUrl);
+			setCopiedProfileLink(true);
+			toast.success("Đã sao chép liên kết hồ sơ.");
+
+			if (copyResetTimeoutRef.current) {
+				window.clearTimeout(copyResetTimeoutRef.current);
+			}
+			copyResetTimeoutRef.current = window.setTimeout(() => {
+				setCopiedProfileLink(false);
+				copyResetTimeoutRef.current = null;
+			}, 2000);
+		} catch {
+			toast.error("Không thể sao chép liên kết. Vui lòng thử lại.");
+		}
+	};
+
 	return (
 		<div className='w-full min-h-screen pt-16'>
 			<div className='neo-container px-0 py-0 sm:px-4 sm:py-8 md:px-6'>
@@ -1083,6 +1447,7 @@ const UserProfilePage: React.FC = () => {
 								: BASE_TABS;
 							const badgeCount: Partial<Record<Tab, number>> = {
 								posts: profile.posts_count,
+								blog: profile.blogs_count,
 							};
 							return (
 								<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
@@ -1126,12 +1491,20 @@ const UserProfilePage: React.FC = () => {
 							<OverviewTab
 								profile={profile}
 								user={user}
+								isOwnProfile={isOwnProfile}
 								onSwitchToPostsTab={() => setActiveTab("posts")}
+								onSwitchToBlogTab={() => setActiveTab("blog")}
 							/>
 						) : activeTab === "bookmarks" ? (
-							<BookmarksTab />
+							<BookmarksTab user={user} />
+						) : activeTab === "blog" ? (
+							<UserBlogsTab username={username} isOwnProfile={isOwnProfile} />
 						) : (
-							<UserPostsTab username={username} user={user} />
+							<UserPostsTab
+								username={username}
+								user={user}
+								isOwnProfile={isOwnProfile}
+							/>
 						)}
 					</div>
 
@@ -1198,12 +1571,16 @@ const UserProfilePage: React.FC = () => {
 
 							{/* Share profile */}
 							<button
-								onClick={() => {
-									navigator.clipboard.writeText(window.location.href);
-								}}
+								type='button'
+								onClick={handleCopyProfileLink}
+								aria-label='Sao chép liên kết hồ sơ'
 								className='flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-								<Share2 className='h-4 w-4' />
-								Sao chép liên kết hồ sơ
+								{copiedProfileLink ? (
+									<Check className='h-4 w-4 text-lime-600' />
+								) : (
+									<Share2 className='h-4 w-4' />
+								)}
+								{copiedProfileLink ? "Đã sao chép" : "Sao chép liên kết hồ sơ"}
 							</button>
 						</div>
 					</aside>

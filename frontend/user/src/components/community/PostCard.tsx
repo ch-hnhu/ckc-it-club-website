@@ -43,7 +43,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 	const [heartCount, setHeartCount] = useState(post.reactions_count);
 	const [loading, setLoading] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
-	const [saved, setSaved] = useState(false);
+	const [saved, setSaved] = useState(post.my_bookmark ?? false);
+	const [saveLoading, setSaveLoading] = useState(false);
 	const [showPostMenu, setShowPostMenu] = useState(false);
 
 	const menuBtnRef = useRef<HTMLButtonElement>(null);
@@ -97,11 +98,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 		return false;
 	};
 
-	const handleToggleSaved = () => {
+	const handleToggleSaved = async () => {
 		if (!requireAuthenticatedUser()) return;
-		const nextSaved = !saved;
-		setSaved(nextSaved);
-		toast.success(nextSaved ? "Đã lưu bài viết." : "Đã bỏ lưu bài viết.");
+		if (saveLoading) return;
+		const wasSaved = saved;
+		setSaved(!wasSaved);
+		setSaveLoading(true);
+		try {
+			const res = await postService.toggleBookmark(post.id);
+			setSaved(res.data.bookmarked);
+			toast.success(res.data.bookmarked ? "Đã lưu bài viết." : "Đã bỏ lưu bài viết.");
+		} catch {
+			setSaved(wasSaved);
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setSaveLoading(false);
+		}
 	};
 
 	const handleUnavailablePostAction = (message: string) => {
@@ -330,7 +342,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 
 				<button
 					onClick={handleToggleSaved}
-					className='inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+					disabled={saveLoading}
+					className='inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
 					style={{ background: saved ? "var(--color-primary)" : "#fff" }}
 					aria-label='Lưu bài viết'>
 					<Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />

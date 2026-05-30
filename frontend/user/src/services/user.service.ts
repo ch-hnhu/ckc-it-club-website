@@ -3,6 +3,7 @@ import type { ApiResponse } from "@/types/api.types";
 import type { UserProfile } from "@/types/user.types";
 import type { PaginatedResponse } from "@/types/api.types";
 import type { Post } from "@/types/post.types";
+import type { Blog } from "@/types/blog.types";
 
 export const userService = {
 	getProfile: (username: string) =>
@@ -15,6 +16,21 @@ export const userService = {
 			per_page: 10,
 			sort: "created_at",
 			order: "desc",
+		}),
+
+	getUserBlogs: (username: string, page = 1) =>
+		api.get<PaginatedResponse<Blog>>("/community/blogs", {
+			username,
+			page,
+			per_page: 10,
+			sort: "created_at",
+			order: "desc",
+		}),
+
+	getBookmarks: (page = 1) =>
+		api.get<PaginatedResponse<Post>>("/community/posts/bookmarks", {
+			page,
+			per_page: 10,
 		}),
 
 	toggleFollow: (username: string) =>

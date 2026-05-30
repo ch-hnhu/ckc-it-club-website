@@ -59,25 +59,29 @@ Route::prefix('v1')->group(function () {
     Route::prefix('community')->group(function () {
         // Public (read-only, published posts only)
         Route::get('/posts', [UserPostController::class, 'index']);
-        Route::get('/posts/{id}', [UserPostController::class, 'show']);
         Route::get('/posts/{id}/comments', [UserPostController::class, 'comments']);
         Route::get('/channels', [UserChannelController::class, 'index']);
 
         // Public blog routes
         Route::get('/blogs', [UserBlogController::class, 'index']);
         Route::get('/blog-tags', [UserBlogController::class, 'tags']);
-        Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
 
-        // Authenticated actions
+        // Authenticated actions — registered before wildcard {id} routes to avoid conflicts
         Route::middleware('auth:sanctum')->group(function () {
+            Route::get('/posts/bookmarks', [UserPostController::class, 'bookmarks']);
             Route::post('/posts', [UserPostController::class, 'store']);
             Route::post('/posts/{id}/reactions', [UserPostController::class, 'react']);
             Route::post('/posts/{id}/comments', [UserPostController::class, 'comment']);
+            Route::post('/posts/{id}/bookmark', [UserPostController::class, 'bookmark']);
             Route::post('/blogs', [UserBlogController::class, 'store']);
             Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
         });
+
+        // Wildcard routes registered last to avoid masking specific paths above
+        Route::get('/posts/{id}', [UserPostController::class, 'show']);
+        Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
     });
 
     // Forgot password (throttled: 5 attempts per minute per IP)

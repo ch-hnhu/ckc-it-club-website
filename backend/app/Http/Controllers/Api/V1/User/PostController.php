@@ -30,6 +30,7 @@ class PostController extends BaseApiController
             : 'desc';
         $perPage = min((int) $request->query('per_page', 15), 50);
         $channel = $request->query('channel');
+        $username = $request->query('username');
 
         $posts = Post::query()
             ->with([
@@ -43,15 +44,20 @@ class PostController extends BaseApiController
                 $channel && $channel !== 'all',
                 fn ($q) => $q->whereHas('channel', fn ($c) => $c->where('slug', $channel))
             )
+            ->when(
+                $username,
+                fn ($q) => $q->whereHas('user', fn ($u) => $u->where('username', $username))
+            )
             ->orderBy(
                 $sort === 'reactions_count' ? 'reactions_count' : "posts.{$sort}",
                 $order
             )
             ->paginate($perPage);
 
-        // Optionally enrich with current user's reactions (one batch query)
+        // Optionally enrich with current user's reactions and bookmarks (batch queries)
         $userId = auth('sanctum')->id();
         $myReactions = [];
+        $myBookmarks = [];
         if ($userId) {
             $postIds = $posts->pluck('id')->toArray();
             $myReactions = Reaction::where('user_id', $userId)
@@ -59,16 +65,88 @@ class PostController extends BaseApiController
                 ->whereIn('target_id', $postIds)
                 ->pluck('type', 'target_id')
                 ->toArray();
+            $myBookmarks = array_flip(
+                DB::table('post_bookmarks')
+                    ->where('user_id', $userId)
+                    ->whereIn('post_id', $postIds)
+                    ->pluck('post_id')
+                    ->all()
+            );
         }
 
-        $posts->getCollection()->transform(function (Post $post) use ($myReactions) {
+        $posts->getCollection()->transform(function (Post $post) use ($myReactions, $myBookmarks) {
             $data = $this->transformPost($post);
             $data['my_reaction'] = $myReactions[$post->id] ?? null;
+            $data['my_bookmark'] = isset($myBookmarks[$post->id]);
 
             return $data;
         });
 
         return $this->paginatedResponse($posts, ApiMessage::RETRIEVED);
+    }
+
+    public function bookmarks(Request $request): JsonResponse
+    {
+        $perPage = min((int) $request->query('per_page', 10), 50);
+        $userId = $request->user()->id;
+
+        $posts = Post::query()
+            ->with([
+                'user:id,full_name,username,email,avatar,student_code',
+                'channel:id,name,slug',
+            ])
+            ->withCount('comments')
+            ->selectRaw('posts.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "post" AND target_id = posts.id) as reactions_count')
+            ->where('posts.status', 'published')
+            ->whereHas('bookmarkedBy', fn ($q) => $q->where('user_id', $userId))
+            ->orderBy('posts.created_at', 'desc')
+            ->paginate($perPage);
+
+        $postIds = $posts->pluck('id')->toArray();
+        $myReactions = Reaction::where('user_id', $userId)
+            ->where('target_type', 'post')
+            ->whereIn('target_id', $postIds)
+            ->pluck('type', 'target_id')
+            ->toArray();
+
+        $posts->getCollection()->transform(function (Post $post) use ($myReactions) {
+            $data = $this->transformPost($post);
+            $data['my_reaction'] = $myReactions[$post->id] ?? null;
+            $data['my_bookmark'] = true;
+
+            return $data;
+        });
+
+        return $this->paginatedResponse($posts, ApiMessage::RETRIEVED);
+    }
+
+    public function bookmark(Request $request, int $id): JsonResponse
+    {
+        Post::where('status', 'published')->findOrFail($id);
+
+        $userId = $request->user()->id;
+        $exists = DB::table('post_bookmarks')
+            ->where('user_id', $userId)
+            ->where('post_id', $id)
+            ->exists();
+
+        if ($exists) {
+            DB::table('post_bookmarks')
+                ->where('user_id', $userId)
+                ->where('post_id', $id)
+                ->delete();
+            $bookmarked = false;
+        } else {
+            DB::table('post_bookmarks')->insert([
+                'user_id' => $userId,
+                'post_id' => $id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $bookmarked = true;
+        }
+
+        return $this->successResponse(true, ['bookmarked' => $bookmarked], ApiMessage::UPDATED);
     }
 
     public function store(Request $request): JsonResponse

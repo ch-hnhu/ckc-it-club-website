@@ -19,6 +19,8 @@ class ProfileController extends BaseApiController
     private function formatProfile(User $user): array
     {
         $user->loadMissing(['faculty', 'major', 'class', 'skills']);
+        $postsCount = $this->countPosts($user->id);
+        $blogsCount = $this->countBlogs($user->id);
 
         return [
             'id'               => $user->id,
@@ -38,7 +40,9 @@ class ProfileController extends BaseApiController
             'gender'           => $user->gender,
             'date_of_birth'    => $user->date_of_birth?->format('Y-m-d'),
             'is_active'        => $user->is_active,
-            'posts_count'     => $this->countContent($user->id),
+            'posts_count'     => $postsCount,
+            'blogs_count'     => $blogsCount,
+            'content_count'   => $postsCount + $blogsCount,
             'likes_count'     => $this->countLikes($user->id),
             'followers_count' => $user->followers()->count(),
             'following_count' => $user->following()->count(),
@@ -146,13 +150,16 @@ class ProfileController extends BaseApiController
         return $this->successResponse(true, $skills, 'Lấy danh sách kỹ năng thành công.');
     }
 
-    /** Tổng bài viết (posts + blogs) đã published của user */
-    private function countContent(int $userId): int
+    /** Tổng posts đã published của user */
+    private function countPosts(int $userId): int
     {
-        $posts = Post::where('user_id', $userId)->where('status', 'published')->count();
-        $blogs = DB::table('blogs')->where('author_id', $userId)->where('status', 'published')->count();
+        return Post::where('user_id', $userId)->where('status', 'published')->count();
+    }
 
-        return $posts + $blogs;
+    /** Tổng blogs đã published của user */
+    private function countBlogs(int $userId): int
+    {
+        return DB::table('blogs')->where('author_id', $userId)->where('status', 'published')->count();
     }
 
     /** Tổng lượt react trên tất cả posts + blogs của user */
