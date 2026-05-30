@@ -14,8 +14,17 @@ import GiphyPicker from "@/components/chat/GiphyPicker";
 
 // ── project ────────────────────────────────────────────────────────────────
 import {
-	Hash, Image as ImageIcon, Loader2, Lock, MessageSquare,
-	Plus, Reply, Send, Smile, Users, X,
+	Hash,
+	Image as ImageIcon,
+	Loader2,
+	Lock,
+	MessageSquare,
+	Plus,
+	Reply,
+	Send,
+	Smile,
+	Users,
+	X,
 } from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
 import type { CommunityLayoutContext } from "./CommunityLayout";
@@ -34,23 +43,24 @@ const ROOM_COLORS = [
 	"bg-[var(--color-pastel-purple)]",
 ];
 
-const GIF_PATTERN = /^https?:\/\/(media\.giphy\.com|media[0-9]*\.giphy\.com|i\.giphy\.com|media\.tenor\.com|c\.tenor\.com)\//i;
+const GIF_PATTERN =
+	/^https?:\/\/(media\.giphy\.com|media[0-9]*\.giphy\.com|i\.giphy\.com|media\.tenor\.com|c\.tenor\.com)\//i;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const getRoomColor = (i: number) => ROOM_COLORS[i % ROOM_COLORS.length];
-const isGifUrl    = (s: string)  => GIF_PATTERN.test(s.trim());
+const isGifUrl = (s: string) => GIF_PATTERN.test(s.trim());
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface MessageGroup {
-	senderId:     number | null;
-	senderName:   string;
+	senderId: number | null;
+	senderName: string;
 	senderAvatar: string;
 	senderHandle: string;
-	firstTime:    string;
-	lastTime:     string;
-	messages:     ChatMessage[];
+	firstTime: string;
+	lastTime: string;
+	messages: ChatMessage[];
 }
 
 // ─── Grouping ─────────────────────────────────────────────────────────────────
@@ -59,19 +69,19 @@ const groupMessages = (messages: ChatMessage[]): MessageGroup[] => {
 	const groups: MessageGroup[] = [];
 	for (const msg of messages) {
 		const sender = msg.created_by;
-		const last   = groups[groups.length - 1];
+		const last = groups[groups.length - 1];
 		if (last && last.senderId === (sender?.id ?? null)) {
 			last.messages.push(msg);
 			last.lastTime = msg.created_at;
 		} else {
 			groups.push({
-				senderId:     sender?.id ?? null,
-				senderName:   sender?.full_name ?? "Thành viên",
+				senderId: sender?.id ?? null,
+				senderName: sender?.full_name ?? "Thành viên",
 				senderAvatar: buildAvatar(sender?.full_name, sender?.avatar),
 				senderHandle: sender ? getHandle(sender.username, sender.email) : "",
-				firstTime:    msg.created_at,
-				lastTime:     msg.created_at,
-				messages:     [msg],
+				firstTime: msg.created_at,
+				lastTime: msg.created_at,
+				messages: [msg],
 			});
 		}
 	}
@@ -97,9 +107,9 @@ const RoomSkeleton: React.FC = () => (
 // ─── RoomItem ─────────────────────────────────────────────────────────────────
 
 const RoomItem: React.FC<{
-	room:    ChatRoom;
-	index:   number;
-	active:  boolean;
+	room: ChatRoom;
+	index: number;
+	active: boolean;
 	onClick: () => void;
 }> = ({ room, index, active, onClick }) => (
 	<button
@@ -109,14 +119,17 @@ const RoomItem: React.FC<{
 				? "border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
 				: "border-transparent text-gray-700 hover:bg-gray-50"
 		}`}>
-		<div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(index)}`}>
+		<div
+			className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(index)}`}>
 			<Hash className='h-3.5 w-3.5 text-black' />
 		</div>
 		<div className='min-w-0 flex-1'>
-			<p className={`truncate text-[13px] font-extrabold ${active ? "text-black" : "text-gray-800"}`}>
+			<p
+				className={`truncate text-[13px] font-extrabold ${active ? "text-black" : "text-gray-800"}`}>
 				{room.name}
 			</p>
-			<p className={`mt-0.5 text-[11px] font-medium ${active ? "text-black/60" : "text-gray-400"}`}>
+			<p
+				className={`mt-0.5 text-[11px] font-medium ${active ? "text-black/60" : "text-gray-400"}`}>
 				{room.member_count} thành viên
 			</p>
 		</div>
@@ -130,11 +143,11 @@ function bubbleRadius(isOwn: boolean, isFirst: boolean, isLast: boolean): string
 	if (single) return "rounded-2xl";
 	if (isOwn) {
 		if (isFirst) return "rounded-2xl rounded-br-md";
-		if (isLast)  return "rounded-2xl rounded-tr-md";
+		if (isLast) return "rounded-2xl rounded-tr-md";
 		return "rounded-l-2xl rounded-r-md";
 	} else {
 		if (isFirst) return "rounded-2xl rounded-bl-md";
-		if (isLast)  return "rounded-2xl rounded-tl-md";
+		if (isLast) return "rounded-2xl rounded-tl-md";
 		return "rounded-r-2xl rounded-l-md";
 	}
 }
@@ -142,14 +155,14 @@ function bubbleRadius(isOwn: boolean, isFirst: boolean, isLast: boolean): string
 // ─── MessageBubble ────────────────────────────────────────────────────────────
 
 const MessageBubble: React.FC<{
-	msg:     ChatMessage;
-	isOwn:   boolean;
+	msg: ChatMessage;
+	isOwn: boolean;
 	isFirst: boolean;
-	isLast:  boolean;
+	isLast: boolean;
 	onReply: (msg: ChatMessage) => void;
 }> = ({ msg, isOwn, isFirst, isLast, onReply }) => (
-	<div className={`group/bbl relative my-[2px] flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
-
+	<div
+		className={`group/bbl relative my-[2px] flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
 		{/* Reply quick-action */}
 		<button
 			onClick={() => onReply(msg)}
@@ -161,7 +174,8 @@ const MessageBubble: React.FC<{
 		</button>
 
 		{/* Bubble */}
-		<div className={`
+		<div
+			className={`
 			relative min-w-[3.5rem] max-w-[75%]
 			${bubbleRadius(isOwn, isFirst, isLast)}
 			border-2 border-black shadow-[2px_2px_0_#111]
@@ -169,7 +183,8 @@ const MessageBubble: React.FC<{
 		`}>
 			{/* Reply preview */}
 			{msg.reply_to && (
-				<div className={`border-b-2 border-black/10 px-3 pt-2 pb-1.5 text-xs ${isOwn ? "text-black/60" : "text-gray-500"}`}>
+				<div
+					className={`border-b-2 border-black/10 px-3 pt-2 pb-1.5 text-xs ${isOwn ? "text-black/60" : "text-gray-500"}`}>
 					<span className='font-bold'>{msg.reply_to.full_name} </span>
 					<span className='line-clamp-1 italic'>
 						{isGifUrl(msg.reply_to.content) ? "🖼 GIF" : msg.reply_to.content}
@@ -187,7 +202,8 @@ const MessageBubble: React.FC<{
 						loading='lazy'
 					/>
 				) : (
-					<p className={`text-sm leading-relaxed break-words ${isOwn ? "text-black" : "text-gray-800"}`}>
+					<p
+						className={`text-sm leading-relaxed break-words ${isOwn ? "text-black" : "text-gray-800"}`}>
 						{msg.content}
 					</p>
 				)}
@@ -199,12 +215,12 @@ const MessageBubble: React.FC<{
 // ─── MessageGroupItem ─────────────────────────────────────────────────────────
 
 const MessageGroupItem: React.FC<{
-	group:   MessageGroup;
-	isOwn:   boolean;
+	group: MessageGroup;
+	isOwn: boolean;
 	onReply: (msg: ChatMessage) => void;
 }> = ({ group, isOwn, onReply }) => (
-	<div className={`flex items-end gap-2 px-4 py-1.5 hover:bg-black/[0.015] ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
-
+	<div
+		className={`flex items-end gap-2 px-4 py-1.5 hover:bg-black/[0.015] ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
 		{/* Avatar — cố định ở bottom của nhóm */}
 		<img
 			src={group.senderAvatar}
@@ -213,18 +229,22 @@ const MessageGroupItem: React.FC<{
 		/>
 
 		{/* Bubbles column — chiếm hết phần còn lại, tối đa 72% */}
-		<div className={`flex min-w-0 flex-1 flex-col gap-0 ${isOwn ? "items-end" : "items-start"}`}
+		<div
+			className={`flex min-w-0 flex-1 flex-col gap-0 ${isOwn ? "items-end" : "items-start"}`}
 			style={{ maxWidth: "72%" }}>
-
 			{/* Header */}
-			<div className={`mb-1.5 flex flex-wrap items-baseline gap-x-1.5 ${isOwn ? "flex-row-reverse" : ""}`}>
-				<span className={`text-[13px] font-extrabold leading-none ${isOwn ? "text-[var(--color-text-primary)]" : "text-gray-900"}`}>
+			<div
+				className={`mb-1.5 flex flex-wrap items-baseline gap-x-1.5 ${isOwn ? "flex-row-reverse" : ""}`}>
+				<span
+					className={`text-[13px] font-extrabold leading-none ${isOwn ? "text-[var(--color-text-primary)]" : "text-gray-900"}`}>
 					{isOwn ? "Bạn" : group.senderName}
 				</span>
 				{group.senderHandle && (
 					<span className='text-[11px] text-gray-400'>{group.senderHandle}</span>
 				)}
-				<span className='text-[11px] text-gray-400'>{formatRelativeTime(group.firstTime)}</span>
+				<span className='text-[11px] text-gray-400'>
+					{formatRelativeTime(group.firstTime)}
+				</span>
 			</div>
 
 			{/* Bubbles — w-full để max-w-[75%] hoạt động chính xác */}
@@ -252,7 +272,9 @@ const EmptyChat: React.FC<{ roomName: string }> = ({ roomName }) => (
 			<Hash className='h-7 w-7 text-black' />
 		</div>
 		<p className='font-heading text-lg font-extrabold text-black'>Chào mừng đến #{roomName}</p>
-		<p className='max-w-xs text-sm text-gray-500'>Đây là khởi đầu của kênh này. Hãy là người đầu tiên nhắn tin!</p>
+		<p className='max-w-xs text-sm text-gray-500'>
+			Đây là khởi đầu của kênh này. Hãy là người đầu tiên nhắn tin!
+		</p>
 	</div>
 );
 
@@ -276,15 +298,17 @@ const GuestWall: React.FC = () => (
 // ─── CreateRoomModal ──────────────────────────────────────────────────────────
 
 const CreateRoomModal: React.FC<{
-	onClose:  () => void;
+	onClose: () => void;
 	onCreate: (room: ChatRoom) => void;
 }> = ({ onClose, onCreate }) => {
-	const [name, setName]     = useState("");
+	const [name, setName] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [error, setError]   = useState<string | null>(null);
-	const inputRef            = useRef<HTMLInputElement>(null);
+	const [error, setError] = useState<string | null>(null);
+	const inputRef = useRef<HTMLInputElement>(null);
 
-	useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
+	useEffect(() => {
+		setTimeout(() => inputRef.current?.focus(), 50);
+	}, []);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -294,12 +318,17 @@ const CreateRoomModal: React.FC<{
 		setError(null);
 		try {
 			const res = await chatService.createRoom(trimmed);
-			if (res.data?.id) { onCreate(res.data); onClose(); }
-			else setError("Không thể tạo phòng. Vui lòng thử lại.");
+			if (res.data?.id) {
+				onCreate(res.data);
+				onClose();
+			} else setError("Không thể tạo phòng. Vui lòng thử lại.");
 		} catch (err: unknown) {
-			const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+			const msg = (err as { response?: { data?: { message?: string } } })?.response?.data
+				?.message;
 			setError(msg ?? "Không thể tạo phòng. Vui lòng thử lại.");
-		} finally { setLoading(false); }
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	return (
@@ -311,15 +340,21 @@ const CreateRoomModal: React.FC<{
 						<div className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111]'>
 							<Hash className='h-4 w-4 text-black' />
 						</div>
-						<h2 className='font-heading text-lg font-extrabold text-black'>Tạo phòng chat</h2>
+						<h2 className='font-heading text-lg font-extrabold text-black'>
+							Tạo phòng chat
+						</h2>
 					</div>
-					<button onClick={onClose} className='inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-transparent transition hover:border-black hover:bg-gray-100'>
+					<button
+						onClick={onClose}
+						className='inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-transparent transition hover:border-black hover:bg-gray-100'>
 						<X className='h-4 w-4' />
 					</button>
 				</div>
 				<form onSubmit={(e) => void handleSubmit(e)} className='space-y-4'>
 					<div>
-						<label className='mb-1.5 block text-xs font-extrabold uppercase tracking-widest text-gray-500'>Tên phòng</label>
+						<label className='mb-1.5 block text-xs font-extrabold uppercase tracking-widest text-gray-500'>
+							Tên phòng
+						</label>
 						<div className='relative'>
 							<span className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400'>
 								<Hash className='h-4 w-4' />
@@ -328,23 +363,38 @@ const CreateRoomModal: React.FC<{
 								ref={inputRef}
 								type='text'
 								value={name}
-								onChange={(e) => { setName(e.target.value); setError(null); }}
+								onChange={(e) => {
+									setName(e.target.value);
+									setError(null);
+								}}
 								placeholder='vd: python-tips, web-dev...'
 								maxLength={50}
 								className='w-full rounded-xl border-2 border-black py-2.5 pl-9 pr-4 text-sm font-medium text-black outline-none placeholder:text-gray-400 focus:shadow-[0_0_0_3px_#A3E635]'
 							/>
 						</div>
-						{error && <p className='mt-1.5 text-xs font-semibold text-red-500'>{error}</p>}
-						<p className='mt-1 text-right text-[10px] text-gray-400'>{name.trim().length}/50</p>
+						{error && (
+							<p className='mt-1.5 text-xs font-semibold text-red-500'>{error}</p>
+						)}
+						<p className='mt-1 text-right text-[10px] text-gray-400'>
+							{name.trim().length}/50
+						</p>
 					</div>
 					<div className='flex gap-2 pt-1'>
-						<button type='button' onClick={onClose}
+						<button
+							type='button'
+							onClick={onClose}
 							className='flex-1 rounded-xl border-2 border-black bg-white py-2.5 font-heading text-sm font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 							Hủy
 						</button>
-						<button type='submit' disabled={!name.trim() || loading}
+						<button
+							type='submit'
+							disabled={!name.trim() || loading}
 							className='flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] py-2.5 font-heading text-sm font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
-							{loading ? <Loader2 className='h-4 w-4 animate-spin' /> : <Plus className='h-4 w-4' />}
+							{loading ? (
+								<Loader2 className='h-4 w-4 animate-spin' />
+							) : (
+								<Plus className='h-4 w-4' />
+							)}
 							{loading ? "Đang tạo..." : "Tạo phòng"}
 						</button>
 					</div>
@@ -360,38 +410,40 @@ const CommunityChatPage: React.FC = () => {
 	const { user } = useOutletContext<CommunityLayoutContext>();
 
 	// ── Room state ─────────────────────────────────────────────────────────────
-	const [rooms, setRooms]               = useState<ChatRoom[]>([]);
+	const [rooms, setRooms] = useState<ChatRoom[]>([]);
 	const [roomsLoading, setRoomsLoading] = useState(true);
-	const [activeRoom, setActiveRoom]     = useState<ChatRoom | null>(null);
+	const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
 	const [activeRoomIdx, setActiveRoomIdx] = useState(0);
-	const [showCreate, setShowCreate]     = useState(false);
+	const [showCreate, setShowCreate] = useState(false);
 
 	// ── Message state ──────────────────────────────────────────────────────────
-	const [messages, setMessages]               = useState<ChatMessage[]>([]);
+	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [messagesLoading, setMessagesLoading] = useState(false);
 
 	// ── Input state ────────────────────────────────────────────────────────────
-	const [input, setInput]               = useState("");
-	const [sending, setSending]           = useState(false);
-	const [replyTo, setReplyTo]           = useState<ChatMessage | null>(null);
+	const [input, setInput] = useState("");
+	const [sending, setSending] = useState(false);
+	const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-	const [showGifPicker, setShowGifPicker]     = useState(false);
+	const [showGifPicker, setShowGifPicker] = useState(false);
 
 	// ── Refs ───────────────────────────────────────────────────────────────────
-	const inputRef       = useRef<HTMLTextAreaElement>(null);
-	const emojiRef       = useRef<HTMLDivElement>(null);
-	const gifRef         = useRef<HTMLDivElement>(null);
+	const inputRef = useRef<HTMLTextAreaElement>(null);
+	const emojiRef = useRef<HTMLDivElement>(null);
+	const gifRef = useRef<HTMLDivElement>(null);
 	const joinedRoomsRef = useRef<Set<number>>(new Set());
 
 	// ── Helpers ────────────────────────────────────────────────────────────────
-	const userId   = user?.id;
+	const userId = user?.id;
 	const msgGroups = groupMessages(messages);
 
 	// ── Click-outside: close pickers ──────────────────────────────────────────
 	useEffect(() => {
 		const handler = (e: MouseEvent) => {
-			if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setShowEmojiPicker(false);
-			if (gifRef.current   && !gifRef.current.contains(e.target as Node))   setShowGifPicker(false);
+			if (emojiRef.current && !emojiRef.current.contains(e.target as Node))
+				setShowEmojiPicker(false);
+			if (gifRef.current && !gifRef.current.contains(e.target as Node))
+				setShowGifPicker(false);
 		};
 		document.addEventListener("mousedown", handler);
 		return () => document.removeEventListener("mousedown", handler);
@@ -399,11 +451,15 @@ const CommunityChatPage: React.FC = () => {
 
 	// ── Load rooms ─────────────────────────────────────────────────────────────
 	useEffect(() => {
-		chatService.getRooms()
+		chatService
+			.getRooms()
 			.then((res) => {
 				const list = Array.isArray(res.data) ? res.data.filter((r) => r?.id) : [];
 				setRooms(list);
-				if (list.length > 0) { setActiveRoom(list[0]); setActiveRoomIdx(0); }
+				if (list.length > 0) {
+					setActiveRoom(list[0]);
+					setActiveRoomIdx(0);
+				}
 			})
 			.catch(() => setRooms([]))
 			.finally(() => setRoomsLoading(false));
@@ -416,7 +472,8 @@ const CommunityChatPage: React.FC = () => {
 		setMessagesLoading(true);
 		setReplyTo(null);
 
-		chatService.getMessages(activeRoom.id, { per_page: 50 })
+		chatService
+			.getMessages(activeRoom.id, { per_page: 50 })
 			.then((res) => {
 				setMessages(res.data);
 				if (userId && res.data.some((m) => m.created_by?.id?.toString() === userId))
@@ -428,19 +485,24 @@ const CommunityChatPage: React.FC = () => {
 
 	// ── Realtime (Reverb / WebSocket) ─────────────────────────────────────────
 	useEffect(() => {
-		if (!activeRoom) return;
+		if (!activeRoom || !echo) return;
+		const activeEcho = echo;
 		const channelName = `chat.${activeRoom.id}`;
-		const roomId      = activeRoom.id;
-		const channel     = echo.channel(channelName);
+		const roomId = activeRoom.id;
+		const channel = activeEcho.channel(channelName);
 
 		channel.listen(".message.sent", (data: ChatMessage) => {
-			setMessages((prev) => prev.some((m) => m.id === data.id) ? prev : [...prev, data]);
+			setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data]));
 			const senderId = data.created_by?.id?.toString();
 			if (senderId !== userId) {
 				setRooms((prev) =>
 					prev.map((r) =>
 						r.id === roomId
-							? { ...r, message_count: r.message_count + 1, last_message_at: data.created_at }
+							? {
+									...r,
+									message_count: r.message_count + 1,
+									last_message_at: data.created_at,
+								}
 							: r,
 					),
 				);
@@ -449,9 +511,9 @@ const CommunityChatPage: React.FC = () => {
 
 		return () => {
 			channel.stopListening(".message.sent");
-			echo.leaveChannel(channelName);
+			activeEcho.leaveChannel(channelName);
 		};
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeRoom?.id]);
 
 	// ── Send text ──────────────────────────────────────────────────────────────
@@ -460,22 +522,35 @@ const CommunityChatPage: React.FC = () => {
 		const text = input.trim();
 		setSending(true);
 		setInput("");
-		if (inputRef.current) { inputRef.current.style.height = "auto"; }
+		if (inputRef.current) {
+			inputRef.current.style.height = "auto";
+		}
 		try {
 			const res = await chatService.sendMessage(activeRoom.id, text, replyTo?.id);
-			setMessages((prev) => prev.some((m) => m.id === res.data.id) ? prev : [...prev, res.data]);
+			setMessages((prev) =>
+				prev.some((m) => m.id === res.data.id) ? prev : [...prev, res.data],
+			);
 			setReplyTo(null);
 			const isNew = !joinedRoomsRef.current.has(activeRoom.id);
 			if (isNew) joinedRoomsRef.current.add(activeRoom.id);
 			setRooms((prev) =>
 				prev.map((r) =>
 					r.id === activeRoom.id
-						? { ...r, message_count: r.message_count + 1, last_message_at: res.data.created_at, ...(isNew ? { member_count: r.member_count + 1 } : {}) }
+						? {
+								...r,
+								message_count: r.message_count + 1,
+								last_message_at: res.data.created_at,
+								...(isNew ? { member_count: r.member_count + 1 } : {}),
+							}
 						: r,
 				),
 			);
-		} catch { setInput(text); }
-		finally { setSending(false); inputRef.current?.focus(); }
+		} catch {
+			setInput(text);
+		} finally {
+			setSending(false);
+			inputRef.current?.focus();
+		}
 	};
 
 	// ── Send GIF ───────────────────────────────────────────────────────────────
@@ -485,19 +560,29 @@ const CommunityChatPage: React.FC = () => {
 		setSending(true);
 		try {
 			const res = await chatService.sendMessage(activeRoom.id, gifUrl, replyTo?.id);
-			setMessages((prev) => prev.some((m) => m.id === res.data.id) ? prev : [...prev, res.data]);
+			setMessages((prev) =>
+				prev.some((m) => m.id === res.data.id) ? prev : [...prev, res.data],
+			);
 			setReplyTo(null);
 			const isNew = !joinedRoomsRef.current.has(activeRoom.id);
 			if (isNew) joinedRoomsRef.current.add(activeRoom.id);
 			setRooms((prev) =>
 				prev.map((r) =>
 					r.id === activeRoom.id
-						? { ...r, message_count: r.message_count + 1, last_message_at: res.data.created_at, ...(isNew ? { member_count: r.member_count + 1 } : {}) }
+						? {
+								...r,
+								message_count: r.message_count + 1,
+								last_message_at: res.data.created_at,
+								...(isNew ? { member_count: r.member_count + 1 } : {}),
+							}
 						: r,
 				),
 			);
-		} catch { /* silent */ }
-		finally { setSending(false); }
+		} catch {
+			/* silent */
+		} finally {
+			setSending(false);
+		}
 	};
 
 	// ── Room created ───────────────────────────────────────────────────────────
@@ -511,17 +596,22 @@ const CommunityChatPage: React.FC = () => {
 	// ── Render ─────────────────────────────────────────────────────────────────
 	return (
 		<div className='flex h-[calc(100vh-4rem)] w-full overflow-hidden'>
-
 			{/* ── Create room modal ──────────────────────────────────────── */}
 			{showCreate && (
-				<CreateRoomModal onClose={() => setShowCreate(false)} onCreate={handleRoomCreated} />
+				<CreateRoomModal
+					onClose={() => setShowCreate(false)}
+					onCreate={handleRoomCreated}
+				/>
 			)}
 
 			{/* ═══════════════════ SIDEBAR ═══════════════════════════════ */}
 			<aside className='flex w-64 shrink-0 flex-col border-r-2 border-black bg-white'>
 				{/* Header */}
 				<div className='flex h-14 items-center gap-2.5 border-b-2 border-black px-4'>
-					<MessageSquare className='h-4 w-4 shrink-0 text-[var(--color-text-primary)]' strokeWidth={2.5} />
+					<MessageSquare
+						className='h-4 w-4 shrink-0 text-[var(--color-text-primary)]'
+						strokeWidth={2.5}
+					/>
 					<span className='flex-1 font-heading text-sm font-extrabold uppercase tracking-wide text-black'>
 						Phòng chat
 					</span>
@@ -542,19 +632,26 @@ const CommunityChatPage: React.FC = () => {
 					) : rooms.length === 0 ? (
 						<div className='py-10 text-center'>
 							<Hash className='mx-auto h-8 w-8 text-gray-300' />
-							<p className='mt-2 text-xs font-bold text-gray-400'>Chưa có phòng nào</p>
+							<p className='mt-2 text-xs font-bold text-gray-400'>
+								Chưa có phòng nào
+							</p>
 						</div>
 					) : (
 						<nav className='space-y-0.5'>
-							{rooms.filter((r) => r?.id).map((room, i) => (
-								<RoomItem
-									key={room.id}
-									room={room}
-									index={i}
-									active={activeRoom?.id === room.id}
-									onClick={() => { setActiveRoom(room); setActiveRoomIdx(i); }}
-								/>
-							))}
+							{rooms
+								.filter((r) => r?.id)
+								.map((room, i) => (
+									<RoomItem
+										key={room.id}
+										room={room}
+										index={i}
+										active={activeRoom?.id === room.id}
+										onClick={() => {
+											setActiveRoom(room);
+											setActiveRoomIdx(i);
+										}}
+									/>
+								))}
 						</nav>
 					)}
 				</div>
@@ -562,15 +659,17 @@ const CommunityChatPage: React.FC = () => {
 
 			{/* ═══════════════════ CHAT AREA ═════════════════════════════ */}
 			<div className='flex min-w-0 flex-1 flex-col bg-[#fafafa]'>
-
 				{/* ── Channel header ──────────────────────────────────── */}
 				{activeRoom ? (
 					<div className='flex h-14 shrink-0 items-center gap-3 border-b-2 border-black bg-white px-5'>
-						<div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(activeRoomIdx)}`}>
+						<div
+							className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(activeRoomIdx)}`}>
 							<Hash className='h-3.5 w-3.5 text-black' />
 						</div>
 						<div>
-							<p className='font-heading text-sm font-extrabold leading-none text-black'>{activeRoom.name}</p>
+							<p className='font-heading text-sm font-extrabold leading-none text-black'>
+								{activeRoom.name}
+							</p>
 						</div>
 						<div className='ml-auto flex items-center gap-1.5 rounded-lg border-2 border-black bg-gray-50 px-2.5 py-1 text-xs font-bold text-gray-500'>
 							<Users className='h-3.5 w-3.5' />
@@ -587,8 +686,7 @@ const CommunityChatPage: React.FC = () => {
 						loading={messagesLoading}
 						autoScrollToBottom={true}
 						scrollBehavior='smooth'
-						className='!h-full !bg-[#fafafa]'
-					>
+						className='!h-full !bg-[#fafafa]'>
 						{!user ? (
 							<GuestWall />
 						) : msgGroups.length === 0 && activeRoom && !messagesLoading ? (
@@ -611,13 +709,14 @@ const CommunityChatPage: React.FC = () => {
 				{/* ── Input area ──────────────────────────────────────── */}
 				{user && activeRoom && (
 					<div className='relative shrink-0 border-t-2 border-black bg-white'>
-
 						{/* Reply preview bar */}
 						{replyTo && (
 							<div className='flex items-center gap-2 border-b-2 border-black/10 bg-gray-50 px-4 py-2'>
 								<Reply className='h-3.5 w-3.5 shrink-0 text-[var(--color-text-primary)]' />
 								<div className='min-w-0 flex-1 text-xs text-gray-500'>
-									<span className='font-bold text-gray-700'>{replyTo.created_by?.full_name ?? "Người dùng"}: </span>
+									<span className='font-bold text-gray-700'>
+										{replyTo.created_by?.full_name ?? "Người dùng"}:{" "}
+									</span>
 									<span className='line-clamp-1'>
 										{isGifUrl(replyTo.content) ? "🖼 GIF" : replyTo.content}
 									</span>
@@ -689,11 +788,16 @@ const CommunityChatPage: React.FC = () => {
 								{/* Emoji button */}
 								<button
 									type='button'
-									onClick={() => { setShowEmojiPicker((v) => !v); setShowGifPicker(false); }}
+									onClick={() => {
+										setShowEmojiPicker((v) => !v);
+										setShowGifPicker(false);
+									}}
 									className={`mb-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition
-										${showEmojiPicker
-											? "border-2 border-black bg-[var(--color-primary)] shadow-[1px_1px_0_#111]"
-											: "text-gray-400 hover:text-gray-700"}`}
+										${
+											showEmojiPicker
+												? "border-2 border-black bg-[var(--color-primary)] shadow-[1px_1px_0_#111]"
+												: "text-gray-400 hover:text-gray-700"
+										}`}
 									title='Emoji'>
 									<Smile className='h-4 w-4' />
 								</button>
@@ -701,11 +805,16 @@ const CommunityChatPage: React.FC = () => {
 								{/* GIF button */}
 								<button
 									type='button'
-									onClick={() => { setShowGifPicker((v) => !v); setShowEmojiPicker(false); }}
+									onClick={() => {
+										setShowGifPicker((v) => !v);
+										setShowEmojiPicker(false);
+									}}
 									className={`mb-0.5 inline-flex h-7 items-center justify-center rounded-lg px-1.5 text-[11px] font-extrabold transition
-										${showGifPicker
-											? "border-2 border-black bg-[var(--color-primary)] text-black shadow-[1px_1px_0_#111]"
-											: "text-gray-400 hover:text-gray-700"}`}
+										${
+											showGifPicker
+												? "border-2 border-black bg-[var(--color-primary)] text-black shadow-[1px_1px_0_#111]"
+												: "text-gray-400 hover:text-gray-700"
+										}`}
 									title='GIF'>
 									<ImageIcon className='mr-0.5 h-3.5 w-3.5' />
 									GIF
@@ -717,9 +826,11 @@ const CommunityChatPage: React.FC = () => {
 								onClick={() => void handleSend()}
 								disabled={!input.trim() || sending}
 								className='mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
-								{sending
-									? <Loader2 className='h-4 w-4 animate-spin' />
-									: <Send className='h-4 w-4' />}
+								{sending ? (
+									<Loader2 className='h-4 w-4 animate-spin' />
+								) : (
+									<Send className='h-4 w-4' />
+								)}
 							</button>
 						</div>
 
