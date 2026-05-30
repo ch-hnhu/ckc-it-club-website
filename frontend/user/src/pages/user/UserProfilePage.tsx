@@ -1,9 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
+import {
+	Link,
+	useLocation,
+	useNavigate,
+	useOutletContext,
+	useParams,
+	useSearchParams,
+} from "react-router-dom";
 import {
 	Bookmark,
 	BookOpen,
-	Building2,
+	BookOpenText,
 	Calendar,
 	Camera,
 	ChevronLeft,
@@ -13,6 +20,7 @@ import {
 	Heart,
 	ImagePlus,
 	LayoutGrid,
+	Loader2,
 	MessageCircle,
 	Share2,
 	UserCheck,
@@ -20,9 +28,12 @@ import {
 	UserPlus,
 	Users,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { AuthUser } from "@/services/auth.service";
+import { api } from "@/services/api.service";
 import { userService } from "@/services/user.service";
 import { postService } from "@/services/post.service";
+import type { ApiResponse } from "@/types/api.types";
 import {
 	buildAvatar,
 	buildProfileUrl,
@@ -181,7 +192,9 @@ const StatsCard: React.FC<StatsCardProps> = ({ profile }) => (
 					<Heart className='h-4 w-4' />
 					Lượt thích
 				</span>
-				<span className='font-heading text-sm font-extrabold text-black'>67</span>
+				<span className='font-heading text-sm font-extrabold text-black'>
+					{profile.likes_count}
+				</span>
 			</div>
 		</div>
 	</div>
@@ -228,6 +241,7 @@ interface ProfileHeaderProps {
 	isOwnProfile: boolean;
 	followed: boolean;
 	onFollow: () => void;
+	onUpdated?: (p: UserProfile) => void;
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -235,28 +249,89 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 	isOwnProfile,
 	followed,
 	onFollow,
+	onUpdated,
 }) => {
 	const handle = getHandle(profile.username, profile.email);
 	const avatar = buildAvatar(profile.full_name, profile.avatar);
 	const joinYear = new Date(profile.created_at).getFullYear();
 
+	const avatarInputRef = useRef<HTMLInputElement>(null);
+	const coverInputRef = useRef<HTMLInputElement>(null);
+	const [uploadingAvatar, setUploadingAvatar] = useState(false);
+	const [uploadingCover, setUploadingCover] = useState(false);
+
 	const DEFAULT_BANNER = "https://www.codedex.io/images/css/banner-v2.png";
 	const coverBg = profile.cover_image || DEFAULT_BANNER;
+
+	const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		setUploadingAvatar(true);
+		try {
+			const fd = new FormData();
+			fd.append("avatar", file);
+			const res = await api.postForm<ApiResponse<UserProfile>>("/users/profile", fd);
+			onUpdated?.(res.data);
+			toast.success("Đã cập nhật ảnh đại diện!");
+		} catch {
+			toast.error("Không thể cập nhật ảnh. Vui lòng thử lại.");
+		} finally {
+			setUploadingAvatar(false);
+			e.target.value = "";
+		}
+	};
+
+	const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		setUploadingCover(true);
+		try {
+			const fd = new FormData();
+			fd.append("cover_image", file);
+			const res = await api.postForm<ApiResponse<UserProfile>>("/users/profile", fd);
+			onUpdated?.(res.data);
+			toast.success("Đã cập nhật ảnh bìa!");
+		} catch {
+			toast.error("Không thể cập nhật ảnh bìa. Vui lòng thử lại.");
+		} finally {
+			setUploadingCover(false);
+			e.target.value = "";
+		}
+	};
 
 	return (
 		<div className='overflow-hidden'>
 			{/* ── Banner ─────────────────────────────────────────────── */}
-			<div className='relative h-40 cursor-pointer overflow-hidden group sm:h-48 md:h-55'>
+			<div
+				className={`relative h-40 overflow-hidden sm:h-48 md:h-55 ${isOwnProfile ? "cursor-pointer group" : ""}`}
+				onClick={() => isOwnProfile && !uploadingCover && coverInputRef.current?.click()}>
 				<img
 					src={coverBg}
 					alt='Ảnh bìa'
 					className='h-full w-full object-cover sm:rounded-xl'
 				/>
 				{isOwnProfile && (
-					<div className='absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 sm:rounded-2xl'>
-						<ImagePlus className='h-6 w-6 text-white' />
-						<span className='text-sm font-bold text-white'>Cập nhật ảnh bìa</span>
-					</div>
+					<>
+						<div className='absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 sm:rounded-2xl'>
+							{uploadingCover ? (
+								<Loader2 className='h-6 w-6 animate-spin text-white' />
+							) : (
+								<>
+									<ImagePlus className='h-6 w-6 text-white' />
+									<span className='text-sm font-bold text-white'>
+										Cập nhật ảnh bìa
+									</span>
+								</>
+							)}
+						</div>
+						<input
+							ref={coverInputRef}
+							type='file'
+							accept='image/*'
+							className='hidden'
+							onChange={handleCoverUpload}
+						/>
+					</>
 				)}
 			</div>
 
@@ -265,19 +340,38 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 				<div className='relative -mt-12 flex items-end justify-between gap-3 sm:-mt-16 md:-mt-[5rem]'>
 					{/* Avatar with edit overlay */}
 					<div className='px-6'>
-						<div className='relative rounded-full border-6 border-white shrink-0 group'>
+						<div
+							className={`relative rounded-full border-6 border-white shrink-0 ${isOwnProfile ? "cursor-pointer group" : ""}`}
+							onClick={() =>
+								isOwnProfile && !uploadingAvatar && avatarInputRef.current?.click()
+							}>
 							<img
 								src={avatar}
 								alt={profile.full_name}
 								className='h-24 w-24 rounded-full bg-[var(--color-pastel-blue)] object-cover sm:h-32 sm:w-32 md:h-36 md:w-36'
 							/>
 							{isOwnProfile && (
-								<div className='absolute inset-0 flex cursor-pointer flex-col items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100'>
-									<Camera className='h-5 w-5 text-white' />
-									<span className='mt-0.5 text-[10px] font-bold text-white'>
-										Đổi ảnh
-									</span>
-								</div>
+								<>
+									<div className='absolute inset-0 flex cursor-pointer flex-col items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100'>
+										{uploadingAvatar ? (
+											<Loader2 className='h-5 w-5 animate-spin text-white' />
+										) : (
+											<>
+												<Camera className='h-5 w-5 text-white' />
+												<span className='mt-0.5 text-[10px] font-bold text-white'>
+													Đổi ảnh
+												</span>
+											</>
+										)}
+									</div>
+									<input
+										ref={avatarInputRef}
+										type='file'
+										accept='image/*'
+										className='hidden'
+										onChange={handleAvatarUpload}
+									/>
+								</>
 							)}
 						</div>
 					</div>
@@ -329,16 +423,16 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 					)}
 
 					<div className='mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500'>
-						{profile.faculty && (
-							<span className='hidden items-center gap-1.5 sm:flex'>
-								<Building2 className='h-4 w-4 shrink-0' />
-								{profile.faculty}
-							</span>
-						)}
 						{profile.major && (
 							<span className='hidden items-center gap-1.5 sm:flex'>
 								<GraduationCap className='h-4 w-4 shrink-0' />
 								{profile.major}
+							</span>
+						)}
+						{profile.class_name && (
+							<span className='hidden items-center gap-1.5 sm:flex'>
+								<BookOpenText className='h-4 w-4 shrink-0' />
+								{profile.class_name}
 							</span>
 						)}
 						<span className='flex items-center gap-1.5'>
@@ -782,9 +876,7 @@ const UserProfilePage: React.FC = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const tabParam = searchParams.get("tab") ?? "";
 	const activeTab: Tab =
-		tabParam === "posts" ? "posts" :
-		tabParam === "bookmarks" ? "bookmarks" :
-		"overview";
+		tabParam === "posts" ? "posts" : tabParam === "bookmarks" ? "bookmarks" : "overview";
 	const previousUsernameRef = useRef<string | undefined>(undefined);
 
 	const setActiveTab = (tab: Tab) => {
@@ -856,15 +948,26 @@ const UserProfilePage: React.FC = () => {
 							cover_image: null,
 							bio: "Thành viên CKC IT CLUB.",
 							student_code: "2200000",
+							faculty_id: null,
 							faculty: "Công nghệ thông tin",
+							major_id: null,
 							major: "Lập trình máy tính",
+							class_id: null,
 							class_name: "22CNTT1",
 							gender: null,
+							date_of_birth: null,
 							is_active: true,
 							posts_count: 12,
+							likes_count: 0,
 							followers_count: 85,
 							following_count: 3,
 							skills: ["JavaScript", "React", "Laravel", "Python"],
+							social_github: null,
+							social_linkedin: null,
+							social_instagram: null,
+							social_youtube: null,
+							social_tiktok: null,
+							social_twitch: null,
 							created_at: "2022-09-01T00:00:00Z",
 						});
 					}
@@ -917,6 +1020,7 @@ const UserProfilePage: React.FC = () => {
 							isOwnProfile={isOwnProfile}
 							followed={followed}
 							onFollow={() => setFollowed((f) => !f)}
+							onUpdated={(updated) => setProfile(updated)}
 						/>
 
 						{/* Tabs — "Đã lưu" only visible on own profile */}
@@ -1024,8 +1128,9 @@ const UserProfilePage: React.FC = () => {
 									<span className='text-gray-500'>Tham gia</span>
 									<span className='font-bold text-black'>
 										{new Date(profile.created_at).toLocaleDateString("vi-VN", {
-											year: "numeric",
+											day: "numeric",
 											month: "short",
+											year: "numeric",
 										})}
 									</span>
 								</div>

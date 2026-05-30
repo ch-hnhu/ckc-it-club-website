@@ -50,6 +50,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
     Route::get('/community/channels', [ChannelController::class, 'index']);
+    Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
 
     // Community routes
     Route::prefix('community')->group(function () {
