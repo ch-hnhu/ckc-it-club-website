@@ -12,6 +12,7 @@ type NeoSelectProps = {
 	value: string;
 	onChange: (value: string) => void;
 	placeholder?: string;
+	emptyMessage?: string;
 	className?: string;
 };
 
@@ -21,6 +22,7 @@ const NeoSelect: React.FC<NeoSelectProps> = ({
 	value,
 	onChange,
 	placeholder = "Chọn...",
+	emptyMessage = "Không có dữ liệu",
 	className = "",
 }) => {
 	const [isOpen, setIsOpen] = useState(false);
@@ -75,29 +77,35 @@ const NeoSelect: React.FC<NeoSelectProps> = ({
 				<ul
 					role='listbox'
 					className='absolute top-[calc(100%+0.5rem)] left-0 z-[49] w-full max-h-84 overflow-y-auto space-y-2 rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[var(--neo-shadow)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
-					{options.map((opt) => {
-						const isSelected = opt.value === value;
-						return (
-							<li key={opt.value} role='option' aria-selected={isSelected}>
-								<button
-									type='button'
-									onClick={() => {
-										onChange(opt.value);
-										setIsOpen(false);
-									}}
-									className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left font-heading text-base font-bold transition-colors focus:outline-none focus-visible:bg-[var(--color-primary-100)] ${
-										isSelected
-											? "bg-[var(--color-primary-100)] text-[var(--color-text-primary)]"
-											: "text-gray-700 hover:bg-[var(--color-primary-100)] hover:text-[var(--color-text-primary)]"
-									}`}>
-									<span>{opt.label}</span>
-									{isSelected && (
-										<Check className='h-4 w-4 shrink-0 text-[var(--color-text-primary)]' />
-									)}
-								</button>
-							</li>
-						);
-					})}
+					{options.length === 0 ? (
+						<li className='px-4 py-3 text-sm font-medium text-gray-400 text-center select-none'>
+							{emptyMessage}
+						</li>
+					) : (
+						options.map((opt) => {
+							const isSelected = opt.value === value;
+							return (
+								<li key={opt.value} role='option' aria-selected={isSelected}>
+									<button
+										type='button'
+										onClick={() => {
+											onChange(opt.value);
+											setIsOpen(false);
+										}}
+										className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left font-heading text-base font-bold transition-colors focus:outline-none focus-visible:bg-[var(--color-primary-100)] ${
+											isSelected
+												? "bg-[var(--color-primary-100)] text-[var(--color-text-primary)]"
+												: "text-gray-700 hover:bg-[var(--color-primary-100)] hover:text-[var(--color-text-primary)]"
+										}`}>
+										<span>{opt.label}</span>
+										{isSelected && (
+											<Check className='h-4 w-4 shrink-0 text-[var(--color-text-primary)]' />
+										)}
+									</button>
+								</li>
+							);
+						})
+					)}
 				</ul>
 			)}
 		</div>

@@ -331,7 +331,9 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 
 	const facultyOptions = allFaculties.map((f) => labelToOpt(f.label));
 	const majorOptions = selectedFaculty
-		? allMajors.filter((m) => m.faculty_id === selectedFaculty.id).map((m) => labelToOpt(m.label))
+		? allMajors
+				.filter((m) => m.faculty_id === selectedFaculty.id)
+				.map((m) => labelToOpt(m.label))
 		: [];
 	const classOptions = selectedMajor
 		? allClasses.filter((c) => c.major_id === selectedMajor.id).map((c) => labelToOpt(c.label))
@@ -405,7 +407,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 								) : usernameStatus === "checking" ? (
 									<p className='flex items-center gap-1 text-xs text-gray-400'>
 										<Loader2 className='h-3 w-3 animate-spin' />
-										Đang kiểm tra...
+										Đang kiểm tra..
 									</p>
 								) : null
 							}
@@ -444,7 +446,8 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 							options={facultyOptions}
 							value={form.faculty}
 							onChange={handleFacultyChange}
-							placeholder={loadingAcademic ? "Đang tải..." : "Chọn khoa..."}
+							placeholder={loadingAcademic ? "Đang tải..." : "Chọn khoa.."}
+							emptyMessage='Không tìm thấy khoa nào'
 						/>
 					</div>
 
@@ -454,7 +457,12 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 							options={majorOptions}
 							value={form.major}
 							onChange={handleMajorChange}
-							placeholder={form.faculty ? "Chọn ngành..." : "Chọn khoa trước"}
+							placeholder='Chọn ngành..'
+							emptyMessage={
+								form.faculty
+									? "Khoa này chưa có ngành"
+									: "Vui lòng chọn khoa trước."
+							}
 						/>
 					</div>
 
@@ -464,7 +472,10 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 							options={classOptions}
 							value={form.class_name}
 							onChange={setField("class_name")}
-							placeholder={form.major ? "Chọn lớp..." : "Chọn ngành trước"}
+							placeholder='Chọn lớp..'
+							emptyMessage={
+								form.major ? "Ngành này chưa có lớp" : "Vui lòng chọn ngành trước."
+							}
 						/>
 					</div>
 
@@ -476,7 +487,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 							options={GENDER_OPTIONS}
 							value={form.gender}
 							onChange={setField("gender")}
-							placeholder='Chọn giới tính...'
+							placeholder='Chọn giới tính..'
 						/>
 					</div>
 				</div>
@@ -642,7 +653,10 @@ const ProfileTabSkeleton: React.FC = () => (
 				<Bone className='mb-4 h-5 w-14' />
 				<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4'>
 					{Array.from({ length: 16 }).map((_, i) => (
-						<Bone key={i} className='h-10 rounded-xl border-2 border-gray-300 bg-gray-100' />
+						<Bone
+							key={i}
+							className='h-10 rounded-xl border-2 border-gray-300 bg-gray-100'
+						/>
 					))}
 				</div>
 			</div>
@@ -652,7 +666,7 @@ const ProfileTabSkeleton: React.FC = () => (
 		<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
 			<Bone className='mb-5 h-5 w-28' />
 			<div className='space-y-4'>
-				{(['w-14', 'w-16', 'w-20', 'w-16', 'w-12'] as const).map((w, i) => (
+				{(["w-14", "w-16", "w-20", "w-16", "w-12"] as const).map((w, i) => (
 					<FieldSkeleton key={i} labelW={w} />
 				))}
 			</div>
@@ -693,7 +707,10 @@ const ComingSoonTab: React.FC<{ title: string }> = ({ title }) => (
 // ─── AccountPage ──────────────────────────────────────────────────────────────
 
 const AccountPage: React.FC = () => {
-	const { user, loadingUser } = useOutletContext<{ user: AuthUser | null; loadingUser: boolean }>();
+	const { user, loadingUser } = useOutletContext<{
+		user: AuthUser | null;
+		loadingUser: boolean;
+	}>();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 
