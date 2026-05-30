@@ -1,5 +1,22 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Hash, Loader2, Lock, MessageSquare, Plus, Send, Users, X } from "lucide-react";
+
+// ── chatscope ──────────────────────────────────────────────────────────────
+import { MessageList } from "@chatscope/chat-ui-kit-react";
+import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
+import "./CommunityChatPage.css";
+
+// ── emoji-mart ─────────────────────────────────────────────────────────────
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
+
+// ── gif-picker (GIPHY) ──────────────────────────────────────────────────────
+import GiphyPicker from "@/components/chat/GiphyPicker";
+
+// ── project ────────────────────────────────────────────────────────────────
+import {
+	Hash, Image as ImageIcon, Loader2, Lock, MessageSquare,
+	Plus, Reply, Send, Smile, Users, X,
+} from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
 import type { CommunityLayoutContext } from "./CommunityLayout";
 import { chatService } from "@/services/chat.service";
@@ -17,41 +34,51 @@ const ROOM_COLORS = [
 	"bg-[var(--color-pastel-purple)]",
 ];
 
+const GIF_PATTERN = /^https?:\/\/(media\.giphy\.com|media[0-9]*\.giphy\.com|i\.giphy\.com|media\.tenor\.com|c\.tenor\.com)\//i;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const getRoomColor = (index: number) => ROOM_COLORS[index % ROOM_COLORS.length];
+const getRoomColor = (i: number) => ROOM_COLORS[i % ROOM_COLORS.length];
+const isGifUrl    = (s: string)  => GIF_PATTERN.test(s.trim());
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface MessageGroup {
-	senderId: number | null;
-	senderName: string;
+	senderId:     number | null;
+	senderName:   string;
 	senderAvatar: string;
 	senderHandle: string;
-	firstTime: string;
-	messages: ChatMessage[];
+	firstTime:    string;
+	lastTime:     string;
+	messages:     ChatMessage[];
 }
+
+// ─── Grouping ─────────────────────────────────────────────────────────────────
 
 const groupMessages = (messages: ChatMessage[]): MessageGroup[] => {
 	const groups: MessageGroup[] = [];
 	for (const msg of messages) {
 		const sender = msg.created_by;
-		const last = groups[groups.length - 1];
+		const last   = groups[groups.length - 1];
 		if (last && last.senderId === (sender?.id ?? null)) {
 			last.messages.push(msg);
+			last.lastTime = msg.created_at;
 		} else {
 			groups.push({
-				senderId: sender?.id ?? null,
-				senderName: sender?.full_name ?? "Thành viên",
+				senderId:     sender?.id ?? null,
+				senderName:   sender?.full_name ?? "Thành viên",
 				senderAvatar: buildAvatar(sender?.full_name, sender?.avatar),
 				senderHandle: sender ? getHandle(sender.username, sender.email) : "",
-				firstTime: msg.created_at,
-				messages: [msg],
+				firstTime:    msg.created_at,
+				lastTime:     msg.created_at,
+				messages:     [msg],
 			});
 		}
 	}
 	return groups;
 };
 
-// ─── Skeletons ────────────────────────────────────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 const RoomSkeleton: React.FC = () => (
 	<div className='space-y-1 p-2'>
@@ -67,38 +94,22 @@ const RoomSkeleton: React.FC = () => (
 	</div>
 );
 
-const MessageGroupSkeleton: React.FC = () => (
-	<div className='flex animate-pulse gap-3 px-5 py-2'>
-		<div className='h-9 w-9 shrink-0 rounded-full bg-gray-200' />
-		<div className='flex-1 space-y-2 pt-0.5'>
-			<div className='flex items-center gap-2'>
-				<div className='h-3 w-24 rounded bg-gray-200' />
-				<div className='h-2.5 w-16 rounded bg-gray-200' />
-			</div>
-			<div className='h-3.5 w-2/3 rounded bg-gray-200' />
-			<div className='h-3.5 w-1/2 rounded bg-gray-200' />
-		</div>
-	</div>
-);
-
 // ─── RoomItem ─────────────────────────────────────────────────────────────────
 
 const RoomItem: React.FC<{
-	room: ChatRoom;
-	index: number;
-	active: boolean;
+	room:    ChatRoom;
+	index:   number;
+	active:  boolean;
 	onClick: () => void;
 }> = ({ room, index, active, onClick }) => (
 	<button
 		onClick={onClick}
-		className={`flex w-full items-center gap-3 rounded-xl border-2 px-3 py-2.5 text-left transition-all duration-150 ${
+		className={`flex w-full items-center gap-3 rounded-xl border-2 px-3 py-2.5 text-left transition-all ${
 			active
 				? "border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
 				: "border-transparent text-gray-700 hover:bg-gray-50"
 		}`}>
-		{/* Color badge */}
-		<div
-			className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(index)}`}>
+		<div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(index)}`}>
 			<Hash className='h-3.5 w-3.5 text-black' />
 		</div>
 		<div className='min-w-0 flex-1'>
@@ -112,24 +123,102 @@ const RoomItem: React.FC<{
 	</button>
 );
 
+// ─── Bubble radius helper ─────────────────────────────────────────────────────
+
+function bubbleRadius(isOwn: boolean, isFirst: boolean, isLast: boolean): string {
+	const single = isFirst && isLast;
+	if (single) return "rounded-2xl";
+	if (isOwn) {
+		if (isFirst) return "rounded-2xl rounded-br-md";
+		if (isLast)  return "rounded-2xl rounded-tr-md";
+		return "rounded-l-2xl rounded-r-md";
+	} else {
+		if (isFirst) return "rounded-2xl rounded-bl-md";
+		if (isLast)  return "rounded-2xl rounded-tl-md";
+		return "rounded-r-2xl rounded-l-md";
+	}
+}
+
+// ─── MessageBubble ────────────────────────────────────────────────────────────
+
+const MessageBubble: React.FC<{
+	msg:     ChatMessage;
+	isOwn:   boolean;
+	isFirst: boolean;
+	isLast:  boolean;
+	onReply: (msg: ChatMessage) => void;
+}> = ({ msg, isOwn, isFirst, isLast, onReply }) => (
+	<div className={`group/bbl relative my-[2px] flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
+
+		{/* Reply quick-action */}
+		<button
+			onClick={() => onReply(msg)}
+			className={`absolute top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover/bbl:opacity-100 transition-opacity
+				flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm hover:border-black
+				${isOwn ? "-left-7" : "-right-7"}`}
+			title='Trả lời'>
+			<Reply className='h-3 w-3 text-gray-500' />
+		</button>
+
+		{/* Bubble */}
+		<div className={`
+			relative min-w-[3.5rem] max-w-[75%]
+			${bubbleRadius(isOwn, isFirst, isLast)}
+			border-2 border-black shadow-[2px_2px_0_#111]
+			${isOwn ? "bg-[var(--color-primary)]" : "bg-white"}
+		`}>
+			{/* Reply preview */}
+			{msg.reply_to && (
+				<div className={`border-b-2 border-black/10 px-3 pt-2 pb-1.5 text-xs ${isOwn ? "text-black/60" : "text-gray-500"}`}>
+					<span className='font-bold'>{msg.reply_to.full_name} </span>
+					<span className='line-clamp-1 italic'>
+						{isGifUrl(msg.reply_to.content) ? "🖼 GIF" : msg.reply_to.content}
+					</span>
+				</div>
+			)}
+
+			{/* Content */}
+			<div className='px-3.5 py-2'>
+				{isGifUrl(msg.content) ? (
+					<img
+						src={msg.content}
+						alt='GIF'
+						className='max-h-52 max-w-full rounded-lg'
+						loading='lazy'
+					/>
+				) : (
+					<p className={`text-sm leading-relaxed break-words ${isOwn ? "text-black" : "text-gray-800"}`}>
+						{msg.content}
+					</p>
+				)}
+			</div>
+		</div>
+	</div>
+);
+
 // ─── MessageGroupItem ─────────────────────────────────────────────────────────
 
 const MessageGroupItem: React.FC<{
-	group: MessageGroup;
-	isOwn: boolean;
-}> = ({ group, isOwn }) => (
-	<div className={`flex gap-3 px-5 py-1.5 transition-colors hover:bg-black/[0.02] ${isOwn ? "" : ""}`}>
-		<div className='shrink-0 pt-0.5'>
-			<img
-				src={group.senderAvatar}
-				alt={group.senderName}
-				className='h-9 w-9 rounded-full border-2 border-black object-cover'
-			/>
-		</div>
-		<div className='min-w-0 flex-1'>
-			{/* Sender header */}
-			<div className='mb-1 flex flex-wrap items-baseline gap-x-2'>
-				<span className={`text-sm font-extrabold ${isOwn ? "text-[var(--color-text-primary)]" : "text-black"}`}>
+	group:   MessageGroup;
+	isOwn:   boolean;
+	onReply: (msg: ChatMessage) => void;
+}> = ({ group, isOwn, onReply }) => (
+	<div className={`flex items-end gap-2 px-4 py-1.5 hover:bg-black/[0.015] ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
+
+		{/* Avatar — cố định ở bottom của nhóm */}
+		<img
+			src={group.senderAvatar}
+			alt={group.senderName}
+			className='h-8 w-8 shrink-0 self-end rounded-full border-2 border-black object-cover'
+		/>
+
+		{/* Bubbles column — chiếm hết phần còn lại, tối đa 72% */}
+		<div className={`flex min-w-0 flex-1 flex-col gap-0 ${isOwn ? "items-end" : "items-start"}`}
+			style={{ maxWidth: "72%" }}>
+
+			{/* Header */}
+			<div className={`mb-1.5 flex flex-wrap items-baseline gap-x-1.5 ${isOwn ? "flex-row-reverse" : ""}`}>
+				<span className={`text-[13px] font-extrabold leading-none ${isOwn ? "text-[var(--color-text-primary)]" : "text-gray-900"}`}>
 					{isOwn ? "Bạn" : group.senderName}
 				</span>
 				{group.senderHandle && (
@@ -138,27 +227,24 @@ const MessageGroupItem: React.FC<{
 				<span className='text-[11px] text-gray-400'>{formatRelativeTime(group.firstTime)}</span>
 			</div>
 
-			{/* Messages */}
-			<div className='space-y-1'>
-				{group.messages.map((msg) => (
-					<div key={msg.id}>
-						{msg.reply_to && (
-							<div className='mb-1.5 flex items-start gap-2 rounded-lg border-l-[3px] border-[var(--color-primary)] bg-gray-50 px-3 py-1.5 text-xs text-gray-500'>
-								<div className='min-w-0'>
-									<span className='font-bold text-gray-700'>{msg.reply_to.full_name} </span>
-									<span className='line-clamp-1'>{msg.reply_to.content}</span>
-								</div>
-							</div>
-						)}
-						<p className='text-sm leading-relaxed text-gray-800'>{msg.content}</p>
-					</div>
+			{/* Bubbles — w-full để max-w-[75%] hoạt động chính xác */}
+			<div className='flex w-full flex-col gap-0'>
+				{group.messages.map((msg, i) => (
+					<MessageBubble
+						key={msg.id}
+						msg={msg}
+						isOwn={isOwn}
+						isFirst={i === 0}
+						isLast={i === group.messages.length - 1}
+						onReply={onReply}
+					/>
 				))}
 			</div>
 		</div>
 	</div>
 );
 
-// ─── EmptyState ───────────────────────────────────────────────────────────────
+// ─── Static states ────────────────────────────────────────────────────────────
 
 const EmptyChat: React.FC<{ roomName: string }> = ({ roomName }) => (
 	<div className='flex h-full flex-col items-center justify-center gap-3 px-6 text-center'>
@@ -166,9 +252,7 @@ const EmptyChat: React.FC<{ roomName: string }> = ({ roomName }) => (
 			<Hash className='h-7 w-7 text-black' />
 		</div>
 		<p className='font-heading text-lg font-extrabold text-black'>Chào mừng đến #{roomName}</p>
-		<p className='max-w-xs text-sm text-gray-500'>
-			Đây là khởi đầu của kênh này. Hãy là người đầu tiên nhắn tin!
-		</p>
+		<p className='max-w-xs text-sm text-gray-500'>Đây là khởi đầu của kênh này. Hãy là người đầu tiên nhắn tin!</p>
 	</div>
 );
 
@@ -192,17 +276,15 @@ const GuestWall: React.FC = () => (
 // ─── CreateRoomModal ──────────────────────────────────────────────────────────
 
 const CreateRoomModal: React.FC<{
-	onClose: () => void;
+	onClose:  () => void;
 	onCreate: (room: ChatRoom) => void;
 }> = ({ onClose, onCreate }) => {
-	const [name, setName] = useState("");
+	const [name, setName]     = useState("");
 	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-	const inputRef = useRef<HTMLInputElement>(null);
+	const [error, setError]   = useState<string | null>(null);
+	const inputRef            = useRef<HTMLInputElement>(null);
 
-	useEffect(() => {
-		setTimeout(() => inputRef.current?.focus(), 50);
-	}, []);
+	useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -212,53 +294,32 @@ const CreateRoomModal: React.FC<{
 		setError(null);
 		try {
 			const res = await chatService.createRoom(trimmed);
-			if (res.data?.id) {
-				onCreate(res.data);
-				onClose();
-			} else {
-				setError("Không thể tạo phòng. Vui lòng thử lại.");
-			}
+			if (res.data?.id) { onCreate(res.data); onClose(); }
+			else setError("Không thể tạo phòng. Vui lòng thử lại.");
 		} catch (err: unknown) {
-			const msg =
-				(err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+			const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
 			setError(msg ?? "Không thể tạo phòng. Vui lòng thử lại.");
-		} finally {
-			setLoading(false);
-		}
+		} finally { setLoading(false); }
 	};
 
 	return (
 		<div className='fixed inset-0 z-50 flex items-center justify-center px-4'>
-			{/* Backdrop */}
-			<div
-				className='absolute inset-0 bg-black/40'
-				onClick={onClose}
-			/>
-
-			{/* Modal */}
+			<div className='absolute inset-0 bg-black/40' onClick={onClose} />
 			<div className='relative w-full max-w-sm rounded-2xl border-2 border-black bg-white p-6 shadow-[6px_6px_0_#111]'>
-				{/* Header */}
 				<div className='mb-5 flex items-center justify-between'>
 					<div className='flex items-center gap-2'>
 						<div className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111]'>
 							<Hash className='h-4 w-4 text-black' />
 						</div>
-						<h2 className='font-heading text-lg font-extrabold text-black'>
-							Tạo phòng chat
-						</h2>
+						<h2 className='font-heading text-lg font-extrabold text-black'>Tạo phòng chat</h2>
 					</div>
-					<button
-						onClick={onClose}
-						className='inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-transparent transition hover:border-black hover:bg-gray-100'>
+					<button onClick={onClose} className='inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-transparent transition hover:border-black hover:bg-gray-100'>
 						<X className='h-4 w-4' />
 					</button>
 				</div>
-
 				<form onSubmit={(e) => void handleSubmit(e)} className='space-y-4'>
 					<div>
-						<label className='mb-1.5 block text-xs font-extrabold uppercase tracking-widest text-gray-500'>
-							Tên phòng
-						</label>
+						<label className='mb-1.5 block text-xs font-extrabold uppercase tracking-widest text-gray-500'>Tên phòng</label>
 						<div className='relative'>
 							<span className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400'>
 								<Hash className='h-4 w-4' />
@@ -267,37 +328,23 @@ const CreateRoomModal: React.FC<{
 								ref={inputRef}
 								type='text'
 								value={name}
-								onChange={(e) => {
-									setName(e.target.value);
-									setError(null);
-								}}
+								onChange={(e) => { setName(e.target.value); setError(null); }}
 								placeholder='vd: python-tips, web-dev...'
 								maxLength={50}
-								className='w-full rounded-xl border-2 border-black py-2.5 pl-9 pr-4 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:shadow-[0_0_0_3px_#A3E635]'
+								className='w-full rounded-xl border-2 border-black py-2.5 pl-9 pr-4 text-sm font-medium text-black outline-none placeholder:text-gray-400 focus:shadow-[0_0_0_3px_#A3E635]'
 							/>
 						</div>
-						{error && (
-							<p className='mt-1.5 text-xs font-semibold text-red-500'>{error}</p>
-						)}
+						{error && <p className='mt-1.5 text-xs font-semibold text-red-500'>{error}</p>}
 						<p className='mt-1 text-right text-[10px] text-gray-400'>{name.trim().length}/50</p>
 					</div>
-
 					<div className='flex gap-2 pt-1'>
-						<button
-							type='button'
-							onClick={onClose}
+						<button type='button' onClick={onClose}
 							className='flex-1 rounded-xl border-2 border-black bg-white py-2.5 font-heading text-sm font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 							Hủy
 						</button>
-						<button
-							type='submit'
-							disabled={!name.trim() || loading}
+						<button type='submit' disabled={!name.trim() || loading}
 							className='flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] py-2.5 font-heading text-sm font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
-							{loading ? (
-								<Loader2 className='h-4 w-4 animate-spin' />
-							) : (
-								<Plus className='h-4 w-4' />
-							)}
+							{loading ? <Loader2 className='h-4 w-4 animate-spin' /> : <Plus className='h-4 w-4' />}
 							{loading ? "Đang tạo..." : "Tạo phòng"}
 						</button>
 					</div>
@@ -312,36 +359,51 @@ const CreateRoomModal: React.FC<{
 const CommunityChatPage: React.FC = () => {
 	const { user } = useOutletContext<CommunityLayoutContext>();
 
-	const [rooms, setRooms] = useState<ChatRoom[]>([]);
+	// ── Room state ─────────────────────────────────────────────────────────────
+	const [rooms, setRooms]               = useState<ChatRoom[]>([]);
 	const [roomsLoading, setRoomsLoading] = useState(true);
-	const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
-	const [activeRoomIndex, setActiveRoomIndex] = useState(0);
-	const [showCreate, setShowCreate] = useState(false);
+	const [activeRoom, setActiveRoom]     = useState<ChatRoom | null>(null);
+	const [activeRoomIdx, setActiveRoomIdx] = useState(0);
+	const [showCreate, setShowCreate]     = useState(false);
 
-	const [messages, setMessages] = useState<ChatMessage[]>([]);
+	// ── Message state ──────────────────────────────────────────────────────────
+	const [messages, setMessages]               = useState<ChatMessage[]>([]);
 	const [messagesLoading, setMessagesLoading] = useState(false);
 
-	const [input, setInput] = useState("");
-	const [sending, setSending] = useState(false);
+	// ── Input state ────────────────────────────────────────────────────────────
+	const [input, setInput]               = useState("");
+	const [sending, setSending]           = useState(false);
+	const [replyTo, setReplyTo]           = useState<ChatMessage | null>(null);
+	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+	const [showGifPicker, setShowGifPicker]     = useState(false);
 
-	const bottomRef = useRef<HTMLDivElement>(null);
-	const inputRef = useRef<HTMLTextAreaElement>(null);
-	// rooms the current user is already a member of (no need to increment member_count on send)
+	// ── Refs ───────────────────────────────────────────────────────────────────
+	const inputRef       = useRef<HTMLTextAreaElement>(null);
+	const emojiRef       = useRef<HTMLDivElement>(null);
+	const gifRef         = useRef<HTMLDivElement>(null);
 	const joinedRoomsRef = useRef<Set<number>>(new Set());
 
-	const userId = (user as { id?: number } & typeof user)?.id;
+	// ── Helpers ────────────────────────────────────────────────────────────────
+	const userId   = user?.id;
+	const msgGroups = groupMessages(messages);
+
+	// ── Click-outside: close pickers ──────────────────────────────────────────
+	useEffect(() => {
+		const handler = (e: MouseEvent) => {
+			if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setShowEmojiPicker(false);
+			if (gifRef.current   && !gifRef.current.contains(e.target as Node))   setShowGifPicker(false);
+		};
+		document.addEventListener("mousedown", handler);
+		return () => document.removeEventListener("mousedown", handler);
+	}, []);
 
 	// ── Load rooms ─────────────────────────────────────────────────────────────
 	useEffect(() => {
-		chatService
-			.getRooms()
+		chatService.getRooms()
 			.then((res) => {
 				const list = Array.isArray(res.data) ? res.data.filter((r) => r?.id) : [];
 				setRooms(list);
-				if (list.length > 0) {
-					setActiveRoom(list[0]);
-					setActiveRoomIndex(0);
-				}
+				if (list.length > 0) { setActiveRoom(list[0]); setActiveRoomIdx(0); }
 			})
 			.catch(() => setRooms([]))
 			.finally(() => setRoomsLoading(false));
@@ -352,40 +414,29 @@ const CommunityChatPage: React.FC = () => {
 		if (!activeRoom || !user) return;
 		setMessages([]);
 		setMessagesLoading(true);
+		setReplyTo(null);
 
-		chatService
-			.getMessages(activeRoom.id, { per_page: 50 })
+		chatService.getMessages(activeRoom.id, { per_page: 50 })
 			.then((res) => {
 				setMessages(res.data);
-				// if user already has a message here, they're already a member
-				if (userId && res.data.some((m) => m.created_by?.id === userId)) {
+				if (userId && res.data.some((m) => m.created_by?.id?.toString() === userId))
 					joinedRoomsRef.current.add(activeRoom.id);
-				}
 			})
 			.catch(() => setMessages([]))
 			.finally(() => setMessagesLoading(false));
 	}, [activeRoom, user]);
 
-	// ── Scroll to bottom ───────────────────────────────────────────────────────
-	useEffect(() => {
-		bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-	}, [messages]);
-
 	// ── Realtime (Reverb / WebSocket) ─────────────────────────────────────────
 	useEffect(() => {
 		if (!activeRoom) return;
-
 		const channelName = `chat.${activeRoom.id}`;
-		const roomId = activeRoom.id;
-		const channel = echo.channel(channelName);
+		const roomId      = activeRoom.id;
+		const channel     = echo.channel(channelName);
 
-		channel.listen('.message.sent', (data: ChatMessage) => {
-			// deduplicate — sender already added via handleSend response
+		channel.listen(".message.sent", (data: ChatMessage) => {
 			setMessages((prev) => prev.some((m) => m.id === data.id) ? prev : [...prev, data]);
-
-			// receivers: update room stats in sidebar
 			const senderId = data.created_by?.id?.toString();
-			if (senderId !== user?.id) {
+			if (senderId !== userId) {
 				setRooms((prev) =>
 					prev.map((r) =>
 						r.id === roomId
@@ -397,67 +448,78 @@ const CommunityChatPage: React.FC = () => {
 		});
 
 		return () => {
-			channel.stopListening('.message.sent');
+			channel.stopListening(".message.sent");
 			echo.leaveChannel(channelName);
 		};
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeRoom?.id]);
 
-	// ── Send ───────────────────────────────────────────────────────────────────
+	// ── Send text ──────────────────────────────────────────────────────────────
 	const handleSend = async () => {
 		if (!input.trim() || sending || !activeRoom || !user) return;
 		const text = input.trim();
 		setSending(true);
 		setInput("");
+		if (inputRef.current) { inputRef.current.style.height = "auto"; }
 		try {
-			const res = await chatService.sendMessage(activeRoom.id, text);
+			const res = await chatService.sendMessage(activeRoom.id, text, replyTo?.id);
 			setMessages((prev) => prev.some((m) => m.id === res.data.id) ? prev : [...prev, res.data]);
-			const isNewMember = !joinedRoomsRef.current.has(activeRoom.id);
-			if (isNewMember) joinedRoomsRef.current.add(activeRoom.id);
+			setReplyTo(null);
+			const isNew = !joinedRoomsRef.current.has(activeRoom.id);
+			if (isNew) joinedRoomsRef.current.add(activeRoom.id);
 			setRooms((prev) =>
 				prev.map((r) =>
 					r.id === activeRoom.id
-						? {
-							...r,
-							message_count: r.message_count + 1,
-							last_message_at: res.data.created_at,
-							...(isNewMember ? { member_count: r.member_count + 1 } : {}),
-						}
+						? { ...r, message_count: r.message_count + 1, last_message_at: res.data.created_at, ...(isNew ? { member_count: r.member_count + 1 } : {}) }
 						: r,
 				),
 			);
-		} catch {
-			setInput(text);
-		} finally {
-			setSending(false);
-			inputRef.current?.focus();
-		}
+		} catch { setInput(text); }
+		finally { setSending(false); inputRef.current?.focus(); }
 	};
 
+	// ── Send GIF ───────────────────────────────────────────────────────────────
+	const handleSendGif = async (gifUrl: string) => {
+		if (!activeRoom || !user || sending) return;
+		setShowGifPicker(false);
+		setSending(true);
+		try {
+			const res = await chatService.sendMessage(activeRoom.id, gifUrl, replyTo?.id);
+			setMessages((prev) => prev.some((m) => m.id === res.data.id) ? prev : [...prev, res.data]);
+			setReplyTo(null);
+			const isNew = !joinedRoomsRef.current.has(activeRoom.id);
+			if (isNew) joinedRoomsRef.current.add(activeRoom.id);
+			setRooms((prev) =>
+				prev.map((r) =>
+					r.id === activeRoom.id
+						? { ...r, message_count: r.message_count + 1, last_message_at: res.data.created_at, ...(isNew ? { member_count: r.member_count + 1 } : {}) }
+						: r,
+				),
+			);
+		} catch { /* silent */ }
+		finally { setSending(false); }
+	};
+
+	// ── Room created ───────────────────────────────────────────────────────────
 	const handleRoomCreated = (room: ChatRoom) => {
 		if (!room?.id) return;
 		setRooms((prev) => [room, ...prev.filter((r) => r?.id)]);
 		setActiveRoom(room);
-		setActiveRoomIndex(0);
+		setActiveRoomIdx(0);
 	};
-
-	const messageGroups = groupMessages(messages);
 
 	// ── Render ─────────────────────────────────────────────────────────────────
 	return (
 		<div className='flex h-[calc(100vh-4rem)] w-full overflow-hidden'>
 
-			{/* ── Create room modal ────────────────────────────────────────── */}
+			{/* ── Create room modal ──────────────────────────────────────── */}
 			{showCreate && (
-				<CreateRoomModal
-					onClose={() => setShowCreate(false)}
-					onCreate={handleRoomCreated}
-				/>
+				<CreateRoomModal onClose={() => setShowCreate(false)} onCreate={handleRoomCreated} />
 			)}
 
-			{/* ── Room sidebar ─────────────────────────────────────────────── */}
+			{/* ═══════════════════ SIDEBAR ═══════════════════════════════ */}
 			<aside className='flex w-64 shrink-0 flex-col border-r-2 border-black bg-white'>
-				{/* Sidebar header */}
+				{/* Header */}
 				<div className='flex h-14 items-center gap-2.5 border-b-2 border-black px-4'>
 					<MessageSquare className='h-4 w-4 shrink-0 text-[var(--color-text-primary)]' strokeWidth={2.5} />
 					<span className='flex-1 font-heading text-sm font-extrabold uppercase tracking-wide text-black'>
@@ -490,7 +552,7 @@ const CommunityChatPage: React.FC = () => {
 									room={room}
 									index={i}
 									active={activeRoom?.id === room.id}
-									onClick={() => { setActiveRoom(room); setActiveRoomIndex(i); }}
+									onClick={() => { setActiveRoom(room); setActiveRoomIdx(i); }}
 								/>
 							))}
 						</nav>
@@ -498,20 +560,17 @@ const CommunityChatPage: React.FC = () => {
 				</div>
 			</aside>
 
-			{/* ── Chat area ────────────────────────────────────────────────── */}
-			<div className='flex min-w-0 flex-1 flex-col bg-white'>
+			{/* ═══════════════════ CHAT AREA ═════════════════════════════ */}
+			<div className='flex min-w-0 flex-1 flex-col bg-[#fafafa]'>
 
-				{/* Channel header */}
+				{/* ── Channel header ──────────────────────────────────── */}
 				{activeRoom ? (
-					<div className='flex h-14 shrink-0 items-center gap-3 border-b-2 border-black px-5'>
-						<div
-							className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(activeRoomIndex)}`}>
+					<div className='flex h-14 shrink-0 items-center gap-3 border-b-2 border-black bg-white px-5'>
+						<div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(activeRoomIdx)}`}>
 							<Hash className='h-3.5 w-3.5 text-black' />
 						</div>
 						<div>
-							<p className='font-heading text-sm font-extrabold leading-none text-black'>
-								{activeRoom.name}
-							</p>
+							<p className='font-heading text-sm font-extrabold leading-none text-black'>{activeRoom.name}</p>
 						</div>
 						<div className='ml-auto flex items-center gap-1.5 rounded-lg border-2 border-black bg-gray-50 px-2.5 py-1 text-xs font-bold text-gray-500'>
 							<Users className='h-3.5 w-3.5' />
@@ -519,45 +578,95 @@ const CommunityChatPage: React.FC = () => {
 						</div>
 					</div>
 				) : (
-					<div className='h-14 shrink-0 border-b-2 border-black' />
+					<div className='h-14 shrink-0 border-b-2 border-black bg-white' />
 				)}
 
-				{/* Messages */}
-				<div className='no-scrollbar flex-1 overflow-y-auto py-4'>
-					{!user ? (
-						<GuestWall />
-					) : messagesLoading ? (
-						<div className='space-y-4'>
-							{Array.from({ length: 6 }).map((_, i) => (
-								<MessageGroupSkeleton key={i} />
-							))}
-						</div>
-					) : messageGroups.length === 0 && activeRoom ? (
-						<EmptyChat roomName={activeRoom.name} />
-					) : (
-						<>
-							{messageGroups.map((group, i) => (
-								<MessageGroupItem
-									key={i}
-									group={group}
-									isOwn={group.senderId === userId}
-								/>
-							))}
-							<div ref={bottomRef} />
-						</>
-					)}
+				{/* ── Message list (chatscope) ────────────────────────── */}
+				<div className='csc-wrap relative min-h-0 flex-1'>
+					<MessageList
+						loading={messagesLoading}
+						autoScrollToBottom={true}
+						scrollBehavior='smooth'
+						className='!h-full !bg-[#fafafa]'
+					>
+						{!user ? (
+							<GuestWall />
+						) : msgGroups.length === 0 && activeRoom && !messagesLoading ? (
+							<EmptyChat roomName={activeRoom.name ?? ""} />
+						) : (
+							<div className='py-2'>
+								{msgGroups.map((group) => (
+									<MessageGroupItem
+										key={`${group.senderId ?? "anon"}-${group.firstTime}`}
+										group={group}
+										isOwn={group.senderId?.toString() === userId}
+										onReply={user ? setReplyTo : () => {}}
+									/>
+								))}
+							</div>
+						)}
+					</MessageList>
 				</div>
 
-				{/* Divider */}
+				{/* ── Input area ──────────────────────────────────────── */}
 				{user && activeRoom && (
-					<div className='shrink-0 border-t-2 border-black bg-white px-4 py-3'>
-						<div className='flex items-end gap-3'>
+					<div className='relative shrink-0 border-t-2 border-black bg-white'>
+
+						{/* Reply preview bar */}
+						{replyTo && (
+							<div className='flex items-center gap-2 border-b-2 border-black/10 bg-gray-50 px-4 py-2'>
+								<Reply className='h-3.5 w-3.5 shrink-0 text-[var(--color-text-primary)]' />
+								<div className='min-w-0 flex-1 text-xs text-gray-500'>
+									<span className='font-bold text-gray-700'>{replyTo.created_by?.full_name ?? "Người dùng"}: </span>
+									<span className='line-clamp-1'>
+										{isGifUrl(replyTo.content) ? "🖼 GIF" : replyTo.content}
+									</span>
+								</div>
+								<button
+									onClick={() => setReplyTo(null)}
+									className='shrink-0 rounded p-0.5 hover:bg-gray-200'>
+									<X className='h-3.5 w-3.5 text-gray-400' />
+								</button>
+							</div>
+						)}
+
+						{/* Emoji picker popup */}
+						{showEmojiPicker && (
+							<div ref={emojiRef} className='absolute bottom-full left-4 z-50 mb-2'>
+								<Picker
+									data={data}
+									locale='vi'
+									theme='light'
+									previewPosition='none'
+									onEmojiSelect={(emoji: { native: string }) => {
+										setInput((prev) => prev + emoji.native);
+										inputRef.current?.focus();
+									}}
+								/>
+							</div>
+						)}
+
+						{/* GIF picker popup (GIPHY) */}
+						{showGifPicker && (
+							<div ref={gifRef} className='absolute bottom-full left-14 z-50 mb-2'>
+								<GiphyPicker
+									onSelect={(url) => void handleSendGif(url)}
+									width={340}
+								/>
+							</div>
+						)}
+
+						{/* Input row */}
+						<div className='flex items-end gap-2 px-4 py-3'>
+							{/* User avatar */}
 							<img
 								src={buildAvatar(user.name, user.picture)}
 								alt={user.name ?? "Bạn"}
-								className='h-9 w-9 shrink-0 rounded-full border-2 border-black object-cover'
+								className='h-9 w-9 shrink-0 self-end rounded-full border-2 border-black object-cover'
 							/>
-							<div className='flex min-w-0 flex-1 items-end gap-2 rounded-xl border-2 border-black bg-white px-3 py-2 focus-within:shadow-[0_0_0_3px_#A3E635]'>
+
+							{/* Textarea + action buttons */}
+							<div className='flex min-w-0 flex-1 items-end gap-1.5 rounded-2xl border-2 border-black bg-white px-3 py-2 focus-within:shadow-[0_0_0_3px_#A3E635]'>
 								<textarea
 									ref={inputRef}
 									rows={1}
@@ -576,19 +685,45 @@ const CommunityChatPage: React.FC = () => {
 									placeholder={`Nhắn vào #${activeRoom.name}...`}
 									className='no-scrollbar max-h-[120px] min-h-[28px] flex-1 resize-none bg-transparent text-sm font-medium text-black outline-none placeholder:text-gray-400'
 								/>
+
+								{/* Emoji button */}
 								<button
-									onClick={() => void handleSend()}
-									disabled={!input.trim() || sending}
-									className='mb-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
-									{sending ? (
-										<Loader2 className='h-3.5 w-3.5 animate-spin' />
-									) : (
-										<Send className='h-3.5 w-3.5' />
-									)}
+									type='button'
+									onClick={() => { setShowEmojiPicker((v) => !v); setShowGifPicker(false); }}
+									className={`mb-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition
+										${showEmojiPicker
+											? "border-2 border-black bg-[var(--color-primary)] shadow-[1px_1px_0_#111]"
+											: "text-gray-400 hover:text-gray-700"}`}
+									title='Emoji'>
+									<Smile className='h-4 w-4' />
+								</button>
+
+								{/* GIF button */}
+								<button
+									type='button'
+									onClick={() => { setShowGifPicker((v) => !v); setShowEmojiPicker(false); }}
+									className={`mb-0.5 inline-flex h-7 items-center justify-center rounded-lg px-1.5 text-[11px] font-extrabold transition
+										${showGifPicker
+											? "border-2 border-black bg-[var(--color-primary)] text-black shadow-[1px_1px_0_#111]"
+											: "text-gray-400 hover:text-gray-700"}`}
+									title='GIF'>
+									<ImageIcon className='mr-0.5 h-3.5 w-3.5' />
+									GIF
 								</button>
 							</div>
+
+							{/* Send button */}
+							<button
+								onClick={() => void handleSend()}
+								disabled={!input.trim() || sending}
+								className='mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
+								{sending
+									? <Loader2 className='h-4 w-4 animate-spin' />
+									: <Send className='h-4 w-4' />}
+							</button>
 						</div>
-						<p className='mt-1.5 pl-12 text-[10px] text-gray-400'>
+
+						<p className='pb-1.5 pl-[4.5rem] text-[10px] text-gray-400'>
 							Enter để gửi · Shift+Enter xuống dòng
 						</p>
 					</div>
