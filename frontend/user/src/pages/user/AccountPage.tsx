@@ -23,142 +23,35 @@ import NeoSelect, { type NeoSelectOption } from "@/components/ui/NeoSelect";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const toOpts = (arr: string[]): NeoSelectOption[] => arr.map((v) => ({ value: v, label: v }));
+// ─── Academic types ───────────────────────────────────────────────────────────
 
-const FACULTY_OPTIONS = toOpts([
-	"Công nghệ thông tin",
-	"Cơ khí",
-	"Cơ khí động lực",
-	"Điện - Điện tử",
-	"Công nghệ nhiệt - lạnh",
-	"Giáo dục đại cương",
-	"Bộ môn Kinh tế",
-]);
+interface FacultyItem {
+	id: number;
+	label: string;
+	value: string;
+}
 
-const MAJOR_BY_FACULTY: Record<string, NeoSelectOption[]> = {
-	"Công nghệ thông tin": toOpts([
-		"Công nghệ Thông tin",
-		"Quản trị mạng máy tính",
-		"Kỹ thuật sửa chữa, lắp ráp máy tính",
-		"Công nghệ Tài chính và Kinh doanh số",
-	]),
-	"Điện - Điện tử": toOpts([
-		"Công nghệ Kỹ thuật Điện, Điện tử",
-		"Công nghệ Kỹ thuật Điện và Năng lượng tái tạo",
-		"Công nghệ Kỹ thuật Điện tử - Viễn thông",
-		"Công nghệ Kỹ thuật Bán dẫn và Vi mạch",
-		"Công nghệ Kỹ thuật Điều khiển và Tự động hóa",
-		"Điện công nghiệp",
-		"Điện tử công nghiệp",
-	]),
-	"Cơ khí": toOpts([
-		"Công nghệ Kỹ thuật Cơ khí",
-		"Công nghệ Kỹ thuật Cơ điện tử",
-		"Cơ khí chế tạo",
-		"Sửa chữa cơ khí",
-		"Hàn",
-	]),
-	"Cơ khí động lực": toOpts(["Công nghệ Kỹ thuật Ô tô", "Bảo trì, sửa chữa ô tô"]),
-	"Công nghệ nhiệt - lạnh": toOpts([
-		"Công nghệ Kỹ thuật Nhiệt",
-		"Kỹ thuật máy lạnh và điều hòa không khí",
-	]),
-	"Bộ môn Kinh tế": toOpts(["Kế toán doanh nghiệp"]),
-	"Giáo dục đại cương": [],
-};
+interface MajorItem {
+	id: number;
+	label: string;
+	value: string;
+	faculty_id: number;
+}
 
-const CLASS_BY_MAJOR: Record<string, NeoSelectOption[]> = {
-	"Công nghệ Thông tin": toOpts([
-		"CĐ TH 23MMTA","CĐ TH 23WEBB","CĐ TH 23WEBC","CĐ TH 23DĐD","CĐ TH 23DĐE",
-		"CĐ CNTT 24A","CĐ CNTT 24B","CĐ CNTT 24C","CĐ CNTT 24D","CĐ CNTT 24E","CĐ CNTT 24F",
-		"CĐ CNTT 24MMT","CĐ CNTT 24AI","CĐ CNTT 24WEBC","CĐ CNTT 24WEBD","CĐ CNTT 24DĐ",
-		"CĐ CNTT 25A","CĐ CNTT 25B","CĐ CNTT 25C","CĐ CNTT 25D","CĐ CNTT 25E","CĐ CNTT 25F",
-	]),
-	"Quản trị mạng máy tính": toOpts([
-		"CĐN QTM 23A","CĐN QTM 23B",
-		"CĐN QTM 24",
-		"CĐN QTM 25A","CĐN QTM 25B",
-	]),
-	"Kỹ thuật sửa chữa, lắp ráp máy tính": toOpts([
-		"CĐN SCMT 23",
-		"CĐN SCMT 24",
-		"CĐN SCMT 25",
-	]),
-	"Công nghệ Tài chính và Kinh doanh số": [],
-	"Công nghệ Kỹ thuật Điện, Điện tử": toOpts([
-		"CĐ ĐĐT 23ĐA","CĐ ĐĐT 23ĐB","CĐ ĐĐT 23ĐC","CĐ ĐĐT 23ĐTD","CĐ ĐĐT 23ĐTE",
-		"CĐ ĐĐT 24A","CĐ ĐĐT 24B","CĐ ĐĐT 24C","CĐ ĐĐT 24D","CĐ ĐĐT 24E","CĐ ĐĐT 24F","CĐ ĐĐT 24G","CĐ ĐĐT 24H",
-		"CĐ ĐĐT 25A","CĐ ĐĐT 25B","CĐ ĐĐT 25C","CĐ ĐĐT 25D","CĐ ĐĐT 25E","CĐ ĐĐT 25F","CĐ ĐĐT 25G","CĐ ĐĐT 25H",
-	]),
-	"Công nghệ Kỹ thuật Điện và Năng lượng tái tạo": [],
-	"Công nghệ Kỹ thuật Điện tử - Viễn thông": toOpts([
-		"CĐ ĐTTT 23VT","CĐ ĐTTT 23MT",
-		"CĐ ĐTTT 24A","CĐ ĐTTT 24B",
-		"CĐ ĐTTT 25A","CĐ ĐTTT 25B",
-	]),
-	"Công nghệ Kỹ thuật Bán dẫn và Vi mạch": [],
-	"Công nghệ Kỹ thuật Điều khiển và Tự động hóa": toOpts([
-		"CĐ ĐKTĐ 23A","CĐ ĐKTĐ 23B","CĐ ĐKTĐ 23C",
-		"CĐ ĐKTĐ 24A","CĐ ĐKTĐ 24B","CĐ ĐKTĐ 24C",
-		"CĐ ĐKTĐ 25A","CĐ ĐKTĐ 25B",
-	]),
-	"Điện công nghiệp": toOpts([
-		"CĐN ĐCN 23A","CĐN ĐCN 23B","CĐN ĐCN 23C","CĐN ĐCN 23D",
-		"CĐN ĐCN 24A","CĐN ĐCN 24B","CĐN ĐCN 24C","CĐN ĐCN 24D","CĐN ĐCN 24E",
-		"CĐN ĐCN 25A","CĐN ĐCN 25B","CĐN ĐCN 25C","CĐN ĐCN 25D",
-	]),
-	"Điện tử công nghiệp": toOpts([
-		"CĐN ĐTCN 23A","CĐN ĐTCN 23B",
-		"CĐN ĐTCN 24A","CĐN ĐTCN 24B",
-		"CĐN ĐTCN 25A","CĐN ĐTCN 25B",
-	]),
-	"Công nghệ Kỹ thuật Cơ khí": [],
-	"Công nghệ Kỹ thuật Cơ điện tử": toOpts([
-		"CĐ CĐT 23A","CĐ CĐT 23B",
-		"CĐ CĐT 24A","CĐ CĐT 24B",
-		"CĐ CĐT 25A","CĐ CĐT 25B",
-	]),
-	"Cơ khí chế tạo": toOpts([
-		"CĐ CK 23A","CĐ CK 23B","CĐ CK 23C","CĐ CK 23D","CĐ CK 23E",
-		"CĐN CGKL 23A","CĐN CGKL 23B",
-		"CĐ CK 24A","CĐ CK 24B","CĐ CK 24C","CĐ CK 24D","CĐ CK 24E",
-		"CĐN CGKL 24A","CĐN CGKL 24B",
-		"CĐ CK 25A","CĐ CK 25B","CĐ CK 25C","CĐ CK 25D","CĐ CK 25E",
-		"CĐN CGKL 25A","CĐN CGKL 25B",
-	]),
-	"Sửa chữa cơ khí": toOpts([
-		"CĐN SCCK 23",
-		"CĐN SCCK 24",
-		"CĐN SCCK 25A","CĐN SCCK 25B",
-	]),
-	"Hàn": toOpts(["CĐN HÀN 23","CĐN HÀN 24","CĐN HÀN 25"]),
-	"Công nghệ Kỹ thuật Ô tô": toOpts([
-		"CĐ ÔTÔ 23A","CĐ ÔTÔ 23B","CĐ ÔTÔ 23C","CĐ ÔTÔ 23D","CĐ ÔTÔ 23E",
-		"CĐN ÔTÔ 23A","CĐN ÔTÔ 23B","CĐN ÔTÔ 23C","CĐN ÔTÔ 23D",
-		"CĐ ÔTÔ 24A","CĐ ÔTÔ 24B","CĐ ÔTÔ 24C","CĐ ÔTÔ 24D","CĐ ÔTÔ 24E",
-		"CĐN ÔTÔ 24A","CĐN ÔTÔ 24B","CĐN ÔTÔ 24C","CĐN ÔTÔ 24D","CĐN ÔTÔ 24E",
-		"CĐ ÔTÔ 25A","CĐ ÔTÔ 25B","CĐ ÔTÔ 25C","CĐ ÔTÔ 25D","CĐ ÔTÔ 25E",
-		"CĐN ÔTÔ 25A","CĐN ÔTÔ 25B","CĐN ÔTÔ 25C","CĐN ÔTÔ 25D",
-	]),
-	"Bảo trì, sửa chữa ô tô": [],
-	"Công nghệ Kỹ thuật Nhiệt": toOpts([
-		"CĐ NL 23A","CĐ NL 23B","CĐ NL 23C","CĐ NL 23D","CĐ NL 23E",
-		"CĐ NL 24A","CĐ NL 24B","CĐ NL 24C","CĐ NL 24D",
-		"CĐ NL 25A","CĐ NL 25B","CĐ NL 25C","CĐ NL 25D",
-	]),
-	"Kỹ thuật máy lạnh và điều hòa không khí": toOpts([
-		"CĐN KTML 23A","CĐN KTML 23B",
-		"CĐN KTML 24A","CĐN KTML 24B","CĐN KTML 24C",
-		"CĐN KTML 25A","CĐN KTML 25B","CĐN KTML 25C",
-	]),
-	"Kế toán doanh nghiệp": toOpts([
-		"CĐ KTDN 23A","CĐ KTDN 23B",
-		"CĐ KTDN 24A","CĐ KTDN 24B",
-		"CĐ KTDN 25A","CĐ KTDN 25B",
-	]),
-};
+interface ClassItem {
+	id: number;
+	label: string;
+	value: string;
+	major_id: number;
+}
 
-const GENDER_OPTIONS = toOpts(["Nam", "Nữ", "Khác"]);
+const labelToOpt = (label: string): NeoSelectOption => ({ value: label, label });
+
+const GENDER_OPTIONS: NeoSelectOption[] = [
+	{ value: "Nam", label: "Nam" },
+	{ value: "Nữ", label: "Nữ" },
+	{ value: "Khác", label: "Khác" },
+];
 
 const SKILL_OPTIONS = [
 	"HTML",
@@ -309,6 +202,32 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 	const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 	const [avatarFile, setAvatarFile] = useState<File | null>(null);
 	const [saving, setSaving] = useState(false);
+
+	// ── Academic data (fetched once, filtered client-side) ──
+	const [allFaculties, setAllFaculties] = useState<FacultyItem[]>([]);
+	const [allMajors, setAllMajors] = useState<MajorItem[]>([]);
+	const [allClasses, setAllClasses] = useState<ClassItem[]>([]);
+	const [loadingAcademic, setLoadingAcademic] = useState(true);
+
+	useEffect(() => {
+		const fetchAcademic = async () => {
+			try {
+				const [facRes, majRes, clsRes] = await Promise.all([
+					api.get<{ data: FacultyItem[] }>("/faculties"),
+					api.get<{ data: MajorItem[] }>("/majors"),
+					api.get<{ data: ClassItem[] }>("/school-classes"),
+				]);
+				setAllFaculties(facRes.data ?? []);
+				setAllMajors(majRes.data ?? []);
+				setAllClasses(clsRes.data ?? []);
+			} catch {
+				// dropdowns trống nếu lỗi — user vẫn có thể save
+			} finally {
+				setLoadingAcademic(false);
+			}
+		};
+		fetchAcademic();
+	}, []);
 	const [usernameStatus, setUsernameStatus] = useState<
 		"idle" | "checking" | "available" | "taken"
 	>("idle");
@@ -405,6 +324,18 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 
 	const handleMajorChange = (val: string) =>
 		setForm((f) => ({ ...f, major: val, class_name: "" }));
+
+	// ── Derived options từ data đã fetch ──
+	const selectedFaculty = allFaculties.find((f) => f.label === form.faculty);
+	const selectedMajor = allMajors.find((m) => m.label === form.major);
+
+	const facultyOptions = allFaculties.map((f) => labelToOpt(f.label));
+	const majorOptions = selectedFaculty
+		? allMajors.filter((m) => m.faculty_id === selectedFaculty.id).map((m) => labelToOpt(m.label))
+		: [];
+	const classOptions = selectedMajor
+		? allClasses.filter((c) => c.major_id === selectedMajor.id).map((c) => labelToOpt(c.label))
+		: [];
 
 	return (
 		<div className='space-y-6'>
@@ -510,17 +441,17 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 					<div>
 						<label className='mb-1.5 block text-sm font-bold text-black'>Khoa</label>
 						<NeoSelect
-							options={FACULTY_OPTIONS}
+							options={facultyOptions}
 							value={form.faculty}
 							onChange={handleFacultyChange}
-							placeholder='Chọn khoa...'
+							placeholder={loadingAcademic ? "Đang tải..." : "Chọn khoa..."}
 						/>
 					</div>
 
 					<div>
 						<label className='mb-1.5 block text-sm font-bold text-black'>Ngành</label>
 						<NeoSelect
-							options={MAJOR_BY_FACULTY[form.faculty] ?? []}
+							options={majorOptions}
 							value={form.major}
 							onChange={handleMajorChange}
 							placeholder={form.faculty ? "Chọn ngành..." : "Chọn khoa trước"}
@@ -530,7 +461,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 					<div>
 						<label className='mb-1.5 block text-sm font-bold text-black'>Lớp</label>
 						<NeoSelect
-							options={CLASS_BY_MAJOR[form.major] ?? []}
+							options={classOptions}
 							value={form.class_name}
 							onChange={setField("class_name")}
 							placeholder={form.major ? "Chọn lớp..." : "Chọn ngành trước"}
@@ -678,7 +609,7 @@ const ComingSoonTab: React.FC<{ title: string }> = ({ title }) => (
 // ─── AccountPage ──────────────────────────────────────────────────────────────
 
 const AccountPage: React.FC = () => {
-	const { user } = useOutletContext<{ user: AuthUser | null }>();
+	const { user, loadingUser } = useOutletContext<{ user: AuthUser | null; loadingUser: boolean }>();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -691,6 +622,9 @@ const AccountPage: React.FC = () => {
 	const [loadingProfile, setLoadingProfile] = useState(true);
 
 	useEffect(() => {
+		// Chờ MainLayout xác minh auth xong mới quyết định redirect
+		if (loadingUser) return;
+
 		if (!user) {
 			navigate("/login", { replace: true });
 			return;
@@ -700,13 +634,15 @@ const AccountPage: React.FC = () => {
 			.then((res) => setProfile((res as { data: UserProfile }).data))
 			.catch(() => setProfile(null))
 			.finally(() => setLoadingProfile(false));
-	}, [user, navigate]);
+	}, [user, loadingUser, navigate]);
 
 	const setActiveTab = (tab: TabId) => {
 		const idx = TABS.findIndex((t) => t.id === tab);
 		setSearchParams({ tabIndex: String(idx) }, { replace: true });
 	};
 
+	// Đang xác minh auth — render trống để tránh flash redirect
+	if (loadingUser) return null;
 	if (!user) return null;
 
 	return (

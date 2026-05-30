@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
+use App\Http\Controllers\Api\V1\User\AcademicController;
 use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
@@ -86,6 +87,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/logout-all', [AuthController::class, 'logoutAll']);
+    });
+
+    // user loged in routes
+    Route::middleware('auth:sanctum')->group(function () {
+        // academic structure
+        Route::get('/faculties', [AcademicController::class, 'faculties']);
+        Route::get('/majors', [AcademicController::class, 'majors']);
+        Route::get('/school-classes', [AcademicController::class, 'schoolClasses']);
     });
 
     // admin routes
