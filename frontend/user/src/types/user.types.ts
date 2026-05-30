@@ -11,6 +11,7 @@ export interface UserProfile {
 	major: string | null;
 	class_name: string | null;
 	gender: string | null;
+	date_of_birth: string | null;
 	is_active: boolean;
 	posts_count: number;
 	followers_count: number;

@@ -8,6 +8,7 @@ import { Toaster } from "sonner";
 
 const MainLayout: React.FC = () => {
 	const [user, setUser] = useState<AuthUser | null>(null);
+	const [loadingUser, setLoadingUser] = useState(true);
 	const { pathname } = useLocation();
 	const isCommunityPage = pathname.startsWith("/cong-dong") || pathname.startsWith("/community");
 
@@ -22,6 +23,7 @@ const MainLayout: React.FC = () => {
 		getCurrentUser().then((currentUser) => {
 			if (isMounted) {
 				setUser(currentUser);
+				setLoadingUser(false);
 			}
 		});
 
@@ -41,7 +43,7 @@ const MainLayout: React.FC = () => {
 
 			{/* Main content */}
 			<main className='flex-grow flex flex-col'>
-				<Outlet context={{ user }} />
+				<Outlet context={{ user, loadingUser }} />
 			</main>
 
 			{!isCommunityPage && <Footer />}
