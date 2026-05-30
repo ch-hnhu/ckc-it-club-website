@@ -22,6 +22,7 @@ import {
 	LayoutGrid,
 	Loader2,
 	MessageCircle,
+	Search,
 	Share2,
 	UserCheck,
 	UserPen,
@@ -459,25 +460,28 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
 // ─── Not Found ────────────────────────────────────────────────────────────────
 
-const ProfileNotFound: React.FC<{ username: string }> = ({ username }) => (
-	<div className='flex flex-col items-center justify-center py-24 text-center'>
-		<div className='mb-4 flex h-20 w-20 items-center justify-center rounded-full border-4 border-black bg-[var(--color-pastel-yellow)] text-4xl shadow-[4px_4px_0_#111]'>
-			🔍
+const ProfileNotFound: React.FC<{ username: string }> = ({ username }) => {
+	const navigate = useNavigate();
+	return (
+		<div className='flex flex-col items-center justify-center py-24 text-center'>
+			<div className='mb-4 flex h-18 w-18 items-center justify-center rounded-full bg-gray-300 text-4xl'>
+				<Search className='text-white' strokeWidth={4} />
+			</div>
+			<h1 className='font-heading text-2xl font-extrabold text-black'>
+				Không tìm thấy người dùng
+			</h1>
+			<p className='mt-2 text-gray-500'>
+				Không có tài khoản nào với tên{" "}
+				<span className='font-bold text-black'>@{username}</span>.
+			</p>
+			<button
+				onClick={() => navigate(-1)}
+				className='mt-6 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-5 py-2.5 font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+				Quay lại
+			</button>
 		</div>
-		<h1 className='font-heading text-2xl font-extrabold text-black'>
-			Không tìm thấy người dùng
-		</h1>
-		<p className='mt-2 text-gray-500'>
-			Không có tài khoản nào với tên <span className='font-bold text-black'>@{username}</span>
-			.
-		</p>
-		<Link
-			to='/cong-dong'
-			className='mt-6 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-5 py-2.5 font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-			Về cộng đồng
-		</Link>
-	</div>
-);
+	);
+};
 
 // ─── Tab Content: Posts ───────────────────────────────────────────────────────
 
@@ -1083,71 +1087,76 @@ const UserProfilePage: React.FC = () => {
 					</div>
 
 					{/* ── Sidebar ── */}
-					<aside className='hidden w-72 shrink-0 space-y-5 lg:block'>
-						<StatsCard profile={profile} />
+					<aside className='hidden w-72 shrink-0 self-start sticky top-24 lg:block'>
+						<div className='space-y-5'>
+							<StatsCard profile={profile} />
 
-						{/* Member info card */}
-						<div className='rounded-2xl border-2 border-black bg-white p-4 shadow-[4px_4px_0_#111]'>
-							<h2 className='mb-4 font-heading text-base font-extrabold text-black'>
-								Thông tin thành viên
-							</h2>
-							<div className='space-y-2.5 text-sm'>
-								{profile.student_code && (
-									<div className='flex items-center justify-between'>
-										<span className='text-gray-500'>MSSV</span>
+							{/* Member info card */}
+							<div className='rounded-2xl border-2 border-black bg-white p-4 shadow-[4px_4px_0_#111]'>
+								<h2 className='mb-4 font-heading text-base font-extrabold text-black'>
+									Thông tin thành viên
+								</h2>
+								<div className='space-y-2.5 text-sm'>
+									{profile.student_code && (
+										<div className='flex items-center justify-between'>
+											<span className='text-gray-500'>MSSV</span>
+											<span className='font-bold text-black'>
+												{profile.student_code}
+											</span>
+										</div>
+									)}
+									{profile.faculty && (
+										<div className='flex items-center justify-between'>
+											<span className='text-gray-500'>Khoa</span>
+											<span className='max-w-[60%] text-right font-bold text-black'>
+												{profile.faculty}
+											</span>
+										</div>
+									)}
+									{profile.major && (
+										<div className='flex items-center justify-between'>
+											<span className='text-gray-500'>Ngành</span>
+											<span className='max-w-[60%] text-right font-bold text-black'>
+												{profile.major}
+											</span>
+										</div>
+									)}
+									{profile.class_name && (
+										<div className='flex items-center justify-between'>
+											<span className='text-gray-500'>Lớp</span>
+											<span className='font-bold text-black'>
+												{profile.class_name}
+											</span>
+										</div>
+									)}
+									<div className='flex items-center justify-between border-t-2 border-dashed border-gray-200 pt-2'>
+										<span className='text-gray-500'>Tham gia</span>
 										<span className='font-bold text-black'>
-											{profile.student_code}
+											{new Date(profile.created_at).toLocaleDateString(
+												"vi-VN",
+												{
+													day: "numeric",
+													month: "short",
+													year: "numeric",
+												},
+											)}
 										</span>
 									</div>
-								)}
-								{profile.faculty && (
-									<div className='flex items-center justify-between'>
-										<span className='text-gray-500'>Khoa</span>
-										<span className='max-w-[60%] text-right font-bold text-black'>
-											{profile.faculty}
-										</span>
-									</div>
-								)}
-								{profile.major && (
-									<div className='flex items-center justify-between'>
-										<span className='text-gray-500'>Ngành</span>
-										<span className='max-w-[60%] text-right font-bold text-black'>
-											{profile.major}
-										</span>
-									</div>
-								)}
-								{profile.class_name && (
-									<div className='flex items-center justify-between'>
-										<span className='text-gray-500'>Lớp</span>
-										<span className='font-bold text-black'>
-											{profile.class_name}
-										</span>
-									</div>
-								)}
-								<div className='flex items-center justify-between border-t-2 border-dashed border-gray-200 pt-2'>
-									<span className='text-gray-500'>Tham gia</span>
-									<span className='font-bold text-black'>
-										{new Date(profile.created_at).toLocaleDateString("vi-VN", {
-											day: "numeric",
-											month: "short",
-											year: "numeric",
-										})}
-									</span>
 								</div>
 							</div>
+
+							<SkillsCard skills={profile.skills} />
+
+							{/* Share profile */}
+							<button
+								onClick={() => {
+									navigator.clipboard.writeText(window.location.href);
+								}}
+								className='flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+								<Share2 className='h-4 w-4' />
+								Sao chép liên kết hồ sơ
+							</button>
 						</div>
-
-						<SkillsCard skills={profile.skills} />
-
-						{/* Share profile */}
-						<button
-							onClick={() => {
-								navigator.clipboard.writeText(window.location.href);
-							}}
-							className='flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-							<Share2 className='h-4 w-4' />
-							Sao chép liên kết hồ sơ
-						</button>
 					</aside>
 				</div>
 			</div>
