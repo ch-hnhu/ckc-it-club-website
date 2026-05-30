@@ -22,56 +22,27 @@ import type { UserProfile } from "@/types/user.types";
 import NeoSelect, { type NeoSelectOption } from "@/components/ui/NeoSelect";
 import NeoDatePicker from "@/components/ui/NeoDatePicker";
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
 // ─── Academic types ───────────────────────────────────────────────────────────
 
-interface FacultyItem {
+interface AcademicItem {
 	id: number;
 	label: string;
 	value: string;
 }
 
-interface MajorItem {
-	id: number;
-	label: string;
-	value: string;
+interface MajorItem extends AcademicItem {
 	faculty_id: number;
 }
 
-interface ClassItem {
-	id: number;
-	label: string;
-	value: string;
+interface ClassItem extends AcademicItem {
 	major_id: number;
 }
 
-const labelToOpt = (label: string): NeoSelectOption => ({ value: label, label });
-
-const GENDER_OPTIONS: NeoSelectOption[] = [
-	{ value: "Nam", label: "Nam" },
-	{ value: "Nữ", label: "Nữ" },
-	{ value: "Khác", label: "Khác" },
-];
-
-const SKILL_OPTIONS = [
-	"HTML",
-	"CSS",
-	"JavaScript",
-	"Python",
-	"Java",
-	"C++",
-	"SQL",
-	"Command Line",
-	"React",
-	"Laravel",
-	"Node.js",
-	"TypeScript",
-	"Git & GitHub",
-	"Docker",
-	"Linux",
-	"PHP",
-];
+interface SkillItem {
+	id: number;
+	name: string;
+	slug: string;
+}
 
 // ─── Tab IDs ─────────────────────────────────────────────────────────────────
 
@@ -82,6 +53,12 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
 	{ id: "billing", label: "Thanh toán", icon: CreditCard },
 	{ id: "notifications", label: "Thông báo email", icon: Bell },
 	{ id: "settings", label: "Cài đặt", icon: Settings },
+];
+
+const GENDER_OPTIONS: NeoSelectOption[] = [
+	{ value: "Nam", label: "Nam" },
+	{ value: "Nữ", label: "Nữ" },
+	{ value: "Khác", label: "Khác" },
 ];
 
 // ─── Input Field ─────────────────────────────────────────────────────────────
@@ -180,61 +157,69 @@ interface ProfileTabProps {
 }
 
 const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
-	const fileInputRef = useRef<HTMLInputElement>(null);
+	const avatarInputRef = useRef<HTMLInputElement>(null);
+	const coverInputRef = useRef<HTMLInputElement>(null);
 
 	const [form, setForm] = useState({
 		full_name: "",
 		username: "",
 		bio: "",
 		student_code: "",
-		faculty: "",
-		major: "",
-		class_name: "",
+		faculty_id: "",
+		major_id: "",
+		class_id: "",
 		gender: "",
 		date_of_birth: "",
-		github: "",
-		twitter: "",
-		linkedin: "",
-		instagram: "",
-		youtube: "",
-		twitch: "",
-		tiktok: "",
+		social_github: "",
+		social_linkedin: "",
+		social_instagram: "",
+		social_youtube: "",
+		social_tiktok: "",
 	});
 	const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
 	const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 	const [avatarFile, setAvatarFile] = useState<File | null>(null);
+	const [coverPreview, setCoverPreview] = useState<string | null>(null);
+	const [coverFile, setCoverFile] = useState<File | null>(null);
 	const [saving, setSaving] = useState(false);
 
-	// ── Academic data (fetched once, filtered client-side) ──
-	const [allFaculties, setAllFaculties] = useState<FacultyItem[]>([]);
+	// ── Skills from API ──
+	const [availableSkills, setAvailableSkills] = useState<SkillItem[]>([]);
+
+	// ── Academic data ──
+	const [allFaculties, setAllFaculties] = useState<AcademicItem[]>([]);
 	const [allMajors, setAllMajors] = useState<MajorItem[]>([]);
 	const [allClasses, setAllClasses] = useState<ClassItem[]>([]);
 	const [loadingAcademic, setLoadingAcademic] = useState(true);
 
 	useEffect(() => {
-		const fetchAcademic = async () => {
+		const fetchStatic = async () => {
 			try {
-				const [facRes, majRes, clsRes] = await Promise.all([
-					api.get<{ data: FacultyItem[] }>("/academic/faculties"),
+				const [facRes, majRes, clsRes, skillsRes] = await Promise.all([
+					api.get<{ data: AcademicItem[] }>("/academic/faculties"),
 					api.get<{ data: MajorItem[] }>("/academic/majors"),
 					api.get<{ data: ClassItem[] }>("/academic/school-classes"),
+					api.get<{ data: SkillItem[] }>("/users/skills"),
 				]);
 				setAllFaculties(facRes.data ?? []);
 				setAllMajors(majRes.data ?? []);
 				setAllClasses(clsRes.data ?? []);
+				setAvailableSkills(skillsRes.data ?? []);
 			} catch {
-				// dropdowns trống nếu lỗi — user vẫn có thể save
+				// dropdowns empty on error — user can still save
 			} finally {
 				setLoadingAcademic(false);
 			}
 		};
-		fetchAcademic();
+		fetchStatic();
 	}, []);
+
 	const [usernameStatus, setUsernameStatus] = useState<
 		"idle" | "checking" | "available" | "taken"
 	>("idle");
 	const usernameTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+	// Populate form when profile loads
 	useEffect(() => {
 		if (!profile) return;
 		setForm({
@@ -242,27 +227,25 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 			username: profile.username ?? "",
 			bio: profile.bio ?? "",
 			student_code: profile.student_code ?? "",
-			faculty: profile.faculty ?? "",
-			major: profile.major ?? "",
-			class_name: profile.class_name ?? "",
+			faculty_id: profile.faculty_id ? String(profile.faculty_id) : "",
+			major_id: profile.major_id ? String(profile.major_id) : "",
+			class_id: profile.class_id ? String(profile.class_id) : "",
 			gender: profile.gender ?? "",
 			date_of_birth: profile.date_of_birth ?? "",
-			github: "",
-			twitter: "",
-			linkedin: "",
-			instagram: "",
-			youtube: "",
-			twitch: "",
-			tiktok: "",
+			social_github: profile.social_github ?? "",
+			social_linkedin: profile.social_linkedin ?? "",
+			social_instagram: profile.social_instagram ?? "",
+			social_youtube: profile.social_youtube ?? "",
+			social_tiktok: profile.social_tiktok ?? "",
 		});
 		setSelectedSkills(profile.skills ?? []);
 	}, [profile]);
 
-	const avatar =
+	const avatarSrc =
 		avatarPreview ??
-		(profile
-			? buildAvatar(profile.full_name, profile.avatar)
-			: buildAvatar(user.name ?? "", null));
+		(profile ? buildAvatar(profile.full_name, profile.avatar) : buildAvatar(user.name ?? "", null));
+
+	const coverSrc = coverPreview ?? profile?.cover_image ?? null;
 
 	const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -270,6 +253,15 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 		setAvatarFile(file);
 		const reader = new FileReader();
 		reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+		reader.readAsDataURL(file);
+	};
+
+	const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		setCoverFile(file);
+		const reader = new FileReader();
+		reader.onload = (ev) => setCoverPreview(ev.target?.result as string);
 		reader.readAsDataURL(file);
 	};
 
@@ -282,7 +274,6 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 	const handleUsernameChange = (val: string) => {
 		setForm((f) => ({ ...f, username: val }));
 		setUsernameStatus("idle");
-
 		if (usernameTimeout.current) clearTimeout(usernameTimeout.current);
 		if (!val || val === profile?.username) return;
 
@@ -292,9 +283,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 				const res = await api.get<{ available: boolean }>("/users/check-username", {
 					username: val,
 				});
-				setUsernameStatus(
-					(res as { available: boolean }).available ? "available" : "taken",
-				);
+				setUsernameStatus(res.available ? "available" : "taken");
 			} catch {
 				setUsernameStatus("idle");
 			}
@@ -305,12 +294,17 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 		setSaving(true);
 		try {
 			const formData = new FormData();
-			Object.entries(form).forEach(([k, v]) => v && formData.append(k, v));
+			Object.entries(form).forEach(([k, v]) => formData.append(k, v));
+			// Always sync skills (marker lets backend know to overwrite)
+			formData.append("skills_sync", "1");
 			selectedSkills.forEach((s) => formData.append("skills[]", s));
 			if (avatarFile) formData.append("avatar", avatarFile);
+			if (coverFile) formData.append("cover_image", coverFile);
 
 			await api.postForm<ApiResponse<UserProfile>>("/users/profile", formData);
 			toast.success("Đã lưu hồ sơ thành công!");
+			setAvatarFile(null);
+			setCoverFile(null);
 			onSaved();
 		} catch {
 			toast.error("Không thể lưu hồ sơ. Vui lòng thử lại.");
@@ -323,269 +317,318 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 		setForm((f) => ({ ...f, [key]: v }));
 
 	const handleFacultyChange = (val: string) =>
-		setForm((f) => ({ ...f, faculty: val, major: "", class_name: "" }));
+		setForm((f) => ({ ...f, faculty_id: val, major_id: "", class_id: "" }));
 
 	const handleMajorChange = (val: string) =>
-		setForm((f) => ({ ...f, major: val, class_name: "" }));
+		setForm((f) => ({ ...f, major_id: val, class_id: "" }));
 
-	// ── Derived options từ data đã fetch ──
-	const selectedFaculty = allFaculties.find((f) => f.label === form.faculty);
-	const selectedMajor = allMajors.find((m) => m.label === form.major);
+	// ── Derived options ──
+	const selectedFaculty = allFaculties.find((f) => String(f.id) === form.faculty_id);
+	const selectedMajor = allMajors.find((m) => String(m.id) === form.major_id);
 
-	const facultyOptions = allFaculties.map((f) => labelToOpt(f.label));
-	const majorOptions = selectedFaculty
+	const facultyOptions: NeoSelectOption[] = allFaculties.map((f) => ({
+		value: String(f.id),
+		label: f.label,
+	}));
+	const majorOptions: NeoSelectOption[] = selectedFaculty
 		? allMajors
 				.filter((m) => m.faculty_id === selectedFaculty.id)
-				.map((m) => labelToOpt(m.label))
+				.map((m) => ({ value: String(m.id), label: m.label }))
 		: [];
-	const classOptions = selectedMajor
-		? allClasses.filter((c) => c.major_id === selectedMajor.id).map((c) => labelToOpt(c.label))
+	const classOptions: NeoSelectOption[] = selectedMajor
+		? allClasses
+				.filter((c) => c.major_id === selectedMajor.id)
+				.map((c) => ({ value: String(c.id), label: c.label }))
 		: [];
 
 	return (
 		<div className='space-y-6'>
-			{/* ── ONE Profile panel: avatar + all fields ── */}
-			<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
-				<h1 className='font-heading text-xl font-extrabold text-black'>Hồ sơ</h1>
-				<p className='mb-6 mt-1 text-sm text-gray-500'>Quản lý thông tin hồ sơ của bạn.</p>
+			{/* ── Profile panel ── */}
+			<div className='rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111] overflow-hidden'>
+				{/* Cover image */}
+				<div
+					className='group relative h-36 cursor-pointer bg-gray-100 sm:h-44'
+					onClick={() => coverInputRef.current?.click()}>
+					{coverSrc ? (
+						<img
+							src={coverSrc}
+							alt='Cover'
+							className='h-full w-full object-cover'
+						/>
+					) : (
+						<div className='flex h-full items-center justify-center'>
+							<span className='text-sm font-medium text-gray-400'>
+								Click để thêm ảnh bìa
+							</span>
+						</div>
+					)}
+					<div className='absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100'>
+						<Camera className='h-5 w-5 text-white' />
+						<span className='text-sm font-bold text-white'>Đổi ảnh bìa</span>
+					</div>
+					<input
+						ref={coverInputRef}
+						type='file'
+						accept='image/*'
+						className='hidden'
+						onChange={handleCoverChange}
+					/>
+				</div>
 
-				{/* Top row — avatar LEFT, Name + Username + Email RIGHT */}
-				<div className='flex flex-col gap-6 sm:flex-row sm:items-start'>
-					{/* Avatar column — larger */}
-					<div className='flex flex-col items-center gap-3 sm:w-52 sm:shrink-0'>
-						<div
-							className='group relative cursor-pointer'
-							onClick={() => fileInputRef.current?.click()}>
-							<img
-								src={avatar}
-								alt='Avatar'
-								className='h-40 w-40 rounded-full border-2 border-black object-cover transition'
-							/>
-							<div className='absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-full bg-black/55 opacity-0 transition-opacity group-hover:opacity-100'>
-								<Camera className='h-5 w-5 text-white' />
-								<span className='text-[11px] font-bold leading-tight text-white'>
-									Chỉnh sửa ảnh
-								</span>
+				<div className='p-6'>
+					<h1 className='font-heading text-xl font-extrabold text-black'>Hồ sơ</h1>
+					<p className='mb-6 mt-1 text-sm text-gray-500'>Quản lý thông tin hồ sơ của bạn.</p>
+
+					{/* Top row — avatar LEFT, Name + Username + Email RIGHT */}
+					<div className='flex flex-col gap-6 sm:flex-row sm:items-start'>
+						{/* Avatar */}
+						<div className='flex flex-col items-center gap-3 sm:w-52 sm:shrink-0'>
+							<div
+								className='group relative cursor-pointer'
+								onClick={() => avatarInputRef.current?.click()}>
+								<img
+									src={avatarSrc}
+									alt='Avatar'
+									className='h-40 w-40 rounded-full border-2 border-black object-cover'
+								/>
+								<div className='absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-full bg-black/55 opacity-0 transition-opacity group-hover:opacity-100'>
+									<Camera className='h-5 w-5 text-white' />
+									<span className='text-[11px] font-bold leading-tight text-white'>
+										Chỉnh sửa ảnh
+									</span>
+								</div>
+								<input
+									ref={avatarInputRef}
+									type='file'
+									accept='image/*'
+									className='hidden'
+									onChange={handleAvatarChange}
+								/>
 							</div>
-							<input
-								ref={fileInputRef}
-								type='file'
-								accept='image/*'
-								className='hidden'
-								onChange={handleAvatarChange}
-							/>
+							<p className='text-center text-xs leading-snug text-gray-500'>
+								Tỉ lệ khuyến nghị 1:1
+								<br />
+								và kích thước tệp &lt; 5 MB.
+							</p>
 						</div>
-						<p className='text-center text-xs leading-snug text-gray-500'>
-							Tỉ lệ khuyến nghị 1:1
-							<br />
-							và kích thước tệp &lt; 5 MB.
-						</p>
-					</div>
 
-					{/* Name + Username + Email column */}
-					<div className='min-w-0 flex-1 space-y-4'>
-						<InputField
-							label='Họ và tên'
-							value={form.full_name}
-							onChange={setField("full_name")}
-							placeholder='Nguyễn Văn A'
-						/>
-
-						<InputField
-							label='Username'
-							value={form.username}
-							onChange={handleUsernameChange}
-							placeholder='ten-nguoi-dung'
-							required
-							hint={
-								usernameStatus === "available" ? (
-									<p className='flex items-center gap-1 text-xs font-bold text-green-600'>
-										<Check className='h-3.5 w-3.5' />
-										Username khả dụng
-									</p>
-								) : usernameStatus === "taken" ? (
-									<p className='text-xs font-bold text-red-500'>
-										Username đã được sử dụng
-									</p>
-								) : usernameStatus === "checking" ? (
-									<p className='flex items-center gap-1 text-xs text-gray-400'>
-										<Loader2 className='h-3 w-3 animate-spin' />
-										Đang kiểm tra..
-									</p>
-								) : null
-							}
-						/>
-
-						{/* Email — read-only */}
-						<div>
-							<label className='mb-1.5 flex items-center gap-2 text-sm font-bold text-black'>
-								Email
-							</label>
-							<input
-								type='email'
-								value={profile?.email ?? user.email ?? ""}
-								disabled
-								className='h-[3.25rem] w-full cursor-not-allowed rounded-xl border-2 border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-400 outline-none select-all'
+						{/* Name + Username + Email */}
+						<div className='min-w-0 flex-1 space-y-4'>
+							<InputField
+								label='Họ và tên'
+								value={form.full_name}
+								onChange={setField("full_name")}
+								placeholder='Nguyễn Văn A'
 							/>
-						</div>
-					</div>
-				</div>
 
-				{/* Divider */}
-				<div className='my-6 border-t-2 border-dashed border-gray-200' />
+							<InputField
+								label='Username'
+								value={form.username}
+								onChange={handleUsernameChange}
+								placeholder='ten-nguoi-dung'
+								required
+								hint={
+									usernameStatus === "available" ? (
+										<p className='flex items-center gap-1 text-xs font-bold text-green-600'>
+											<Check className='h-3.5 w-3.5' />
+											Username khả dụng
+										</p>
+									) : usernameStatus === "taken" ? (
+										<p className='text-xs font-bold text-red-500'>
+											Username đã được sử dụng
+										</p>
+									) : usernameStatus === "checking" ? (
+										<p className='flex items-center gap-1 text-xs text-gray-400'>
+											<Loader2 className='h-3 w-3 animate-spin' />
+											Đang kiểm tra..
+										</p>
+									) : null
+								}
+							/>
 
-				{/* Remaining full-width fields */}
-				<div className='space-y-4'>
-					<InputField
-						label='MSSV'
-						value={form.student_code}
-						onChange={setField("student_code")}
-						placeholder='0306231234'
-					/>
-
-					<div>
-						<label className='mb-1.5 block text-sm font-bold text-black'>Khoa</label>
-						<NeoSelect
-							options={facultyOptions}
-							value={form.faculty}
-							onChange={handleFacultyChange}
-							placeholder={loadingAcademic ? "Đang tải..." : "Chọn khoa.."}
-							emptyMessage='Không tìm thấy khoa nào'
-						/>
-					</div>
-
-					<div>
-						<label className='mb-1.5 block text-sm font-bold text-black'>Ngành</label>
-						<NeoSelect
-							options={majorOptions}
-							value={form.major}
-							onChange={handleMajorChange}
-							placeholder='Chọn ngành..'
-							emptyMessage={
-								form.faculty
-									? "Khoa này chưa có ngành"
-									: "Vui lòng chọn khoa trước."
-							}
-						/>
-					</div>
-
-					<div>
-						<label className='mb-1.5 block text-sm font-bold text-black'>Lớp</label>
-						<NeoSelect
-							options={classOptions}
-							value={form.class_name}
-							onChange={setField("class_name")}
-							placeholder='Chọn lớp..'
-							emptyMessage={
-								form.major ? "Ngành này chưa có lớp" : "Vui lòng chọn ngành trước."
-							}
-						/>
-					</div>
-
-					<div>
-						<label className='mb-1.5 block text-sm font-bold text-black'>
-							Giới tính
-						</label>
-						<NeoSelect
-							options={GENDER_OPTIONS}
-							value={form.gender}
-							onChange={setField("gender")}
-							placeholder='Chọn giới tính..'
-						/>
-					</div>
-
-					<div>
-						<label className='mb-1.5 block text-sm font-bold text-black'>
-							Ngày sinh
-						</label>
-						<NeoDatePicker
-							value={form.date_of_birth}
-							onChange={setField("date_of_birth")}
-							placeholder='Chọn ngày sinh..'
-						/>
-					</div>
-				</div>
-
-				<div className='mt-4'>
-					<label className='mb-1.5 block text-sm font-bold text-black'>Giới thiệu</label>
-					<textarea
-						value={form.bio}
-						onChange={(e) => setField("bio")(e.target.value)}
-						placeholder='Một chút về bản thân bạn..'
-						rows={4}
-						className='w-full resize-none rounded-xl border-2 border-black bg-white px-3 py-2.5 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
-					/>
-				</div>
-
-				{/* Skills — within the same profile panel */}
-				<div className='mt-6'>
-					<h3 className='mb-4 font-heading text-base font-extrabold text-black'>
-						Kỹ năng
-					</h3>
-					<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4'>
-						{SKILL_OPTIONS.map((skill) => {
-							const checked = selectedSkills.includes(skill);
-							return (
-								<label
-									key={skill}
-									className={`flex cursor-pointer items-center gap-2.5 rounded-xl border-2 border-black px-3 py-2.5 bg-white text-sm font-bold transition select-none"
-									}`}>
-									<div
-										className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 border-black transition ${
-											checked ? "bg-black" : "bg-white"
-										}`}>
-										{checked && <Check className='h-3 w-3 text-white' />}
-									</div>
-									<input
-										type='checkbox'
-										className='sr-only'
-										checked={checked}
-										onChange={() => toggleSkill(skill)}
-									/>
-									{skill}
+							{/* Email — read-only */}
+							<div>
+								<label className='mb-1.5 block text-sm font-bold text-black'>
+									Email
 								</label>
-							);
-						})}
+								<input
+									type='email'
+									value={profile?.email ?? user.email ?? ""}
+									disabled
+									className='h-[3.25rem] w-full cursor-not-allowed rounded-xl border-2 border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-400 outline-none select-all'
+								/>
+							</div>
+						</div>
+					</div>
+
+					{/* Divider */}
+					<div className='my-6 border-t-2 border-dashed border-gray-200' />
+
+					{/* Remaining fields */}
+					<div className='space-y-4'>
+						<InputField
+							label='MSSV'
+							value={form.student_code}
+							onChange={setField("student_code")}
+							placeholder='0306231234'
+						/>
+
+						<div>
+							<label className='mb-1.5 block text-sm font-bold text-black'>Khoa</label>
+							<NeoSelect
+								options={facultyOptions}
+								value={form.faculty_id}
+								onChange={handleFacultyChange}
+								placeholder={loadingAcademic ? "Đang tải..." : "Chọn khoa.."}
+								emptyMessage='Không tìm thấy khoa nào'
+							/>
+						</div>
+
+						<div>
+							<label className='mb-1.5 block text-sm font-bold text-black'>Ngành</label>
+							<NeoSelect
+								options={majorOptions}
+								value={form.major_id}
+								onChange={handleMajorChange}
+								placeholder='Chọn ngành..'
+								emptyMessage={
+									form.faculty_id
+										? "Khoa này chưa có ngành"
+										: "Vui lòng chọn khoa trước."
+								}
+							/>
+						</div>
+
+						<div>
+							<label className='mb-1.5 block text-sm font-bold text-black'>Lớp</label>
+							<NeoSelect
+								options={classOptions}
+								value={form.class_id}
+								onChange={setField("class_id")}
+								placeholder='Chọn lớp..'
+								emptyMessage={
+									form.major_id ? "Ngành này chưa có lớp" : "Vui lòng chọn ngành trước."
+								}
+							/>
+						</div>
+
+						<div>
+							<label className='mb-1.5 block text-sm font-bold text-black'>
+								Giới tính
+							</label>
+							<NeoSelect
+								options={GENDER_OPTIONS}
+								value={form.gender}
+								onChange={setField("gender")}
+								placeholder='Chọn giới tính..'
+							/>
+						</div>
+
+						<div>
+							<label className='mb-1.5 block text-sm font-bold text-black'>
+								Ngày sinh
+							</label>
+							<NeoDatePicker
+								value={form.date_of_birth}
+								onChange={setField("date_of_birth")}
+								placeholder='Chọn ngày sinh..'
+							/>
+						</div>
+					</div>
+
+					<div className='mt-4'>
+						<label className='mb-1.5 block text-sm font-bold text-black'>Giới thiệu</label>
+						<textarea
+							value={form.bio}
+							onChange={(e) => setField("bio")(e.target.value)}
+							placeholder='Một chút về bản thân bạn..'
+							rows={4}
+							className='w-full resize-none rounded-xl border-2 border-black bg-white px-3 py-2.5 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
+						/>
+					</div>
+
+					{/* Skills */}
+					<div className='mt-6'>
+						<h3 className='mb-4 font-heading text-base font-extrabold text-black'>
+							Kỹ năng
+						</h3>
+						{availableSkills.length === 0 ? (
+							<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4'>
+								{Array.from({ length: 8 }).map((_, i) => (
+									<div
+										key={i}
+										className='h-10 animate-pulse rounded-xl border-2 border-gray-200 bg-gray-100'
+									/>
+								))}
+							</div>
+						) : (
+							<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4'>
+								{availableSkills.map((skill) => {
+									const checked = selectedSkills.includes(skill.name);
+									return (
+										<label
+											key={skill.id}
+											className={`flex cursor-pointer select-none items-center gap-2.5 rounded-xl border-2 border-black px-3 py-2.5 text-sm font-bold transition ${
+												checked ? "bg-[var(--color-primary)]" : "bg-white hover:bg-gray-50"
+											}`}>
+											<div
+												className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 border-black transition ${
+													checked ? "bg-black" : "bg-white"
+												}`}>
+												{checked && <Check className='h-3 w-3 text-white' />}
+											</div>
+											<input
+												type='checkbox'
+												className='sr-only'
+												checked={checked}
+												onChange={() => toggleSkill(skill.name)}
+											/>
+											{skill.name}
+										</label>
+									);
+								})}
+							</div>
+						)}
 					</div>
 				</div>
 			</div>
 
-			{/* ── Social media — separate panel ── */}
+			{/* ── Social media panel ── */}
 			<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
 				<h1 className='mb-5 font-heading text-lg font-extrabold text-black'>Mạng xã hội</h1>
 				<div className='space-y-4'>
 					<SocialInput
 						label='GitHub'
-						value={form.github}
-						onChange={setField("github")}
+						value={form.social_github}
+						onChange={setField("social_github")}
 						prefix='github.com/'
 						icon={<Github />}
 					/>
 					<SocialInput
 						label='LinkedIn'
-						value={form.linkedin}
-						onChange={setField("linkedin")}
-						prefix='linkedin.com/u/'
+						value={form.social_linkedin}
+						onChange={setField("social_linkedin")}
+						prefix='linkedin.com/in/'
 						icon={<Globe />}
 					/>
 					<SocialInput
 						label='Instagram'
-						value={form.instagram}
-						onChange={setField("instagram")}
+						value={form.social_instagram}
+						onChange={setField("social_instagram")}
 						prefix='instagram.com/'
 						icon={<Instagram />}
 					/>
 					<SocialInput
 						label='YouTube'
-						value={form.youtube}
-						onChange={setField("youtube")}
+						value={form.social_youtube}
+						onChange={setField("social_youtube")}
 						prefix='youtube.com/@'
 						icon={<Youtube />}
 					/>
 					<SocialInput
 						label='TikTok'
-						value={form.tiktok}
-						onChange={setField("tiktok")}
+						value={form.social_tiktok}
+						onChange={setField("social_tiktok")}
 						prefix='tiktok.com/@'
 						icon={<Globe />}
 					/>
@@ -597,7 +640,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 				<button
 					onClick={handleSave}
 					disabled={saving}
-					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-x-0 disabled:translate-y-0 disabled:shadow-[3px_3px_0_#111]'>
+					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:translate-x-0 disabled:translate-y-0 disabled:opacity-60 disabled:shadow-[3px_3px_0_#111]'>
 					{saving && <Loader2 className='h-4 w-4 animate-spin' />}
 					Lưu thay đổi
 				</button>
@@ -621,63 +664,52 @@ const FieldSkeleton: React.FC<{ labelW?: string }> = ({ labelW = "w-16" }) => (
 
 const ProfileTabSkeleton: React.FC = () => (
 	<div className='space-y-6'>
-		{/* ── Profile card ── */}
-		<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
-			{/* Heading */}
-			<Bone className='h-6 w-14' />
-			<Bone className='mt-1.5 mb-6 h-4 w-52 bg-gray-100' />
+		{/* Profile card */}
+		<div className='overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111]'>
+			{/* Cover */}
+			<Bone className='h-36 w-full rounded-none sm:h-44' />
 
-			{/* Top row: avatar + name/username/email */}
-			<div className='flex flex-col gap-6 sm:flex-row sm:items-start'>
-				{/* Avatar column */}
-				<div className='flex flex-col items-center gap-3 sm:w-52 sm:shrink-0'>
-					<Bone className='h-40 w-40 rounded-full' />
-					<Bone className='h-3 w-28 bg-gray-100' />
-					<Bone className='h-3 w-20 bg-gray-100' />
+			<div className='p-6'>
+				<Bone className='h-6 w-14' />
+				<Bone className='mb-6 mt-1.5 h-4 w-52 bg-gray-100' />
+
+				<div className='flex flex-col gap-6 sm:flex-row sm:items-start'>
+					<div className='flex flex-col items-center gap-3 sm:w-52 sm:shrink-0'>
+						<Bone className='h-40 w-40 rounded-full' />
+						<Bone className='h-3 w-28 bg-gray-100' />
+					</div>
+					<div className='min-w-0 flex-1 space-y-4'>
+						<FieldSkeleton labelW='w-20' />
+						<FieldSkeleton labelW='w-24' />
+						<FieldSkeleton labelW='w-12' />
+					</div>
 				</div>
 
-				{/* Name + Username + Email */}
-				<div className='min-w-0 flex-1 space-y-4'>
-					<FieldSkeleton labelW='w-20' />
-					<FieldSkeleton labelW='w-24' />
-					<FieldSkeleton labelW='w-12' />
-				</div>
-			</div>
+				<div className='my-6 border-t-2 border-dashed border-gray-200' />
 
-			{/* Divider */}
-			<div className='my-6 border-t-2 border-dashed border-gray-200' />
-
-			{/* MSSV / Khoa / Ngành / Lớp / Giới tính / Ngày sinh */}
-			<div className='space-y-4'>
-				<FieldSkeleton labelW='w-10' />
-				<FieldSkeleton labelW='w-8' />
-				<FieldSkeleton labelW='w-12' />
-				<FieldSkeleton labelW='w-6' />
-				<FieldSkeleton labelW='w-16' />
-				<FieldSkeleton labelW='w-16' />
-			</div>
-
-			{/* Bio */}
-			<div className='mt-4'>
-				<Bone className='mb-1.5 h-4 w-16' />
-				<Bone className='h-[6.5rem] w-full rounded-xl' />
-			</div>
-
-			{/* Skills */}
-			<div className='mt-6'>
-				<Bone className='mb-4 h-5 w-14' />
-				<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4'>
-					{Array.from({ length: 16 }).map((_, i) => (
-						<Bone
-							key={i}
-							className='h-10 rounded-xl border-2 border-gray-300 bg-gray-100'
-						/>
+				<div className='space-y-4'>
+					{["w-10", "w-8", "w-12", "w-6", "w-16", "w-16"].map((w, i) => (
+						<FieldSkeleton key={i} labelW={w} />
 					))}
+				</div>
+
+				<div className='mt-4'>
+					<Bone className='mb-1.5 h-4 w-16' />
+					<Bone className='h-[6.5rem] w-full rounded-xl' />
+				</div>
+
+				<div className='mt-6'>
+					<Bone className='mb-4 h-5 w-14' />
+					<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4'>
+						{Array.from({ length: 16 }).map((_, i) => (
+							<Bone key={i} className='h-10 rounded-xl border-2 border-gray-300 bg-gray-100' />
+						))}
+					</div>
 				</div>
 			</div>
 		</div>
 
-		{/* ── Social card ── */}
+		{/* Social card */}
 		<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
 			<Bone className='mb-5 h-5 w-28' />
 			<div className='space-y-4'>
@@ -687,7 +719,7 @@ const ProfileTabSkeleton: React.FC = () => (
 			</div>
 		</div>
 
-		{/* ── Save button ── */}
+		{/* Save button */}
 		<div className='flex justify-end pb-4'>
 			<Bone className='h-10 w-36 rounded-xl' />
 		</div>
@@ -737,8 +769,12 @@ const AccountPage: React.FC = () => {
 	const [profile, setProfile] = useState<UserProfile | null>(null);
 	const [loadingProfile, setLoadingProfile] = useState(true);
 
+	const fetchProfile = async () => {
+		const res = await api.get<{ data: UserProfile }>("/users/profile");
+		setProfile((res as { data: UserProfile }).data);
+	};
+
 	useEffect(() => {
-		// Chờ MainLayout xác minh auth xong mới quyết định redirect
 		if (loadingUser) return;
 
 		if (!user) {
@@ -746,8 +782,7 @@ const AccountPage: React.FC = () => {
 			return;
 		}
 
-		api.get<{ data: UserProfile }>("/auth/me")
-			.then((res) => setProfile((res as { data: UserProfile }).data))
+		fetchProfile()
 			.catch(() => setProfile(null))
 			.finally(() => setLoadingProfile(false));
 	}, [user, loadingUser, navigate]);
@@ -757,7 +792,6 @@ const AccountPage: React.FC = () => {
 		setSearchParams({ tabIndex: String(idx) }, { replace: true });
 	};
 
-	// Đang xác minh auth — render trống để tránh flash redirect
 	if (loadingUser) return null;
 	if (!user) return null;
 
@@ -765,9 +799,9 @@ const AccountPage: React.FC = () => {
 		<div className='min-h-screen w-full bg-[var(--color-surface)] pt-16'>
 			<div className='neo-container px-4 py-8 md:px-6'>
 				<div className='flex flex-col gap-6 lg:flex-row'>
-					{/* ── Sidebar ── */}
+					{/* Sidebar */}
 					<aside className='w-full shrink-0 lg:w-56'>
-						<nav className='rounded-2xl border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111] space-y-2'>
+						<nav className='space-y-2 rounded-2xl border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
 							{TABS.map((tab) => {
 								const Icon = tab.icon;
 								const isActive = activeTabId === tab.id;
@@ -788,7 +822,7 @@ const AccountPage: React.FC = () => {
 						</nav>
 					</aside>
 
-					{/* ── Content ── */}
+					{/* Content */}
 					<main className='min-w-0 flex-1'>
 						{activeTabId === "profile" ? (
 							loadingProfile ? (
@@ -798,10 +832,7 @@ const AccountPage: React.FC = () => {
 									user={user}
 									profile={profile}
 									onSaved={async () => {
-										const res = await api.get<{ data: UserProfile }>(
-											"/auth/me",
-										);
-										setProfile((res as { data: UserProfile }).data);
+										await fetchProfile().catch(() => {});
 									}}
 								/>
 							)

@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
+use App\Http\Controllers\Api\V1\User\ProfileController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
@@ -89,13 +90,21 @@ Route::prefix('v1')->group(function () {
         Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     });
 
-    // user loged in routes
+    // user logged-in routes
     Route::middleware('auth:sanctum')->group(function () {
         // academic structure
         Route::prefix('academic')->group(function () {
             Route::get('/faculties', [AcademicController::class, 'faculties']);
             Route::get('/majors', [AcademicController::class, 'majors']);
             Route::get('/school-classes', [AcademicController::class, 'schoolClasses']);
+        });
+
+        // user profile
+        Route::prefix('users')->group(function () {
+            Route::get('/skills', [ProfileController::class, 'skills']);
+            Route::get('/check-username', [ProfileController::class, 'checkUsername']);
+            Route::get('/profile', [ProfileController::class, 'show']);
+            Route::post('/profile', [ProfileController::class, 'update']);
         });
     });
 
