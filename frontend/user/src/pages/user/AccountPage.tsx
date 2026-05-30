@@ -213,9 +213,9 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 		const fetchAcademic = async () => {
 			try {
 				const [facRes, majRes, clsRes] = await Promise.all([
-					api.get<{ data: FacultyItem[] }>("/faculties"),
-					api.get<{ data: MajorItem[] }>("/majors"),
-					api.get<{ data: ClassItem[] }>("/school-classes"),
+					api.get<{ data: FacultyItem[] }>("/academic/faculties"),
+					api.get<{ data: MajorItem[] }>("/academic/majors"),
+					api.get<{ data: ClassItem[] }>("/academic/school-classes"),
 				]);
 				setAllFaculties(facRes.data ?? []);
 				setAllMajors(majRes.data ?? []);

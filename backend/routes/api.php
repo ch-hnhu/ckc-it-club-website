@@ -92,9 +92,11 @@ Route::prefix('v1')->group(function () {
     // user loged in routes
     Route::middleware('auth:sanctum')->group(function () {
         // academic structure
-        Route::get('/faculties', [AcademicController::class, 'faculties']);
-        Route::get('/majors', [AcademicController::class, 'majors']);
-        Route::get('/school-classes', [AcademicController::class, 'schoolClasses']);
+        Route::prefix('academic')->group(function () {
+            Route::get('/faculties', [AcademicController::class, 'faculties']);
+            Route::get('/majors', [AcademicController::class, 'majors']);
+            Route::get('/school-classes', [AcademicController::class, 'schoolClasses']);
+        });
     });
 
     // admin routes
