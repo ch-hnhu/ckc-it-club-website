@@ -24,6 +24,7 @@ import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
 import type { Blog, BlogDetail, BlogComment } from "@/types/blog.types";
 import { buildAvatar, formatRelativeTime, getHandle, readingTime } from "@/lib/utils";
+import { renderMarkdownContent } from "@/lib/markdown";
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ const BlogCover: React.FC<BlogCoverProps> = ({ loading, title, imageUrl }) => {
 
 	if (!imageUrl || imageFailed) {
 		return (
-			<div className='mb-6 flex aspect-[16/9] w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--color-pastel-blue)] px-6 text-center md:aspect-[21/10]'>
+			<div className='mb-8 flex aspect-[16/9] w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--color-pastel-blue)] px-6 text-center'>
 				<span className='font-heading text-5xl font-extrabold uppercase leading-none text-black/20 md:text-7xl'>
 					{title?.trim().charAt(0) || "B"}
 				</span>
@@ -85,7 +86,7 @@ const BlogCover: React.FC<BlogCoverProps> = ({ loading, title, imageUrl }) => {
 	}
 
 	return (
-		<div className='relative mb-6 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-gray-200 md:aspect-[21/10]'>
+		<div className='relative mb-8 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-gray-200'>
 			{!imageLoaded && <div className='absolute inset-0 animate-pulse bg-gray-200' />}
 			<img
 				src={imageUrl}
@@ -554,8 +555,8 @@ const BlogDetailPage: React.FC = () => {
 	};
 
 	return (
-		<div className='w-full min-h-screen pb-12 pt-16'>
-			<main className='mx-auto w-full max-w-3xl px-4 pt-4 pb-12 md:px-6'>
+		<div className='w-full min-h-screen pt-16'>
+			<main className='mx-auto w-full max-w-5xl px-4 pb-16 md:px-6'>
 				{/* Mobile top bar */}
 				<div className='sticky top-16 z-30 -mx-4 mb-3 flex h-14 items-center gap-2 border-b border-gray-200 bg-[var(--color-surface)] px-3 md:hidden'>
 					<button
@@ -570,7 +571,7 @@ const BlogDetailPage: React.FC = () => {
 				</div>
 
 				{/* Breadcrumb */}
-				<div className='mb-6'>
+				<div className='mb-6 pt-6'>
 					<Breadcrumb>
 						<BreadcrumbList>
 							<BreadcrumbItem>
@@ -633,14 +634,14 @@ const BlogDetailPage: React.FC = () => {
 				{!blogError && (
 					<article className='overflow-hidden rounded-2xl bg-white'>
 						{blogLoading ? (
-							<div className='p-5 md:p-7'>
+							<div>
 								<DetailSkeleton />
 							</div>
 						) : blog ? (
 							<>
-								<div className='p-5 md:p-8'>
+								<div>
 									{/* Title */}
-									<h1 className='font-heading text-2xl font-extrabold leading-tight text-black md:text-3xl lg:text-4xl'>
+									<h1 className='font-heading text-3xl font-extrabold leading-tight text-black md:text-4xl lg:text-5xl'>
 										{blog.title}
 									</h1>
 
@@ -679,7 +680,7 @@ const BlogDetailPage: React.FC = () => {
 									{blog.content && (
 										<div
 											className='prose prose-sm mt-7 max-w-none leading-7 text-gray-800 [&_a]:text-lime-700 [&_a:hover]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--color-primary)] [&_blockquote]:pl-4 [&_blockquote]:text-gray-600 [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:font-mono [&_code]:text-sm [&_h2]:mt-8 [&_h2]:font-heading [&_h2]:text-2xl [&_h2]:font-extrabold [&_h3]:mt-6 [&_h3]:font-heading [&_h3]:text-xl [&_h3]:font-extrabold [&_img]:rounded-xl [&_img]:border-2 [&_img]:border-black [&_pre]:rounded-xl [&_pre]:border-2 [&_pre]:border-black [&_pre]:bg-gray-900 [&_pre]:p-4 [&_pre]:text-white [&_strong]:font-extrabold'
-											dangerouslySetInnerHTML={{ __html: blog.content }}
+											dangerouslySetInnerHTML={{ __html: renderMarkdownContent(blog.content) }}
 										/>
 									)}
 

@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
+use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Auth\AuthController;
@@ -62,6 +63,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/blog-tags', [UserBlogController::class, 'tags']);
         Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
+
+        // Chat rooms (public list, auth for messages, admin-only create)
+        Route::get('/chat-rooms', [UserChatController::class, 'index']);
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::middleware('permission:community.chat.manage')
+                ->post('/chat-rooms', [UserChatController::class, 'store']);
+            Route::get('/chat-rooms/{room}/messages', [UserChatController::class, 'messages']);
+            Route::get('/chat-rooms/{room}/poll', [UserChatController::class, 'poll']);
+            Route::post('/chat-rooms/{room}/messages', [UserChatController::class, 'send']);
+        });
 
         // Authenticated actions
         Route::middleware('auth:sanctum')->group(function () {

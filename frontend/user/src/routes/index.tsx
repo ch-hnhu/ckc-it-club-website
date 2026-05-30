@@ -2,6 +2,7 @@ import MainLayout from "@/layouts/MainLayout";
 import ContactPage from "@/pages/ContactPage";
 import CommunityLayout from "@/pages/community/CommunityLayout";
 import CommunityFeedPage from "@/pages/community/CommunityFeedPage";
+import CommunityChatPage from "@/pages/community/CommunityChatPage";
 import CommunityCreatePage from "@/pages/community/CommunityCreatePage";
 import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
 import BlogFeedPage from "@/pages/Blog/BlogFeedPage";
@@ -60,6 +61,10 @@ const router = createBrowserRouter([
 					{
 						path: "bai-viet/:id",
 						element: <CommunityPostDetailPage />,
+					},
+					{
+						path: "chat",
+						element: <CommunityChatPage />,
 					},
 					{
 						path: "dang-bai",
