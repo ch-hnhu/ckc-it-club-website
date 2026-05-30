@@ -31,7 +31,7 @@ const NeoSelect: React.FC<NeoSelectProps> = ({
 		if (!isOpen) return;
 
 		const handlePointerDown = (event: PointerEvent) => {
-			if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+			if (!containerRef.current?.contains(event.target as Node)) {
 				setIsOpen(false);
 			}
 		};
@@ -50,10 +50,10 @@ const NeoSelect: React.FC<NeoSelectProps> = ({
 	}, [isOpen]);
 
 	return (
-		<div
-			ref={containerRef}
-			className={`relative z-[20] ${className}`}
-			style={{ isolation: "isolate" }}>
+		// Không dùng isolation/z-index trên container — tránh tạo stacking context riêng
+		// Dropdown absolute z-[49] được evaluate trong root stacking context
+		// → nằm trên sibling z-auto, dưới navbar z-50, tự bám scroll không cần JS
+		<div ref={containerRef} className={`relative ${className}`}>
 			<button
 				id={id}
 				type='button'
@@ -74,7 +74,7 @@ const NeoSelect: React.FC<NeoSelectProps> = ({
 			{isOpen && (
 				<ul
 					role='listbox'
-					className='absolute top-[calc(100%+0.5rem)] left-0 z-10 w-full space-y-2 rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[var(--neo-shadow)]'>
+					className='absolute top-[calc(100%+0.5rem)] left-0 z-[49] w-full max-h-84 overflow-y-auto space-y-2 rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[var(--neo-shadow)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
 					{options.map((opt) => {
 						const isSelected = opt.value === value;
 						return (
