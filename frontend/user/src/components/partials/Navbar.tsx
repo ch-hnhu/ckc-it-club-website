@@ -234,22 +234,26 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 					<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
 					<span>Trang cá nhân</span>
 				</Link>
-				<button
-					type='button'
+				<Link
+					to={
+						user
+							? buildProfileUrl(user.username, user.email ?? "") + "?tab=bookmarks"
+							: "/"
+					}
 					onClick={() => closeProfileMenu(isMobile)}
 					className={profileMenuItemClass}
 					role='menuitem'>
 					<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
 					<span>Đã lưu</span>
-				</button>
-				<button
-					type='button'
+				</Link>
+				<Link
+					to='/tai-khoan?tabIndex=0'
 					onClick={() => closeProfileMenu(isMobile)}
 					className={profileMenuItemClass}
 					role='menuitem'>
 					<SlidersHorizontal className='h-5 w-5 shrink-0 text-gray-600' />
-					<span>Cài đặt</span>
-				</button>
+					<span>Tài khoản</span>
+				</Link>
 				<button
 					type='button'
 					onClick={handleMenuLogout}
@@ -590,19 +594,28 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 								{/* Account options */}
 								<nav className='flex flex-col gap-0.5'>
 									<Link
-										to={user ? buildProfileUrl(user.username, user.email ?? "") : "/"}
+										to={
+											user
+												? buildProfileUrl(user.username, user.email ?? "")
+												: "/"
+										}
 										onClick={closeMobileMenu}
 										className={profileMenuItemClass}>
 										<UserRound className='h-5 w-5 shrink-0 text-gray-600' />
 										<span>Trang cá nhân</span>
 									</Link>
-									<button
-										type='button'
+									<Link
+										to={
+											user
+												? buildProfileUrl(user.username, user.email ?? "") +
+													"?tab=bookmarks"
+												: "/"
+										}
 										onClick={closeMobileMenu}
 										className={profileMenuItemClass}>
 										<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
 										<span>Đã lưu</span>
-									</button>
+									</Link>
 									<button
 										type='button'
 										onClick={closeMobileMenu}

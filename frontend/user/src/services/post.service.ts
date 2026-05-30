@@ -50,6 +50,10 @@ export const postService = {
 			type,
 		}),
 
+	/** Toggle bookmark on a post (requires auth). */
+	toggleBookmark: (postId: number) =>
+		api.post<ApiResponse<{ bookmarked: boolean }>>(`/community/posts/${postId}/bookmark`),
+
 	/**
 	 * Create a top-level comment or a reply on a post (requires auth).
 	 * Pass parentId to reply to an existing comment.

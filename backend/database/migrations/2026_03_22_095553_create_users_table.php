@@ -25,7 +25,15 @@ return new class extends Migration
             $table->string('full_name')->nullable();
             $table->string('gender')->nullable();
             $table->string('avatar')->nullable();
-            $table->date('dob')->nullable();
+            $table->string('cover_image')->nullable();
+            $table->string('bio', 500)->nullable();
+            $table->date('date_of_birth')->nullable();
+            $table->string('social_github', 100)->nullable();
+            $table->string('social_linkedin', 100)->nullable();
+            $table->string('social_instagram', 100)->nullable();
+            $table->string('social_youtube', 100)->nullable();
+            $table->string('social_tiktok', 100)->nullable();
+            $table->string('social_twitch', 100)->nullable();
 
             $table->char('student_code', 15)->unique()->nullable();
 

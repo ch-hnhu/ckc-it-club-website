@@ -7,14 +7,28 @@ export interface UserProfile {
 	cover_image: string | null;
 	bio: string | null;
 	student_code: string | null;
+	faculty_id: number | null;
 	faculty: string | null;
+	major_id: number | null;
 	major: string | null;
+	class_id: number | null;
 	class_name: string | null;
 	gender: string | null;
+	date_of_birth: string | null;
 	is_active: boolean;
 	posts_count: number;
+	blogs_count: number;
+	content_count: number;
+	likes_count: number;
 	followers_count: number;
 	following_count: number;
+	is_following: boolean;
 	skills: string[];
+	social_github: string | null;
+	social_linkedin: string | null;
+	social_instagram: string | null;
+	social_youtube: string | null;
+	social_tiktok: string | null;
+	social_twitch: string | null;
 	created_at: string;
 }

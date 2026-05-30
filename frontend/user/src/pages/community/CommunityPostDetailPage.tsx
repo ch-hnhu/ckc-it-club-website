@@ -135,6 +135,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 	const avatar = buildAvatar(u?.full_name, u?.avatar);
 	const name = u?.full_name ?? "Thành viên CKC";
 	const handle = u ? getHandle(u.username, u.email) : "@ckc";
+	const profileUrl = u ? buildProfileUrl(u.username, u.email) : null;
 	const time = comment.created_at ? formatRelativeTime(comment.created_at) : "";
 	const hasReplies = comment.replies && comment.replies.length > 0;
 
@@ -147,19 +148,23 @@ const CommentItem: React.FC<CommentItemProps> = ({
 		<div className={depth > 0 ? "ml-11 mt-3" : ""}>
 			<div className='flex gap-3'>
 				<div className='shrink-0'>
-					<img
-						src={avatar}
-						alt={name}
-						className='h-9 w-9 rounded-full border-2 border-black object-cover'
-					/>
+					<Link to={profileUrl ?? "#"}>
+						<img
+							src={avatar}
+							alt={name}
+							className='h-9 w-9 rounded-full border-2 border-black object-cover'
+						/>
+					</Link>
 				</div>
 
 				<div className='min-w-0 flex-1'>
 					<div className='rounded-[10px] border-2 border-black bg-white px-4 py-3 shadow-[2px_2px_0_#111]'>
 						<div className='mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5'>
-							<span className='font-heading text-sm font-extrabold text-black'>
+							<Link
+								to={profileUrl ?? "#"}
+								className='font-heading text-sm font-extrabold text-black hover:underline'>
 								{name}
-							</span>
+							</Link>
 							<span className='text-xs text-gray-500'>{handle}</span>
 							<span className='text-xs text-gray-400'>· {time}</span>
 						</div>
@@ -338,6 +343,9 @@ const CommunityPostDetailPage: React.FC = () => {
 	const authorName = post?.user?.full_name ?? "Thành viên CKC";
 	const authorHandle = post?.user ? getHandle(post.user.username, post.user.email) : "@ckc";
 	const authorAvatar = buildAvatar(post?.user?.full_name, post?.user?.avatar);
+	const authorProfileUrl = post?.user
+		? buildProfileUrl(post.user.username, post.user.email)
+		: null;
 	const channelName = post?.channel?.name ?? "Chung";
 	const channelSlug = post?.channel?.slug ?? "general";
 	const createdAt = post?.created_at ? formatRelativeTime(post.created_at) : "";
@@ -446,11 +454,13 @@ const CommunityPostDetailPage: React.FC = () => {
 								<div className='mb-5 flex items-start justify-between gap-3'>
 									<div className='flex items-center gap-3'>
 										<div className='relative shrink-0'>
-											<img
-												src={authorAvatar}
-												alt={authorName}
-												className='h-12 w-12 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
-											/>
+											<Link to={authorProfileUrl ?? "#"}>
+												<img
+													src={authorAvatar}
+													alt={authorName}
+													className='h-12 w-12 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
+												/>
+											</Link>
 											{post.is_pinned && (
 												<span className='absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)]'>
 													<Zap className='h-3 w-3 fill-current' />
@@ -459,9 +469,11 @@ const CommunityPostDetailPage: React.FC = () => {
 										</div>
 										<div>
 											<div className='flex flex-wrap items-center gap-x-2 gap-y-0.5'>
-												<p className='font-heading text-base font-extrabold text-black'>
+												<Link
+													to={authorProfileUrl ?? "#"}
+													className='font-heading text-base font-extrabold text-black hover:underline'>
 													{authorName}
-												</p>
+												</Link>
 												<span className='text-sm text-gray-500'>
 													{authorHandle}
 												</span>
@@ -809,15 +821,19 @@ const CommunityPostDetailPage: React.FC = () => {
 						<section className='neo-card neo-card-static bg-white p-5'>
 							{/* Avatar + Name row */}
 							<div className='flex items-center gap-4'>
-								<img
-									src={authorAvatar}
-									alt={authorName}
-									className='h-14 w-14 shrink-0 rounded-full border-2 border-black object-cover'
-								/>
+								<Link to={authorProfileUrl ?? "#"} className='shrink-0'>
+									<img
+										src={authorAvatar}
+										alt={authorName}
+										className='h-14 w-14 rounded-full border-2 border-black object-cover'
+									/>
+								</Link>
 								<div className='min-w-0'>
-									<h3 className='font-heading text-base font-extrabold leading-snug text-black'>
+									<Link
+										to={authorProfileUrl ?? "#"}
+										className='font-heading text-base font-extrabold leading-snug text-black hover:underline'>
 										{authorName}
-									</h3>
+									</Link>
 									<p className='text-sm text-gray-500'>{authorHandle}</p>
 								</div>
 							</div>

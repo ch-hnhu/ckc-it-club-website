@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Code2, Crown, Hash, Home, Monitor, Trophy, X } from "lucide-react";
-import { Link, Outlet, useOutletContext, useParams } from "react-router-dom";
+import { Code2, Crown, Hash, Home, MessageSquare, Monitor, Trophy, X } from "lucide-react";
+import { Link, Outlet, useLocation, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { communityService, type CommunityChannel } from "@/services/community.service";
 
@@ -29,6 +29,7 @@ export type CommunityLayoutContext = {
 
 const PRIMARY_NAV = [
 	{ id: "home", label: "Trang chủ", icon: Home, to: "/cong-dong" },
+	{ id: "chat", label: "Phòng chat", icon: MessageSquare, to: "/cong-dong/chat" },
 	{ id: "leaderboard", label: "Bảng xếp hạng", icon: Trophy, to: "/cong-dong" },
 	{ id: "showcase", label: "Showcase dự án", icon: Monitor, to: "/cong-dong" },
 	{ id: "challenge", label: "Thử thách tháng", icon: Crown, to: "/cong-dong" },
@@ -85,8 +86,10 @@ const CommunityLayout: React.FC = () => {
 	const user = outletContext?.user ?? null;
 
 	const { channelSlug } = useParams<{ channelSlug: string }>();
+	const location = useLocation();
 
-	const pageMode = channelSlug ? "channel" : "home";
+	const isChat = location.pathname.startsWith("/cong-dong/chat");
+	const pageMode = channelSlug && !isChat ? "channel" : isChat ? "chat" : "home";
 	const activeChannel = channelSlug ?? "";
 
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -140,7 +143,9 @@ const CommunityLayout: React.FC = () => {
 			<nav className='space-y-2'>
 				{PRIMARY_NAV.map((item) => {
 					const Icon = item.icon;
-					const isActive = item.id === "home" && pageMode === "home";
+					const isActive =
+						(item.id === "home" && pageMode === "home") ||
+						(item.id === "chat" && pageMode === "chat");
 					return (
 						<Link
 							key={item.id}

@@ -49,6 +49,8 @@ export interface Post {
 	reactions_count: number;
 	/** Type of current user's reaction, null if not reacted or guest */
 	my_reaction: ReactionType | null;
+	/** Whether the current authenticated user has bookmarked this post */
+	my_bookmark?: boolean;
 	tags: string[];
 	media_urls: string[];
 	created_at: string;
@@ -65,6 +67,8 @@ export interface PostListParams {
 	per_page?: number;
 	/** Channel slug. Pass "all" or omit to fetch all channels. */
 	channel?: string;
+	/** Filter by author username */
+	username?: string;
 	/** Sort by reactions (top) or date (newest). Default: created_at */
 	sort?: "created_at" | "reactions_count";
 	order?: "asc" | "desc";

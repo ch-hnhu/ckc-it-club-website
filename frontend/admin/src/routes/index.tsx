@@ -40,6 +40,7 @@ import TagListPage from "@/pages/community/TagListPage";
 import SystemNotificationPage from "@/pages/community/SystemNotificationPage";
 import ChatRoomListPage from "@/pages/community/ChatRoomListPage";
 import MediaListPage from "@/pages/community/MediaListPage";
+import SkillListPage from "@/pages/community/SkillListPage";
 
 const router = createBrowserRouter([
 	{
@@ -336,6 +337,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.media.view">
 						<MediaListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/skills",
+				element: (
+					<PermissionRoute permission="community.skills.manage">
+						<SkillListPage />
 					</PermissionRoute>
 				),
 			},

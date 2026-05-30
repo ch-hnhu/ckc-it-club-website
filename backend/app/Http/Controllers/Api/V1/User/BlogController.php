@@ -7,12 +7,32 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
 use App\Models\Comment;
 use App\Models\Reaction;
+use App\Models\Tag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class BlogController extends BaseApiController
 {
+    public function tags(): JsonResponse
+    {
+        $tags = Tag::query()
+            ->select('id', 'name', 'color')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Tag $tag) => [
+                'id'    => $tag->id,
+                'name'  => $tag->name,
+                'color' => $tag->color,
+            ])
+            ->values()
+            ->toArray();
+
+        return $this->successResponse(true, $tags, ApiMessage::RETRIEVED);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $allowedSorts = ['published_at', 'reactions_count', 'view_count', 'created_at'];
@@ -25,13 +45,18 @@ class BlogController extends BaseApiController
         $perPage = min((int) $request->query('per_page', 12), 50);
         $search  = $request->query('search');
         $tag     = $request->query('tag');
+        $username = $request->query('username');
 
         $blogs = Blog::query()
-            ->with(['author:id,full_name,email,avatar', 'tags:id,name'])
+            ->with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
             ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count')
             ->where('blogs.status', 'published')
             ->when($search, fn ($q) => $q->where('blogs.title', 'like', "%{$search}%"))
             ->when($tag, fn ($q) => $q->whereHas('tags', fn ($t) => $t->where('name', $tag)))
+            ->when($username, fn ($q) => $q->whereHas('author', fn ($author) => $author
+                ->where('username', $username)
+                ->orWhere('email', 'like', "{$username}@%")
+            ))
             ->when(
                 $sort === 'reactions_count',
                 fn ($q) => $q->orderBy('reactions_count', $order),
@@ -61,7 +86,7 @@ class BlogController extends BaseApiController
 
     public function show(string $slug): JsonResponse
     {
-        $blog = Blog::with(['author:id,full_name,email,avatar', 'tags:id,name'])
+        $blog = Blog::with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
             ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count,
                          (SELECT COUNT(*) FROM comments WHERE blog_id = blogs.id AND deleted_at IS NULL AND is_hidden = 0) as blog_comments_count')
             ->where('status', 'published')
@@ -92,6 +117,56 @@ class BlogController extends BaseApiController
             : null;
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $request->validate([
+            'title'          => ['required', 'string', 'min:5', 'max:500'],
+            'slug'           => ['nullable', 'string', 'max:500'],
+            'content'        => ['required', 'string'],
+            'excerpt'        => ['nullable', 'string', 'max:1000'],
+            'featured_image' => ['nullable', 'image', 'max:5120'],
+            'tag_ids'        => ['nullable', 'array'],
+            'tag_ids.*'      => ['integer', 'exists:tags,id'],
+        ]);
+
+        $coverImagePath = null;
+        if ($request->hasFile('featured_image')) {
+            $coverImagePath = $request->file('featured_image')->store('blog-covers', 'public');
+        }
+
+        $baseSlug = Str::slug($request->input('slug') ?: $request->input('title')) ?: 'blog';
+        $slug = $baseSlug;
+        $i = 1;
+        while (Blog::where('slug', $slug)->exists()) {
+            $slug = "{$baseSlug}-{$i}";
+            $i++;
+        }
+
+        $blog = DB::transaction(function () use ($request, $slug, $coverImagePath) {
+            $blog = Blog::create([
+                'author_id'    => $request->user()->id,
+                'title'        => $request->input('title'),
+                'slug'         => $slug,
+                'content'      => $request->input('content'),
+                'excerpt'      => $request->input('excerpt'),
+                'cover_image'  => $coverImagePath,
+                'status'       => 'published',
+                'published_at' => now(),
+                'view_count'   => 0,
+            ]);
+
+            if ($request->filled('tag_ids')) {
+                $blog->tags()->sync($request->input('tag_ids'));
+            }
+
+            return $blog;
+        });
+
+        $blog->load(['author:id,full_name,email,avatar,username', 'tags:id,name']);
+
+        return $this->createdResponse($this->transformBlog($blog), 'Tạo blog thành công.');
     }
 
     public function react(Request $request, int $id): JsonResponse
@@ -222,6 +297,7 @@ class BlogController extends BaseApiController
                 'full_name' => $author->full_name,
                 'email'     => $author->email,
                 'avatar'    => $author->avatar,
+                'username'  => $author->username,
             ] : null,
             'title'           => $blog->title,
             'excerpt'         => $blog->excerpt,
