@@ -10,8 +10,6 @@ import {
 	Instagram,
 	Loader2,
 	Settings,
-	Twitch,
-	Twitter,
 	User,
 	Youtube,
 } from "lucide-react";
@@ -21,8 +19,13 @@ import { api } from "@/services/api.service";
 import { buildAvatar } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api.types";
 import type { UserProfile } from "@/types/user.types";
+import NeoSelect, { type NeoSelectOption } from "@/components/ui/NeoSelect";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
+
+const toOpts = (arr: string[]): NeoSelectOption[] => arr.map((v) => ({ value: v, label: v }));
+
+const GENDER_OPTIONS = toOpts(["Nam", "Nữ", "Khác"]);
 
 const SKILL_OPTIONS = [
 	"HTML",
@@ -41,15 +44,6 @@ const SKILL_OPTIONS = [
 	"Docker",
 	"Linux",
 	"PHP",
-];
-
-const PASTEL_COLORS = [
-	"var(--color-pastel-green)",
-	"var(--color-pastel-blue)",
-	"var(--color-pastel-pink)",
-	"var(--color-pastel-yellow)",
-	"var(--color-pastel-purple)",
-	"var(--color-pastel-orange)",
 ];
 
 // ─── Tab IDs ─────────────────────────────────────────────────────────────────
@@ -102,7 +96,7 @@ const InputField: React.FC<InputFieldProps> = ({
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
-				className={`w-full rounded-xl border-2 border-black bg-white px-3 py-2.5 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635] ${
+				className={`h-[3.25rem] w-full rounded-xl border-2 border-black bg-white px-4 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635] ${
 					prefix ? "pl-[calc(0.75rem+var(--prefix-width,3.5rem))]" : ""
 				}`}
 				style={prefix ? { paddingLeft: `${prefix.length * 7.5 + 16}px` } : undefined}
@@ -164,11 +158,12 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 	const [form, setForm] = useState({
 		full_name: "",
 		username: "",
-		location: "",
-		work: "",
-		education: "",
-		website: "",
 		bio: "",
+		student_code: "",
+		faculty: "",
+		major: "",
+		class_name: "",
+		gender: "",
 		github: "",
 		twitter: "",
 		linkedin: "",
@@ -191,11 +186,12 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 		setForm({
 			full_name: profile.full_name ?? "",
 			username: profile.username ?? "",
-			location: "",
-			work: "",
-			education: profile.major ?? "",
-			website: "",
 			bio: profile.bio ?? "",
+			student_code: profile.student_code ?? "",
+			faculty: profile.faculty ?? "",
+			major: profile.major ?? "",
+			class_name: profile.class_name ?? "",
+			gender: profile.gender ?? "",
 			github: "",
 			twitter: "",
 			linkedin: "",
@@ -278,22 +274,21 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 				<h1 className='font-heading text-xl font-extrabold text-black'>Hồ sơ</h1>
 				<p className='mb-6 mt-1 text-sm text-gray-500'>Quản lý thông tin hồ sơ của bạn.</p>
 
-				{/* Top row — avatar LEFT, Name + Username RIGHT */}
+				{/* Top row — avatar LEFT, Name + Username + Email RIGHT */}
 				<div className='flex flex-col gap-6 sm:flex-row sm:items-start'>
-					{/* Avatar column */}
-					<div className='flex flex-col items-center gap-2.5 sm:w-40 sm:shrink-0'>
-						{/* Clickable image with full hover overlay */}
+					{/* Avatar column — larger */}
+					<div className='flex flex-col items-center gap-3 sm:w-52 sm:shrink-0'>
 						<div
 							className='group relative cursor-pointer'
 							onClick={() => fileInputRef.current?.click()}>
 							<img
 								src={avatar}
 								alt='Avatar'
-								className='h-32 w-32 rounded-full border-2 border-black object-cover transition'
+								className='h-40 w-40 rounded-full border-2 border-black object-cover transition'
 							/>
 							<div className='absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-full bg-black/55 opacity-0 transition-opacity group-hover:opacity-100'>
 								<Camera className='h-5 w-5 text-white' />
-								<span className='text-[11px] font-bold text-white leading-tight'>
+								<span className='text-[11px] font-bold leading-tight text-white'>
 									Chỉnh sửa ảnh
 								</span>
 							</div>
@@ -305,15 +300,15 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 								onChange={handleAvatarChange}
 							/>
 						</div>
-						<p className='text-center text-xs leading-snug text-gray-600'>
+						<p className='text-center text-xs leading-snug text-gray-500'>
 							Tỉ lệ khuyến nghị 1:1
 							<br />
 							và kích thước tệp &lt; 5 MB.
 						</p>
 					</div>
 
-					{/* Name + Username column */}
-					<div className='flex-1 space-y-4'>
+					{/* Name + Username + Email column */}
+					<div className='min-w-0 flex-1 space-y-4'>
 						<InputField
 							label='Họ và tên'
 							value={form.full_name}
@@ -345,6 +340,19 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 								) : null
 							}
 						/>
+
+						{/* Email — read-only */}
+						<div>
+							<label className='mb-1.5 flex items-center gap-2 text-sm font-bold text-black'>
+								Email
+							</label>
+							<input
+								type='email'
+								value={profile?.email ?? user.email ?? ""}
+								disabled
+								className='h-[3.25rem] w-full cursor-not-allowed rounded-xl border-2 border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-400 outline-none select-all'
+							/>
+						</div>
 					</div>
 				</div>
 
@@ -354,46 +362,55 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 				{/* Remaining full-width fields */}
 				<div className='space-y-4'>
 					<InputField
-						label='Địa điểm'
-						value={form.location}
-						onChange={setField("location")}
-						placeholder='TP. Hồ Chí Minh, Việt Nam'
+						label='MSSV'
+						value={form.student_code}
+						onChange={setField("student_code")}
+						placeholder='0306231234'
 					/>
 
 					<InputField
-						label='Nơi làm việc'
-						value={form.work}
-						onChange={setField("work")}
-						placeholder='Công ty của bạn'
+						label='Khoa'
+						value={form.faculty}
+						onChange={setField("faculty")}
+						placeholder='Công nghệ thông tin'
 					/>
 
 					<InputField
-						label='Học vấn'
-						value={form.education}
-						onChange={setField("education")}
-						placeholder='Trường học của bạn'
+						label='Ngành'
+						value={form.major}
+						onChange={setField("major")}
+						placeholder='Công nghệ Thông tin'
 					/>
 
 					<InputField
-						label='Website'
-						value={form.website}
-						onChange={setField("website")}
-						placeholder='https://website-cua-ban.com'
-						type='url'
+						label='Lớp'
+						value={form.class_name}
+						onChange={setField("class_name")}
+						placeholder='22CNTT1'
 					/>
 
 					<div>
 						<label className='mb-1.5 block text-sm font-bold text-black'>
-							Giới thiệu
+							Giới tính
 						</label>
-						<textarea
-							value={form.bio}
-							onChange={(e) => setField("bio")(e.target.value)}
-							placeholder='Kể một chút về bản thân bạn!'
-							rows={4}
-							className='w-full resize-none rounded-xl border-2 border-black bg-white px-3 py-2.5 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
+						<NeoSelect
+							options={GENDER_OPTIONS}
+							value={form.gender}
+							onChange={setField("gender")}
+							placeholder='Chọn giới tính...'
 						/>
 					</div>
+				</div>
+
+				<div className='mt-4'>
+					<label className='mb-1.5 block text-sm font-bold text-black'>Giới thiệu</label>
+					<textarea
+						value={form.bio}
+						onChange={(e) => setField("bio")(e.target.value)}
+						placeholder='Một chút về bản thân bạn..'
+						rows={4}
+						className='w-full resize-none rounded-xl border-2 border-black bg-white px-3 py-2.5 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
+					/>
 				</div>
 
 				{/* Skills — within the same profile panel */}
@@ -402,7 +419,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 						Kỹ năng
 					</h3>
 					<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4'>
-						{SKILL_OPTIONS.map((skill, i) => {
+						{SKILL_OPTIONS.map((skill) => {
 							const checked = selectedSkills.includes(skill);
 							return (
 								<label

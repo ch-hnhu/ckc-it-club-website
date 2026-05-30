@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import {
 	Bookmark,
 	BookOpen,
@@ -742,7 +742,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ profile, user, onSwitchToPost
 
 // ─── Tab Content: Saved ───────────────────────────────────────────────────────
 
-const SavedPostsTab: React.FC<{ user: AuthUser | null }> = ({ user }) => (
+const BookmarksTab: React.FC = () => (
 	<div className='mt-5 mb-5 px-6 sm:px-0'>
 		<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
 			<Bookmark className='mx-auto mb-4 h-10 w-10 text-gray-300' />
@@ -756,7 +756,7 @@ const SavedPostsTab: React.FC<{ user: AuthUser | null }> = ({ user }) => (
 
 // ─── UserProfilePage ──────────────────────────────────────────────────────────
 
-type Tab = "overview" | "posts" | "saved";
+type Tab = "overview" | "posts" | "bookmarks";
 
 type TabDef = { id: Tab; label: string; icon: React.ElementType };
 
@@ -765,7 +765,7 @@ const BASE_TABS: TabDef[] = [
 	{ id: "posts", label: "Posts", icon: FileText },
 ];
 
-const SAVED_TAB: TabDef = { id: "saved", label: "Đã lưu", icon: Bookmark };
+const BOOKMARKS_TAB: TabDef = { id: "bookmarks", label: "Đã lưu", icon: Bookmark };
 
 const UserProfilePage: React.FC = () => {
 	const { username: rawParam } = useParams<{ username: string }>();
@@ -776,8 +776,24 @@ const UserProfilePage: React.FC = () => {
 	const [profile, setProfile] = useState<UserProfile | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [notFound, setNotFound] = useState(false);
-	const [activeTab, setActiveTab] = useState<Tab>("overview");
 	const [followed, setFollowed] = useState(false);
+
+	// ── Tab state synced with URL ?tab= query param ──────────────────────────
+	const [searchParams, setSearchParams] = useSearchParams();
+	const tabParam = searchParams.get("tab") ?? "";
+	const activeTab: Tab =
+		tabParam === "posts" ? "posts" :
+		tabParam === "bookmarks" ? "bookmarks" :
+		"overview";
+	const previousUsernameRef = useRef<string | undefined>(undefined);
+
+	const setActiveTab = (tab: Tab) => {
+		if (tab === "overview") {
+			setSearchParams({}, { replace: true });
+		} else {
+			setSearchParams({ tab }, { replace: true });
+		}
+	};
 
 	// Derive the handle the current user would own (same logic as buildProfileUrl / Navbar links)
 	const myHandle = user ? buildProfileUrl(user.username, user.email).replace(/^\/@/, "") : null;
@@ -790,11 +806,21 @@ const UserProfilePage: React.FC = () => {
 			(profile && (String(user.id) === String(profile.id) || user.email === profile.email))),
 	);
 
-	// When navigating to a different profile, reset to the overview tab so the
-	// private "Đã lưu" tab can never be "stuck" open on someone else's profile.
+	// When navigating to a different profile, clear ?tab= so overview is shown.
 	useEffect(() => {
-		setActiveTab("overview");
-	}, [username]);
+		if (previousUsernameRef.current && previousUsernameRef.current !== username) {
+			setSearchParams({}, { replace: true });
+		}
+		previousUsernameRef.current = username;
+	}, [username]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Guard: if someone manually types ?tab=bookmarks on another user's profile,
+	// redirect to overview once we know it's not their own profile.
+	useEffect(() => {
+		if (!loading && activeTab === "bookmarks" && !isOwnProfile) {
+			setSearchParams({}, { replace: true });
+		}
+	}, [loading, activeTab, isOwnProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		if (!username) return;
@@ -896,7 +922,7 @@ const UserProfilePage: React.FC = () => {
 						{/* Tabs — "Đã lưu" only visible on own profile */}
 						{(() => {
 							const tabs: TabDef[] = isOwnProfile
-								? [...BASE_TABS, SAVED_TAB]
+								? [...BASE_TABS, BOOKMARKS_TAB]
 								: BASE_TABS;
 							const badgeCount: Partial<Record<Tab, number>> = {
 								posts: profile.posts_count,
@@ -945,8 +971,8 @@ const UserProfilePage: React.FC = () => {
 								user={user}
 								onSwitchToPostsTab={() => setActiveTab("posts")}
 							/>
-						) : activeTab === "saved" ? (
-							<SavedPostsTab user={user} />
+						) : activeTab === "bookmarks" ? (
+							<BookmarksTab />
 						) : (
 							<UserPostsTab username={username} user={user} />
 						)}
