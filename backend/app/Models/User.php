@@ -91,6 +91,16 @@ class User extends Authenticatable
         return $this->belongsToMany(Skill::class, 'user_skills');
     }
 
+    public function following(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_follows', 'follower_id', 'following_id');
+    }
+
+    public function followers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_follows', 'following_id', 'follower_id');
+    }
+
     public function departments(): BelongsToMany
     {
         return $this->belongsToMany(Department::class, 'department_user')

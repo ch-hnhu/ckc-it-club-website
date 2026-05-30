@@ -16,4 +16,15 @@ export const userService = {
 			sort: "created_at",
 			order: "desc",
 		}),
+
+	toggleFollow: (username: string) =>
+		api.post<ApiResponse<{ is_following: boolean; followers_count: number }>>(
+			`/users/${username}/follow`,
+		),
+
+	getFollowers: (username: string) =>
+		api.get<ApiResponse<UserProfile[]>>(`/users/${username}/followers`),
+
+	getFollowing: (username: string) =>
+		api.get<ApiResponse<UserProfile[]>>(`/users/${username}/following`),
 };

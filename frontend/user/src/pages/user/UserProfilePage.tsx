@@ -241,6 +241,7 @@ interface ProfileHeaderProps {
 	profile: UserProfile;
 	isOwnProfile: boolean;
 	followed: boolean;
+	followLoading: boolean;
 	onFollow: () => void;
 	onUpdated?: (p: UserProfile) => void;
 }
@@ -249,6 +250,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 	profile,
 	isOwnProfile,
 	followed,
+	followLoading,
 	onFollow,
 	onUpdated,
 }) => {
@@ -389,22 +391,20 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 						) : (
 							<button
 								onClick={onFollow}
-								className={`inline-flex shrink-0 items-center gap-2 rounded-lg border-2 border-black px-3 py-2 text-xs font-extrabold hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition hover:bg-white shadow-[3px_3px_0_#111] sm:px-4 sm:text-sm ${
+								disabled={followLoading}
+								className={`inline-flex shrink-0 items-center gap-2 rounded-lg border-2 border-black px-3 py-2 text-xs font-extrabold transition hover:bg-white hover:shadow-none sm:px-4 sm:text-sm disabled:opacity-70 disabled:cursor-not-allowed ${
 									followed
 										? "bg-white text-black shadow-none translate-x-[1px] translate-y-[1px]"
-										: "bg-[var(--color-primary)] text-black"
+										: "bg-[var(--color-primary)] text-black shadow-[3px_3px_0_#111] hover:translate-x-[1px] hover:translate-y-[1px]"
 								}`}>
-								{followed ? (
-									<>
-										<UserCheck className='h-4 w-4' />
-										Đang theo dõi
-									</>
+								{followLoading ? (
+									<Loader2 className='h-4 w-4 animate-spin' />
+								) : followed ? (
+									<UserCheck className='h-4 w-4' />
 								) : (
-									<>
-										<UserPlus className='h-4 w-4' />
-										Theo dõi
-									</>
+									<UserPlus className='h-4 w-4' />
 								)}
+								{followed ? "Đang theo dõi" : "Theo dõi"}
 							</button>
 						)}
 					</div>
@@ -875,6 +875,7 @@ const UserProfilePage: React.FC = () => {
 	const [loading, setLoading] = useState(true);
 	const [notFound, setNotFound] = useState(false);
 	const [followed, setFollowed] = useState(false);
+	const [followLoading, setFollowLoading] = useState(false);
 
 	// ── Tab state synced with URL ?tab= query param ──────────────────────────
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -928,7 +929,10 @@ const UserProfilePage: React.FC = () => {
 		userService
 			.getProfile(username)
 			.then((res) => {
-				if (!cancelled) setProfile(res.data);
+				if (!cancelled) {
+					setProfile(res.data);
+					setFollowed(res.data.is_following ?? false);
+				}
 			})
 			.catch((err) => {
 				if (!cancelled) {
@@ -1013,6 +1017,50 @@ const UserProfilePage: React.FC = () => {
 
 	if (!profile) return null;
 
+	const handleFollow = async () => {
+		if (!user) {
+			// Chưa đăng nhập → redirect về trang login
+			window.location.href = "/login";
+			return;
+		}
+		if (followLoading) return;
+		// Optimistic update
+		const wasFollowed = followed;
+		setFollowed(!wasFollowed);
+		setProfile((p) =>
+			p
+				? {
+						...p,
+						followers_count: wasFollowed
+							? Math.max(0, p.followers_count - 1)
+							: p.followers_count + 1,
+					}
+				: p,
+		);
+		setFollowLoading(true);
+		try {
+			const res = await userService.toggleFollow(username!);
+			setFollowed(res.data.is_following);
+			setProfile((p) => (p ? { ...p, followers_count: res.data.followers_count } : p));
+		} catch {
+			// Rollback
+			setFollowed(wasFollowed);
+			setProfile((p) =>
+				p
+					? {
+							...p,
+							followers_count: wasFollowed
+								? p.followers_count + 1
+								: Math.max(0, p.followers_count - 1),
+						}
+					: p,
+			);
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setFollowLoading(false);
+		}
+	};
+
 	return (
 		<div className='w-full min-h-screen pt-16'>
 			<div className='neo-container px-0 py-0 sm:px-4 sm:py-8 md:px-6'>
@@ -1023,7 +1071,8 @@ const UserProfilePage: React.FC = () => {
 							profile={profile}
 							isOwnProfile={isOwnProfile}
 							followed={followed}
-							onFollow={() => setFollowed((f) => !f)}
+							followLoading={followLoading}
+							onFollow={handleFollow}
 							onUpdated={(updated) => setProfile(updated)}
 						/>
 

@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
+use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
@@ -51,6 +52,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/contacts', [PublicContactController::class, 'store']);
     Route::get('/community/channels', [ChannelController::class, 'index']);
     Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
+    Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
+    Route::get('/users/{username}/following', [FollowController::class, 'following']);
 
     // Community routes
     Route::prefix('community')->group(function () {
@@ -106,6 +109,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/check-username', [ProfileController::class, 'checkUsername']);
             Route::get('/profile', [ProfileController::class, 'show']);
             Route::post('/profile', [ProfileController::class, 'update']);
+            Route::post('/{username}/follow', [FollowController::class, 'toggle']);
         });
     });
 

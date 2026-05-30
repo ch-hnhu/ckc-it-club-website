@@ -20,6 +20,7 @@ export interface UserProfile {
 	likes_count: number;
 	followers_count: number;
 	following_count: number;
+	is_following: boolean;
 	skills: string[];
 	social_github: string | null;
 	social_linkedin: string | null;
