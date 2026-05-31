@@ -16,6 +16,7 @@ import GiphyPicker from "@/components/chat/GiphyPicker";
 import {
 	Hash,
 	Image as ImageIcon,
+	List,
 	Loader2,
 	Lock,
 	MessageSquare,
@@ -175,12 +176,16 @@ const MessageBubble: React.FC<{
 
 		{/* Bubble */}
 		<div
-			className={`
-			relative min-w-[3.5rem] max-w-[75%]
+			className={
+				isGifUrl(msg.content)
+					? ""
+					: `
+			relative min-w-[3.5rem] max-w-[85%] sm:max-w-[75%]
 			${bubbleRadius(isOwn, isFirst, isLast)}
 			border-2 border-black shadow-[2px_2px_0_#111]
 			${isOwn ? "bg-[var(--color-primary)]" : "bg-white"}
-		`}>
+		`
+			}>
 			{/* Reply preview */}
 			{msg.reply_to && (
 				<div
@@ -193,21 +198,23 @@ const MessageBubble: React.FC<{
 			)}
 
 			{/* Content */}
-			<div className='px-3.5 py-2'>
-				{isGifUrl(msg.content) ? (
+			{isGifUrl(msg.content) ? (
+				<div className='rounded-2xl'>
 					<img
 						src={msg.content}
 						alt='GIF'
-						className='max-h-52 max-w-full rounded-lg'
+						className='max-h-52 max-w-full rounded-xl border-2 border-black shadow-[2px_2px_0_#111] bg-[var(--color-primary)]'
 						loading='lazy'
 					/>
-				) : (
+				</div>
+			) : (
+				<div className='px-3.5 py-2'>
 					<p
-						className={`text-sm leading-relaxed break-words ${isOwn ? "text-black" : "text-gray-800"}`}>
+						className={`text-sm leading-relaxed break-words whitespace-pre-wrap ${isOwn ? "text-black" : "text-gray-800"}`}>
 						{msg.content}
 					</p>
-				)}
-			</div>
+				</div>
+			)}
 		</div>
 	</div>
 );
@@ -230,8 +237,7 @@ const MessageGroupItem: React.FC<{
 
 		{/* Bubbles column — chiếm hết phần còn lại, tối đa 72% */}
 		<div
-			className={`flex min-w-0 flex-1 flex-col gap-0 ${isOwn ? "items-end" : "items-start"}`}
-			style={{ maxWidth: "72%" }}>
+			className={`flex min-w-0 flex-1 flex-col gap-0 max-w-[85%] sm:max-w-[72%] ${isOwn ? "items-end" : "items-start"}`}>
 			{/* Header */}
 			<div
 				className={`mb-1.5 flex flex-wrap items-baseline gap-x-1.5 ${isOwn ? "flex-row-reverse" : ""}`}>
@@ -426,6 +432,7 @@ const CommunityChatPage: React.FC = () => {
 	const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 	const [showGifPicker, setShowGifPicker] = useState(false);
+	const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
 	// ── Refs ───────────────────────────────────────────────────────────────────
 	const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -524,6 +531,7 @@ const CommunityChatPage: React.FC = () => {
 		setInput("");
 		if (inputRef.current) {
 			inputRef.current.style.height = "auto";
+			inputRef.current.scrollTop = 0;
 		}
 		try {
 			const res = await chatService.sendMessage(activeRoom.id, text, replyTo?.id);
@@ -604,8 +612,71 @@ const CommunityChatPage: React.FC = () => {
 				/>
 			)}
 
-			{/* ═══════════════════ SIDEBAR ═══════════════════════════════ */}
-			<aside className='flex w-64 shrink-0 flex-col border-r-2 border-black bg-white'>
+			{/* ═══════════════ MOBILE SIDEBAR OVERLAY ══════════════════ */}
+			{showMobileSidebar && (
+				<div className='fixed inset-0 z-50 md:hidden'>
+					<button
+						className='absolute inset-0 h-full w-full bg-black/50'
+						onClick={() => setShowMobileSidebar(false)}
+						aria-label='Đóng danh sách phòng'
+					/>
+					<aside className='relative flex h-full w-[min(80vw,16rem)] flex-col border-r-2 border-black bg-white shadow-[4px_0_0_#111]'>
+						<div className='flex h-14 items-center gap-2.5 border-b-2 border-black px-4'>
+							<MessageSquare
+								className='h-4 w-4 shrink-0 text-[var(--color-text-primary)]'
+								strokeWidth={2.5}
+							/>
+							<span className='flex-1 font-heading text-sm font-extrabold uppercase tracking-wide text-black'>
+								Phòng chat
+							</span>
+							{user?.permissions?.includes("community.chat.manage") && (
+								<button
+									onClick={() => {
+										setShowCreate(true);
+										setShowMobileSidebar(false);
+									}}
+									title='Tạo phòng mới'
+									className='inline-flex h-7 w-7 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-[var(--color-primary)] hover:shadow-none'>
+									<Plus className='h-3.5 w-3.5' />
+								</button>
+							)}
+						</div>
+						<div className='no-scrollbar flex-1 overflow-y-auto p-2'>
+							{roomsLoading ? (
+								<RoomSkeleton />
+							) : rooms.length === 0 ? (
+								<div className='py-10 text-center'>
+									<Hash className='mx-auto h-8 w-8 text-gray-300' />
+									<p className='mt-2 text-xs font-bold text-gray-400'>
+										Chưa có phòng nào
+									</p>
+								</div>
+							) : (
+								<nav className='space-y-0.5'>
+									{rooms
+										.filter((r) => r?.id)
+										.map((room, i) => (
+											<RoomItem
+												key={room.id}
+												room={room}
+												index={i}
+												active={activeRoom?.id === room.id}
+												onClick={() => {
+													setActiveRoom(room);
+													setActiveRoomIdx(i);
+													setShowMobileSidebar(false);
+												}}
+											/>
+										))}
+								</nav>
+							)}
+						</div>
+					</aside>
+				</div>
+			)}
+
+			{/* ═══════════════════ SIDEBAR (desktop) ══════════════════════ */}
+			<aside className='hidden md:flex w-64 shrink-0 flex-col border-r-2 border-black bg-white'>
 				{/* Header */}
 				<div className='flex h-14 items-center gap-2.5 border-b-2 border-black px-4'>
 					<MessageSquare
@@ -660,25 +731,35 @@ const CommunityChatPage: React.FC = () => {
 			{/* ═══════════════════ CHAT AREA ═════════════════════════════ */}
 			<div className='flex min-w-0 flex-1 flex-col bg-[#fafafa]'>
 				{/* ── Channel header ──────────────────────────────────── */}
-				{activeRoom ? (
-					<div className='flex h-14 shrink-0 items-center gap-3 border-b-2 border-black bg-white px-5'>
-						<div
-							className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(activeRoomIdx)}`}>
-							<Hash className='h-3.5 w-3.5 text-black' />
-						</div>
-						<div>
-							<p className='font-heading text-sm font-extrabold leading-none text-black'>
-								{activeRoom.name}
-							</p>
-						</div>
-						<div className='ml-auto flex items-center gap-1.5 rounded-lg border-2 border-black bg-gray-50 px-2.5 py-1 text-xs font-bold text-gray-500'>
-							<Users className='h-3.5 w-3.5' />
-							{activeRoom.member_count}
-						</div>
-					</div>
-				) : (
-					<div className='h-14 shrink-0 border-b-2 border-black bg-white' />
-				)}
+				<div className='flex h-14 shrink-0 items-center gap-2 sm:gap-3 border-b-2 border-black bg-white px-3 sm:px-5'>
+					{/* Mobile room list toggle */}
+					<button
+						className='md:hidden inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-black transition hover:bg-gray-100'
+						onClick={() => setShowMobileSidebar(true)}
+						aria-label='Danh sách phòng chat'>
+						<List className='h-5 w-5' />
+					</button>
+
+					{activeRoom ? (
+						<>
+							<div
+								className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(activeRoomIdx)}`}>
+								<Hash className='h-3.5 w-3.5 text-black' />
+							</div>
+							<div className='min-w-0 flex-1'>
+								<p className='truncate font-heading text-sm font-extrabold leading-none text-black'>
+									{activeRoom.name}
+								</p>
+							</div>
+							<div className='flex items-center gap-1.5 rounded-lg border-2 border-black bg-gray-50 px-2.5 py-1 text-xs font-bold text-gray-500'>
+								<Users className='h-3.5 w-3.5' />
+								{activeRoom.member_count}
+							</div>
+						</>
+					) : (
+						<div className='flex-1' />
+					)}
+				</div>
 
 				{/* ── Message list (chatscope) ────────────────────────── */}
 				<div className='csc-wrap relative min-h-0 flex-1'>
@@ -731,7 +812,9 @@ const CommunityChatPage: React.FC = () => {
 
 						{/* Emoji picker popup */}
 						{showEmojiPicker && (
-							<div ref={emojiRef} className='absolute bottom-full left-4 z-50 mb-2'>
+							<div
+								ref={emojiRef}
+								className='absolute bottom-full left-0 sm:left-4 z-50 mb-2'>
 								<Picker
 									data={data}
 									locale='vi'
@@ -747,25 +830,32 @@ const CommunityChatPage: React.FC = () => {
 
 						{/* GIF picker popup (GIPHY) */}
 						{showGifPicker && (
-							<div ref={gifRef} className='absolute bottom-full left-14 z-50 mb-2'>
+							<div
+								ref={gifRef}
+								className='absolute bottom-full left-0 sm:left-14 z-50 mb-2'>
 								<GiphyPicker
 									onSelect={(url) => void handleSendGif(url)}
-									width={340}
+									width={Math.min(
+										340,
+										typeof window !== "undefined"
+											? window.innerWidth - 16
+											: 340,
+									)}
 								/>
 							</div>
 						)}
 
 						{/* Input row */}
-						<div className='flex items-end gap-2 px-4 py-3'>
+						<div className='flex gap-2 px-4 py-3'>
 							{/* User avatar */}
 							<img
 								src={buildAvatar(user.name, user.picture)}
 								alt={user.name ?? "Bạn"}
-								className='h-9 w-9 shrink-0 self-end rounded-full border-2 border-black object-cover'
+								className='h-10 w-10 shrink-0 rounded-full border-2 border-black object-cover'
 							/>
 
 							{/* Textarea + action buttons */}
-							<div className='flex min-w-0 flex-1 items-end gap-1.5 rounded-2xl border-2 border-black bg-white px-3 py-2 focus-within:shadow-[0_0_0_3px_#A3E635]'>
+							<div className='flex min-w-0 flex-1 items-center gap-1.5 rounded-2xl border-2 border-black bg-white px-3 focus-within:shadow-[0_0_0_3px_#A3E635]'>
 								<textarea
 									ref={inputRef}
 									rows={1}
@@ -782,7 +872,7 @@ const CommunityChatPage: React.FC = () => {
 										}
 									}}
 									placeholder={`Nhắn vào #${activeRoom.name}...`}
-									className='no-scrollbar max-h-[120px] min-h-[28px] flex-1 resize-none bg-transparent text-sm font-medium text-black outline-none placeholder:text-gray-400'
+									className='no-scrollbar max-h-[120px] min-h-0 flex-1 resize-none bg-transparent py-[10px] text-sm font-medium text-black outline-none placeholder:text-gray-400'
 								/>
 
 								{/* Emoji button */}
@@ -792,7 +882,7 @@ const CommunityChatPage: React.FC = () => {
 										setShowEmojiPicker((v) => !v);
 										setShowGifPicker(false);
 									}}
-									className={`mb-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition
+									className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition
 										${
 											showEmojiPicker
 												? "border-2 border-black bg-[var(--color-primary)] shadow-[1px_1px_0_#111]"
@@ -809,7 +899,7 @@ const CommunityChatPage: React.FC = () => {
 										setShowGifPicker((v) => !v);
 										setShowEmojiPicker(false);
 									}}
-									className={`mb-0.5 inline-flex h-7 items-center justify-center rounded-lg px-1.5 text-[11px] font-extrabold transition
+									className={`inline-flex h-7 items-center justify-center rounded-lg px-1.5 text-[11px] font-extrabold transition
 										${
 											showGifPicker
 												? "border-2 border-black bg-[var(--color-primary)] text-black shadow-[1px_1px_0_#111]"
@@ -825,7 +915,7 @@ const CommunityChatPage: React.FC = () => {
 							<button
 								onClick={() => void handleSend()}
 								disabled={!input.trim() || sending}
-								className='mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
+								className='inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
 								{sending ? (
 									<Loader2 className='h-4 w-4 animate-spin' />
 								) : (
@@ -834,7 +924,7 @@ const CommunityChatPage: React.FC = () => {
 							</button>
 						</div>
 
-						<p className='pb-1.5 pl-[4.5rem] text-[10px] text-gray-400'>
+						<p className='pb-1.5 pl-4 sm:pl-[4.5rem] text-[10px] text-gray-400 hidden sm:block'>
 							Enter để gửi · Shift+Enter xuống dòng
 						</p>
 					</div>

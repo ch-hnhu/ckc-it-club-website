@@ -616,13 +616,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 										<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
 										<span>Đã lưu</span>
 									</Link>
-									<button
-										type='button'
+									<Link
+										to='/tai-khoan?tabIndex=0'
 										onClick={closeMobileMenu}
-										className={profileMenuItemClass}>
+										className={profileMenuItemClass}
+										role='menuitem'>
 										<SlidersHorizontal className='h-5 w-5 shrink-0 text-gray-600' />
-										<span>Cài đặt</span>
-									</button>
+										<span>Tài khoản</span>
+									</Link>
 									<button
 										type='button'
 										onClick={() => {
