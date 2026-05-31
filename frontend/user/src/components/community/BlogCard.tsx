@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, Heart, MessageCircle } from "lucide-react";
+import { Eye, Heart, MessageCircle, Pin } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Blog } from "@/types/blog.types";
 import { buildAvatar, formatRelativeTime } from "@/lib/utils";
@@ -7,6 +7,7 @@ import { buildAvatar, formatRelativeTime } from "@/lib/utils";
 interface BlogCardProps {
 	blog: Blog;
 	featured?: boolean;
+	showPinnedBadge?: boolean;
 }
 
 const TAG_BG = [
@@ -28,7 +29,11 @@ const Placeholder: React.FC<{ title: string; tall?: boolean }> = ({ title, tall 
 	</div>
 );
 
-export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) => {
+export const BlogCard: React.FC<BlogCardProps> = ({
+	blog,
+	featured = false,
+	showPinnedBadge = false,
+}) => {
 	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = buildAvatar(blog.user?.full_name, blog.user?.avatar);
 	const detailUrl = `/blog/${blog.slug}`;
@@ -36,7 +41,15 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 
 	if (featured) {
 		return (
-			<Link to={detailUrl} className='group neo-card block overflow-hidden bg-white'>
+			<Link to={detailUrl} className='group neo-card relative block overflow-hidden bg-white'>
+				{showPinnedBadge && blog.is_pinned && (
+					<span
+						className='absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-primary text-black shadow-[2px_2px_0_#111]'
+						aria-label='Blog đã ghim'
+						title='Blog đã ghim'>
+						<Pin className='h-4 w-4' />
+					</span>
+				)}
 				<div className='aspect-[21/9] overflow-hidden'>
 					{blog.featured_image ? (
 						<img
@@ -105,7 +118,15 @@ export const BlogCard: React.FC<BlogCardProps> = ({ blog, featured = false }) =>
 	return (
 		<Link
 			to={detailUrl}
-			className='group flex h-full flex-col overflow-hidden rounded-2xl border-2 border-black bg-white'>
+			className='group relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-black bg-white'>
+			{showPinnedBadge && blog.is_pinned && (
+				<span
+					className='absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-primary text-black shadow-[2px_2px_0_#111]'
+					aria-label='Blog đã ghim'
+					title='Blog đã ghim'>
+					<Pin className='h-4 w-4' />
+				</span>
+			)}
 			<div className='overflow-hidden'>
 				{blog.featured_image ? (
 					<img

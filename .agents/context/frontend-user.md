@@ -60,6 +60,7 @@
 - Community post cards and detail render the post overflow menu dynamically: authors see pin/edit/privacy/archive/delete actions, while other viewers see save/report actions backed by the bookmark and report endpoints.
 - Community post detail owner menu is wired to real actions: pin/unpin, edit route, privacy modal, archive/restore, and delete confirmation. Viewer menu actions use real bookmark and report flows.
 - Own-profile empty states for Posts and Blog show direct create CTAs linking to `/cong-dong/dang-bai` and `/blog/dang-bai`; the same CTAs appear in overview carousel panels when those lists are empty.
+- Profile post lists and overview carousels display pinned posts first and mark pinned content with a `Pin` badge instead of the older energy/Zap marker.
 
 ## Route Surface
 

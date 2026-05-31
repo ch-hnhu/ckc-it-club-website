@@ -69,6 +69,59 @@ class ArchivedPostDetailAccessTest extends TestCase
             ->assertJsonPath('data.0.content', 'Archived post comment');
     }
 
+    public function test_owner_can_pin_and_unpin_their_post(): void
+    {
+        $owner = $this->createUser('owner@example.com', 'owner');
+        $post = $this->createPost($owner, 'published');
+
+        Sanctum::actingAs($owner);
+
+        $this->patchJson("/api/v1/community/posts/{$post->id}", [
+            'is_pinned' => true,
+        ])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.is_pinned', true);
+
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'is_pinned' => true,
+        ]);
+        $this->assertNotNull($post->fresh()->pinned_at);
+
+        $this->patchJson("/api/v1/community/posts/{$post->id}", [
+            'is_pinned' => false,
+        ])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.is_pinned', false);
+
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'is_pinned' => false,
+            'pinned_at' => null,
+        ]);
+    }
+
+    public function test_profile_post_listing_returns_pinned_posts_first(): void
+    {
+        $owner = $this->createUser('owner@example.com', 'owner');
+        $newerPost = $this->createPost($owner, 'published');
+        $newerPost->update(['created_at' => now()]);
+        $pinnedPost = $this->createPost($owner, 'published');
+        $pinnedPost->update([
+            'created_at' => now()->subDay(),
+            'is_pinned' => true,
+            'pinned_at' => now(),
+        ]);
+
+        $this->getJson('/api/v1/community/posts?username=owner&sort=created_at&order=desc')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $pinnedPost->id)
+            ->assertJsonPath('data.0.is_pinned', true)
+            ->assertJsonPath('data.1.id', $newerPost->id);
+    }
+
     private function createUser(string $email, string $username): User
     {
         return User::query()->create([
@@ -81,10 +134,10 @@ class ArchivedPostDetailAccessTest extends TestCase
 
     private function createPost(User $owner, string $status): Post
     {
-        $channel = Channel::query()->create([
-            'name' => 'General',
-            'slug' => 'general',
-        ]);
+        $channel = Channel::query()->firstOrCreate(
+            ['slug' => 'general'],
+            ['name' => 'General'],
+        );
 
         return Post::query()->create([
             'user_id' => $owner->id,

@@ -12,7 +12,6 @@ import {
 	Pin,
 	Share2,
 	Trash2,
-	Zap,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Post } from "@/types/post.types";
@@ -27,11 +26,18 @@ import DeletePostConfirm from "./DeletePostConfirm";
 interface PostCardProps {
 	post: Post;
 	user: AuthUser | null;
+	showPinnedBadge?: boolean;
 	onPostDeleted?: (id: number) => void;
 	onPostUpdated?: (post: Post) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, user, onPostDeleted, onPostUpdated }) => {
+const PostCard: React.FC<PostCardProps> = ({
+	post,
+	user,
+	showPinnedBadge = false,
+	onPostDeleted,
+	onPostUpdated,
+}) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const authorName = post.user?.full_name ?? "Ẩn danh";
@@ -203,9 +209,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, user, onPostDeleted, onPostUp
 							alt={authorName}
 							className='h-10 w-10 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover transition hover:opacity-80'
 						/>
-						{isPinned && (
+						{showPinnedBadge && isPinned && (
 							<span className='absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)] text-black'>
-								<Zap className='h-3 w-3 fill-current' />
+								<Pin className='h-3 w-3' />
 							</span>
 						)}
 					</Link>

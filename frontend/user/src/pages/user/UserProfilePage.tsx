@@ -24,6 +24,7 @@ import {
 	LayoutGrid,
 	Loader2,
 	MessageCircle,
+	Pin,
 	Plus,
 	Search,
 	Share2,
@@ -51,6 +52,9 @@ import type { UserProfile } from "@/types/user.types";
 import type { Post } from "@/types/post.types";
 import BlogCard from "@/components/community/BlogCard";
 import PostCard from "@/components/community/PostCard";
+
+const sortPinnedFirst = <T extends { is_pinned?: boolean }>(items: T[]): T[] =>
+	[...items].sort((a, b) => Number(Boolean(b.is_pinned)) - Number(Boolean(a.is_pinned)));
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -509,7 +513,7 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfil
 		userService
 			.getUserPosts(username)
 			.then((res) => {
-				if (!cancelled) setPosts(res.data);
+				if (!cancelled) setPosts(sortPinnedFirst(res.data));
 			})
 			.catch(() => {
 				if (!cancelled) setError(true);
@@ -566,6 +570,7 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfil
 					key={post.id}
 					post={post}
 					user={user}
+					showPinnedBadge
 					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
 				/>
 			))}
@@ -593,7 +598,7 @@ const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) =
 		userService
 			.getUserBlogs(username)
 			.then((res) => {
-				if (!cancelled) setBlogs(res.data);
+				if (!cancelled) setBlogs(sortPinnedFirst(res.data));
 			})
 			.catch(() => {
 				if (!cancelled) setError(true);
@@ -649,7 +654,7 @@ const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) =
 	return (
 		<div className='mt-5 mb-5 grid gap-5 px-6 sm:grid-cols-2 sm:px-0'>
 			{blogs.map((blog) => (
-				<BlogCard key={blog.id} blog={blog} />
+				<BlogCard key={blog.id} blog={blog} showPinnedBadge />
 			))}
 		</div>
 	);
@@ -702,9 +707,18 @@ const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
 	};
 
 	return (
-		<article className='flex w-68 shrink-0 flex-col rounded-2xl border-2 border-black bg-white'>
+		<article className='relative flex w-68 shrink-0 flex-col rounded-2xl border-2 border-black bg-white'>
+			{post.is_pinned && (
+				<span
+					className='absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-primary text-black shadow-[2px_2px_0_#111]'
+					aria-label='Bài viết đã ghim'
+					title='Bài viết đã ghim'>
+					<Pin className='h-4 w-4' />
+				</span>
+			)}
+
 			{/* Header */}
-			<div className='flex items-center gap-2 px-4 pt-4 pb-2 cursor-pointer'>
+			<div className='flex items-center gap-2 px-4 pt-4 pb-2 pr-12 cursor-pointer'>
 				<Link
 					to={authorProfileUrl ?? "#"}
 					onClick={(e) => !authorProfileUrl && e.preventDefault()}
@@ -977,7 +991,7 @@ const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, isOwnProfile, onShow
 						className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
 						{blogs.map((blog) => (
 							<div key={blog.id} className='w-72 shrink-0 sm:w-80'>
-								<BlogCard blog={blog} />
+								<BlogCard blog={blog} showPinnedBadge />
 							</div>
 						))}
 					</div>
@@ -1028,7 +1042,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 		userService
 			.getUserPosts(profileHandle, 1)
 			.then((res) => {
-				if (!cancelled) setRecentPosts(res.data.slice(0, 6));
+				if (!cancelled) setRecentPosts(sortPinnedFirst(res.data).slice(0, 6));
 			})
 			.catch(() => {
 				if (!cancelled) setRecentPosts([]);
@@ -1049,7 +1063,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 		userService
 			.getUserBlogs(profileHandle, 1)
 			.then((res) => {
-				if (!cancelled) setRecentBlogs(res.data.slice(0, 6));
+				if (!cancelled) setRecentBlogs(sortPinnedFirst(res.data).slice(0, 6));
 			})
 			.catch(() => {
 				if (!cancelled) setRecentBlogs([]);

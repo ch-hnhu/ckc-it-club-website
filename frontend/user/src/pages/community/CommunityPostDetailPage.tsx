@@ -16,7 +16,6 @@ import {
 	Send,
 	Share2,
 	Trash2,
-	Zap,
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
@@ -603,11 +602,6 @@ const CommunityPostDetailPage: React.FC = () => {
 													className='h-12 w-12 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
 												/>
 											</Link>
-											{post.is_pinned && (
-												<span className='absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)]'>
-													<Zap className='h-3 w-3 fill-current' />
-												</span>
-											)}
 										</div>
 										<div>
 											<div className='flex flex-wrap items-center gap-x-2 gap-y-0.5'>

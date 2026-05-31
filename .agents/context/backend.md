@@ -264,6 +264,7 @@
 - Community module:
 - user-facing community routes expose published channels/posts/blogs, comments, and reactions under `/api/v1/community`.
 - user-facing post list items include `content`, `excerpt`, and `is_excerpt_truncated` so the frontend can render collapsed Markdown and expand the full post content inline without navigating away.
+- user-facing post listing with a `username` profile filter orders pinned posts before unpinned posts, then applies the requested sort/order.
 - authenticated users can create published posts through `POST /api/v1/community/posts` with `channel_slug` or `channel_id`, `title`, `content`, optional `visibility`, and optional `media` image/video upload up to 20 MB. Uploaded post media is stored on the public disk under `community/posts/{post_id}`, mirrored into `posts.media_urls`, and tracked in `media_files`.
 - `posts` now has schema support for author profile pinning (`is_pinned`, `pinned_at`), author-owned archiving through `status = archived`, soft delete metadata, and `visibility`; pinning is scoped to the post author's profile, not global community feed ordering. The backend must enforce a maximum of 3 pinned posts per author when the pin endpoint is implemented.
 - `post_bookmarks` stores one saved post per user/post pair, while `post_reports` stores report reason/status/resolution metadata.
@@ -440,6 +441,7 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-05-31`: Added the missing `posts.pinned_at` migration required by user post pin/unpin updates.
 - `2026-05-30`: Public/user profile payload now returns separate `posts_count`, `blogs_count`, and `content_count` (`posts + blogs`); community blog listing accepts `username` to filter blogs by author handle/email prefix.
 - `2026-05-24`: Department member leadership is tied to each department's configured Spatie head role (`head_role_id`); updating a head only assigns/removes that one user role, so the same user can hold multiple department-head roles.
 - `2026-05-24`: User create/update role sync now also propagates department head roles into department membership/head ownership, so editing user roles and editing department chức vụ stay consistent.

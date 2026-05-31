@@ -48,6 +48,10 @@ class PostController extends BaseApiController
                 $username,
                 fn ($q) => $q->whereHas('user', fn ($u) => $u->where('username', $username))
             )
+            ->when(
+                $username,
+                fn ($q) => $q->orderByDesc('posts.is_pinned')->orderByDesc('posts.pinned_at')
+            )
             ->orderBy(
                 $sort === 'reactions_count' ? 'reactions_count' : "posts.{$sort}",
                 $order
