@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->enum('type', ['direct', 'group'])->default('direct');
             $table->string('name')->nullable();
+            $table->string('image')->nullable();
             $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
 

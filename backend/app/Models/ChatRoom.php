@@ -9,7 +9,7 @@ class ChatRoom extends Model
 {
     protected $table = 'chat_rooms';
 
-    protected $fillable = ['type', 'name', 'last_message_at'];
+    protected $fillable = ['type', 'name', 'image', 'last_message_at'];
 
     protected function casts(): array
     {

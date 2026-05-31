@@ -177,6 +177,7 @@ class ChatController extends BaseApiController
         return [
             'id'               => $room->id,
             'name'             => $room->name,
+            'image'            => $room->image,
             'type'             => $room->type,
             'member_count'     => $room->members_count ?? 0,
             'message_count'    => $room->message_count ?? 0,
