@@ -21,6 +21,7 @@ import {
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
+import { userService } from "@/services/user.service";
 import type { PostDetail, PostComment } from "@/types/post.types";
 import type { CommunityLayoutContext } from "./CommunityLayout";
 import {
@@ -285,6 +286,14 @@ const CommunityPostDetailPage: React.FC = () => {
 	const [reactionLoading, setReactionLoading] = useState(false);
 	const [saved, setSaved] = useState(false);
 
+	const [followed, setFollowed] = useState(false);
+	const [followLoading, setFollowLoading] = useState(false);
+	const [authorStats, setAuthorStats] = useState<{
+		posts_count: number;
+		followers_count: number;
+		following_count: number;
+	} | null>(null);
+
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
 	const [showPostMenu, setShowPostMenu] = useState(false);
@@ -339,6 +348,57 @@ const CommunityPostDetailPage: React.FC = () => {
 			.catch(() => setComments([]))
 			.finally(() => setCommentsLoading(false));
 	}, [id]);
+
+	useEffect(() => {
+		if (!post?.user) return;
+		const handle = getHandle(post.user.username, post.user.email).replace(/^@/, "");
+		userService
+			.getProfile(handle)
+			.then((res) => {
+				const profile = res.data;
+				setFollowed(profile.is_following ?? false);
+				setAuthorStats({
+					posts_count: profile.posts_count ?? 0,
+					followers_count: profile.followers_count ?? 0,
+					following_count: profile.following_count ?? 0,
+				});
+			})
+			.catch(() => {});
+	}, [post?.user?.id]);
+
+	const handleToggleFollow = async () => {
+		if (!user) {
+			navigate("/login", { state: { from: location.pathname + location.search } });
+			return;
+		}
+		if (followLoading || !post?.user) return;
+		setFollowLoading(true);
+		const wasFollowed = followed;
+		setFollowed((f) => !f);
+		setAuthorStats((prev) =>
+			prev
+				? { ...prev, followers_count: prev.followers_count + (wasFollowed ? -1 : 1) }
+				: prev,
+		);
+		try {
+			const handle = getHandle(post.user.username, post.user.email).replace(/^@/, "");
+			const res = await userService.toggleFollow(handle);
+			setFollowed(res.data.is_following);
+			setAuthorStats((prev) =>
+				prev ? { ...prev, followers_count: res.data.followers_count } : prev,
+			);
+		} catch {
+			setFollowed(wasFollowed);
+			setAuthorStats((prev) =>
+				prev
+					? { ...prev, followers_count: prev.followers_count + (wasFollowed ? 1 : -1) }
+					: prev,
+			);
+			toast.error("Không thể thực hiện hành động. Vui lòng thử lại.");
+		} finally {
+			setFollowLoading(false);
+		}
+	};
 
 	const authorName = post?.user?.full_name ?? "Thành viên CKC";
 	const authorHandle = post?.user ? getHandle(post.user.username, post.user.email) : "@ckc";
@@ -848,31 +908,40 @@ const CommunityPostDetailPage: React.FC = () => {
 							{/* Stats */}
 							<div className='mt-3 flex gap-4 border-t-2 border-gray-200 pt-3 text-sm'>
 								<span className='whitespace-nowrap'>
-									<strong className='font-extrabold text-black'>0</strong>{" "}
+									<strong className='font-extrabold text-black'>
+										{authorStats?.posts_count ?? 0}
+									</strong>{" "}
 									<span className='text-gray-500'>Bài viết</span>
 								</span>
 								<span className='whitespace-nowrap'>
-									<strong className='font-extrabold text-black'>0</strong>{" "}
+									<strong className='font-extrabold text-black'>
+										{authorStats?.followers_count ?? 0}
+									</strong>{" "}
 									<span className='text-gray-500'>Theo dõi</span>
 								</span>
 								<span className='whitespace-nowrap'>
-									<strong className='font-extrabold text-black'>0</strong>{" "}
+									<strong className='font-extrabold text-black'>
+										{authorStats?.following_count ?? 0}
+									</strong>{" "}
 									<span className='text-gray-500'>Đang theo</span>
 								</span>
 							</div>
 
 							{/* Actions */}
-								<div className='mt-4 space-y-2'>
-									<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-										Theo dõi
+							<div className='mt-4 space-y-2'>
+								{!isOwnPost && (
+									<button
+										onClick={handleToggleFollow}
+										disabled={followLoading}
+										className={`inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60 ${followed ? "bg-white" : "bg-[var(--color-primary)]"}`}>
+										{followed ? "Bỏ theo dõi" : "Theo dõi"}
 									</button>
-									<Link
-										key={post.user.id}
-										to={buildProfileUrl(post.user.username, post.user.email)}
-										className='flex items-center gap-3'>
-										<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-white font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-											Xem trang cá nhân
-										</button>
+								)}
+								<Link
+									to={buildProfileUrl(post.user.username, post.user.email)}>
+									<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-white font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+										Xem trang cá nhân
+									</button>
 								</Link>
 							</div>
 						</section>

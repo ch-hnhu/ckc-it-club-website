@@ -151,16 +151,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, user, onPostDeleted, onPostUp
 		}
 	};
 
-	const handleArchive = async () => {
+	const isArchived = post.status === "archived";
+
+	const handleToggleArchive = async () => {
 		if (archiveLoading) return;
 		closePostMenu();
 		setArchiveLoading(true);
 		try {
-			await postService.updatePost(post.id, { status: "archived" });
-			toast.success("Đã lưu trữ bài viết.");
+			await postService.updatePost(post.id, { status: isArchived ? "published" : "archived" });
+			toast.success(isArchived ? "Đã khôi phục bài viết." : "Đã lưu trữ bài viết.");
 			onPostDeleted?.(post.id);
 		} catch {
-			toast.error("Không thể lưu trữ. Vui lòng thử lại.");
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
 		} finally {
 			setArchiveLoading(false);
 		}
@@ -272,11 +274,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, user, onPostDeleted, onPostUp
 										Quyền riêng tư
 									</button>
 									<button
-										onClick={handleArchive}
+										onClick={handleToggleArchive}
 										disabled={archiveLoading}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
 										<Archive className='h-4 w-4' />
-										{archiveLoading ? "Đang lưu trữ..." : "Lưu trữ"}
+										{archiveLoading
+											? (isArchived ? "Đang khôi phục..." : "Đang lưu trữ...")
+											: (isArchived ? "Bỏ lưu trữ" : "Lưu trữ")}
 									</button>
 									<button
 										onClick={() => {

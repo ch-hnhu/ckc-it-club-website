@@ -771,18 +771,19 @@ const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
 interface PostCarouselProps {
 	posts: Post[];
 	user: AuthUser | null;
+	isOwnProfile: boolean;
 	onShowAll: () => void;
 }
 
-const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) => {
+const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, isOwnProfile, onShowAll }) => {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [canScrollLeft, setCanScrollLeft] = useState(false);
 	const [canScrollRight, setCanScrollRight] = useState(false);
+	const showArrows = posts.length > 3;
 
 	const updateScrollShadows = () => {
 		const el = scrollRef.current;
 		if (!el) return;
-
 		const maxScrollLeft = el.scrollWidth - el.clientWidth;
 		setCanScrollLeft(el.scrollLeft > 4);
 		setCanScrollRight(el.scrollLeft < maxScrollLeft - 4);
@@ -798,59 +799,68 @@ const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) =
 	useEffect(() => {
 		updateScrollShadows();
 		window.addEventListener("resize", updateScrollShadows);
-
-		return () => {
-			window.removeEventListener("resize", updateScrollShadows);
-		};
+		return () => window.removeEventListener("resize", updateScrollShadows);
 	}, [posts]);
 
 	return (
 		<div>
 			<div className='mb-4 flex items-center justify-between'>
 				<h1 className='font-heading font-extrabold text-black text-2xl'>Posts</h1>
-				<div className='flex items-center gap-2'>
+				{showArrows && (
+					<div className='flex items-center gap-2'>
+						<button
+							onClick={() => scroll("left")}
+							className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+							aria-label='Cuộn trái'>
+							<ChevronLeft className='h-4 w-4' />
+						</button>
+						<button
+							onClick={() => scroll("right")}
+							className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+							aria-label='Cuộn phải'>
+							<ChevronRight className='h-4 w-4' />
+						</button>
+					</div>
+				)}
+			</div>
+
+			{posts.length === 0 ? (
+				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-12 text-center'>
+					<p className='text-sm text-gray-500'>
+						{isOwnProfile
+							? "Bạn chưa đăng bài viết nào."
+							: "Người dùng này chưa đăng bài viết nào."}
+					</p>
+				</div>
+			) : (
+				<div className='relative'>
+					{canScrollLeft && (
+						<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
+					)}
+					{canScrollRight && (
+						<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
+					)}
+					<div
+						ref={scrollRef}
+						onScroll={updateScrollShadows}
+						className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
+						{posts.map((post) => (
+							<PostCardCompact key={post.id} post={post} user={user} />
+						))}
+					</div>
+				</div>
+			)}
+
+			{posts.length >= 6 && (
+				<div className='mt-5 flex justify-center'>
 					<button
-						onClick={() => scroll("left")}
-						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-						aria-label='Cuộn trái'>
-						<ChevronLeft className='h-4 w-4' />
-					</button>
-					<button
-						onClick={() => scroll("right")}
-						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-						aria-label='Cuộn phải'>
+						onClick={onShowAll}
+						className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						Xem tất cả Posts
 						<ChevronRight className='h-4 w-4' />
 					</button>
 				</div>
-			</div>
-
-			{/* Scrollable row — hidden scrollbar */}
-			<div className='relative'>
-				{canScrollLeft && (
-					<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
-				)}
-				{canScrollRight && (
-					<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
-				)}
-				<div
-					ref={scrollRef}
-					onScroll={updateScrollShadows}
-					className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
-					{posts.map((post) => (
-						<PostCardCompact key={post.id} post={post} user={user} />
-					))}
-				</div>
-			</div>
-
-			{/* Show all button */}
-			<div className='mt-5 flex justify-center'>
-				<button
-					onClick={onShowAll}
-					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-					Xem tất cả Posts
-					<ChevronRight className='h-4 w-4' />
-				</button>
-			</div>
+			)}
 		</div>
 	);
 };
@@ -859,18 +869,19 @@ const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) =
 
 interface BlogCarouselProps {
 	blogs: Blog[];
+	isOwnProfile: boolean;
 	onShowAll: () => void;
 }
 
-const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, onShowAll }) => {
+const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, isOwnProfile, onShowAll }) => {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [canScrollLeft, setCanScrollLeft] = useState(false);
 	const [canScrollRight, setCanScrollRight] = useState(false);
+	const showArrows = blogs.length > 3;
 
 	const updateScrollShadows = () => {
 		const el = scrollRef.current;
 		if (!el) return;
-
 		const maxScrollLeft = el.scrollWidth - el.clientWidth;
 		setCanScrollLeft(el.scrollLeft > 4);
 		setCanScrollRight(el.scrollLeft < maxScrollLeft - 4);
@@ -886,59 +897,70 @@ const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, onShowAll }) => {
 	useEffect(() => {
 		updateScrollShadows();
 		window.addEventListener("resize", updateScrollShadows);
-
-		return () => {
-			window.removeEventListener("resize", updateScrollShadows);
-		};
+		return () => window.removeEventListener("resize", updateScrollShadows);
 	}, [blogs]);
 
 	return (
 		<div>
 			<div className='mb-4 flex items-center justify-between'>
 				<h1 className='font-heading font-extrabold text-black text-2xl'>Blog</h1>
-				<div className='flex items-center gap-2'>
+				{showArrows && (
+					<div className='flex items-center gap-2'>
+						<button
+							onClick={() => scroll("left")}
+							className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+							aria-label='Cuộn trái'>
+							<ChevronLeft className='h-4 w-4' />
+						</button>
+						<button
+							onClick={() => scroll("right")}
+							className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+							aria-label='Cuộn phải'>
+							<ChevronRight className='h-4 w-4' />
+						</button>
+					</div>
+				)}
+			</div>
+
+			{blogs.length === 0 ? (
+				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-12 text-center'>
+					<p className='text-sm text-gray-500'>
+						{isOwnProfile
+							? "Bạn chưa đăng blog nào."
+							: "Người dùng này chưa đăng blog nào."}
+					</p>
+				</div>
+			) : (
+				<div className='relative'>
+					{canScrollLeft && (
+						<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
+					)}
+					{canScrollRight && (
+						<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
+					)}
+					<div
+						ref={scrollRef}
+						onScroll={updateScrollShadows}
+						className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
+						{blogs.map((blog) => (
+							<div key={blog.id} className='w-72 shrink-0 sm:w-80'>
+								<BlogCard blog={blog} />
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+
+			{blogs.length >= 6 && (
+				<div className='mt-5 flex justify-center'>
 					<button
-						onClick={() => scroll("left")}
-						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-						aria-label='Cuộn trái'>
-						<ChevronLeft className='h-4 w-4' />
-					</button>
-					<button
-						onClick={() => scroll("right")}
-						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-						aria-label='Cuộn phải'>
+						onClick={onShowAll}
+						className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						Xem tất cả Blog
 						<ChevronRight className='h-4 w-4' />
 					</button>
 				</div>
-			</div>
-
-			<div className='relative'>
-				{canScrollLeft && (
-					<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
-				)}
-				{canScrollRight && (
-					<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
-				)}
-				<div
-					ref={scrollRef}
-					onScroll={updateScrollShadows}
-					className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
-					{blogs.map((blog) => (
-						<div key={blog.id} className='w-72 shrink-0 sm:w-80'>
-							<BlogCard blog={blog} />
-						</div>
-					))}
-				</div>
-			</div>
-
-			<div className='mt-5 flex justify-center'>
-				<button
-					onClick={onShowAll}
-					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-					Xem tất cả Blog
-					<ChevronRight className='h-4 w-4' />
-				</button>
-			</div>
+			)}
 		</div>
 	);
 };
@@ -1014,11 +1036,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 			{loadingPosts ? (
 				<div>
 					<div className='mb-4 flex items-center justify-between'>
-						<div className='h-5 w-40 animate-pulse rounded bg-gray-200' />
-						<div className='flex gap-2'>
-							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
-							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
-						</div>
+						<div className='h-7 w-24 animate-pulse rounded bg-gray-200' />
 					</div>
 					<div className='no-scrollbar flex gap-4 overflow-x-hidden pb-2'>
 						{Array.from({ length: 3 }).map((_, i) => (
@@ -1029,31 +1047,20 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 						))}
 					</div>
 				</div>
-			) : recentPosts.length > 0 ? (
-				<PostCarousel posts={recentPosts} user={user} onShowAll={onSwitchToPostsTab} />
 			) : (
-				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
-					<FileText className='mx-auto mb-4 h-10 w-10 text-gray-300' />
-					<p className='font-heading text-base font-extrabold text-black'>
-						Chưa có bài viết nào
-					</p>
-					<p className='mt-1 text-sm text-gray-400'>
-						{isOwnProfile
-							? "Bạn chưa đăng bài viết nào."
-							: "Người dùng này chưa đăng bài viết nào."}
-					</p>
-				</div>
+				<PostCarousel
+					posts={recentPosts}
+					user={user}
+					isOwnProfile={isOwnProfile}
+					onShowAll={onSwitchToPostsTab}
+				/>
 			)}
 
 			{/* Recent blogs carousel */}
 			{loadingBlogs ? (
 				<div>
 					<div className='mb-4 flex items-center justify-between'>
-						<div className='h-5 w-32 animate-pulse rounded bg-gray-200' />
-						<div className='flex gap-2'>
-							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
-							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
-						</div>
+						<div className='h-7 w-16 animate-pulse rounded bg-gray-200' />
 					</div>
 					<div className='no-scrollbar flex gap-4 overflow-x-hidden pb-2'>
 						{Array.from({ length: 3 }).map((_, i) => (
@@ -1064,20 +1071,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 						))}
 					</div>
 				</div>
-			) : recentBlogs.length > 0 ? (
-				<BlogCarousel blogs={recentBlogs} onShowAll={onSwitchToBlogTab} />
 			) : (
-				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
-					<BookOpen className='mx-auto mb-4 h-10 w-10 text-gray-300' />
-					<p className='font-heading text-base font-extrabold text-black'>
-						Chưa có blog nào
-					</p>
-					<p className='mt-1 text-sm text-gray-400'>
-						{isOwnProfile
-							? "Bạn chưa đăng blog nào."
-							: "Người dùng này chưa đăng blog nào."}
-					</p>
-				</div>
+				<BlogCarousel
+					blogs={recentBlogs}
+					isOwnProfile={isOwnProfile}
+					onShowAll={onSwitchToBlogTab}
+				/>
 			)}
 		</div>
 	);
@@ -1403,6 +1402,8 @@ const UserProfilePage: React.FC = () => {
 							followers_count: 85,
 							following_count: 3,
 							is_following: false,
+							bookmarks_count: null,
+							archived_count: null,
 							skills: ["JavaScript", "React", "Laravel", "Python"],
 							social_github: null,
 							social_linkedin: null,
@@ -1541,6 +1542,8 @@ const UserProfilePage: React.FC = () => {
 							const badgeCount: Partial<Record<Tab, number>> = {
 								posts: profile.posts_count,
 								blog: profile.blogs_count,
+								...(profile.bookmarks_count != null ? { bookmarks: profile.bookmarks_count } : {}),
+								...(profile.archived_count != null ? { archived: profile.archived_count } : {}),
 							};
 							return (
 								<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
