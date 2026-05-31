@@ -928,7 +928,7 @@ const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, isOwnProfile, onShow
 	return (
 		<div>
 			<div className='mb-4 flex items-center justify-between'>
-				<h1 className='font-heading font-extrabold text-black text-2xl'>Blog</h1>
+				<h1 className='font-heading font-extrabold text-black text-2xl'>Blogs</h1>
 				{showArrows && (
 					<div className='flex items-center gap-2'>
 						<button
@@ -989,7 +989,7 @@ const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, isOwnProfile, onShow
 					<button
 						onClick={onShowAll}
 						className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-						Xem tất cả Blog
+						Xem tất cả Blogs
 						<ChevronRight className='h-4 w-4' />
 					</button>
 				</div>
@@ -1282,7 +1282,7 @@ type TabDef = { id: Tab; label: string; icon: React.ElementType };
 const BASE_TABS: TabDef[] = [
 	{ id: "overview", label: "Tổng quan", icon: LayoutGrid },
 	{ id: "posts", label: "Posts", icon: FileText },
-	{ id: "blog", label: "Blog", icon: BookOpen },
+	{ id: "blog", label: "Blogs", icon: BookOpen },
 ];
 
 const BOOKMARKS_TAB: TabDef = { id: "bookmarks", label: "Đã lưu", icon: Bookmark };
@@ -1575,8 +1575,12 @@ const UserProfilePage: React.FC = () => {
 							const badgeCount: Partial<Record<Tab, number>> = {
 								posts: profile.posts_count,
 								blog: profile.blogs_count,
-								...(profile.bookmarks_count != null ? { bookmarks: profile.bookmarks_count } : {}),
-								...(profile.archived_count != null ? { archived: profile.archived_count } : {}),
+								...(profile.bookmarks_count != null
+									? { bookmarks: profile.bookmarks_count }
+									: {}),
+								...(profile.archived_count != null
+									? { archived: profile.archived_count }
+									: {}),
 							};
 							return (
 								<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
