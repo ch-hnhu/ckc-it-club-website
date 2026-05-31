@@ -457,11 +457,6 @@ function PostListPage() {
 											Trạng thái {getSortIcon("status")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[70px]">
-										<Button variant="ghost" onClick={() => handleSort("is_pinned")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Ghim {getSortIcon("is_pinned")}
-										</Button>
-									</TableHead>
 									<TableHead className="w-[160px]">
 										<Button variant="ghost" onClick={() => handleSort("reactions_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Tương tác {getSortIcon("reactions_count")}
@@ -481,7 +476,7 @@ function PostListPage() {
 									Array.from({ length: meta.per_page }).map((_, i) => (
 										<TableRow key={`skeleton-${i}`}>
 											<TableCell><Skeleton className="h-4 w-4" /></TableCell>
-											<TableCell colSpan={10}><Skeleton className="h-4 w-full" /></TableCell>
+											<TableCell colSpan={9}><Skeleton className="h-4 w-full" /></TableCell>
 										</TableRow>
 									))
 								) : posts.length > 0 ? (
@@ -543,15 +538,6 @@ function PostListPage() {
 											{/* Status */}
 											<TableCell>{getStatusBadge(post.status)}</TableCell>
 
-											{/* Pin */}
-											<TableCell className="text-center">
-												{post.is_pinned ? (
-													<Pin className="mx-auto h-4 w-4 text-amber-500" />
-												) : (
-													<span className="text-muted-foreground/30">—</span>
-												)}
-											</TableCell>
-
 											{/* Reactions + Comments */}
 											<TableCell>
 												<div className="text-sm text-muted-foreground">
@@ -610,7 +596,7 @@ function PostListPage() {
 									))
 								) : (
 									<TableRow>
-										<TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
+										<TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
 											Không tìm thấy bài đăng nào phù hợp.
 										</TableCell>
 									</TableRow>
@@ -619,7 +605,7 @@ function PostListPage() {
 
 							<TableFooter className="bg-transparent">
 								<TableRow>
-									<TableCell colSpan={11}>
+									<TableCell colSpan={10}>
 										<div className="flex items-center justify-between px-2">
 											<p className="flex-1 text-sm text-muted-foreground">
 												Đang hiển thị {posts.length} trên tổng {meta.total} bài đăng.

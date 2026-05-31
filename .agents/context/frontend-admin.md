@@ -352,6 +352,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-01`: Admin post management table no longer shows the `Ghim` column; pin/unpin remains available from each row's action menu.
 - `2026-06-01`: Admin comment list changed the `Thuộc về` table column to `URL bài viết`, rendering `article_url` as an external link to the user-facing post/blog.
 - `2026-06-01`: Shared `ui/dialog` only suppresses `aria-describedby` when no `DialogDescription` is present, preserving description linking when available; built-in close button is explicitly `type="button"`.
 
