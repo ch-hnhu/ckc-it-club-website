@@ -24,6 +24,7 @@ import {
 	LayoutGrid,
 	Loader2,
 	MessageCircle,
+	Plus,
 	Search,
 	Share2,
 	UserCheck,
@@ -546,6 +547,14 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfil
 							? "Bạn chưa đăng bài viết nào."
 							: "Người dùng này chưa đăng bài viết nào."}
 				</p>
+				{!error && isOwnProfile && (
+					<Link
+						to='/cong-dong/dang-bai'
+						className='mt-5 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						<Plus className='h-4 w-4' />
+						Tạo bài viết
+					</Link>
+				)}
 			</div>
 		);
 	}
@@ -625,6 +634,14 @@ const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) =
 							? "Bạn chưa đăng blog nào."
 							: "Người dùng này chưa đăng blog nào."}
 				</p>
+				{!error && isOwnProfile && (
+					<Link
+						to='/blog/dang-bai'
+						className='mt-5 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						<Plus className='h-4 w-4' />
+						Tạo blog
+					</Link>
+				)}
 			</div>
 		);
 	}
@@ -831,6 +848,14 @@ const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, isOwnProfile, 
 							? "Bạn chưa đăng bài viết nào."
 							: "Người dùng này chưa đăng bài viết nào."}
 					</p>
+					{isOwnProfile && (
+						<Link
+							to='/cong-dong/dang-bai'
+							className='mt-4 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							<Plus className='h-4 w-4' />
+							Tạo bài viết
+						</Link>
+					)}
 				</div>
 			) : (
 				<div className='relative'>
@@ -929,6 +954,14 @@ const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, isOwnProfile, onShow
 							? "Bạn chưa đăng blog nào."
 							: "Người dùng này chưa đăng blog nào."}
 					</p>
+					{isOwnProfile && (
+						<Link
+							to='/blog/dang-bai'
+							className='mt-4 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							<Plus className='h-4 w-4' />
+							Tạo blog
+						</Link>
+					)}
 				</div>
 			) : (
 				<div className='relative'>
