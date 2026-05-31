@@ -222,7 +222,9 @@ const CommunityFeedPage: React.FC = () => {
 				{/* Create post prompt */}
 				{user && (
 					<div className='mb-6 flex items-center gap-3 rounded-xl border-2 border-black bg-white px-5 py-4'>
-						<Link to={buildProfileUrl(user.username, user.email ?? "")} className='relative'>
+						<Link
+							to={buildProfileUrl(user.username, user.email ?? "")}
+							className='relative'>
 							<img
 								src={userAvatar}
 								alt={userDisplayName}

@@ -96,6 +96,13 @@ const CommunityLayout: React.FC = () => {
 	const [channels, setChannels] = useState<ChannelItem[]>(buildFallbackChannels());
 
 	useEffect(() => {
+		document.documentElement.classList.add("no-scrollbar");
+		return () => {
+			document.documentElement.classList.remove("no-scrollbar");
+		};
+	}, []);
+
+	useEffect(() => {
 		if (!isSidebarOpen) return;
 		const prevBody = document.body.style.overflow;
 		const prevHtml = document.documentElement.style.overflow;
@@ -232,7 +239,7 @@ const CommunityLayout: React.FC = () => {
 			</div>
 
 			{isSidebarOpen && (
-				<div className='fixed inset-x-0 bottom-0 top-16 z-50 lg:hidden'>
+				<div className='fixed inset-0 z-50 lg:hidden'>
 					<button
 						className='absolute inset-0 h-full w-full bg-black/55'
 						onClick={() => setIsSidebarOpen(false)}

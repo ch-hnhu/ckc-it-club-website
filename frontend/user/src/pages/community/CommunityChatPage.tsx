@@ -16,6 +16,7 @@ import GiphyPicker from "@/components/chat/GiphyPicker";
 import {
 	Hash,
 	Image as ImageIcon,
+	List,
 	Loader2,
 	Lock,
 	MessageSquare,
@@ -209,7 +210,7 @@ const MessageBubble: React.FC<{
 			) : (
 				<div className='px-3.5 py-2'>
 					<p
-						className={`text-sm leading-relaxed break-words ${isOwn ? "text-black" : "text-gray-800"}`}>
+						className={`text-sm leading-relaxed break-words whitespace-pre-wrap ${isOwn ? "text-black" : "text-gray-800"}`}>
 						{msg.content}
 					</p>
 				</div>
@@ -530,6 +531,7 @@ const CommunityChatPage: React.FC = () => {
 		setInput("");
 		if (inputRef.current) {
 			inputRef.current.style.height = "auto";
+			inputRef.current.scrollTop = 0;
 		}
 		try {
 			const res = await chatService.sendMessage(activeRoom.id, text, replyTo?.id);
@@ -732,10 +734,10 @@ const CommunityChatPage: React.FC = () => {
 				<div className='flex h-14 shrink-0 items-center gap-2 sm:gap-3 border-b-2 border-black bg-white px-3 sm:px-5'>
 					{/* Mobile room list toggle */}
 					<button
-						className='md:hidden inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+						className='md:hidden inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-black transition hover:bg-gray-100'
 						onClick={() => setShowMobileSidebar(true)}
-						title='Danh sách phòng'>
-						<Hash className='h-4 w-4' />
+						aria-label='Danh sách phòng chat'>
+						<List className='h-5 w-5' />
 					</button>
 
 					{activeRoom ? (
