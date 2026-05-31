@@ -158,7 +158,7 @@ function getVisibilityLabel(v: PostVisibility) {
 	return v === "public" ? "Công khai" : "Thành viên";
 }
 
-type SortKey = "id" | "status" | "created_at" | "reactions_count" | "user_name" | "channel_name" | "content" | "tags" | "is_pinned";
+type SortKey = "id" | "status" | "created_at" | "reactions_count" | "user_name" | "channel_name" | "content" | "is_pinned";
 
 const statusFilterOptions: Array<{ value: PostStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -448,11 +448,6 @@ function PostListPage() {
 										</Button>
 									</TableHead>
 									<TableHead className="min-w-[120px]">
-										<Button variant="ghost" onClick={() => handleSort("tags")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Tags {getSortIcon("tags")}
-										</Button>
-									</TableHead>
-									<TableHead className="min-w-[120px]">
 										<Button variant="ghost" onClick={() => handleSort("channel_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Kênh {getSortIcon("channel_name")}
 										</Button>
@@ -533,26 +528,6 @@ function PostListPage() {
 															<Image className="h-3 w-3" />
 															{post.media.length} tệp đính kèm
 														</span>
-													)}
-												</div>
-											</TableCell>
-
-											{/* Tags */}
-											<TableCell>
-												<div className="flex flex-wrap gap-1">
-													{post.tags.slice(0, 2).map((tag) => (
-														<Badge
-															key={tag.id}
-															variant="outline"
-															className="rounded-full px-2 py-0 text-xs"
-															style={tag.color ? { borderColor: `${tag.color}40`, color: tag.color } : undefined}>
-															{tag.name}
-														</Badge>
-													))}
-													{post.tags.length > 2 && (
-														<Badge variant="secondary" className="rounded-full px-2 py-0 text-xs">
-															+{post.tags.length - 2}
-														</Badge>
 													)}
 												</div>
 											</TableCell>
@@ -743,28 +718,13 @@ function PostListPage() {
 									</div>
 								</div>
 
-								{/* Tags + Stats */}
-								<div className="grid gap-4 sm:grid-cols-2">
-									<div className="space-y-1.5">
-										<p className="text-sm font-medium">Tags</p>
-										<div className="flex flex-wrap gap-1.5">
-											{selectedPost.tags.length > 0 ? selectedPost.tags.map((tag) => (
-												<Badge key={tag.id} variant="outline" className="rounded-full text-xs"
-													style={tag.color ? { borderColor: `${tag.color}40`, color: tag.color } : undefined}>
-													{tag.name}
-												</Badge>
-											)) : (
-												<span className="text-sm text-muted-foreground">Không có tag</span>
-											)}
-										</div>
-									</div>
-									<div className="space-y-1.5">
-										<p className="text-sm font-medium">Thống kê</p>
-										<div className="space-y-1 text-sm text-muted-foreground">
-											<p>{selectedPost.reactions_count} lượt cảm xúc</p>
-											<p>{selectedPost.comments_count} bình luận</p>
-											<p>{selectedPost.media.length} tệp đính kèm</p>
-										</div>
+								{/* Stats */}
+								<div className="space-y-1.5">
+									<p className="text-sm font-medium">Thống kê</p>
+									<div className="space-y-1 text-sm text-muted-foreground">
+										<p>{selectedPost.reactions_count} lượt cảm xúc</p>
+										<p>{selectedPost.comments_count} bình luận</p>
+										<p>{selectedPost.media.length} tệp đính kèm</p>
 									</div>
 								</div>
 
