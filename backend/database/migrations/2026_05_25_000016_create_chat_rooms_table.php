@@ -10,13 +10,12 @@ return new class extends Migration
     {
         Schema::create('chat_rooms', function (Blueprint $table) {
             $table->id();
-            $table->enum('type', ['direct', 'group'])->default('direct');
             $table->string('name')->nullable();
             $table->string('image')->nullable();
             $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
 
-            $table->index(['type', 'last_message_at']);
+            $table->index('last_message_at');
         });
     }
 

@@ -1,21 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
-	Bot,
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
-	Crown,
-	ImageIcon,
-	LogOut,
 	MessagesSquare,
+	MoreHorizontal,
 	Pencil,
+	Plus,
 	Trash2,
-	UserMinus,
-	UserPlus,
 	Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -35,10 +31,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -60,11 +65,8 @@ import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { cn } from "@/lib/utils";
 import chatService from "@/services/chat.service";
 
-// ─── Types (exported so service can import) ───────────────────────────────────
-
 export interface ChatRoomRecord {
 	id: number;
-	type: "direct" | "group";
 	name: string | null;
 	member_count: number;
 	message_count: number;
@@ -74,8 +76,6 @@ export interface ChatRoomRecord {
 
 export interface ChatRoomStats {
 	total: number;
-	group_count: number;
-	direct_count: number;
 	system_events: number;
 }
 
@@ -92,7 +92,7 @@ export interface ChatSystemMessageRecord {
 	} | null;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+type RoomSortKey = "id" | "name" | "member_count" | "message_count" | "last_message_at" | "created_at";
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
 	dateStyle: "medium",
@@ -101,41 +101,9 @@ const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
 
 function formatDate(value: string | null | undefined) {
 	if (!value) return "--";
-	const d = new Date(value);
-	return Number.isNaN(d.getTime()) ? "--" : dateFormatter.format(d);
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? "--" : dateFormatter.format(date);
 }
-
-type EventTypeMeta = {
-	label: string;
-	icon: React.ElementType;
-	className: string;
-};
-
-const EVENT_TYPE_MAP: Record<string, EventTypeMeta> = {
-	room_created:   { label: "Tạo phòng",       icon: MessagesSquare, className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10" },
-	member_joined:  { label: "Tham gia",         icon: UserPlus,       className: "border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10" },
-	member_left:    { label: "Rời nhóm",         icon: LogOut,         className: "border-slate-500/20 bg-slate-500/10 text-slate-600 hover:bg-slate-500/10" },
-	member_added:   { label: "Thêm thành viên",  icon: UserPlus,       className: "border-violet-500/20 bg-violet-500/10 text-violet-700 hover:bg-violet-500/10" },
-	member_removed: { label: "Xóa thành viên",   icon: UserMinus,      className: "border-rose-500/20 bg-rose-500/10 text-rose-700 hover:bg-rose-500/10" },
-	avatar_changed: { label: "Đổi ảnh nhóm",     icon: ImageIcon,      className: "border-amber-500/20 bg-amber-500/10 text-amber-700 hover:bg-amber-500/10" },
-	room_renamed:   { label: "Đổi tên nhóm",     icon: Pencil,         className: "border-indigo-500/20 bg-indigo-500/10 text-indigo-700 hover:bg-indigo-500/10" },
-	role_changed:   { label: "Đổi vai trò",      icon: Crown,          className: "border-orange-500/20 bg-orange-500/10 text-orange-700 hover:bg-orange-500/10" },
-};
-
-const FALLBACK_EVENT: EventTypeMeta = {
-	label: "Sự kiện",
-	icon: Bot,
-	className: "border-slate-500/20 bg-slate-500/10 text-slate-600 hover:bg-slate-500/10",
-};
-
-function getEventMeta(eventType: string | null): EventTypeMeta {
-	if (!eventType) return FALLBACK_EVENT;
-	return EVENT_TYPE_MAP[eventType] ?? { ...FALLBACK_EVENT, label: eventType };
-}
-
-type RoomSortKey = "id" | "name" | "member_count" | "last_message_at" | "created_at";
-
-// ─── Sub-component: stat card ─────────────────────────────────────────────────
 
 function StatCard({
 	label,
@@ -155,14 +123,14 @@ function StatCard({
 			<CardContent className="pt-5">
 				<div className="flex items-start justify-between gap-3">
 					<div className="min-w-0 space-y-1">
-						<p className="text-sm text-muted-foreground truncate">{label}</p>
+						<p className="truncate text-sm text-muted-foreground">{label}</p>
 						{loading ? (
 							<Skeleton className="h-7 w-14" />
 						) : (
 							<p className="text-2xl font-bold tabular-nums">{value}</p>
 						)}
 					</div>
-					<div className={cn("rounded-lg p-2.5 shrink-0", accent)}>
+					<div className={cn("shrink-0 rounded-lg p-2.5", accent)}>
 						<Icon className="h-5 w-5" />
 					</div>
 				</div>
@@ -170,8 +138,6 @@ function StatCard({
 		</Card>
 	);
 }
-
-// ─── Sub-component: pagination footer ─────────────────────────────────────────
 
 function PaginationFooter({
 	meta,
@@ -192,11 +158,13 @@ function PaginationFooter({
 			<div className="flex items-center space-x-6 lg:space-x-8">
 				<div className="flex items-center space-x-2">
 					<p className="text-sm font-medium">Rows per page</p>
-					<Select value={`${meta.per_page}`} onValueChange={(v) => onPerPageChange(Number(v))}>
-						<SelectTrigger className="h-8 w-[70px]"><SelectValue /></SelectTrigger>
+					<Select value={`${meta.per_page}`} onValueChange={(value) => onPerPageChange(Number(value))}>
+						<SelectTrigger className="h-8 w-[70px]">
+							<SelectValue />
+						</SelectTrigger>
 						<SelectContent side="top">
-							{[10, 20, 25, 50].map((s) => (
-								<SelectItem key={s} value={`${s}`}>{s}</SelectItem>
+							{[10, 20, 25, 50].map((size) => (
+								<SelectItem key={size} value={`${size}`}>{size}</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
@@ -205,20 +173,36 @@ function PaginationFooter({
 					Trang {meta.current_page} / {meta.last_page}
 				</div>
 				<div className="flex items-center space-x-2">
-					<Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex"
-						onClick={() => onPageChange(1)} disabled={meta.current_page === 1}>
+					<Button
+						variant="outline"
+						className="hidden h-8 w-8 p-0 lg:flex"
+						onClick={() => onPageChange(1)}
+						disabled={meta.current_page === 1}
+					>
 						<ChevronsLeft className="h-4 w-4" />
 					</Button>
-					<Button variant="outline" className="h-8 w-8 p-0"
-						onClick={() => onPageChange(Math.max(1, meta.current_page - 1))} disabled={meta.current_page === 1}>
+					<Button
+						variant="outline"
+						className="h-8 w-8 p-0"
+						onClick={() => onPageChange(Math.max(1, meta.current_page - 1))}
+						disabled={meta.current_page === 1}
+					>
 						<ChevronLeft className="h-4 w-4" />
 					</Button>
-					<Button variant="outline" className="h-8 w-8 p-0"
-						onClick={() => onPageChange(Math.min(meta.last_page, meta.current_page + 1))} disabled={meta.current_page === meta.last_page}>
+					<Button
+						variant="outline"
+						className="h-8 w-8 p-0"
+						onClick={() => onPageChange(Math.min(meta.last_page, meta.current_page + 1))}
+						disabled={meta.current_page === meta.last_page}
+					>
 						<ChevronRight className="h-4 w-4" />
 					</Button>
-					<Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex"
-						onClick={() => onPageChange(meta.last_page)} disabled={meta.current_page === meta.last_page}>
+					<Button
+						variant="outline"
+						className="hidden h-8 w-8 p-0 lg:flex"
+						onClick={() => onPageChange(meta.last_page)}
+						disabled={meta.current_page === meta.last_page}
+					>
 						<ChevronsRight className="h-4 w-4" />
 					</Button>
 				</div>
@@ -227,104 +211,82 @@ function PaginationFooter({
 	);
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 function ChatRoomListPage() {
 	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Phòng chat" }]);
 
-	// ── Stats ──
-	const [stats, setStats] = useState<ChatRoomStats>({ total: 0, group_count: 0, direct_count: 0, system_events: 0 });
+	const [stats, setStats] = useState<ChatRoomStats>({ total: 0, system_events: 0 });
 	const [loadingStats, setLoadingStats] = useState(true);
-
-	// ── Rooms table ──
 	const [rooms, setRooms] = useState<ChatRoomRecord[]>([]);
 	const [loadingRooms, setLoadingRooms] = useState(true);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
-	const [typeFilter, setTypeFilter] = useState<"all" | "group" | "direct">("all");
 	const [sortConfig, setSortConfig] = useState<{ key: RoomSortKey | null; order: "asc" | "desc" | null }>({
 		key: "last_message_at",
 		order: "desc",
 	});
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, per_page: 20, total: 0 });
+	const [reloadToken, setReloadToken] = useState(0);
 
-	// ── System messages dialog ──
-	const [selectedRoom, setSelectedRoom] = useState<ChatRoomRecord | null>(null);
-	const [sysMessages, setSysMessages] = useState<ChatSystemMessageRecord[]>([]);
-	const [loadingSys, setLoadingSys] = useState(false);
-	const [sysMeta, setSysMeta] = useState({ current_page: 1, last_page: 1, per_page: 20, total: 0 });
-	const [sysEventFilter, setSysEventFilter] = useState("all");
+	const [formOpen, setFormOpen] = useState(false);
+	const [editTarget, setEditTarget] = useState<ChatRoomRecord | null>(null);
+	const [roomName, setRoomName] = useState("");
+	const [isSavingRoom, setIsSavingRoom] = useState(false);
+	const [deleteRoomTarget, setDeleteRoomTarget] = useState<ChatRoomRecord | null>(null);
+	const [isDeletingRoom, setIsDeletingRoom] = useState(false);
 
-	// ── Delete confirm ──
-	const [deleteTarget, setDeleteTarget] = useState<{ roomId: number; msg: ChatSystemMessageRecord } | null>(null);
-	const [isDeleting, setIsDeleting] = useState(false);
-
-	// ── Debounce search ──
 	useEffect(() => {
 		const timer = setTimeout(() => setDebouncedSearch(search.trim()), 400);
 		return () => clearTimeout(timer);
 	}, [search]);
 
-	// ── Reset page on filter/sort change ──
 	useEffect(() => {
-		setMeta((p) => ({ ...p, current_page: 1 }));
-	}, [debouncedSearch, typeFilter, sortConfig]);
+		setMeta((prev) => ({ ...prev, current_page: 1 }));
+	}, [debouncedSearch, sortConfig]);
 
-	// ── Load stats ──
 	useEffect(() => {
 		setLoadingStats(true);
 		chatService.getStats()
-			.then((res) => { if (res.data) setStats(res.data); })
+			.then((response) => {
+				if (response.data) setStats(response.data);
+			})
 			.catch(() => {})
 			.finally(() => setLoadingStats(false));
-	}, []);
+	}, [reloadToken]);
 
-	// ── Load rooms ──
 	useEffect(() => {
 		let cancelled = false;
 		setLoadingRooms(true);
+
 		chatService.getRooms({
 			page: meta.current_page,
 			per_page: meta.per_page,
 			search: debouncedSearch || undefined,
-			type: typeFilter !== "all" ? typeFilter : undefined,
 			sort: sortConfig.key ?? undefined,
 			order: sortConfig.order ?? undefined,
 		})
-			.then((res) => {
+			.then((response) => {
 				if (cancelled) return;
-				setRooms(res.data ?? []);
-				if (res.meta) {
-					setMeta((p) => ({ ...p, last_page: res.meta.last_page, total: res.meta.total }));
+				setRooms(response.data ?? []);
+				if (response.meta) {
+					setMeta((prev) => ({
+						...prev,
+						last_page: response.meta.last_page,
+						total: response.meta.total,
+					}));
 				}
 			})
-			.catch(() => { if (!cancelled) toast.error("Không thể tải danh sách phòng chat."); })
-			.finally(() => { if (!cancelled) setLoadingRooms(false); });
-		return () => { cancelled = true; };
-	}, [meta.current_page, meta.per_page, debouncedSearch, typeFilter, sortConfig]);
-
-	// ── Load system messages for selected room ──
-	const loadSysMessages = useCallback(() => {
-		if (!selectedRoom) return;
-		setLoadingSys(true);
-		chatService.getSystemMessages(selectedRoom.id, {
-			page: sysMeta.current_page,
-			per_page: sysMeta.per_page,
-			event_type: sysEventFilter !== "all" ? sysEventFilter : undefined,
-		})
-			.then((res) => {
-				setSysMessages(res.data ?? []);
-				if (res.meta) {
-					setSysMeta((p) => ({ ...p, last_page: res.meta.last_page, total: res.meta.total }));
-				}
+			.catch(() => {
+				if (!cancelled) toast.error("Không thể tải danh sách phòng chat.");
 			})
-			.catch(() => toast.error("Không thể tải nhật ký sự kiện."))
-			.finally(() => setLoadingSys(false));
-	}, [selectedRoom, sysMeta.current_page, sysMeta.per_page, sysEventFilter]);
+			.finally(() => {
+				if (!cancelled) setLoadingRooms(false);
+			});
 
-	useEffect(() => { loadSysMessages(); }, [loadSysMessages]);
+		return () => {
+			cancelled = true;
+		};
+	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig, reloadToken]);
 
-	// ── Sort (3-state: asc → desc → null) ──
 	const handleSort = (key: RoomSortKey) => {
 		let order: "asc" | "desc" | null = "asc";
 		if (sortConfig.key === key) {
@@ -334,44 +296,73 @@ function ChatRoomListPage() {
 	};
 
 	const getSortIcon = (key: RoomSortKey) =>
-		sortConfig.key !== key    ? <ArrowUpDown className="ml-2 h-4 w-4" /> :
-		sortConfig.order === "asc"  ? <ArrowUp   className="ml-2 h-4 w-4" /> :
-		sortConfig.order === "desc" ? <ArrowDown  className="ml-2 h-4 w-4" /> :
-		                              <ArrowUpDown className="ml-2 h-4 w-4" />;
+		sortConfig.key !== key ? <ArrowUpDown className="ml-2 h-4 w-4" /> :
+		sortConfig.order === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> :
+		sortConfig.order === "desc" ? <ArrowDown className="ml-2 h-4 w-4" /> :
+		<ArrowUpDown className="ml-2 h-4 w-4" />;
 
-	// ── Open / close system messages dialog ──
-	const handleOpenSysMessages = (room: ChatRoomRecord) => {
-		setSelectedRoom(room);
-		setSysMessages([]);
-		setSysMeta({ current_page: 1, last_page: 1, per_page: 20, total: 0 });
-		setSysEventFilter("all");
+	const roomDisplayName = (room: ChatRoomRecord) => room.name ?? `Phòng #${room.id}`;
+
+	const openCreateRoom = () => {
+		setEditTarget(null);
+		setRoomName("");
+		setFormOpen(true);
 	};
 
-	// ── Delete system message ──
-	const handleDelete = async () => {
-		if (!deleteTarget) return;
-		setIsDeleting(true);
+	const openEditRoom = (room: ChatRoomRecord) => {
+		setEditTarget(room);
+		setRoomName(room.name ?? "");
+		setFormOpen(true);
+	};
+
+	const handleSaveRoom = async () => {
+		const name = roomName.trim();
+		if (name.length < 2) {
+			toast.error("Tên phòng chat phải có ít nhất 2 ký tự.");
+			return;
+		}
+
+		setIsSavingRoom(true);
 		try {
-			await chatService.deleteSystemMessage(deleteTarget.roomId, deleteTarget.msg.id);
-			toast.success("Đã xóa sự kiện.");
-			setDeleteTarget(null);
-			loadSysMessages();
-			chatService.getStats().then((r) => { if (r.data) setStats(r.data); });
+			if (editTarget) {
+				const response = await chatService.updateRoom(editTarget.id, { name });
+				setRooms((prev) => prev.map((room) => room.id === editTarget.id ? { ...room, ...response.data } : room));
+				toast.success("Đã cập nhật phòng chat.");
+			} else {
+				await chatService.createRoom({ name });
+				setMeta((prev) => ({ ...prev, current_page: 1 }));
+				toast.success("Đã tạo phòng chat.");
+			}
+
+			setFormOpen(false);
+			setEditTarget(null);
+			setRoomName("");
+			setReloadToken((token) => token + 1);
 		} catch {
-			toast.error("Không thể xóa sự kiện.");
+			toast.error(editTarget ? "Không thể cập nhật phòng chat." : "Không thể tạo phòng chat.");
 		} finally {
-			setIsDeleting(false);
+			setIsSavingRoom(false);
 		}
 	};
 
-	const roomDisplayName = (room: ChatRoomRecord) =>
-		room.name ?? (room.type === "direct" ? "Chat trực tiếp" : `Nhóm #${room.id}`);
+	const handleDeleteRoom = async () => {
+		if (!deleteRoomTarget) return;
+		setIsDeletingRoom(true);
+		try {
+			await chatService.deleteRoom(deleteRoomTarget.id);
+			toast.success("Đã xóa phòng chat.");
+			setDeleteRoomTarget(null);
+			setReloadToken((token) => token + 1);
+		} catch {
+			toast.error("Không thể xóa phòng chat.");
+		} finally {
+			setIsDeletingRoom(false);
+		}
+	};
 
 	return (
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
-
-				{/* Hero */}
 				<section className="overflow-hidden rounded-[30px] border border-sky-500/15 bg-[linear-gradient(135deg,rgba(14,165,233,0.10),rgba(248,252,255,0.96)_44%,rgba(252,254,255,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.10),rgba(8,14,18,0.96)_45%,rgba(5,9,12,0.98)_100%)]">
 					<div className="px-6 py-7 md:px-8 md:py-9">
 						<div className="max-w-3xl space-y-4">
@@ -383,46 +374,44 @@ function ChatRoomListPage() {
 									Quản lý phòng chat
 								</h1>
 								<p className="text-sm leading-7 text-sky-950/70 md:text-base dark:text-sky-50/65">
-									Theo dõi các phòng chat trong CLB và nhật ký sự kiện hệ thống — tham gia, rời nhóm, đổi tên, đổi ảnh...
+									Quản lý các phòng chat nhóm trong CLB, theo dõi số thành viên, tin nhắn và thời điểm hoạt động gần nhất.
 								</p>
 							</div>
 						</div>
 					</div>
 				</section>
 
-				{/* Stats cards */}
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-					<StatCard label="Tổng phòng chat" value={stats.total} loading={loadingStats}
-						icon={MessagesSquare} accent="bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400" />
-					<StatCard label="Phòng nhóm" value={stats.group_count} loading={loadingStats}
-						icon={Users} accent="bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400" />
-					<StatCard label="Chat trực tiếp" value={stats.direct_count} loading={loadingStats}
-						icon={UserPlus} accent="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400" />
-					<StatCard label="Sự kiện hệ thống" value={stats.system_events} loading={loadingStats}
-						icon={Bot} accent="bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400" />
+				<div className="grid gap-4 sm:grid-cols-2">
+					<StatCard
+						label="Tổng phòng chat"
+						value={stats.total}
+						loading={loadingStats}
+						icon={MessagesSquare}
+						accent="bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400"
+					/>
+					<StatCard
+						label="Sự kiện hệ thống"
+						value={stats.system_events}
+						loading={loadingStats}
+						icon={Users}
+						accent="bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400"
+					/>
 				</div>
 
-				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
-					{/* Filters */}
 					<div className="flex flex-wrap items-center gap-3">
 						<Input
 							placeholder="Tìm kiếm theo tên phòng..."
 							value={search}
-							onChange={(e) => setSearch(e.target.value)}
+							onChange={(event) => setSearch(event.target.value)}
 							className="h-8 w-full sm:w-64 md:w-80"
 						/>
-						<Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
-							<SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">Tất cả loại</SelectItem>
-								<SelectItem value="group">Phòng nhóm</SelectItem>
-								<SelectItem value="direct">Chat trực tiếp</SelectItem>
-							</SelectContent>
-						</Select>
+						<Button size="sm" className="ml-auto h-8 gap-1.5" onClick={openCreateRoom}>
+							<Plus className="h-4 w-4" />
+							Tạo phòng
+						</Button>
 					</div>
 
-					{/* Rooms table */}
 					<div className="overflow-hidden rounded-md border">
 						<Table>
 							<TableHeader>
@@ -437,20 +426,27 @@ function ChatRoomListPage() {
 											Thành viên {getSortIcon("member_count")}
 										</Button>
 									</TableHead>
+									<TableHead className="w-[120px]">
+										<Button variant="ghost" onClick={() => handleSort("message_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Tin nhắn {getSortIcon("message_count")}
+										</Button>
+									</TableHead>
 									<TableHead className="w-[170px]">
 										<Button variant="ghost" onClick={() => handleSort("last_message_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Hoạt động cuối {getSortIcon("last_message_at")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[110px] text-sm font-medium">Thao tác</TableHead>
+									<TableHead className="w-[56px]" />
 								</TableRow>
 							</TableHeader>
 
 							<TableBody>
 								{loadingRooms ? (
-									Array.from({ length: 6 }).map((_, i) => (
-										<TableRow key={i}>
-											<TableCell colSpan={4}><Skeleton className="h-4 w-full" /></TableCell>
+									Array.from({ length: 6 }).map((_, index) => (
+										<TableRow key={index}>
+											<TableCell colSpan={5}>
+												<Skeleton className="h-4 w-full" />
+											</TableCell>
 										</TableRow>
 									))
 								) : rooms.length > 0 ? (
@@ -458,50 +454,60 @@ function ChatRoomListPage() {
 										<TableRow key={room.id}>
 											<TableCell>
 												<div className="flex items-center gap-2.5">
-													<div className={cn(
-														"flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
-														room.type === "group"
-															? "bg-violet-100 text-violet-600 dark:bg-violet-900/40"
-															: "bg-sky-100 text-sky-600 dark:bg-sky-900/40",
-													)}>
-														{room.type === "group"
-															? <Users className="h-4 w-4" />
-															: <UserPlus className="h-4 w-4" />}
+													<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-violet-100 text-violet-600 dark:bg-violet-900/40">
+														<Users className="h-4 w-4" />
 													</div>
 													<div className="min-w-0">
-														<p className="text-sm font-medium truncate">{roomDisplayName(room)}</p>
+														<p className="truncate text-sm font-medium">{roomDisplayName(room)}</p>
 														<p className="text-xs text-muted-foreground">#{room.id}</p>
 													</div>
 												</div>
 											</TableCell>
-
 											<TableCell>
 												<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
 													<Users className="h-3.5 w-3.5" />
 													{room.member_count}
 												</div>
 											</TableCell>
-
+											<TableCell>
+												<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+													<MessagesSquare className="h-3.5 w-3.5" />
+													{room.message_count}
+												</div>
+											</TableCell>
 											<TableCell className="text-sm text-muted-foreground">
 												{formatDate(room.last_message_at)}
 											</TableCell>
-
-											<TableCell>
-												<Button
-													variant="outline"
-													size="sm"
-													className="h-8 gap-1.5 text-xs"
-													onClick={() => handleOpenSysMessages(room)}
-												>
-													<Bot className="h-3.5 w-3.5" />
-													Nhật ký
-												</Button>
+											<TableCell className="text-right">
+												<DropdownMenu>
+													<DropdownMenuTrigger asChild>
+														<Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
+															<MoreHorizontal className="h-4 w-4" />
+															<span className="sr-only">Mở menu</span>
+														</Button>
+													</DropdownMenuTrigger>
+													<DropdownMenuContent align="end" className="w-40 p-1">
+														<DropdownMenuItem className="gap-2 px-2 py-2 text-sm" onClick={() => openEditRoom(room)}>
+															<Pencil className="h-4 w-4" />
+															Sửa phòng
+														</DropdownMenuItem>
+														<DropdownMenuSeparator />
+														<DropdownMenuItem
+															variant="destructive"
+															className="gap-2 px-2 py-2 text-sm"
+															onClick={() => setDeleteRoomTarget(room)}
+														>
+															<Trash2 className="h-4 w-4" />
+															Xóa phòng
+														</DropdownMenuItem>
+													</DropdownMenuContent>
+												</DropdownMenu>
 											</TableCell>
 										</TableRow>
 									))
 								) : (
 									<TableRow>
-										<TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+										<TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
 											Không có phòng chat nào.
 										</TableCell>
 									</TableRow>
@@ -510,11 +516,11 @@ function ChatRoomListPage() {
 
 							<TableFooter className="bg-transparent">
 								<TableRow>
-									<TableCell colSpan={6}>
+									<TableCell colSpan={5}>
 										<PaginationFooter
 											meta={meta}
-											onPageChange={(p) => setMeta((prev) => ({ ...prev, current_page: p }))}
-											onPerPageChange={(pp) => setMeta((prev) => ({ ...prev, per_page: pp, current_page: 1 }))}
+											onPageChange={(page) => setMeta((prev) => ({ ...prev, current_page: page }))}
+											onPerPageChange={(perPage) => setMeta((prev) => ({ ...prev, per_page: perPage, current_page: 1 }))}
 											label="phòng chat"
 										/>
 									</TableCell>
@@ -525,147 +531,68 @@ function ChatRoomListPage() {
 				</div>
 			</div>
 
-			{/* System messages dialog */}
-			<Dialog open={!!selectedRoom} onOpenChange={(open) => !open && setSelectedRoom(null)}>
-				<DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
-					<DialogHeader className="shrink-0">
-						<DialogTitle className="flex items-center gap-2">
-							<Bot className="h-5 w-5 text-muted-foreground" />
-							Nhật ký sự kiện —{" "}
-							<span className="font-semibold">
-								{selectedRoom ? roomDisplayName(selectedRoom) : ""}
-							</span>
-						</DialogTitle>
+			<Dialog open={formOpen} onOpenChange={(open) => {
+				if (!open && !isSavingRoom) {
+					setFormOpen(false);
+					setEditTarget(null);
+					setRoomName("");
+				}
+			}}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>{editTarget ? "Cập nhật phòng chat" : "Tạo phòng chat"}</DialogTitle>
 					</DialogHeader>
-
-					{/* Filter bar */}
-					<div className="flex items-center gap-3 shrink-0 pt-1">
-						<Select value={sysEventFilter} onValueChange={(v) => {
-							setSysEventFilter(v);
-							setSysMeta((p) => ({ ...p, current_page: 1 }));
-						}}>
-							<SelectTrigger className="h-8 w-[190px] text-sm"><SelectValue /></SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">Tất cả sự kiện</SelectItem>
-								<SelectItem value="room_created">Tạo phòng</SelectItem>
-								<SelectItem value="member_joined">Tham gia</SelectItem>
-								<SelectItem value="member_left">Rời nhóm</SelectItem>
-								<SelectItem value="member_added">Thêm thành viên</SelectItem>
-								<SelectItem value="member_removed">Xóa thành viên</SelectItem>
-								<SelectItem value="avatar_changed">Đổi ảnh nhóm</SelectItem>
-								<SelectItem value="room_renamed">Đổi tên nhóm</SelectItem>
-								<SelectItem value="role_changed">Đổi vai trò</SelectItem>
-							</SelectContent>
-						</Select>
-						<p className="text-sm text-muted-foreground">
-							{loadingSys ? "Đang tải..." : `${sysMeta.total} sự kiện`}
+					<div className="space-y-2">
+						<Label htmlFor="chat-room-name">Tên phòng</Label>
+						<Input
+							id="chat-room-name"
+							value={roomName}
+							onChange={(event) => setRoomName(event.target.value)}
+							placeholder="Nhập tên phòng chat"
+							maxLength={50}
+							onKeyDown={(event) => {
+								if (event.key === "Enter") {
+									event.preventDefault();
+									void handleSaveRoom();
+								}
+							}}
+						/>
+						<p className="text-xs text-muted-foreground">
+							Tên phòng chat phải rõ ràng và không trùng với phòng đang có.
 						</p>
 					</div>
-
-					{/* Table */}
-					<div className="flex-1 overflow-auto rounded-md border">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead className="w-[130px] text-sm font-medium">Thời gian</TableHead>
-									<TableHead className="w-[160px] text-sm font-medium">Loại sự kiện</TableHead>
-									<TableHead className="min-w-[200px] text-sm font-medium">Nội dung</TableHead>
-									<TableHead className="w-[160px] text-sm font-medium">Người thực hiện</TableHead>
-									<TableHead className="w-[52px]" />
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{loadingSys ? (
-									Array.from({ length: 5 }).map((_, i) => (
-										<TableRow key={i}>
-											<TableCell colSpan={5}><Skeleton className="h-4 w-full" /></TableCell>
-										</TableRow>
-									))
-								) : sysMessages.length > 0 ? (
-									sysMessages.map((msg) => {
-										const evMeta = getEventMeta(msg.event_type);
-										const Icon = evMeta.icon;
-										return (
-											<TableRow key={msg.id}>
-												<TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-													{formatDate(msg.created_at)}
-												</TableCell>
-												<TableCell>
-													<Badge variant="outline" className={cn("rounded-full px-2.5 py-0.5 gap-1.5 text-xs", evMeta.className)}>
-														<Icon className="h-3 w-3" />
-														{evMeta.label}
-													</Badge>
-												</TableCell>
-												<TableCell>
-													<p className="text-sm leading-5 text-muted-foreground line-clamp-2">
-														{msg.content ?? "--"}
-													</p>
-												</TableCell>
-												<TableCell>
-													{msg.creator ? (
-														<div className="space-y-0.5">
-															<p className="text-sm font-medium truncate max-w-[140px]">{msg.creator.full_name}</p>
-															<p className="text-xs text-muted-foreground truncate max-w-[140px]">{msg.creator.email}</p>
-														</div>
-													) : (
-														<span className="text-xs text-muted-foreground italic">Hệ thống</span>
-													)}
-												</TableCell>
-												<TableCell>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="h-7 w-7 text-muted-foreground hover:text-destructive"
-														onClick={() => selectedRoom && setDeleteTarget({ roomId: selectedRoom.id, msg })}
-													>
-														<Trash2 className="h-3.5 w-3.5" />
-													</Button>
-												</TableCell>
-											</TableRow>
-										);
-									})
-								) : (
-									<TableRow>
-										<TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-											Không có sự kiện nào.
-										</TableCell>
-									</TableRow>
-								)}
-							</TableBody>
-						</Table>
-					</div>
-
-					{/* Pagination inside dialog */}
-					{sysMeta.last_page > 1 && (
-						<div className="shrink-0 border-t pt-3">
-							<PaginationFooter
-								meta={sysMeta}
-								onPageChange={(p) => setSysMeta((prev) => ({ ...prev, current_page: p }))}
-								onPerPageChange={(pp) => setSysMeta((prev) => ({ ...prev, per_page: pp, current_page: 1 }))}
-								label="sự kiện"
-							/>
-						</div>
-					)}
+					<DialogFooter>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setFormOpen(false)}
+							disabled={isSavingRoom}
+						>
+							Hủy
+						</Button>
+						<Button type="button" onClick={handleSaveRoom} disabled={isSavingRoom}>
+							{isSavingRoom ? "Đang lưu..." : editTarget ? "Cập nhật" : "Tạo phòng"}
+						</Button>
+					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 
-			{/* Delete confirm */}
-			<AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+			<AlertDialog open={!!deleteRoomTarget} onOpenChange={(open) => !open && setDeleteRoomTarget(null)}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Xác nhận xóa sự kiện</AlertDialogTitle>
+						<AlertDialogTitle>Xác nhận xóa phòng chat</AlertDialogTitle>
 						<AlertDialogDescription>
-							Bản ghi sự kiện hệ thống này sẽ bị xóa vĩnh viễn. Hành động không thể hoàn tác.
+							Phòng "{deleteRoomTarget ? roomDisplayName(deleteRoomTarget) : ""}" sẽ bị xóa cùng toàn bộ thành viên và tin nhắn liên quan. Hành động không thể hoàn tác.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel>
+						<AlertDialogCancel disabled={isDeletingRoom}>Hủy</AlertDialogCancel>
 						<AlertDialogAction
-							onClick={handleDelete}
-							disabled={isDeleting}
+							onClick={handleDeleteRoom}
+							disabled={isDeletingRoom}
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
-							{isDeleting ? "Đang xóa..." : "Xóa"}
+							{isDeletingRoom ? "Đang xóa..." : "Xóa phòng"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

@@ -18,7 +18,6 @@ class ChatController extends BaseApiController
     public function index(): JsonResponse
     {
         $rooms = ChatRoom::query()
-            ->where('type', 'group')
             ->withCount('members')
             ->withCount(['messages as message_count' => fn ($q) => $q->where('type', 'text')])
             ->orderByDesc('last_message_at')
@@ -39,12 +38,11 @@ class ChatController extends BaseApiController
         $name = trim($request->input('name'));
 
         // Kiểm tra tên phòng đã tồn tại chưa
-        if (ChatRoom::where('type', 'group')->whereRaw('LOWER(name) = ?', [strtolower($name)])->exists()) {
+        if (ChatRoom::whereRaw('LOWER(name) = ?', [strtolower($name)])->exists()) {
             return $this->errorResponse(false, 'Tên phòng chat đã tồn tại. Vui lòng chọn tên khác.', 422);
         }
 
         $room = ChatRoom::create([
-            'type' => 'group',
             'name' => $name,
         ]);
 
@@ -66,7 +64,7 @@ class ChatController extends BaseApiController
 
     public function messages(Request $request, int $roomId): JsonResponse
     {
-        $room = ChatRoom::where('type', 'group')->findOrFail($roomId);
+        $room = ChatRoom::findOrFail($roomId);
 
         $perPage = min(50, max(1, (int) $request->query('per_page', 30)));
         $before   = $request->query('before'); // ISO timestamp for pagination
@@ -107,7 +105,7 @@ class ChatController extends BaseApiController
 
     public function send(Request $request, int $roomId): JsonResponse
     {
-        $room = ChatRoom::where('type', 'group')->findOrFail($roomId);
+        $room = ChatRoom::findOrFail($roomId);
 
         $request->validate([
             'content'     => ['required', 'string', 'min:1', 'max:2000'],
@@ -147,7 +145,7 @@ class ChatController extends BaseApiController
 
     public function poll(Request $request, int $roomId): JsonResponse
     {
-        $room  = ChatRoom::where('type', 'group')->findOrFail($roomId);
+        $room  = ChatRoom::findOrFail($roomId);
         $after = $request->query('after'); // ISO timestamp
 
         $query = Message::query()
@@ -178,7 +176,6 @@ class ChatController extends BaseApiController
             'id'               => $room->id,
             'name'             => $room->name,
             'image'            => $room->image,
-            'type'             => $room->type,
             'member_count'     => $room->members_count ?? 0,
             'message_count'    => $room->message_count ?? 0,
             'last_message_at'  => $room->last_message_at?->toIso8601String(),

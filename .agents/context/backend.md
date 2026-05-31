@@ -270,7 +270,7 @@
 - `channels`, `posts`, `post_reports`, and `comments` support topic feeds, reports, nested comments, and soft-deleted comments.
 - `reactions` is polymorphic by `target_type`/`target_id` for posts, comments, and blogs.
 - authenticated users can create published blogs through `POST /api/v1/community/blogs` with `title`, `content`, optional `excerpt`, optional `tag_ids[]`, and optional `featured_image` image upload up to 5 MB. Uploaded blog cover images are stored on the public disk under `blog-covers`.
-- `chat_rooms`, `chat_members`, and `messages` support direct/group chat, unread tracking through `last_read_at`, message replies, and soft-deleted messages.
+- `chat_rooms`, `chat_members`, and `messages` support named chat rooms, unread tracking through `last_read_at`, message replies, and soft-deleted messages.
 - `blogs`, `tags`, and `blog_tags` support long-form posts with normalized blog tags.
 - `media_files` stores shared uploads for posts, messages, and blogs.
 - Community module tables are defined in separate table-specific migrations dated `2026_05_25_000010` through `2026_05_25_000023`, not one combined community migration.
@@ -440,6 +440,8 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-06-01`: `chat_rooms` no longer has a `type` column; chat room APIs, model fillable fields, and `ChatRoomSeeder` now treat every room as a named chat room without direct/group filtering.
+- `2026-06-01`: Admin chat room management supports CRUD through `POST /chat-rooms`, `PUT/PATCH /chat-rooms/{room}`, and `DELETE /chat-rooms/{room}`.
 - `2026-06-01`: Admin comment list payload includes `article_url` pointing to the user-facing post/blog URL; admin comment filtering now supports both post and blog comments.
 - `2026-06-01`: User chat message pagination accepts `per_page`, `before`, and optional `before_id`; messages are ordered by `created_at desc, id desc` so scroll-up loading can fetch older batches without cursor boundary gaps.
 

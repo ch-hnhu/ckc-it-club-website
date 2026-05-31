@@ -2,7 +2,6 @@ export interface ChatRoom {
 	id: number;
 	name: string;
 	image: string | null;
-	type: "group" | "direct";
 	member_count: number;
 	message_count: number;
 	last_message_at: string | null;

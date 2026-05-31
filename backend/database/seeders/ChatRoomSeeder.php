@@ -45,7 +45,6 @@ class ChatRoomSeeder extends Seeder
 
         foreach ($rooms as $room) {
             $existing = DB::table('chat_rooms')
-                ->where('type', 'group')
                 ->where('name', $room['name'])
                 ->first();
 
@@ -54,7 +53,6 @@ class ChatRoomSeeder extends Seeder
             }
 
             $roomId = DB::table('chat_rooms')->insertGetId([
-                'type'       => 'group',
                 'name'       => $room['name'],
                 'created_at' => now(),
                 'updated_at' => now(),

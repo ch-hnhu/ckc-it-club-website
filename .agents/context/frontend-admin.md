@@ -352,6 +352,9 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-01`: Admin chat room management no longer depends on room `type`; the list removed direct/group filtering and type stats because `chat_rooms.type` was dropped.
+- `2026-06-01`: Admin `/community/chat-rooms` page has create, update, and delete controls for chat rooms, and the row action UI uses an ellipsis menu without exposing the system-message log.
+
 - `2026-06-01`: Admin post management table no longer shows the `Ghim` column; pin/unpin remains available from each row's action menu.
 - `2026-06-01`: Admin comment list changed the `Thuộc về` table column to `URL bài viết`, rendering `article_url` as an external link to the user-facing post/blog.
 - `2026-06-01`: Shared `ui/dialog` only suppresses `aria-describedby` when no `DialogDescription` is present, preserving description linking when available; built-in close button is explicitly `type="button"`.

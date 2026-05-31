@@ -260,6 +260,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-01`: User chat room type contract no longer includes `type`; all chat rooms returned by `/community/chat-rooms` are treated as standard named rooms.
 - `2026-06-01`: Community chat initially requests 30 latest messages and scroll-up pagination requests older batches with `before` plus `before_id` cursor parameters.
 
 - `2026-05-30`: Profile overview now shows a Blog carousel below the Posts carousel, with a `Xem tất cả Blog` action that switches to the Blog tab.

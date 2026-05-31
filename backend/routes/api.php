@@ -324,6 +324,10 @@ Route::prefix('v1')->group(function () {
             Route::get('chat-rooms/{room}/system-messages', [ChatRoomController::class, 'systemMessages']);
         });
         Route::middleware('permission:community.chat.manage')->group(function () {
+            Route::post('chat-rooms', [ChatRoomController::class, 'store']);
+            Route::put('chat-rooms/{room}', [ChatRoomController::class, 'update']);
+            Route::patch('chat-rooms/{room}', [ChatRoomController::class, 'update']);
+            Route::delete('chat-rooms/{room}', [ChatRoomController::class, 'destroy']);
             Route::delete('chat-rooms/{room}/messages/{message}', [ChatRoomController::class, 'destroyMessage']);
         });
 
