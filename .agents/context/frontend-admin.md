@@ -352,6 +352,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-01`: Admin channel create/edit dialog uses a file input for channel avatar images and submits channel forms as `multipart/form-data`.
 - `2026-06-01`: Admin chat room management no longer depends on room `type`; the list removed direct/group filtering and type stats because `chat_rooms.type` was dropped.
 - `2026-06-01`: Admin `/community/chat-rooms` page has create, update, and delete controls for chat rooms, and the row action UI uses an ellipsis menu without exposing the system-message log.
 

@@ -93,12 +93,12 @@ type SortKey = "id" | "name" | "slug" | "description" | "posts_count" | "created
 
 interface ChannelFormState {
 	name: string;
-	slug: string;
 	description: string;
-	image: string;
+	image: File | null;
+	imagePreview: string;
 }
 
-const emptyForm: ChannelFormState = { name: "", slug: "", description: "", image: "" };
+const emptyForm: ChannelFormState = { name: "", description: "", image: null, imagePreview: "" };
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -119,7 +119,6 @@ function ChannelListPage() {
 	const [formOpen, setFormOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<ChannelRecord | null>(null);
 	const [form, setForm] = useState<ChannelFormState>(emptyForm);
-	const [slugEdited, setSlugEdited] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<ChannelRecord | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -181,14 +180,17 @@ function ChannelListPage() {
 	const openCreate = () => {
 		setEditTarget(null);
 		setForm(emptyForm);
-		setSlugEdited(false);
 		setFormOpen(true);
 	};
 
 	const openEdit = (channel: ChannelRecord) => {
 		setEditTarget(channel);
-		setForm({ name: channel.name, slug: channel.slug, description: channel.description ?? "", image: channel.image ?? "" });
-		setSlugEdited(true);
+		setForm({
+			name: channel.name,
+			description: channel.description ?? "",
+			image: null,
+			imagePreview: channel.image ?? "",
+		});
 		setFormOpen(true);
 	};
 
@@ -196,7 +198,24 @@ function ChannelListPage() {
 		setForm((p) => ({
 			...p,
 			name: value,
-			slug: slugEdited ? p.slug : toSlug(value),
+		}));
+	};
+
+	const handleImageChange = (file: File | null) => {
+		if (!file) {
+			setForm((p) => ({ ...p, image: null, imagePreview: editTarget?.image ?? "" }));
+			return;
+		}
+
+		if (!file.type.startsWith("image/")) {
+			toast.error("Vui lòng chọn một file hình ảnh.");
+			return;
+		}
+
+		setForm((p) => ({
+			...p,
+			image: file,
+			imagePreview: URL.createObjectURL(file),
 		}));
 	};
 
@@ -210,9 +229,9 @@ function ChannelListPage() {
 			if (editTarget) {
 				const res = await channelService.updateChannel(editTarget.id, {
 					name: form.name,
-					slug: form.slug || toSlug(form.name),
+					slug: toSlug(form.name),
 					description: form.description || null,
-					image: form.image || null,
+					image: form.image,
 				});
 				setChannels((prev) => prev.map((c) =>
 					c.id === editTarget.id ? { ...c, ...res.data } : c
@@ -221,9 +240,9 @@ function ChannelListPage() {
 			} else {
 				const res = await channelService.createChannel({
 					name: form.name,
-					slug: form.slug || toSlug(form.name),
+					slug: toSlug(form.name),
 					description: form.description || null,
-					image: form.image || null,
+					image: form.image,
 				});
 				setChannels((prev) => [res.data, ...prev]);
 				toast.success("Đã tạo kênh mới.");
@@ -477,13 +496,13 @@ function ChannelListPage() {
 								onChange={(e) => handleNameChange(e.target.value)}
 							/>
 						</div>
-						<div className="space-y-2">
+						<div className="hidden">
 							<Label htmlFor="channel-slug">Slug</Label>
 							<Input
 								id="channel-slug"
 								placeholder="hoc-thuat-ky-thuat"
-								value={form.slug}
-								onChange={(e) => { setSlugEdited(true); setForm((p) => ({ ...p, slug: e.target.value })); }}
+								value={toSlug(form.name)}
+								readOnly
 								className="font-mono text-sm"
 							/>
 							<p className="text-xs text-muted-foreground">Tự động tạo từ tên. Có thể chỉnh sửa thủ công.</p>
@@ -500,22 +519,22 @@ function ChannelListPage() {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="channel-image">Ảnh đại diện (URL)</Label>
+							<Label htmlFor="channel-image">Ảnh đại diện</Label>
 							<div className="flex items-center gap-3">
 								<Avatar className="h-10 w-10 shrink-0">
-									<AvatarImage src={form.image || undefined} alt="preview" />
+									<AvatarImage src={form.imagePreview || undefined} alt="preview" />
 									<AvatarFallback className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
 										<Hash className="h-4 w-4" />
 									</AvatarFallback>
 								</Avatar>
 								<Input
 									id="channel-image"
-									placeholder="https://example.com/image.png"
-									value={form.image}
-									onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))}
+									type="file"
+									accept="image/*"
+									onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
 								/>
 							</div>
-							<p className="text-xs text-muted-foreground">Nhập URL ảnh. Để trống nếu không có.</p>
+							<p className="text-xs text-muted-foreground">Chọn file JPG, PNG, WEBP hoặc GIF. Tối đa 2MB.</p>
 						</div>
 					</div>
 					<DialogFooter>

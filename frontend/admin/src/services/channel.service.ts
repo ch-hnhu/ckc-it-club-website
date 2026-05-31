@@ -2,6 +2,32 @@ import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type { ChannelRecord } from "@/pages/community/ChannelListPage";
 
+export interface ChannelPayload {
+	name: string;
+	slug?: string;
+	description?: string | null;
+	image?: File | null;
+}
+
+function toFormData(payload: ChannelPayload) {
+	const formData = new FormData();
+	formData.append("name", payload.name);
+
+	if (payload.slug) {
+		formData.append("slug", payload.slug);
+	}
+
+	if (payload.description) {
+		formData.append("description", payload.description);
+	}
+
+	if (payload.image) {
+		formData.append("image", payload.image);
+	}
+
+	return formData;
+}
+
 const channelService = {
 	async getChannels(params?: {
 		page?: number;
@@ -13,20 +39,22 @@ const channelService = {
 		return api.get("/channels", params as Record<string, unknown>);
 	},
 
-	async createChannel(payload: {
-		name: string;
-		slug?: string;
-		description?: string | null;
-		image?: string | null;
-	}): Promise<ApiResponse<ChannelRecord>> {
-		return api.post<ApiResponse<ChannelRecord>, typeof payload>("/channels", payload);
+	async createChannel(payload: ChannelPayload): Promise<ApiResponse<ChannelRecord>> {
+		return api.post<ApiResponse<ChannelRecord>, FormData>("/channels", toFormData(payload), {
+			headers: { "Content-Type": "multipart/form-data" },
+		});
 	},
 
 	async updateChannel(
 		id: number | string,
-		payload: { name: string; slug?: string; description?: string | null; image?: string | null },
+		payload: ChannelPayload,
 	): Promise<ApiResponse<ChannelRecord>> {
-		return api.put<ApiResponse<ChannelRecord>, typeof payload>(`/channels/${id}`, payload);
+		const formData = toFormData(payload);
+		formData.append("_method", "PUT");
+
+		return api.post<ApiResponse<ChannelRecord>, FormData>(`/channels/${id}`, formData, {
+			headers: { "Content-Type": "multipart/form-data" },
+		});
 	},
 
 	async deleteChannel(id: number | string): Promise<ApiResponse<null>> {

@@ -440,6 +440,7 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-06-01`: Admin channel create/update now accepts an uploaded image file in `image`, stores it on the public disk under `channels/`, and returns a public image URL while preserving existing external image URLs.
 - `2026-06-01`: `chat_rooms` no longer has a `type` column; chat room APIs, model fillable fields, and `ChatRoomSeeder` now treat every room as a named chat room without direct/group filtering.
 - `2026-06-01`: Admin chat room management supports CRUD through `POST /chat-rooms`, `PUT/PATCH /chat-rooms/{room}`, and `DELETE /chat-rooms/{room}`.
 - `2026-06-01`: Admin comment list payload includes `article_url` pointing to the user-facing post/blog URL; admin comment filtering now supports both post and blog comments.
