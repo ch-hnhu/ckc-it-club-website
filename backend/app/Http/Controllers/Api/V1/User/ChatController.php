@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\ChatMember;
 use App\Models\ChatRoom;
 use App\Models\Message;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -68,17 +69,29 @@ class ChatController extends BaseApiController
         $room = ChatRoom::where('type', 'group')->findOrFail($roomId);
 
         $perPage = min(50, max(1, (int) $request->query('per_page', 30)));
-        $before  = $request->query('before'); // ISO timestamp for pagination
+        $before   = $request->query('before'); // ISO timestamp for pagination
+        $beforeId = (int) $request->query('before_id', 0);
 
         $query = Message::query()
             ->where('room_id', $room->id)
             ->where('type', 'text')
             ->whereNull('deleted_at')
             ->with('creator:id,full_name,email,avatar,username')
-            ->orderByDesc('created_at');
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
 
         if ($before) {
-            $query->where('created_at', '<', $before);
+            $beforeTime = Carbon::parse($before);
+            $query->where(function ($q) use ($beforeTime, $beforeId) {
+                $q->where('created_at', '<', $beforeTime);
+
+                if ($beforeId > 0) {
+                    $q->orWhere(function ($q) use ($beforeTime, $beforeId) {
+                        $q->where('created_at', '=', $beforeTime)
+                            ->where('id', '<', $beforeId);
+                    });
+                }
+            });
         }
 
         $messages = $query->limit($perPage)->get()->reverse()->values();

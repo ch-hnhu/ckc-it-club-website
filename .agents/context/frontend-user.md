@@ -260,6 +260,8 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-01`: Community chat initially requests 30 latest messages and scroll-up pagination requests older batches with `before` plus `before_id` cursor parameters.
+
 - `2026-05-30`: Profile overview now shows a Blog carousel below the Posts carousel, with a `Xem tất cả Blog` action that switches to the Blog tab.
 - `2026-05-30`: Profile empty states now distinguish own profile copy (`Bạn chưa...`) from other-user copy (`Người dùng này...`).
 - `2026-05-30`: Profile stats card uses `content_count` for total posts plus blogs, while tab badges continue using separate `posts_count` and `blogs_count`.

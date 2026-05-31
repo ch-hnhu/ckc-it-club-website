@@ -440,6 +440,8 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-06-01`: User chat message pagination accepts `per_page`, `before`, and optional `before_id`; messages are ordered by `created_at desc, id desc` so scroll-up loading can fetch older batches without cursor boundary gaps.
+
 - `2026-05-30`: Public/user profile payload now returns separate `posts_count`, `blogs_count`, and `content_count` (`posts + blogs`); community blog listing accepts `username` to filter blogs by author handle/email prefix.
 - `2026-05-24`: Department member leadership is tied to each department's configured Spatie head role (`head_role_id`); updating a head only assigns/removes that one user role, so the same user can hold multiple department-head roles.
 - `2026-05-24`: User create/update role sync now also propagates department head roles into department membership/head ownership, so editing user roles and editing department chức vụ stay consistent.

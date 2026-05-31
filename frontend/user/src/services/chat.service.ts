@@ -6,7 +6,7 @@ export const chatService = {
 	getRooms: () =>
 		api.get<ApiResponse<ChatRoom[]>>("/community/chat-rooms"),
 
-	getMessages: (roomId: number, params?: { per_page?: number; before?: string }) =>
+	getMessages: (roomId: number, params?: { per_page?: number; before?: string; before_id?: number }) =>
 		api.get<ApiResponse<ChatMessage[]>>(`/community/chat-rooms/${roomId}/messages`, params as Record<string, unknown>),
 
 	poll: (roomId: number, after: string) =>
