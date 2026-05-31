@@ -19,7 +19,7 @@ class ChatRoomController extends BaseApiController
         $search   = $request->query('search');
         $type     = $request->query('type'); // 'direct' | 'group'
 
-        $allowedSorts = ['id', 'name', 'member_count', 'system_events_count', 'last_message_at', 'created_at'];
+        $allowedSorts = ['id', 'name', 'member_count', 'last_message_at', 'created_at'];
         $sort  = in_array($request->query('sort', 'last_message_at'), $allowedSorts)
             ? $request->query('sort', 'last_message_at')
             : 'last_message_at';
@@ -27,17 +27,14 @@ class ChatRoomController extends BaseApiController
             ? $request->query('order', 'desc')
             : 'desc';
 
+        // withCount('members') tạo alias "members_count", cần map đúng khi sort
+        $sortColumn = $sort === 'member_count' ? DB::raw('members_count') : $sort;
+
         $paginated = ChatRoom::query()
-            ->withCount([
-                'members',
-                'messages',
-                'messages as system_events_count' => fn ($q) => $q->where('type', 'system'),
-            ])
+            ->withCount(['members', 'messages'])
             ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
             ->when($type && in_array($type, ['direct', 'group']), fn ($q) => $q->where('type', $type))
-            ->orderBy($sort === 'member_count' || $sort === 'system_events_count'
-                ? DB::raw($sort)  // calculated columns
-                : $sort, $order)
+            ->orderBy($sortColumn, $order)
             ->paginate($perPage);
 
         $items = collect($paginated->items())->map(fn ($room) => $this->transformRoom($room));
@@ -151,14 +148,13 @@ class ChatRoomController extends BaseApiController
     private function transformRoom(ChatRoom $room): array
     {
         return [
-            'id'                   => $room->id,
-            'type'                 => $room->type,
-            'name'                 => $room->name,
-            'member_count'         => $room->members_count ?? 0,
-            'message_count'        => $room->messages_count ?? 0,
-            'system_events_count'  => $room->system_events_count ?? 0,
-            'last_message_at'      => $room->last_message_at?->toISOString(),
-            'created_at'           => $room->created_at->toISOString(),
+            'id'              => $room->id,
+            'type'            => $room->type,
+            'name'            => $room->name,
+            'member_count'    => $room->members_count ?? 0,
+            'message_count'   => $room->messages_count ?? 0,
+            'last_message_at' => $room->last_message_at?->toISOString(),
+            'created_at'      => $room->created_at->toISOString(),
         ];
     }
 

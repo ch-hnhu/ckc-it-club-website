@@ -68,7 +68,6 @@ export interface ChatRoomRecord {
 	name: string | null;
 	member_count: number;
 	message_count: number;
-	system_events_count: number;
 	last_message_at: string | null;
 	created_at: string;
 }
@@ -134,7 +133,7 @@ function getEventMeta(eventType: string | null): EventTypeMeta {
 	return EVENT_TYPE_MAP[eventType] ?? { ...FALLBACK_EVENT, label: eventType };
 }
 
-type RoomSortKey = "id" | "name" | "member_count" | "system_events_count" | "last_message_at" | "created_at";
+type RoomSortKey = "id" | "name" | "member_count" | "last_message_at" | "created_at";
 
 // ─── Sub-component: stat card ─────────────────────────────────────────────────
 
@@ -433,15 +432,9 @@ function ChatRoomListPage() {
 											Tên phòng {getSortIcon("name")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[120px] text-sm font-medium">Loại</TableHead>
 									<TableHead className="w-[120px]">
 										<Button variant="ghost" onClick={() => handleSort("member_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Thành viên {getSortIcon("member_count")}
-										</Button>
-									</TableHead>
-									<TableHead className="w-[150px]">
-										<Button variant="ghost" onClick={() => handleSort("system_events_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Sự kiện HT {getSortIcon("system_events_count")}
 										</Button>
 									</TableHead>
 									<TableHead className="w-[170px]">
@@ -457,7 +450,7 @@ function ChatRoomListPage() {
 								{loadingRooms ? (
 									Array.from({ length: 6 }).map((_, i) => (
 										<TableRow key={i}>
-											<TableCell colSpan={6}><Skeleton className="h-4 w-full" /></TableCell>
+											<TableCell colSpan={4}><Skeleton className="h-4 w-full" /></TableCell>
 										</TableRow>
 									))
 								) : rooms.length > 0 ? (
@@ -483,32 +476,10 @@ function ChatRoomListPage() {
 											</TableCell>
 
 											<TableCell>
-												{room.type === "group" ? (
-													<Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs border-violet-500/20 bg-violet-500/10 text-violet-700">
-														Nhóm
-													</Badge>
-												) : (
-													<Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs border-sky-500/20 bg-sky-500/10 text-sky-700">
-														Trực tiếp
-													</Badge>
-												)}
-											</TableCell>
-
-											<TableCell>
 												<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
 													<Users className="h-3.5 w-3.5" />
 													{room.member_count}
 												</div>
-											</TableCell>
-
-											<TableCell>
-												{room.system_events_count > 0 ? (
-													<Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs border-amber-500/20 bg-amber-500/10 text-amber-700">
-														{room.system_events_count} sự kiện
-													</Badge>
-												) : (
-													<span className="text-sm text-muted-foreground">—</span>
-												)}
 											</TableCell>
 
 											<TableCell className="text-sm text-muted-foreground">
