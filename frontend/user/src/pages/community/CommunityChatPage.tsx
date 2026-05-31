@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 // ── chatscope ──────────────────────────────────────────────────────────────
 import { MessageList } from "@chatscope/chat-ui-kit-react";
@@ -218,7 +219,8 @@ const MessageBubble: React.FC<{
 						{msg.content}
 					</p>
 					{/* Timestamp bên trong bubble, căn phải */}
-					<p className={`mt-0.5 text-right text-[10px] leading-none ${isOwn ? "text-black/50" : "text-gray-400"}`}>
+					<p
+						className={`mt-0.5 text-right text-[10px] leading-none ${isOwn ? "text-black/50" : "text-gray-400"}`}>
 						{formatRelativeTime(msg.created_at)}
 					</p>
 				</div>
@@ -444,6 +446,7 @@ const CommunityChatPage: React.FC = () => {
 	const emojiRef = useRef<HTMLDivElement>(null);
 	const gifRef = useRef<HTMLDivElement>(null);
 	const joinedRoomsRef = useRef<Set<number>>(new Set());
+	const isComposingRef = useRef(false); // track IME composition
 
 	// ── Helpers ────────────────────────────────────────────────────────────────
 	const userId = user?.id;
@@ -532,8 +535,13 @@ const CommunityChatPage: React.FC = () => {
 	const handleSend = async () => {
 		if (!input.trim() || sending || !activeRoom || !user) return;
 		const text = input.trim();
-		setSending(true);
-		setInput("");
+
+		// flushSync ép React commit ngay — DOM textarea cleared trước khi reset height/scroll
+		flushSync(() => {
+			setSending(true);
+			setInput("");
+		});
+
 		if (inputRef.current) {
 			inputRef.current.style.height = "auto";
 			inputRef.current.scrollTop = 0;
@@ -870,8 +878,10 @@ const CommunityChatPage: React.FC = () => {
 										e.target.style.height = "auto";
 										e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
 									}}
+									onCompositionStart={() => { isComposingRef.current = true; }}
+									onCompositionEnd={() => { isComposingRef.current = false; }}
 									onKeyDown={(e) => {
-										if (e.key === "Enter" && !e.shiftKey) {
+										if (e.key === "Enter" && !e.shiftKey && !isComposingRef.current) {
 											e.preventDefault();
 											void handleSend();
 										}
