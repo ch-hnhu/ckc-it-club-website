@@ -402,13 +402,25 @@ class PostController extends BaseApiController
 
     public function show(int $id): JsonResponse
     {
+        $userId = auth('sanctum')->id();
+
         $post = Post::with([
             'user:id,full_name,username,email,avatar,student_code',
             'channel:id,name,slug',
         ])
             ->withCount('comments')
             ->selectRaw('posts.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "post" AND target_id = posts.id) as reactions_count')
-            ->where('status', 'published')
+            ->where(function ($query) use ($userId) {
+                $query->where('status', 'published');
+
+                if ($userId) {
+                    $query->orWhere(function ($ownArchived) use ($userId) {
+                        $ownArchived
+                            ->where('status', 'archived')
+                            ->where('user_id', $userId);
+                    });
+                }
+            })
             ->findOrFail($id);
 
         $data = $this->transformPost($post);
@@ -421,14 +433,18 @@ class PostController extends BaseApiController
             ->groupBy('type')
             ->pluck('count', 'type');
 
-        // Current user's own reaction (null for guests)
-        $userId = auth('sanctum')->id();
         $data['my_reaction'] = $userId
             ? Reaction::where('user_id', $userId)
                 ->where('target_type', 'post')
                 ->where('target_id', $id)
                 ->value('type')
             : null;
+        $data['my_bookmark'] = $userId
+            ? DB::table('post_bookmarks')
+                ->where('user_id', $userId)
+                ->where('post_id', $id)
+                ->exists()
+            : false;
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
     }
@@ -530,8 +546,23 @@ class PostController extends BaseApiController
 
     public function comments(Request $request, int $id): JsonResponse
     {
-        // Ensure post exists and is published
-        Post::where('status', 'published')->findOrFail($id);
+        $userId = auth('sanctum')->id();
+
+        // Ensure the post is publicly visible, or the current user's own archived post.
+        Post::query()
+            ->whereKey($id)
+            ->where(function ($query) use ($userId) {
+                $query->where('status', 'published');
+
+                if ($userId) {
+                    $query->orWhere(function ($ownArchived) use ($userId) {
+                        $ownArchived
+                            ->where('status', 'archived')
+                            ->where('user_id', $userId);
+                    });
+                }
+            })
+            ->firstOrFail();
 
         // Load ALL visible (non-hidden, non-deleted) comments for this post ordered by date
         $allComments = Comment::with('user:id,full_name,username,email,avatar')
