@@ -82,6 +82,18 @@ export interface CreatePostPayload {
 	media?: File | null;
 }
 
+export type PostReportReason = "spam" | "offensive" | "misinformation" | "inappropriate" | "other";
+
+export interface UpdatePostPayload {
+	title?: string;
+	content?: string;
+	channelSlug?: string;
+	visibility?: "public" | "members" | "private";
+	isPinned?: boolean;
+	status?: "published" | "archived";
+	media?: File | null;
+}
+
 // ---------------------------------------------------------------------------
 // Comments
 // ---------------------------------------------------------------------------

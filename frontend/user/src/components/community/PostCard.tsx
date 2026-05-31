@@ -20,13 +20,18 @@ import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
 import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle, isVideoMediaUrl } from "@/lib/utils";
 import { renderMarkdownContent, renderMarkdownPreview } from "@/lib/markdown";
+import ReportPostModal from "./ReportPostModal";
+import PrivacyPostModal from "./PrivacyPostModal";
+import DeletePostConfirm from "./DeletePostConfirm";
 
 interface PostCardProps {
 	post: Post;
 	user: AuthUser | null;
+	onPostDeleted?: (id: number) => void;
+	onPostUpdated?: (post: Post) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, user, onPostDeleted, onPostUpdated }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const authorName = post.user?.full_name ?? "Ẩn danh";
@@ -46,6 +51,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 	const [saved, setSaved] = useState(post.my_bookmark ?? false);
 	const [saveLoading, setSaveLoading] = useState(false);
 	const [showPostMenu, setShowPostMenu] = useState(false);
+
+	// Own-post action state
+	const [isPinned, setIsPinned] = useState(post.is_pinned);
+	const [currentVisibility, setCurrentVisibility] = useState<"public" | "members" | "private">(
+		(post.visibility as "public" | "members" | "private") ?? "public",
+	);
+	const [pinLoading, setPinLoading] = useState(false);
+	const [archiveLoading, setArchiveLoading] = useState(false);
+	const [deleteLoading, setDeleteLoading] = useState(false);
+
+	// Modal visibility
+	const [showReportModal, setShowReportModal] = useState(false);
+	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
 	const menuBtnRef = useRef<HTMLButtonElement>(null);
 	const menuDropdownRef = useRef<HTMLDivElement>(null);
@@ -71,7 +90,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 		}
 		if (loading) return;
 
-		// Optimistic update
 		const wasLiked = liked;
 		setLiked(!wasLiked);
 		setHeartCount((c) => (wasLiked ? Math.max(0, c - 1) : c + 1));
@@ -116,9 +134,58 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 		}
 	};
 
-	const handleUnavailablePostAction = (message: string) => {
+	const handleTogglePin = async () => {
+		if (pinLoading) return;
 		closePostMenu();
-		toast.info(message);
+		const next = !isPinned;
+		setIsPinned(next);
+		setPinLoading(true);
+		try {
+			await postService.updatePost(post.id, { isPinned: next });
+			toast.success(next ? "Đã ghim bài viết lên trang cá nhân." : "Đã bỏ ghim bài viết.");
+		} catch {
+			setIsPinned(!next);
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setPinLoading(false);
+		}
+	};
+
+	const handleArchive = async () => {
+		if (archiveLoading) return;
+		closePostMenu();
+		setArchiveLoading(true);
+		try {
+			await postService.updatePost(post.id, { status: "archived" });
+			toast.success("Đã lưu trữ bài viết.");
+			onPostDeleted?.(post.id);
+		} catch {
+			toast.error("Không thể lưu trữ. Vui lòng thử lại.");
+		} finally {
+			setArchiveLoading(false);
+		}
+	};
+
+	const handleDelete = async () => {
+		if (deleteLoading) return;
+		setDeleteLoading(true);
+		try {
+			await postService.deletePost(post.id);
+			toast.success("Đã xóa bài viết.");
+			setShowDeleteConfirm(false);
+			onPostDeleted?.(post.id);
+		} catch {
+			toast.error("Không thể xóa. Vui lòng thử lại.");
+		} finally {
+			setDeleteLoading(false);
+		}
+	};
+
+	const handlePrivacySaved = (visibility: "public" | "members" | "private") => {
+		setCurrentVisibility(visibility);
+		if (onPostUpdated) {
+			onPostUpdated({ ...post, visibility });
+		}
 	};
 
 	return (
@@ -134,7 +201,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 							alt={authorName}
 							className='h-10 w-10 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover transition hover:opacity-80'
 						/>
-						{post.is_pinned && (
+						{isPinned && (
 							<span className='absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)] text-black'>
 								<Zap className='h-3 w-3 fill-current' />
 							</span>
@@ -180,53 +247,42 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 							{isOwnPost ? (
 								<>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												post.is_pinned
-													? "Chức năng bỏ ghim khỏi trang cá nhân đang được phát triển."
-													: "Chức năng ghim lên trang cá nhân đang được phát triển.",
-											)
-										}
-										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+										onClick={handleTogglePin}
+										disabled={pinLoading}
+										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
 										<Pin className='h-4 w-4' />
-										{post.is_pinned ? "Bỏ ghim" : "Ghim"}
+										{isPinned ? "Bỏ ghim" : "Ghim"}
 									</button>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												"Chức năng chỉnh sửa bài viết đang được phát triển.",
-											)
-										}
+										onClick={() => {
+											closePostMenu();
+											navigate(`/cong-dong/bai-viet/${post.id}/chinh-sua`);
+										}}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
 										<Pencil className='h-4 w-4' />
 										Chỉnh sửa
 									</button>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												"Chức năng đổi quyền riêng tư đang được phát triển.",
-											)
-										}
+										onClick={() => {
+											closePostMenu();
+											setShowPrivacyModal(true);
+										}}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
 										<LockKeyhole className='h-4 w-4' />
 										Quyền riêng tư
 									</button>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												"Chức năng lưu trữ bài viết đang được phát triển.",
-											)
-										}
-										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+										onClick={handleArchive}
+										disabled={archiveLoading}
+										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
 										<Archive className='h-4 w-4' />
-										Lưu trữ
+										{archiveLoading ? "Đang lưu trữ..." : "Lưu trữ"}
 									</button>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												"Chức năng xóa bài viết đang được phát triển.",
-											)
-										}
+										onClick={() => {
+											closePostMenu();
+											setShowDeleteConfirm(true);
+										}}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
 										<Trash2 className='h-4 w-4' />
 										Xóa
@@ -248,9 +304,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 									<button
 										onClick={() => {
 											if (!requireAuthenticatedUser()) return;
-											handleUnavailablePostAction(
-												"Chức năng báo cáo đang được phát triển.",
-											);
+											closePostMenu();
+											setShowReportModal(true);
 										}}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
 										<Flag className='h-4 w-4' />
@@ -355,6 +410,28 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 					<Share2 className='h-4 w-4' />
 				</button>
 			</div>
+
+			{showReportModal && (
+				<ReportPostModal postId={post.id} onClose={() => setShowReportModal(false)} />
+			)}
+
+			{showPrivacyModal && (
+				<PrivacyPostModal
+					postId={post.id}
+					currentVisibility={currentVisibility}
+					onClose={() => setShowPrivacyModal(false)}
+					onSaved={handlePrivacySaved}
+				/>
+			)}
+
+			{showDeleteConfirm && (
+				<DeletePostConfirm
+					postTitle={post.title}
+					deleting={deleteLoading}
+					onClose={() => setShowDeleteConfirm(false)}
+					onConfirm={handleDelete}
+				/>
+			)}
 		</article>
 	);
 };

@@ -8,6 +8,7 @@ import {
 	useSearchParams,
 } from "react-router-dom";
 import {
+	Archive,
 	Bookmark,
 	BookOpen,
 	BookOpenText,
@@ -552,7 +553,12 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfil
 	return (
 		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
 			{posts.map((post) => (
-				<PostCard key={post.id} post={post} user={user} />
+				<PostCard
+					key={post.id}
+					post={post}
+					user={user}
+					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+				/>
 			))}
 		</div>
 	);
@@ -1145,7 +1151,91 @@ const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 	return (
 		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
 			{posts.map((post) => (
-				<PostCard key={post.id} post={post} user={user} />
+				<PostCard
+					key={post.id}
+					post={post}
+					user={user}
+					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+				/>
+			))}
+		</div>
+	);
+};
+
+// ─── Tab Content: Archived ────────────────────────────────────────────────────
+
+const ArchivedTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
+	const [posts, setPosts] = useState<Post[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+		setLoading(true);
+		setError(false);
+
+		postService
+			.getArchivedPosts()
+			.then((res) => {
+				if (!cancelled) setPosts(res.data);
+			})
+			.catch(() => {
+				if (!cancelled) setError(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	if (loading) {
+		return (
+			<div className='mt-5 space-y-5 px-6 sm:px-0'>
+				{Array.from({ length: 3 }).map((_, i) => (
+					<PostSkeleton key={i} />
+				))}
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<Archive className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
+					Không thể tải bài viết lưu trữ
+				</p>
+				<p className='mt-1 text-sm text-gray-400'>Vui lòng thử lại sau.</p>
+			</div>
+		);
+	}
+
+	if (posts.length === 0) {
+		return (
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<Archive className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
+					Chưa có bài viết lưu trữ nào
+				</p>
+				<p className='mt-1 text-sm text-gray-400'>
+					Những bài viết bạn lưu trữ sẽ hiển thị ở đây.
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
+			{posts.map((post) => (
+				<PostCard
+					key={post.id}
+					post={post}
+					user={user}
+					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+				/>
 			))}
 		</div>
 	);
@@ -1153,7 +1243,7 @@ const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 
 // ─── UserProfilePage ──────────────────────────────────────────────────────────
 
-type Tab = "overview" | "posts" | "blog" | "bookmarks";
+type Tab = "overview" | "posts" | "blog" | "bookmarks" | "archived";
 
 type TabDef = { id: Tab; label: string; icon: React.ElementType };
 
@@ -1164,6 +1254,7 @@ const BASE_TABS: TabDef[] = [
 ];
 
 const BOOKMARKS_TAB: TabDef = { id: "bookmarks", label: "Đã lưu", icon: Bookmark };
+const ARCHIVED_TAB: TabDef = { id: "archived", label: "Lưu trữ", icon: Archive };
 
 const writeClipboardText = async (text: string) => {
 	if (navigator.clipboard?.writeText) {
@@ -1211,7 +1302,9 @@ const UserProfilePage: React.FC = () => {
 				? "blog"
 				: tabParam === "bookmarks"
 					? "bookmarks"
-					: "overview";
+					: tabParam === "archived"
+						? "archived"
+						: "overview";
 	const previousUsernameRef = useRef<string | undefined>(undefined);
 
 	const setActiveTab = (tab: Tab) => {
@@ -1241,10 +1334,10 @@ const UserProfilePage: React.FC = () => {
 		previousUsernameRef.current = username;
 	}, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Guard: if someone manually types ?tab=bookmarks on another user's profile,
+	// Guard: if someone manually types ?tab=bookmarks or ?tab=archived on another user's profile,
 	// redirect to overview once we know it's not their own profile.
 	useEffect(() => {
-		if (!loading && activeTab === "bookmarks" && !isOwnProfile) {
+		if (!loading && (activeTab === "bookmarks" || activeTab === "archived") && !isOwnProfile) {
 			setSearchParams({}, { replace: true });
 		}
 	}, [loading, activeTab, isOwnProfile]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1440,10 +1533,10 @@ const UserProfilePage: React.FC = () => {
 							onUpdated={(updated) => setProfile(updated)}
 						/>
 
-						{/* Tabs — "Đã lưu" only visible on own profile */}
+						{/* Tabs — "Đã lưu" and "Lưu trữ" only visible on own profile */}
 						{(() => {
 							const tabs: TabDef[] = isOwnProfile
-								? [...BASE_TABS, BOOKMARKS_TAB]
+								? [...BASE_TABS, BOOKMARKS_TAB, ARCHIVED_TAB]
 								: BASE_TABS;
 							const badgeCount: Partial<Record<Tab, number>> = {
 								posts: profile.posts_count,
@@ -1497,6 +1590,8 @@ const UserProfilePage: React.FC = () => {
 							/>
 						) : activeTab === "bookmarks" ? (
 							<BookmarksTab user={user} />
+						) : activeTab === "archived" ? (
+							<ArchivedTab user={user} />
 						) : activeTab === "blog" ? (
 							<UserBlogsTab username={username} isOwnProfile={isOwnProfile} />
 						) : (

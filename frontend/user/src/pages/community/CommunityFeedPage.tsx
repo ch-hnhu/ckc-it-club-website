@@ -288,7 +288,16 @@ const CommunityFeedPage: React.FC = () => {
 							</button>
 						</div>
 					) : posts.length > 0 ? (
-						posts.map((post) => <PostCard key={post.id} post={post} user={user} />)
+						posts.map((post) => (
+								<PostCard
+									key={post.id}
+									post={post}
+									user={user}
+									onPostDeleted={(id) =>
+										setPosts((prev) => prev.filter((p) => p.id !== id))
+									}
+								/>
+							))
 					) : (
 						<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
 							<Search className='mx-auto h-10 w-10 text-gray-500' />
