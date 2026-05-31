@@ -4,7 +4,12 @@ set -eu
 cd /var/www/html
 
 if [ -z "${APP_KEY:-}" ]; then
-  php artisan key:generate --force
+  if [ -f .env ]; then
+    php artisan key:generate --force
+  else
+    echo "APP_KEY is required when no .env file is present. Set APP_KEY in the deployment environment."
+    exit 1
+  fi
 fi
 
 # Clear cache để tránh các lỗi config/route cũ
