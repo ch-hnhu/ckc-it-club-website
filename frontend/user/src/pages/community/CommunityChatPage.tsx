@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 // ── chatscope ──────────────────────────────────────────────────────────────
 import { MessageList } from "@chatscope/chat-ui-kit-react";
@@ -178,7 +179,7 @@ const MessageBubble: React.FC<{
 		<div
 			className={
 				isGifUrl(msg.content)
-					? ""
+					? "max-w-[85%] sm:max-w-[75%]"
 					: `
 			relative min-w-[3.5rem] max-w-[85%] sm:max-w-[75%]
 			${bubbleRadius(isOwn, isFirst, isLast)}
@@ -199,19 +200,28 @@ const MessageBubble: React.FC<{
 
 			{/* Content */}
 			{isGifUrl(msg.content) ? (
-				<div className='rounded-2xl'>
+				<div className='relative rounded-2xl'>
 					<img
 						src={msg.content}
 						alt='GIF'
 						className='max-h-52 max-w-full rounded-xl border-2 border-black shadow-[2px_2px_0_#111] bg-[var(--color-primary)]'
 						loading='lazy'
 					/>
+					{/* Timestamp overlay trên GIF */}
+					<span className='absolute bottom-2 right-2 rounded bg-black/40 px-1.5 py-0.5 text-[10px] font-medium text-white'>
+						{formatRelativeTime(msg.created_at)}
+					</span>
 				</div>
 			) : (
-				<div className='px-3.5 py-2'>
+				<div className='px-3.5 pb-2 pt-2'>
 					<p
 						className={`text-sm leading-relaxed break-words whitespace-pre-wrap ${isOwn ? "text-black" : "text-gray-800"}`}>
 						{msg.content}
+					</p>
+					{/* Timestamp bên trong bubble, căn phải */}
+					<p
+						className={`mt-0.5 text-right text-[10px] leading-none ${isOwn ? "text-black/50" : "text-gray-400"}`}>
+						{formatRelativeTime(msg.created_at)}
 					</p>
 				</div>
 			)}
@@ -248,9 +258,6 @@ const MessageGroupItem: React.FC<{
 				{group.senderHandle && (
 					<span className='text-[11px] text-gray-400'>{group.senderHandle}</span>
 				)}
-				<span className='text-[11px] text-gray-400'>
-					{formatRelativeTime(group.firstTime)}
-				</span>
 			</div>
 
 			{/* Bubbles — w-full để max-w-[75%] hoạt động chính xác */}
@@ -439,6 +446,7 @@ const CommunityChatPage: React.FC = () => {
 	const emojiRef = useRef<HTMLDivElement>(null);
 	const gifRef = useRef<HTMLDivElement>(null);
 	const joinedRoomsRef = useRef<Set<number>>(new Set());
+	const isComposingRef = useRef(false); // track IME composition
 
 	// ── Helpers ────────────────────────────────────────────────────────────────
 	const userId = user?.id;
@@ -527,8 +535,13 @@ const CommunityChatPage: React.FC = () => {
 	const handleSend = async () => {
 		if (!input.trim() || sending || !activeRoom || !user) return;
 		const text = input.trim();
-		setSending(true);
-		setInput("");
+
+		// flushSync ép React commit ngay — DOM textarea cleared trước khi reset height/scroll
+		flushSync(() => {
+			setSending(true);
+			setInput("");
+		});
+
 		if (inputRef.current) {
 			inputRef.current.style.height = "auto";
 			inputRef.current.scrollTop = 0;
@@ -865,8 +878,10 @@ const CommunityChatPage: React.FC = () => {
 										e.target.style.height = "auto";
 										e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
 									}}
+									onCompositionStart={() => { isComposingRef.current = true; }}
+									onCompositionEnd={() => { isComposingRef.current = false; }}
 									onKeyDown={(e) => {
-										if (e.key === "Enter" && !e.shiftKey) {
+										if (e.key === "Enter" && !e.shiftKey && !isComposingRef.current) {
 											e.preventDefault();
 											void handleSend();
 										}
