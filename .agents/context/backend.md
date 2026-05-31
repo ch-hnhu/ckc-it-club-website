@@ -440,6 +440,7 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-06-01`: Admin comment list payload includes `article_url` pointing to the user-facing post/blog URL; admin comment filtering now supports both post and blog comments.
 - `2026-06-01`: User chat message pagination accepts `per_page`, `before`, and optional `before_id`; messages are ordered by `created_at desc, id desc` so scroll-up loading can fetch older batches without cursor boundary gaps.
 
 - `2026-05-30`: Public/user profile payload now returns separate `posts_count`, `blogs_count`, and `content_count` (`posts + blogs`); community blog listing accepts `username` to filter blogs by author handle/email prefix.

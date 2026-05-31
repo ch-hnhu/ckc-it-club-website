@@ -9,6 +9,7 @@ import {
 	ChevronsRight,
 	Eye,
 	EyeOff,
+	ExternalLink,
 	Filter,
 	MessageSquare,
 	MoreHorizontal,
@@ -74,6 +75,7 @@ export interface CommentRecord {
 	user: CommentAuthor;
 	commentable_type: CommentableType;
 	commentable_id: number;
+	article_url: string | null;
 	parent_id: number | null;
 	content: string;
 	is_hidden: boolean;
@@ -369,9 +371,9 @@ function CommentListPage() {
 											Nội dung {getSortIcon("content")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[130px]">
+									<TableHead className="min-w-[260px]">
 										<Button variant="ghost" onClick={() => handleSort("post_id")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Thuộc về {getSortIcon("post_id")}
+											URL bài viết {getSortIcon("post_id")}
 										</Button>
 									</TableHead>
 									<TableHead className="w-[130px]">
@@ -437,13 +439,19 @@ function CommentListPage() {
 												</div>
 											</TableCell>
 											<TableCell>
-												<Badge variant="outline" className={`rounded-full px-2 py-0 text-xs ${
-													comment.commentable_type === "post"
-														? "border-violet-500/20 bg-violet-500/10 text-violet-700"
-														: "border-sky-500/20 bg-sky-500/10 text-sky-700"
-												}`}>
-													{comment.commentable_type === "post" ? "Bài đăng" : "Blog"} #{comment.commentable_id}
-												</Badge>
+												{comment.article_url ? (
+													<a
+														href={comment.article_url}
+														target="_blank"
+														rel="noreferrer"
+														title={comment.article_url}
+														className="inline-flex max-w-[300px] items-center gap-1.5 truncate text-sm font-medium text-primary underline-offset-4 hover:underline">
+														<span className="truncate">{comment.article_url}</span>
+														<ExternalLink className="h-3.5 w-3.5 shrink-0" />
+													</a>
+												) : (
+													<span className="text-sm text-muted-foreground">--</span>
+												)}
 											</TableCell>
 											<TableCell>
 												{comment.is_hidden ? (
@@ -565,15 +573,17 @@ function CommentListPage() {
 										<p className="text-sm font-medium">{selectedComment.user.full_name ?? "Ẩn danh"}</p>
 										<p className="text-xs text-muted-foreground">{selectedComment.user.email}</p>
 									</div>
-									<div className="ml-auto flex items-center gap-2">
-										<Badge variant="outline" className={`rounded-full px-2 py-0 text-xs ${
-											selectedComment.commentable_type === "post"
-												? "border-violet-500/20 bg-violet-500/10 text-violet-700"
-												: "border-sky-500/20 bg-sky-500/10 text-sky-700"
-										}`}>
-											{selectedComment.commentable_type === "post" ? "Bài đăng" : "Blog"} #{selectedComment.commentable_id}
-										</Badge>
-									</div>
+									{selectedComment.article_url && (
+										<a
+											href={selectedComment.article_url}
+											target="_blank"
+											rel="noreferrer"
+											title={selectedComment.article_url}
+											className="ml-auto inline-flex max-w-[220px] items-center gap-1.5 truncate text-sm font-medium text-primary underline-offset-4 hover:underline">
+											<span className="truncate">Mở bài viết</span>
+											<ExternalLink className="h-3.5 w-3.5 shrink-0" />
+										</a>
+									)}
 								</div>
 								{selectedComment.parent_id && (
 									<div className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">

@@ -352,6 +352,9 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-01`: Admin comment list changed the `Thuộc về` table column to `URL bài viết`, rendering `article_url` as an external link to the user-facing post/blog.
+- `2026-06-01`: Shared `ui/dialog` only suppresses `aria-describedby` when no `DialogDescription` is present, preserving description linking when available; built-in close button is explicitly `type="button"`.
+
 - `2026-05-24`: Wired department member chức vụ changes from the detail table to `PATCH /departments/{department}/users/{user}`; the backend maps head/member changes to the user's configured head role for that department.
 - `2026-05-24`: User create/update role forms can affect department head display because backend maps selected head roles to the corresponding department ownership.
 - `2026-04-20`: Updated CreateUser avatar behavior so clearing selected image restores default avatar preview (`/img/default-avatar.jpg`) while preserving all other form field state.
