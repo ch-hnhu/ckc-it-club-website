@@ -85,7 +85,7 @@ function formatDate(value: string | null) {
 }
 
 
-type SortKey = "id" | "name" | "posts_count" | "blogs_count" | "created_at";
+type SortKey = "id" | "name" | "blogs_count" | "created_at";
 
 // ─── Form state ──────────────────────────────────────────────────────────────
 
@@ -232,8 +232,8 @@ function TagListPage() {
 		}
 	};
 
-	const totalUsage = tags.reduce((s, t) => s + t.posts_count + t.blogs_count, 0);
-	const unusedCount = tags.filter((t) => t.posts_count + t.blogs_count === 0).length;
+	const totalUsage = tags.reduce((s, t) => s + t.blogs_count, 0);
+	const unusedCount = tags.filter((t) => t.blogs_count === 0).length;
 
 	return (
 		<div className="min-h-full bg-background">
@@ -257,7 +257,7 @@ function TagListPage() {
 					<div className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-5 shadow-sm">
 						<p className="text-sm font-semibold text-foreground">Lượt sử dụng</p>
 						<p className="mt-1 text-3xl font-semibold tracking-tight text-violet-700 dark:text-violet-300">{totalUsage}</p>
-						<p className="mt-1 text-xs text-muted-foreground">Tổng số lần được gán trên bài đăng và blog.</p>
+						<p className="mt-1 text-xs text-muted-foreground">Tổng số lần được gán trên blog.</p>
 					</div>
 					<div className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-5 shadow-sm">
 						<p className="text-sm font-semibold text-foreground">Chưa dùng</p>
@@ -300,11 +300,6 @@ function TagListPage() {
 										</Button>
 									</TableHead>
 									<TableHead className="w-[180px] text-sm font-medium">Slug</TableHead>
-									<TableHead className="w-[120px]">
-										<Button variant="ghost" onClick={() => handleSort("posts_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Bài đăng {getSortIcon("posts_count")}
-										</Button>
-									</TableHead>
 									<TableHead className="w-[100px]">
 										<Button variant="ghost" onClick={() => handleSort("blogs_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Blog {getSortIcon("blogs_count")}
@@ -347,7 +342,6 @@ function TagListPage() {
 												</Badge>
 											</TableCell>
 											<TableCell className="text-sm text-muted-foreground font-mono">{tag.slug}</TableCell>
-											<TableCell className="text-sm text-muted-foreground">{tag.posts_count}</TableCell>
 											<TableCell className="text-sm text-muted-foreground">{tag.blogs_count}</TableCell>
 											<TableCell className="text-sm text-muted-foreground">{formatDate(tag.created_at)}</TableCell>
 											<TableCell>
@@ -508,9 +502,9 @@ function TagListPage() {
 										{deleteTarget.name}
 									</Badge>
 								</div>
-								{(deleteTarget.posts_count + deleteTarget.blogs_count) > 0 && (
+								{deleteTarget.blogs_count > 0 && (
 									<p className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-amber-700">
-										Tag này đang được dùng trong {deleteTarget.posts_count} bài đăng và {deleteTarget.blogs_count} blog.
+										Tag này đang được dùng trong {deleteTarget.blogs_count} blog.
 										Xóa tag sẽ gỡ nó khỏi tất cả nội dung liên quan.
 									</p>
 								)}
