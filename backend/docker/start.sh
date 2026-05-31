@@ -12,6 +12,15 @@ php artisan config:clear
 php artisan route:clear
 php artisan view:clear
 
+APP_ROLE="${APP_ROLE:-web}"
+
+if [ "$APP_ROLE" = "reverb" ]; then
+  PORT_TO_BIND="${PORT:-${REVERB_SERVER_PORT:-8080}}"
+  exec php artisan reverb:start --host=0.0.0.0 --port="$PORT_TO_BIND"
+fi
+
+PORT_TO_BIND="${PORT:-10000}"
+
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   php artisan migrate --force
 fi
@@ -19,8 +28,6 @@ fi
 if [ "${RUN_SEEDERS:-false}" = "true" ]; then
   php artisan db:seed --force
 fi
-
-PORT_TO_BIND="${PORT:-10000}"
 
 cat >/etc/nginx/http.d/default.conf <<'NGINXCONF'
 server {

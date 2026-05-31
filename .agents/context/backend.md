@@ -147,7 +147,7 @@
 - `routes/api.php`: API route source-of-truth.
 - `routes/web.php`: OAuth web entrypoints.
 - `config/`: auth, sanctum, cors, database, services, permission.
-- `docker/` and `Dockerfile`: production-ish container flow for Render.
+- `docker/` and `Dockerfile`: container flow for local/container deployment and DigitalOcean App Platform services.
 
 ## Request and Response Conventions
 
@@ -362,16 +362,22 @@ curl http://localhost:8000/api/v1/health
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REDIRECT_URI`
 - `OAUTH_HTTP_VERIFY`
+- `BROADCAST_CONNECTION=reverb` plus `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET`, `REVERB_HOST`, `REVERB_PORT`, and `REVERB_SCHEME` when realtime broadcasting is enabled.
+- `REVERB_SERVER_HOST` and `REVERB_SERVER_PORT` are for the Reverb process bind address, not for browser/client connection.
 - `MYSQL_ATTR_SSL_CA` when using SSL-protected MySQL providers
 
 ## Docker and Deploy Notes
 
-- There is a Dockerfile intended for Render-style deployment.
+- Production target is currently DigitalOcean App Platform for backend API and Reverb services.
+- DigitalOcean setup docs live in `DIGITALOCEAN_APP_PLATFORM_REVERB.md`.
+- There is also a Dockerfile available for local/container deployment.
 - Container startup script:
 - can generate `APP_KEY` if missing.
 - clears Laravel caches.
 - optionally runs migrations and seeders with `RUN_MIGRATIONS=true` and `RUN_SEEDERS=true`.
 - serves through nginx + php-fpm on `PORT`, default `10000`.
+- can run Reverb instead of nginx/php-fpm when `APP_ROLE=reverb`; this starts `php artisan reverb:start` on `0.0.0.0:$PORT`.
+- DigitalOcean App Platform should run Reverb as a separate web service and route public `/app` and `/apps` requests from `api.ckcitclub.tech` to that service with path prefix preserved.
 
 ## Files Agents Should Prefer Reading Before Edits
 

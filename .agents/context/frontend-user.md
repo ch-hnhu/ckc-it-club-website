@@ -205,8 +205,11 @@
 - Current app uses:
 - `VITE_API_URL`
 - `VITE_BACKEND_URL`
-- There is no checked-in `.env.example` in this package right now, only a local `.env`.
-- If you formalize setup for other developers or agents, add `.env.example` and document it here.
+- `VITE_REVERB_APP_KEY`
+- `VITE_REVERB_HOST`
+- `VITE_REVERB_PORT`
+- `VITE_REVERB_SCHEME`
+- `.env.example` exists for local setup. Production currently points Reverb to `api.ckcitclub.tech` over HTTPS/WSS, with DigitalOcean App Platform routing `/app` and `/apps` to the Reverb service.
 
 ## Setup and Run
 

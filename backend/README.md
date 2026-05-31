@@ -58,16 +58,15 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
-## Docker Deploy (Render)
+## DigitalOcean Deploy
 
-This backend includes a production Docker setup for Render.
+Current production target is DigitalOcean App Platform for the backend and Reverb services, with frontend user on Vercel.
 
 ### Files
 
-- Docker image: Dockerfile
-- Startup script: docker/start.sh
-- Build ignore: .dockerignore
-- Render Blueprint: ../render.yaml
+- App Platform Reverb guide: `../DIGITALOCEAN_APP_PLATFORM_REVERB.md`
+- Docker image remains available for local/container use: `Dockerfile`
+- Startup script: `docker/start.sh`
 
 ### Local Docker test
 
@@ -76,21 +75,23 @@ docker build -t ckc-backend .
 docker run --rm -p 10000:10000 --env-file .env ckc-backend
 ```
 
-### Render setup
+### DigitalOcean setup
 
-1. Push code to GitHub.
-2. In Render, create Blueprint from render.yaml.
-3. Fill required env vars in Render dashboard:
-   - APP_URL
-   - DB_HOST
-   - DB_DATABASE
-   - DB_USERNAME
-   - DB_PASSWORD
-   - MYSQL_ATTR_SSL_CA (optional, when your MySQL provider requires custom CA path)
-4. Deploy.
+1. Keep the existing backend API service.
+2. Add a second App Platform web service named `reverb` from the same backend Docker image.
+3. Set `APP_ROLE=reverb` on the Reverb service so the container runs `php artisan reverb:start`.
+4. Route `/app` and `/apps` to the Reverb service with path prefix preserved; route `/` to the backend API service.
+5. Set matching `REVERB_APP_ID`, `REVERB_APP_KEY`, and `REVERB_APP_SECRET` on both backend and Reverb services.
 
-The container starts Laravel on the Render assigned port using:
+For Reverb production env, use:
 
-```bash
-php artisan serve --host=0.0.0.0 --port=$PORT
+```env
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=ckc-it-club-production
+REVERB_APP_KEY=ckcitclubprodkey
+REVERB_HOST=api.ckcitclub.tech
+REVERB_PORT=443
+REVERB_SCHEME=https
+REVERB_SERVER_HOST=0.0.0.0
+REVERB_SERVER_PORT=8080
 ```
