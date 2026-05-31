@@ -12,7 +12,7 @@ RUN apk add --no-cache \
     oniguruma-dev \
     icu-dev \
     mysql-client \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring bcmath intl zip \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring bcmath intl zip pcntl \
     && rm -rf /var/cache/apk/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -26,6 +26,6 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-di
 COPY docker/start.sh /usr/local/bin/start-container
 RUN chmod +x /usr/local/bin/start-container
 
-EXPOSE 10000
+EXPOSE 10000 8080
 
 ENTRYPOINT ["start-container"]

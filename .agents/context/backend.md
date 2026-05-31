@@ -148,6 +148,7 @@
 - `routes/web.php`: OAuth web entrypoints.
 - `config/`: auth, sanctum, cors, database, services, permission.
 - `docker/` and `Dockerfile`: container flow for local/container deployment and DigitalOcean App Platform services.
+- Docker image installs `pcntl` because Reverb needs PHP signal constants when running its long-lived server.
 
 ## Request and Response Conventions
 

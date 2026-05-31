@@ -67,6 +67,7 @@ Current production target is DigitalOcean App Platform for the backend and Rever
 - App Platform Reverb guide: `../DIGITALOCEAN_APP_PLATFORM_REVERB.md`
 - Docker image remains available for local/container use: `Dockerfile`
 - Startup script: `docker/start.sh`
+- Docker image installs `pcntl` because Laravel Reverb needs signal constants such as `SIGINT`.
 
 ### Local Docker test
 
