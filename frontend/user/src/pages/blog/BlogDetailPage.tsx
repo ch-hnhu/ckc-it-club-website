@@ -632,7 +632,7 @@ const BlogDetailPage: React.FC = () => {
 				)}
 
 				{!blogError && (
-					<article className='overflow-hidden rounded-2xl bg-white'>
+					<article className='rounded-2xl bg-white'>
 						{blogLoading ? (
 							<div>
 								<DetailSkeleton />
@@ -716,7 +716,7 @@ const BlogDetailPage: React.FC = () => {
 												}
 											}}
 											disabled={reactionLoading}
-											className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
+											className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
 											style={{
 												background: liked
 													? "var(--color-pastel-pink)"
