@@ -325,26 +325,6 @@ function CommentListPage() {
 									))}
 								</DropdownMenuContent>
 							</DropdownMenu>
-
-							{/* Filter loại */}
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm" className="h-8">
-										<MessageSquare className="h-4 w-4" />
-										{typeFilter === "all" ? "Tất cả loại" : typeFilter === "post" ? "Bài đăng" : "Blog"}
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end" className="w-[160px]">
-									<DropdownMenuLabel>Thuộc về</DropdownMenuLabel>
-									<DropdownMenuSeparator />
-									{(["all", "post", "blog"] as TypeFilter[]).map((v) => (
-										<DropdownMenuItem key={v} onClick={() => setTypeFilter(v)}
-											className={typeFilter === v ? "bg-muted font-medium" : ""}>
-											{v === "all" ? "Tất cả loại" : v === "post" ? "Bài đăng" : "Blog"}
-										</DropdownMenuItem>
-									))}
-								</DropdownMenuContent>
-							</DropdownMenu>
 						</div>
 					</div>
 
