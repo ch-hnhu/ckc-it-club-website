@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
 	ArrowLeft,
 	Bookmark,
+	Check,
 	Clock,
 	Eye,
 	Heart,
@@ -492,6 +493,8 @@ const BlogDetailPage: React.FC = () => {
 
 	const [followed, setFollowed] = useState(false);
 	const [followLoading, setFollowLoading] = useState(false);
+	const [copiedLink, setCopiedLink] = useState(false);
+	const copyResetRef = useRef<number | null>(null);
 
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
@@ -621,6 +624,40 @@ const BlogDetailPage: React.FC = () => {
 	};
 
 	const isOwnProfile = Boolean(user?.id && blog?.user?.id && Number(user.id) === blog.user.id);
+
+	// Cleanup copy timeout on unmount
+	useEffect(() => {
+		return () => {
+			if (copyResetRef.current) window.clearTimeout(copyResetRef.current);
+		};
+	}, []);
+
+	const handleCopyLink = async () => {
+		const url = `${window.location.origin}/blog/${blog?.slug ?? ""}`;
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(url);
+			} else {
+				const el = document.createElement("textarea");
+				el.value = url;
+				el.style.position = "fixed";
+				el.style.top = "-9999px";
+				document.body.appendChild(el);
+				el.select();
+				document.execCommand("copy");
+				document.body.removeChild(el);
+			}
+			setCopiedLink(true);
+			toast.success("Đã sao chép liên kết bài viết.");
+			if (copyResetRef.current) window.clearTimeout(copyResetRef.current);
+			copyResetRef.current = window.setTimeout(() => {
+				setCopiedLink(false);
+				copyResetRef.current = null;
+			}, 2500);
+		} catch {
+			toast.error("Không thể sao chép. Vui lòng thử lại.");
+		}
+	};
 
 	return (
 		<div className='w-full min-h-screen pt-16'>
@@ -816,9 +853,18 @@ const BlogDetailPage: React.FC = () => {
 										</button>
 
 										<button
-											className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-											aria-label='Chia sẻ'>
-											<Share2 className='h-4 w-4' />
+											onClick={handleCopyLink}
+											className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${
+												copiedLink
+													? "bg-[var(--color-primary)] translate-x-[1px] translate-y-[1px] shadow-none"
+													: "bg-white"
+											}`}
+											aria-label='Sao chép liên kết'>
+											{copiedLink ? (
+												<Check className='h-4 w-4 text-black' />
+											) : (
+												<Share2 className='h-4 w-4' />
+											)}
 										</button>
 									</div>
 								</div>
