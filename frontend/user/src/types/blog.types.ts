@@ -6,6 +6,7 @@ export interface BlogAuthor {
 	email: string;
 	avatar: string | null;
 	username: string | null;
+	is_following?: boolean;
 }
 
 export interface BlogTag {

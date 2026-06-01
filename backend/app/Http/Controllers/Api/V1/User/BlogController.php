@@ -116,6 +116,13 @@ class BlogController extends BaseApiController
                 ->value('type')
             : null;
 
+        if ($data['user'] && $userId && $blog->author) {
+            $data['user']['is_following'] = auth('sanctum')->user()
+                ->following()
+                ->where('following_id', $blog->author->id)
+                ->exists();
+        }
+
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
     }
 
