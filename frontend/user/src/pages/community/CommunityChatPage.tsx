@@ -443,6 +443,7 @@ const CommunityChatPage: React.FC = () => {
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	const emojiRef = useRef<HTMLDivElement>(null);
 	const gifRef = useRef<HTMLDivElement>(null);
+	const isComposingRef = useRef(false);
 	const joinedRoomsRef = useRef<Set<number>>(new Set());
 	const msgListRef = useRef<HTMLDivElement>(null);
 	const loadingMoreRef = useRef(false);
