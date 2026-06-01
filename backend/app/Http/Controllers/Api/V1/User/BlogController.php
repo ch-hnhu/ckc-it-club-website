@@ -6,6 +6,7 @@ use App\Enums\ApiMessage;
 use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
+use App\Models\MediaFile;
 use App\Models\Comment;
 use App\Models\Reaction;
 use App\Models\Tag;
@@ -175,6 +176,18 @@ class BlogController extends BaseApiController
         });
 
         $blog->load(['author:id,full_name,email,avatar,username', 'tags:id,name']);
+
+        // Track ảnh bìa vào media_files nếu có
+        if ($coverImagePath) {
+            MediaFile::create([
+                'owner_id'    => $request->user()->id,
+                'url'         => Storage::disk('public')->url($coverImagePath),
+                'file_type'   => 'image',
+                'size_kb'     => (int) ceil($request->file('featured_image')->getSize() / 1024),
+                'target_type' => 'blog',
+                'target_id'   => $blog->id,
+            ]);
+        }
 
         $message = $isAdmin ? 'Tạo blog thành công.' : 'Blog đã được gửi và đang chờ duyệt.';
 

@@ -7,6 +7,7 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	ExternalLink,
 	FileText,
 	Filter,
 	HardDrive,
@@ -221,9 +222,10 @@ function MediaListPage() {
 		order: "desc",
 	});
 
-	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+	const { allSelected, isSelected, selectedIds, toggleAll, toggleOne } = useTableSelection(
 		files.map((f) => f.id),
 	);
+	const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
 	useEffect(() => {
 		const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -314,6 +316,28 @@ function MediaListPage() {
 		} finally {
 			setIsDeleting(false);
 		}
+	};
+
+	const handleBulkDelete = async () => {
+		if (selectedIds.length === 0 || isBulkDeleting) return;
+		setIsBulkDeleting(true);
+		try {
+			await Promise.all(selectedIds.map((id) => mediaService.deleteMediaFile(id)));
+			setFiles((prev) => prev.filter((f) => !selectedIds.includes(f.id)));
+			setReloadToken((p) => p + 1);
+			toast.success(`Đã xóa ${selectedIds.length} tài nguyên.`);
+			toggleAll(false);
+		} catch {
+			toast.error("Không thể xóa một số tài nguyên. Vui lòng thử lại.");
+		} finally {
+			setIsBulkDeleting(false);
+		}
+	};
+
+	const getSourceUrl = (targetType: TargetType, targetId: number): string | null => {
+		if (targetType === "post") return `/community/posts/${targetId}`;
+		if (targetType === "blog") return `/community/blogs/${targetId}`;
+		return null;
 	};
 
 	const activeFilterCount =
@@ -521,6 +545,31 @@ function MediaListPage() {
 						</div>
 					</div>
 
+					{/* Bulk delete toolbar */}
+					{selectedIds.length > 0 && (
+						<div className='flex items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-2.5'>
+							<span className='text-sm font-medium text-destructive'>
+								Đã chọn {selectedIds.length} tài nguyên
+							</span>
+							<Button
+								variant='destructive'
+								size='sm'
+								className='h-7 gap-1.5'
+								disabled={isBulkDeleting}
+								onClick={handleBulkDelete}>
+								<Trash2 className='h-3.5 w-3.5' />
+								{isBulkDeleting ? "Đang xóa..." : "Xóa tất cả đã chọn"}
+							</Button>
+							<Button
+								variant='ghost'
+								size='sm'
+								className='h-7 ml-auto'
+								onClick={() => toggleAll(false)}>
+								Bỏ chọn
+							</Button>
+						</div>
+					)}
+
 					<div className='overflow-hidden rounded-md border'>
 						<Table>
 							<TableHeader>
@@ -688,15 +737,25 @@ function MediaListPage() {
 
 											{/* Target */}
 											<TableCell>
-												<Badge
-													variant='outline'
-													className={cn(
-														"rounded-full px-2 py-0.5 text-xs",
-														TARGET_TYPE_MAP[file.target_type].className,
-													)}>
-													{TARGET_TYPE_MAP[file.target_type].label} #
-													{file.target_id}
-												</Badge>
+												{(() => {
+													const sourceUrl = getSourceUrl(file.target_type, file.target_id);
+													const badge = (
+														<Badge
+															variant='outline'
+															className={cn(
+																"rounded-full px-2 py-0.5 text-xs",
+																TARGET_TYPE_MAP[file.target_type].className,
+															)}>
+															{TARGET_TYPE_MAP[file.target_type].label} #{file.target_id}
+														</Badge>
+													);
+													return sourceUrl ? (
+														<a href={sourceUrl} title='Xem nguồn' className='inline-flex items-center gap-1 hover:opacity-80'>
+															{badge}
+															<ExternalLink className='h-3 w-3 text-muted-foreground' />
+														</a>
+													) : badge;
+												})()}
 											</TableCell>
 
 											{/* Date */}
@@ -716,7 +775,7 @@ function MediaListPage() {
 													</DropdownMenuTrigger>
 													<DropdownMenuContent
 														align='end'
-														className='w-[160px]'>
+														className='w-[170px]'>
 														<DropdownMenuItem asChild>
 															<a
 																href={file.url}
@@ -726,6 +785,17 @@ function MediaListPage() {
 																Xem tệp
 															</a>
 														</DropdownMenuItem>
+														{getSourceUrl(file.target_type, file.target_id) && (
+															<DropdownMenuItem asChild>
+																<a
+																	href={getSourceUrl(file.target_type, file.target_id)!}
+																	target='_blank'
+																	rel='noopener noreferrer'>
+																	<ExternalLink className='h-4 w-4' />
+																	Xem bài nguồn
+																</a>
+															</DropdownMenuItem>
+														)}
 														<DropdownMenuSeparator />
 														<DropdownMenuItem
 															className='text-destructive focus:bg-destructive/10 focus:text-destructive'

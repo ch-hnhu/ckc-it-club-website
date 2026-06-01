@@ -8,6 +8,7 @@ use App\Models\MediaFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class MediaFileController extends BaseApiController
 {
@@ -60,9 +61,25 @@ class MediaFileController extends BaseApiController
 
     public function destroy(MediaFile $mediaFile): JsonResponse
     {
+        // Xóa file vật lý trên storage (trích path từ URL)
+        $this->deleteStorageFile($mediaFile->url);
+
         $mediaFile->delete();
 
         return $this->successResponse(true, null, 'Đã xóa tài nguyên.');
+    }
+
+    private function deleteStorageFile(string $url): void
+    {
+        try {
+            $storageUrl = Storage::disk('public')->url('');
+            if (str_starts_with($url, $storageUrl)) {
+                $path = ltrim(substr($url, strlen($storageUrl)), '/');
+                Storage::disk('public')->delete($path);
+            }
+        } catch (\Throwable) {
+            // Không throw — xóa DB dù file không tồn tại
+        }
     }
 
     private function transformFile(MediaFile $file): array
