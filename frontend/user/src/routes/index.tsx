@@ -4,6 +4,7 @@ import CommunityLayout from "@/pages/community/CommunityLayout";
 import CommunityFeedPage from "@/pages/community/CommunityFeedPage";
 import CommunityChatPage from "@/pages/community/CommunityChatPage";
 import CommunityCreatePage from "@/pages/community/CommunityCreatePage";
+import EditPostPage from "@/pages/community/EditPostPage";
 import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
 import BlogFeedPage from "@/pages/blog/BlogFeedPage";
 import BlogCreatePage from "@/pages/blog/BlogCreatePage";
@@ -66,6 +67,10 @@ const router = createBrowserRouter([
 					{
 						path: "bai-viet/:id",
 						element: <CommunityPostDetailPage />,
+					},
+					{
+						path: "bai-viet/:id/chinh-sua",
+						element: <EditPostPage />,
 					},
 					{
 						path: "chat",

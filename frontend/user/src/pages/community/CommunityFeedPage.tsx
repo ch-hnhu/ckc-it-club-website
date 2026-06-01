@@ -222,7 +222,9 @@ const CommunityFeedPage: React.FC = () => {
 				{/* Create post prompt */}
 				{user && (
 					<div className='mb-6 flex items-center gap-3 rounded-xl border-2 border-black bg-white px-5 py-4'>
-						<Link to={buildProfileUrl(user.username, user.email ?? "")} className='relative'>
+						<Link
+							to={buildProfileUrl(user.username, user.email ?? "")}
+							className='relative'>
 							<img
 								src={userAvatar}
 								alt={userDisplayName}
@@ -286,7 +288,16 @@ const CommunityFeedPage: React.FC = () => {
 							</button>
 						</div>
 					) : posts.length > 0 ? (
-						posts.map((post) => <PostCard key={post.id} post={post} user={user} />)
+						posts.map((post) => (
+								<PostCard
+									key={post.id}
+									post={post}
+									user={user}
+									onPostDeleted={(id) =>
+										setPosts((prev) => prev.filter((p) => p.id !== id))
+									}
+								/>
+							))
 					) : (
 						<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
 							<Search className='mx-auto h-10 w-10 text-gray-500' />

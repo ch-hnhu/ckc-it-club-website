@@ -16,11 +16,11 @@ import {
 	Send,
 	Share2,
 	Trash2,
-	Zap,
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
+import { userService } from "@/services/user.service";
 import type { PostDetail, PostComment } from "@/types/post.types";
 import type { CommunityLayoutContext } from "./CommunityLayout";
 import {
@@ -31,6 +31,9 @@ import {
 	buildProfileUrl,
 } from "@/lib/utils";
 import { renderMarkdownContent } from "@/lib/markdown";
+import DeletePostConfirm from "@/components/community/DeletePostConfirm";
+import PrivacyPostModal from "@/components/community/PrivacyPostModal";
+import ReportPostModal from "@/components/community/ReportPostModal";
 
 // ---------------------------------------------------------------------------
 // Skeleton
@@ -284,10 +287,25 @@ const CommunityPostDetailPage: React.FC = () => {
 	const [heartCount, setHeartCount] = useState(0);
 	const [reactionLoading, setReactionLoading] = useState(false);
 	const [saved, setSaved] = useState(false);
+	const [saveLoading, setSaveLoading] = useState(false);
+	const [pinLoading, setPinLoading] = useState(false);
+	const [archiveLoading, setArchiveLoading] = useState(false);
+	const [deleteLoading, setDeleteLoading] = useState(false);
+
+	const [followed, setFollowed] = useState(false);
+	const [followLoading, setFollowLoading] = useState(false);
+	const [authorStats, setAuthorStats] = useState<{
+		posts_count: number;
+		followers_count: number;
+		following_count: number;
+	} | null>(null);
 
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
 	const [showPostMenu, setShowPostMenu] = useState(false);
+	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [showReportModal, setShowReportModal] = useState(false);
 
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
 	const menuBtnRef = useRef<HTMLButtonElement>(null);
@@ -325,6 +343,7 @@ const CommunityPostDetailPage: React.FC = () => {
 				setPost(res.data);
 				setLiked(res.data.my_reaction === "heart");
 				setHeartCount(res.data.reactions_count);
+				setSaved(res.data.my_bookmark ?? false);
 			})
 			.catch(() => setPostError("Không tìm thấy bài viết."))
 			.finally(() => setPostLoading(false));
@@ -340,6 +359,57 @@ const CommunityPostDetailPage: React.FC = () => {
 			.finally(() => setCommentsLoading(false));
 	}, [id]);
 
+	useEffect(() => {
+		if (!post?.user) return;
+		const handle = getHandle(post.user.username, post.user.email).replace(/^@/, "");
+		userService
+			.getProfile(handle)
+			.then((res) => {
+				const profile = res.data;
+				setFollowed(profile.is_following ?? false);
+				setAuthorStats({
+					posts_count: profile.posts_count ?? 0,
+					followers_count: profile.followers_count ?? 0,
+					following_count: profile.following_count ?? 0,
+				});
+			})
+			.catch(() => {});
+	}, [post?.user?.id]);
+
+	const handleToggleFollow = async () => {
+		if (!user) {
+			navigate("/login", { state: { from: location.pathname + location.search } });
+			return;
+		}
+		if (followLoading || !post?.user) return;
+		setFollowLoading(true);
+		const wasFollowed = followed;
+		setFollowed((f) => !f);
+		setAuthorStats((prev) =>
+			prev
+				? { ...prev, followers_count: prev.followers_count + (wasFollowed ? -1 : 1) }
+				: prev,
+		);
+		try {
+			const handle = getHandle(post.user.username, post.user.email).replace(/^@/, "");
+			const res = await userService.toggleFollow(handle);
+			setFollowed(res.data.is_following);
+			setAuthorStats((prev) =>
+				prev ? { ...prev, followers_count: res.data.followers_count } : prev,
+			);
+		} catch {
+			setFollowed(wasFollowed);
+			setAuthorStats((prev) =>
+				prev
+					? { ...prev, followers_count: prev.followers_count + (wasFollowed ? 1 : -1) }
+					: prev,
+			);
+			toast.error("Không thể thực hiện hành động. Vui lòng thử lại.");
+		} finally {
+			setFollowLoading(false);
+		}
+	};
+
 	const authorName = post?.user?.full_name ?? "Thành viên CKC";
 	const authorHandle = post?.user ? getHandle(post.user.username, post.user.email) : "@ckc";
 	const authorAvatar = buildAvatar(post?.user?.full_name, post?.user?.avatar);
@@ -351,6 +421,8 @@ const CommunityPostDetailPage: React.FC = () => {
 	const createdAt = post?.created_at ? formatRelativeTime(post.created_at) : "";
 	const renderedPostContent = post?.content ? renderMarkdownContent(post.content) : "";
 	const isOwnPost = Boolean(user?.id && post?.user?.id && Number(user.id) === post.user.id);
+	const isArchived = post?.status === "archived";
+	const currentVisibility = (post?.visibility ?? "public") as "public" | "members" | "private";
 
 	const closePostMenu = () => setShowPostMenu(false);
 
@@ -361,16 +433,85 @@ const CommunityPostDetailPage: React.FC = () => {
 		return false;
 	};
 
-	const handleToggleSaved = () => {
+	const handleToggleSaved = async () => {
 		if (!requireAuthenticatedUser()) return;
-		const nextSaved = !saved;
-		setSaved(nextSaved);
-		toast.success(nextSaved ? "Đã lưu bài viết." : "Đã bỏ lưu bài viết.");
+		if (!post || saveLoading) return;
+
+		const wasSaved = saved;
+		setSaved(!wasSaved);
+		setSaveLoading(true);
+
+		try {
+			const res = await postService.toggleBookmark(post.id);
+			setSaved(res.data.bookmarked);
+			toast.success(res.data.bookmarked ? "Đã lưu bài viết." : "Đã bỏ lưu bài viết.");
+		} catch {
+			setSaved(wasSaved);
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setSaveLoading(false);
+		}
 	};
 
-	const handleUnavailablePostAction = (message: string) => {
+	const handleTogglePin = async () => {
+		if (!post || pinLoading) return;
 		closePostMenu();
-		toast.info(message);
+		const nextPinned = !post.is_pinned;
+		setPost((prev) => (prev ? { ...prev, is_pinned: nextPinned } : prev));
+		setPinLoading(true);
+
+		try {
+			await postService.updatePost(post.id, { isPinned: nextPinned });
+			toast.success(
+				nextPinned ? "Đã ghim bài viết lên trang cá nhân." : "Đã bỏ ghim bài viết.",
+			);
+		} catch {
+			setPost((prev) => (prev ? { ...prev, is_pinned: !nextPinned } : prev));
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setPinLoading(false);
+		}
+	};
+
+	const handleToggleArchive = async () => {
+		if (!post || archiveLoading) return;
+		closePostMenu();
+		const nextStatus = isArchived ? "published" : "archived";
+		const previousStatus = post.status;
+		setPost((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+		setArchiveLoading(true);
+
+		try {
+			await postService.updatePost(post.id, { status: nextStatus });
+			toast.success(
+				nextStatus === "archived" ? "Đã lưu trữ bài viết." : "Đã khôi phục bài viết.",
+			);
+		} catch {
+			setPost((prev) => (prev ? { ...prev, status: previousStatus } : prev));
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setArchiveLoading(false);
+		}
+	};
+
+	const handlePrivacySaved = (visibility: "public" | "members" | "private") => {
+		setPost((prev) => (prev ? { ...prev, visibility } : prev));
+	};
+
+	const handleDeletePost = async () => {
+		if (!post || deleteLoading) return;
+		setDeleteLoading(true);
+
+		try {
+			await postService.deletePost(post.id);
+			toast.success("Đã xóa bài viết.");
+			setShowDeleteConfirm(false);
+			navigate("/cong-dong", { replace: true });
+		} catch {
+			toast.error("Không thể xóa. Vui lòng thử lại.");
+		} finally {
+			setDeleteLoading(false);
+		}
 	};
 
 	const handleSubmitComment = async () => {
@@ -461,11 +602,6 @@ const CommunityPostDetailPage: React.FC = () => {
 													className='h-12 w-12 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
 												/>
 											</Link>
-											{post.is_pinned && (
-												<span className='absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)]'>
-													<Zap className='h-3 w-3 fill-current' />
-												</span>
-											)}
 										</div>
 										<div>
 											<div className='flex flex-wrap items-center gap-x-2 gap-y-0.5'>
@@ -504,53 +640,50 @@ const CommunityPostDetailPage: React.FC = () => {
 												{isOwnPost ? (
 													<>
 														<button
-															onClick={() =>
-																handleUnavailablePostAction(
-																	post.is_pinned
-																		? "Chức năng bỏ ghim khỏi trang cá nhân đang được phát triển."
-																		: "Chức năng ghim lên trang cá nhân đang được phát triển.",
-																)
-															}
-															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															onClick={handleTogglePin}
+															disabled={pinLoading}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
 															<Pin className='h-4 w-4' />
 															{post.is_pinned ? "Bỏ ghim" : "Ghim"}
 														</button>
 														<button
-															onClick={() =>
-																handleUnavailablePostAction(
-																	"Chức năng chỉnh sửa bài viết đang được phát triển.",
-																)
-															}
+															onClick={() => {
+																closePostMenu();
+																navigate(
+																	`/cong-dong/bai-viet/${post.id}/chinh-sua`,
+																);
+															}}
 															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
 															<Pencil className='h-4 w-4' />
 															Chỉnh sửa
 														</button>
 														<button
-															onClick={() =>
-																handleUnavailablePostAction(
-																	"Chức năng đổi quyền riêng tư đang được phát triển.",
-																)
-															}
+															onClick={() => {
+																closePostMenu();
+																setShowPrivacyModal(true);
+															}}
 															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
 															<LockKeyhole className='h-4 w-4' />
 															Quyền riêng tư
 														</button>
 														<button
-															onClick={() =>
-																handleUnavailablePostAction(
-																	"Chức năng lưu trữ bài viết đang được phát triển.",
-																)
-															}
-															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															onClick={handleToggleArchive}
+															disabled={archiveLoading}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
 															<Archive className='h-4 w-4' />
-															Lưu trữ
+															{archiveLoading
+																? isArchived
+																	? "Đang khôi phục..."
+																	: "Đang lưu trữ..."
+																: isArchived
+																	? "Bỏ lưu trữ"
+																	: "Lưu trữ"}
 														</button>
 														<button
-															onClick={() =>
-																handleUnavailablePostAction(
-																	"Chức năng xóa bài viết đang được phát triển.",
-																)
-															}
+															onClick={() => {
+																closePostMenu();
+																setShowDeleteConfirm(true);
+															}}
 															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
 															<Trash2 className='h-4 w-4' />
 															Xóa
@@ -563,7 +696,8 @@ const CommunityPostDetailPage: React.FC = () => {
 																closePostMenu();
 																handleToggleSaved();
 															}}
-															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+															disabled={saveLoading}
+															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
 															<Bookmark
 																className={`h-4 w-4 ${saved ? "fill-current" : ""}`}
 															/>
@@ -573,9 +707,8 @@ const CommunityPostDetailPage: React.FC = () => {
 															onClick={() => {
 																if (!requireAuthenticatedUser())
 																	return;
-																handleUnavailablePostAction(
-																	"Chức năng báo cáo đang được phát triển.",
-																);
+																closePostMenu();
+																setShowReportModal(true);
 															}}
 															className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
 															<Flag className='h-4 w-4' />
@@ -694,7 +827,8 @@ const CommunityPostDetailPage: React.FC = () => {
 
 									<button
 										onClick={handleToggleSaved}
-										className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+										disabled={saveLoading}
+										className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
 										style={{
 											background: saved ? "var(--color-primary)" : "#fff",
 										}}
@@ -848,31 +982,40 @@ const CommunityPostDetailPage: React.FC = () => {
 							{/* Stats */}
 							<div className='mt-3 flex gap-4 border-t-2 border-gray-200 pt-3 text-sm'>
 								<span className='whitespace-nowrap'>
-									<strong className='font-extrabold text-black'>0</strong>{" "}
+									<strong className='font-extrabold text-black'>
+										{authorStats?.posts_count ?? 0}
+									</strong>{" "}
 									<span className='text-gray-500'>Bài viết</span>
 								</span>
 								<span className='whitespace-nowrap'>
-									<strong className='font-extrabold text-black'>0</strong>{" "}
+									<strong className='font-extrabold text-black'>
+										{authorStats?.followers_count ?? 0}
+									</strong>{" "}
 									<span className='text-gray-500'>Theo dõi</span>
 								</span>
 								<span className='whitespace-nowrap'>
-									<strong className='font-extrabold text-black'>0</strong>{" "}
+									<strong className='font-extrabold text-black'>
+										{authorStats?.following_count ?? 0}
+									</strong>{" "}
 									<span className='text-gray-500'>Đang theo</span>
 								</span>
 							</div>
 
 							{/* Actions */}
-								<div className='mt-4 space-y-2'>
-									<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-[var(--color-primary)] font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-										Theo dõi
+							<div className='mt-4 space-y-2'>
+								{!isOwnPost && (
+									<button
+										onClick={handleToggleFollow}
+										disabled={followLoading}
+										className={`inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60 ${followed ? "bg-white" : "bg-[var(--color-primary)]"}`}>
+										{followed ? "Bỏ theo dõi" : "Theo dõi"}
 									</button>
-									<Link
-										key={post.user.id}
-										to={buildProfileUrl(post.user.username, post.user.email)}
-										className='flex items-center gap-3'>
-										<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-white font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-											Xem trang cá nhân
-										</button>
+								)}
+								<Link
+									to={buildProfileUrl(post.user.username, post.user.email)}>
+									<button className='inline-flex h-10 w-full items-center justify-center rounded-lg border-2 border-black bg-white font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+										Xem trang cá nhân
+									</button>
 								</Link>
 							</div>
 						</section>
@@ -955,6 +1098,28 @@ const CommunityPostDetailPage: React.FC = () => {
 					</p>
 				</div>
 			</aside>
+
+			{post && showPrivacyModal && (
+				<PrivacyPostModal
+					postId={post.id}
+					currentVisibility={currentVisibility}
+					onClose={() => setShowPrivacyModal(false)}
+					onSaved={handlePrivacySaved}
+				/>
+			)}
+
+			{post && showDeleteConfirm && (
+				<DeletePostConfirm
+					postTitle={post.title}
+					deleting={deleteLoading}
+					onClose={() => setShowDeleteConfirm(false)}
+					onConfirm={handleDeletePost}
+				/>
+			)}
+
+			{post && showReportModal && (
+				<ReportPostModal postId={post.id} onClose={() => setShowReportModal(false)} />
+			)}
 		</div>
 	);
 };

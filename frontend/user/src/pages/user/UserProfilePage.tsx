@@ -8,6 +8,7 @@ import {
 	useSearchParams,
 } from "react-router-dom";
 import {
+	Archive,
 	Bookmark,
 	BookOpen,
 	BookOpenText,
@@ -23,6 +24,8 @@ import {
 	LayoutGrid,
 	Loader2,
 	MessageCircle,
+	Pin,
+	Plus,
 	Search,
 	Share2,
 	UserCheck,
@@ -49,6 +52,9 @@ import type { UserProfile } from "@/types/user.types";
 import type { Post } from "@/types/post.types";
 import BlogCard from "@/components/community/BlogCard";
 import PostCard from "@/components/community/PostCard";
+
+const sortPinnedFirst = <T extends { is_pinned?: boolean }>(items: T[]): T[] =>
+	[...items].sort((a, b) => Number(Boolean(b.is_pinned)) - Number(Boolean(a.is_pinned)));
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -507,7 +513,7 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfil
 		userService
 			.getUserPosts(username)
 			.then((res) => {
-				if (!cancelled) setPosts(res.data);
+				if (!cancelled) setPosts(sortPinnedFirst(res.data));
 			})
 			.catch(() => {
 				if (!cancelled) setError(true);
@@ -545,6 +551,14 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfil
 							? "Bạn chưa đăng bài viết nào."
 							: "Người dùng này chưa đăng bài viết nào."}
 				</p>
+				{!error && isOwnProfile && (
+					<Link
+						to='/cong-dong/dang-bai'
+						className='mt-5 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						<Plus className='h-4 w-4' />
+						Tạo bài viết
+					</Link>
+				)}
 			</div>
 		);
 	}
@@ -552,7 +566,13 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfil
 	return (
 		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
 			{posts.map((post) => (
-				<PostCard key={post.id} post={post} user={user} />
+				<PostCard
+					key={post.id}
+					post={post}
+					user={user}
+					showPinnedBadge
+					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+				/>
 			))}
 		</div>
 	);
@@ -578,7 +598,7 @@ const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) =
 		userService
 			.getUserBlogs(username)
 			.then((res) => {
-				if (!cancelled) setBlogs(res.data);
+				if (!cancelled) setBlogs(sortPinnedFirst(res.data));
 			})
 			.catch(() => {
 				if (!cancelled) setError(true);
@@ -619,6 +639,14 @@ const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) =
 							? "Bạn chưa đăng blog nào."
 							: "Người dùng này chưa đăng blog nào."}
 				</p>
+				{!error && isOwnProfile && (
+					<Link
+						to='/blog/dang-bai'
+						className='mt-5 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						<Plus className='h-4 w-4' />
+						Tạo blog
+					</Link>
+				)}
 			</div>
 		);
 	}
@@ -626,7 +654,7 @@ const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) =
 	return (
 		<div className='mt-5 mb-5 grid gap-5 px-6 sm:grid-cols-2 sm:px-0'>
 			{blogs.map((blog) => (
-				<BlogCard key={blog.id} blog={blog} />
+				<BlogCard key={blog.id} blog={blog} showPinnedBadge />
 			))}
 		</div>
 	);
@@ -679,9 +707,18 @@ const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
 	};
 
 	return (
-		<article className='flex w-68 shrink-0 flex-col rounded-2xl border-2 border-black bg-white'>
+		<article className='relative flex w-68 shrink-0 flex-col rounded-2xl border-2 border-black bg-white'>
+			{post.is_pinned && (
+				<span
+					className='absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-primary text-black shadow-[2px_2px_0_#111]'
+					aria-label='Bài viết đã ghim'
+					title='Bài viết đã ghim'>
+					<Pin className='h-4 w-4' />
+				</span>
+			)}
+
 			{/* Header */}
-			<div className='flex items-center gap-2 px-4 pt-4 pb-2 cursor-pointer'>
+			<div className='flex items-center gap-2 px-4 pt-4 pb-2 pr-12 cursor-pointer'>
 				<Link
 					to={authorProfileUrl ?? "#"}
 					onClick={(e) => !authorProfileUrl && e.preventDefault()}
@@ -765,18 +802,19 @@ const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
 interface PostCarouselProps {
 	posts: Post[];
 	user: AuthUser | null;
+	isOwnProfile: boolean;
 	onShowAll: () => void;
 }
 
-const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) => {
+const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, isOwnProfile, onShowAll }) => {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [canScrollLeft, setCanScrollLeft] = useState(false);
 	const [canScrollRight, setCanScrollRight] = useState(false);
+	const showArrows = posts.length > 3;
 
 	const updateScrollShadows = () => {
 		const el = scrollRef.current;
 		if (!el) return;
-
 		const maxScrollLeft = el.scrollWidth - el.clientWidth;
 		setCanScrollLeft(el.scrollLeft > 4);
 		setCanScrollRight(el.scrollLeft < maxScrollLeft - 4);
@@ -792,59 +830,76 @@ const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) =
 	useEffect(() => {
 		updateScrollShadows();
 		window.addEventListener("resize", updateScrollShadows);
-
-		return () => {
-			window.removeEventListener("resize", updateScrollShadows);
-		};
+		return () => window.removeEventListener("resize", updateScrollShadows);
 	}, [posts]);
 
 	return (
 		<div>
 			<div className='mb-4 flex items-center justify-between'>
 				<h1 className='font-heading font-extrabold text-black text-2xl'>Posts</h1>
-				<div className='flex items-center gap-2'>
+				{showArrows && (
+					<div className='flex items-center gap-2'>
+						<button
+							onClick={() => scroll("left")}
+							className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+							aria-label='Cuộn trái'>
+							<ChevronLeft className='h-4 w-4' />
+						</button>
+						<button
+							onClick={() => scroll("right")}
+							className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+							aria-label='Cuộn phải'>
+							<ChevronRight className='h-4 w-4' />
+						</button>
+					</div>
+				)}
+			</div>
+
+			{posts.length === 0 ? (
+				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-12 text-center'>
+					<p className='text-sm text-gray-500'>
+						{isOwnProfile
+							? "Bạn chưa đăng bài viết nào."
+							: "Người dùng này chưa đăng bài viết nào."}
+					</p>
+					{isOwnProfile && (
+						<Link
+							to='/cong-dong/dang-bai'
+							className='mt-4 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							<Plus className='h-4 w-4' />
+							Tạo bài viết
+						</Link>
+					)}
+				</div>
+			) : (
+				<div className='relative'>
+					{canScrollLeft && (
+						<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
+					)}
+					{canScrollRight && (
+						<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
+					)}
+					<div
+						ref={scrollRef}
+						onScroll={updateScrollShadows}
+						className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
+						{posts.map((post) => (
+							<PostCardCompact key={post.id} post={post} user={user} />
+						))}
+					</div>
+				</div>
+			)}
+
+			{posts.length >= 6 && (
+				<div className='mt-5 flex justify-center'>
 					<button
-						onClick={() => scroll("left")}
-						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-						aria-label='Cuộn trái'>
-						<ChevronLeft className='h-4 w-4' />
-					</button>
-					<button
-						onClick={() => scroll("right")}
-						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-						aria-label='Cuộn phải'>
+						onClick={onShowAll}
+						className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						Xem tất cả Posts
 						<ChevronRight className='h-4 w-4' />
 					</button>
 				</div>
-			</div>
-
-			{/* Scrollable row — hidden scrollbar */}
-			<div className='relative'>
-				{canScrollLeft && (
-					<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
-				)}
-				{canScrollRight && (
-					<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
-				)}
-				<div
-					ref={scrollRef}
-					onScroll={updateScrollShadows}
-					className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
-					{posts.map((post) => (
-						<PostCardCompact key={post.id} post={post} user={user} />
-					))}
-				</div>
-			</div>
-
-			{/* Show all button */}
-			<div className='mt-5 flex justify-center'>
-				<button
-					onClick={onShowAll}
-					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-					Xem tất cả Posts
-					<ChevronRight className='h-4 w-4' />
-				</button>
-			</div>
+			)}
 		</div>
 	);
 };
@@ -853,18 +908,19 @@ const PostCarousel: React.FC<PostCarouselProps> = ({ posts, user, onShowAll }) =
 
 interface BlogCarouselProps {
 	blogs: Blog[];
+	isOwnProfile: boolean;
 	onShowAll: () => void;
 }
 
-const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, onShowAll }) => {
+const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, isOwnProfile, onShowAll }) => {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [canScrollLeft, setCanScrollLeft] = useState(false);
 	const [canScrollRight, setCanScrollRight] = useState(false);
+	const showArrows = blogs.length > 3;
 
 	const updateScrollShadows = () => {
 		const el = scrollRef.current;
 		if (!el) return;
-
 		const maxScrollLeft = el.scrollWidth - el.clientWidth;
 		setCanScrollLeft(el.scrollLeft > 4);
 		setCanScrollRight(el.scrollLeft < maxScrollLeft - 4);
@@ -880,59 +936,78 @@ const BlogCarousel: React.FC<BlogCarouselProps> = ({ blogs, onShowAll }) => {
 	useEffect(() => {
 		updateScrollShadows();
 		window.addEventListener("resize", updateScrollShadows);
-
-		return () => {
-			window.removeEventListener("resize", updateScrollShadows);
-		};
+		return () => window.removeEventListener("resize", updateScrollShadows);
 	}, [blogs]);
 
 	return (
 		<div>
 			<div className='mb-4 flex items-center justify-between'>
-				<h1 className='font-heading font-extrabold text-black text-2xl'>Blog</h1>
-				<div className='flex items-center gap-2'>
+				<h1 className='font-heading font-extrabold text-black text-2xl'>Blogs</h1>
+				{showArrows && (
+					<div className='flex items-center gap-2'>
+						<button
+							onClick={() => scroll("left")}
+							className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+							aria-label='Cuộn trái'>
+							<ChevronLeft className='h-4 w-4' />
+						</button>
+						<button
+							onClick={() => scroll("right")}
+							className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+							aria-label='Cuộn phải'>
+							<ChevronRight className='h-4 w-4' />
+						</button>
+					</div>
+				)}
+			</div>
+
+			{blogs.length === 0 ? (
+				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-12 text-center'>
+					<p className='text-sm text-gray-500'>
+						{isOwnProfile
+							? "Bạn chưa đăng blog nào."
+							: "Người dùng này chưa đăng blog nào."}
+					</p>
+					{isOwnProfile && (
+						<Link
+							to='/blog/dang-bai'
+							className='mt-4 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							<Plus className='h-4 w-4' />
+							Tạo blog
+						</Link>
+					)}
+				</div>
+			) : (
+				<div className='relative'>
+					{canScrollLeft && (
+						<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
+					)}
+					{canScrollRight && (
+						<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
+					)}
+					<div
+						ref={scrollRef}
+						onScroll={updateScrollShadows}
+						className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
+						{blogs.map((blog) => (
+							<div key={blog.id} className='w-72 shrink-0 sm:w-80'>
+								<BlogCard blog={blog} showPinnedBadge />
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+
+			{blogs.length >= 6 && (
+				<div className='mt-5 flex justify-center'>
 					<button
-						onClick={() => scroll("left")}
-						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-						aria-label='Cuộn trái'>
-						<ChevronLeft className='h-4 w-4' />
-					</button>
-					<button
-						onClick={() => scroll("right")}
-						className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-						aria-label='Cuộn phải'>
+						onClick={onShowAll}
+						className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						Xem tất cả Blogs
 						<ChevronRight className='h-4 w-4' />
 					</button>
 				</div>
-			</div>
-
-			<div className='relative'>
-				{canScrollLeft && (
-					<div className='pointer-events-none absolute inset-y-0 left-0 z-10 w-20 sm:w-40 bg-gradient-to-r from-white via-white/20 to-transparent' />
-				)}
-				{canScrollRight && (
-					<div className='pointer-events-none absolute inset-y-0 right-0 z-10 w-28 sm:w-48 bg-gradient-to-l from-white via-white/20 to-transparent' />
-				)}
-				<div
-					ref={scrollRef}
-					onScroll={updateScrollShadows}
-					className='no-scrollbar flex gap-4 overflow-x-auto pb-2'>
-					{blogs.map((blog) => (
-						<div key={blog.id} className='w-72 shrink-0 sm:w-80'>
-							<BlogCard blog={blog} />
-						</div>
-					))}
-				</div>
-			</div>
-
-			<div className='mt-5 flex justify-center'>
-				<button
-					onClick={onShowAll}
-					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-					Xem tất cả Blog
-					<ChevronRight className='h-4 w-4' />
-				</button>
-			</div>
+			)}
 		</div>
 	);
 };
@@ -967,7 +1042,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 		userService
 			.getUserPosts(profileHandle, 1)
 			.then((res) => {
-				if (!cancelled) setRecentPosts(res.data.slice(0, 6));
+				if (!cancelled) setRecentPosts(sortPinnedFirst(res.data).slice(0, 6));
 			})
 			.catch(() => {
 				if (!cancelled) setRecentPosts([]);
@@ -988,7 +1063,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 		userService
 			.getUserBlogs(profileHandle, 1)
 			.then((res) => {
-				if (!cancelled) setRecentBlogs(res.data.slice(0, 6));
+				if (!cancelled) setRecentBlogs(sortPinnedFirst(res.data).slice(0, 6));
 			})
 			.catch(() => {
 				if (!cancelled) setRecentBlogs([]);
@@ -1008,11 +1083,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 			{loadingPosts ? (
 				<div>
 					<div className='mb-4 flex items-center justify-between'>
-						<div className='h-5 w-40 animate-pulse rounded bg-gray-200' />
-						<div className='flex gap-2'>
-							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
-							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
-						</div>
+						<div className='h-7 w-24 animate-pulse rounded bg-gray-200' />
 					</div>
 					<div className='no-scrollbar flex gap-4 overflow-x-hidden pb-2'>
 						{Array.from({ length: 3 }).map((_, i) => (
@@ -1023,31 +1094,20 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 						))}
 					</div>
 				</div>
-			) : recentPosts.length > 0 ? (
-				<PostCarousel posts={recentPosts} user={user} onShowAll={onSwitchToPostsTab} />
 			) : (
-				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
-					<FileText className='mx-auto mb-4 h-10 w-10 text-gray-300' />
-					<p className='font-heading text-base font-extrabold text-black'>
-						Chưa có bài viết nào
-					</p>
-					<p className='mt-1 text-sm text-gray-400'>
-						{isOwnProfile
-							? "Bạn chưa đăng bài viết nào."
-							: "Người dùng này chưa đăng bài viết nào."}
-					</p>
-				</div>
+				<PostCarousel
+					posts={recentPosts}
+					user={user}
+					isOwnProfile={isOwnProfile}
+					onShowAll={onSwitchToPostsTab}
+				/>
 			)}
 
 			{/* Recent blogs carousel */}
 			{loadingBlogs ? (
 				<div>
 					<div className='mb-4 flex items-center justify-between'>
-						<div className='h-5 w-32 animate-pulse rounded bg-gray-200' />
-						<div className='flex gap-2'>
-							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
-							<div className='h-8 w-8 animate-pulse rounded-lg bg-gray-200' />
-						</div>
+						<div className='h-7 w-16 animate-pulse rounded bg-gray-200' />
 					</div>
 					<div className='no-scrollbar flex gap-4 overflow-x-hidden pb-2'>
 						{Array.from({ length: 3 }).map((_, i) => (
@@ -1058,20 +1118,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 						))}
 					</div>
 				</div>
-			) : recentBlogs.length > 0 ? (
-				<BlogCarousel blogs={recentBlogs} onShowAll={onSwitchToBlogTab} />
 			) : (
-				<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center'>
-					<BookOpen className='mx-auto mb-4 h-10 w-10 text-gray-300' />
-					<p className='font-heading text-base font-extrabold text-black'>
-						Chưa có blog nào
-					</p>
-					<p className='mt-1 text-sm text-gray-400'>
-						{isOwnProfile
-							? "Bạn chưa đăng blog nào."
-							: "Người dùng này chưa đăng blog nào."}
-					</p>
-				</div>
+				<BlogCarousel
+					blogs={recentBlogs}
+					isOwnProfile={isOwnProfile}
+					onShowAll={onSwitchToBlogTab}
+				/>
 			)}
 		</div>
 	);
@@ -1145,7 +1197,91 @@ const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 	return (
 		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
 			{posts.map((post) => (
-				<PostCard key={post.id} post={post} user={user} />
+				<PostCard
+					key={post.id}
+					post={post}
+					user={user}
+					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+				/>
+			))}
+		</div>
+	);
+};
+
+// ─── Tab Content: Archived ────────────────────────────────────────────────────
+
+const ArchivedTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
+	const [posts, setPosts] = useState<Post[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+		setLoading(true);
+		setError(false);
+
+		postService
+			.getArchivedPosts()
+			.then((res) => {
+				if (!cancelled) setPosts(res.data);
+			})
+			.catch(() => {
+				if (!cancelled) setError(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	if (loading) {
+		return (
+			<div className='mt-5 space-y-5 px-6 sm:px-0'>
+				{Array.from({ length: 3 }).map((_, i) => (
+					<PostSkeleton key={i} />
+				))}
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<Archive className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
+					Không thể tải bài viết lưu trữ
+				</p>
+				<p className='mt-1 text-sm text-gray-400'>Vui lòng thử lại sau.</p>
+			</div>
+		);
+	}
+
+	if (posts.length === 0) {
+		return (
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<Archive className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
+					Chưa có bài viết lưu trữ nào
+				</p>
+				<p className='mt-1 text-sm text-gray-400'>
+					Những bài viết bạn lưu trữ sẽ hiển thị ở đây.
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
+			{posts.map((post) => (
+				<PostCard
+					key={post.id}
+					post={post}
+					user={user}
+					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+				/>
 			))}
 		</div>
 	);
@@ -1153,17 +1289,18 @@ const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 
 // ─── UserProfilePage ──────────────────────────────────────────────────────────
 
-type Tab = "overview" | "posts" | "blog" | "bookmarks";
+type Tab = "overview" | "posts" | "blog" | "bookmarks" | "archived";
 
 type TabDef = { id: Tab; label: string; icon: React.ElementType };
 
 const BASE_TABS: TabDef[] = [
 	{ id: "overview", label: "Tổng quan", icon: LayoutGrid },
 	{ id: "posts", label: "Posts", icon: FileText },
-	{ id: "blog", label: "Blog", icon: BookOpen },
+	{ id: "blog", label: "Blogs", icon: BookOpen },
 ];
 
 const BOOKMARKS_TAB: TabDef = { id: "bookmarks", label: "Đã lưu", icon: Bookmark };
+const ARCHIVED_TAB: TabDef = { id: "archived", label: "Lưu trữ", icon: Archive };
 
 const writeClipboardText = async (text: string) => {
 	if (navigator.clipboard?.writeText) {
@@ -1211,7 +1348,9 @@ const UserProfilePage: React.FC = () => {
 				? "blog"
 				: tabParam === "bookmarks"
 					? "bookmarks"
-					: "overview";
+					: tabParam === "archived"
+						? "archived"
+						: "overview";
 	const previousUsernameRef = useRef<string | undefined>(undefined);
 
 	const setActiveTab = (tab: Tab) => {
@@ -1241,10 +1380,10 @@ const UserProfilePage: React.FC = () => {
 		previousUsernameRef.current = username;
 	}, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Guard: if someone manually types ?tab=bookmarks on another user's profile,
+	// Guard: if someone manually types ?tab=bookmarks or ?tab=archived on another user's profile,
 	// redirect to overview once we know it's not their own profile.
 	useEffect(() => {
-		if (!loading && activeTab === "bookmarks" && !isOwnProfile) {
+		if (!loading && (activeTab === "bookmarks" || activeTab === "archived") && !isOwnProfile) {
 			setSearchParams({}, { replace: true });
 		}
 	}, [loading, activeTab, isOwnProfile]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1310,6 +1449,8 @@ const UserProfilePage: React.FC = () => {
 							followers_count: 85,
 							following_count: 3,
 							is_following: false,
+							bookmarks_count: null,
+							archived_count: null,
 							skills: ["JavaScript", "React", "Laravel", "Python"],
 							social_github: null,
 							social_linkedin: null,
@@ -1440,14 +1581,20 @@ const UserProfilePage: React.FC = () => {
 							onUpdated={(updated) => setProfile(updated)}
 						/>
 
-						{/* Tabs — "Đã lưu" only visible on own profile */}
+						{/* Tabs — "Đã lưu" and "Lưu trữ" only visible on own profile */}
 						{(() => {
 							const tabs: TabDef[] = isOwnProfile
-								? [...BASE_TABS, BOOKMARKS_TAB]
+								? [...BASE_TABS, BOOKMARKS_TAB, ARCHIVED_TAB]
 								: BASE_TABS;
 							const badgeCount: Partial<Record<Tab, number>> = {
 								posts: profile.posts_count,
 								blog: profile.blogs_count,
+								...(profile.bookmarks_count != null
+									? { bookmarks: profile.bookmarks_count }
+									: {}),
+								...(profile.archived_count != null
+									? { archived: profile.archived_count }
+									: {}),
 							};
 							return (
 								<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
@@ -1497,6 +1644,8 @@ const UserProfilePage: React.FC = () => {
 							/>
 						) : activeTab === "bookmarks" ? (
 							<BookmarksTab user={user} />
+						) : activeTab === "archived" ? (
+							<ArchivedTab user={user} />
 						) : activeTab === "blog" ? (
 							<UserBlogsTab username={username} isOwnProfile={isOwnProfile} />
 						) : (

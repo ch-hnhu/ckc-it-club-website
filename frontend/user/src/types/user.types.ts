@@ -23,6 +23,8 @@ export interface UserProfile {
 	followers_count: number;
 	following_count: number;
 	is_following: boolean;
+	bookmarks_count: number | null;
+	archived_count: number | null;
 	skills: string[];
 	social_github: string | null;
 	social_linkedin: string | null;

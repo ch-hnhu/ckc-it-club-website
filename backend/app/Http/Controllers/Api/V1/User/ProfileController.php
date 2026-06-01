@@ -21,6 +21,8 @@ class ProfileController extends BaseApiController
         $user->loadMissing(['faculty', 'major', 'class', 'skills']);
         $postsCount = $this->countPosts($user->id);
         $blogsCount = $this->countBlogs($user->id);
+        $authUser = auth('sanctum')->user();
+        $isOwnProfile = $authUser && $authUser->id === $user->id;
 
         return [
             'id'               => $user->id,
@@ -46,8 +48,10 @@ class ProfileController extends BaseApiController
             'likes_count'     => $this->countLikes($user->id),
             'followers_count' => $user->followers()->count(),
             'following_count' => $user->following()->count(),
-            'is_following'    => auth()->check() ? auth()->user()->following()->where('following_id', $user->id)->exists() : false,
-            'skills'           => $user->skills->pluck('name')->values(),
+            'is_following'      => auth('sanctum')->check() ? auth('sanctum')->user()->following()->where('following_id', $user->id)->exists() : false,
+            'bookmarks_count'   => $isOwnProfile ? DB::table('post_bookmarks')->where('user_id', $user->id)->count() : null,
+            'archived_count'    => $isOwnProfile ? Post::where('user_id', $user->id)->where('status', 'archived')->count() : null,
+            'skills'            => $user->skills->pluck('name')->values(),
             'social_github'    => $user->social_github,
             'social_linkedin'  => $user->social_linkedin,
             'social_instagram' => $user->social_instagram,
