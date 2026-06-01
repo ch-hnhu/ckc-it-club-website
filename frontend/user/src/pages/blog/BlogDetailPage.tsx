@@ -314,7 +314,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 		`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserDisplayName)}&background=A3E635&color=111111&bold=true`;
 
 	return (
-		<div className={depth > 0 ? "ml-11 mt-3" : ""}>
+		<div id={depth === 0 ? `comment-${comment.id}` : undefined} className={depth > 0 ? "ml-11 mt-3" : ""}>
 			<div className='flex gap-3'>
 				<div className='shrink-0'>
 					<img
