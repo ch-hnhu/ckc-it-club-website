@@ -58,7 +58,7 @@ const DetailSkeleton: React.FC = () => (
 );
 
 const CoverSkeleton: React.FC = () => (
-	<div className='mb-6 aspect-[16/9] w-full animate-pulse rounded-2xl bg-gray-200 md:aspect-[21/10]' />
+	<div className='mb-6 h-64 w-full animate-pulse rounded-2xl bg-gray-200 md:h-80' />
 );
 
 interface BlogCoverProps {
@@ -99,14 +99,14 @@ const BlogCover: React.FC<BlogCoverProps> = ({ loading, title, imageUrl }) => {
 	}
 
 	return (
-		<div className='relative mb-8 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-gray-200'>
-			{!imageLoaded && <div className='absolute inset-0 animate-pulse bg-gray-200' />}
+		<div className='relative mb-8 w-full overflow-hidden rounded-2xl bg-gray-100'>
+			{!imageLoaded && <div className='h-64 w-full animate-pulse bg-gray-200 md:h-80' />}
 			<img
 				ref={imgRef}
 				src={imageUrl}
 				alt={title || "Ảnh bìa blog"}
-				className={`h-full w-full object-cover transition-opacity duration-300 ${
-					imageLoaded ? "opacity-100" : "opacity-0"
+				className={`block max-h-[75vh] w-full object-contain transition-opacity duration-300 ${
+					imageLoaded ? "opacity-100" : "opacity-0 absolute inset-0"
 				}`}
 				onLoad={() => setImageLoaded(true)}
 				onError={() => setImageFailed(true)}

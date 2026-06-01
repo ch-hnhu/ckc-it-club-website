@@ -269,28 +269,32 @@ const BlogCreatePage: React.FC = () => {
 										<X className='h-4 w-4' />
 									</button>
 
-									{/* Preview 1: Trang chi tiết (16:9) */}
+									{/* Preview 1: Trang chi tiết */}
 									<div className='border-b-2 border-black'>
 										<p className='bg-gray-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500'>
-											Trang chi tiết (16:9)
+											Trang chi tiết
 										</p>
-										<img
-											src={coverPreviewUrl}
-											alt={coverImage?.name ?? "Ảnh bìa blog"}
-											className='aspect-[16/9] w-full object-cover'
-										/>
+										<div className='bg-gray-100'>
+											<img
+												src={coverPreviewUrl}
+												alt={coverImage?.name ?? "Ảnh bìa blog"}
+												className='max-h-[340px] w-full object-contain'
+											/>
+										</div>
 									</div>
 
-									{/* Preview 2: Card danh sách (21:9) */}
+									{/* Preview 2: Card danh sách */}
 									<div className='border-b-2 border-black'>
 										<p className='bg-gray-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500'>
-											Card danh sách (21:9)
+											Card danh sách
 										</p>
-										<img
-											src={coverPreviewUrl}
-											alt={coverImage?.name ?? "Ảnh bìa blog"}
-											className='aspect-[21/9] w-full object-cover'
-										/>
+										<div className='bg-gray-100'>
+											<img
+												src={coverPreviewUrl}
+												alt={coverImage?.name ?? "Ảnh bìa blog"}
+												className='aspect-[21/9] w-full object-contain'
+											/>
+										</div>
 									</div>
 
 									<figcaption className='truncate bg-gray-50 px-3 py-2 text-xs font-bold text-gray-700'>

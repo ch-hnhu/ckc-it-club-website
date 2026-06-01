@@ -50,12 +50,12 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 						<Pin className='h-4 w-4' />
 					</span>
 				)}
-				<div className='aspect-[21/9] overflow-hidden'>
+				<div className='aspect-[21/9] overflow-hidden bg-gray-100'>
 					{blog.featured_image ? (
 						<img
 							src={blog.featured_image}
 							alt={blog.title}
-							className='h-full w-full object-cover transition-transform duration-500 group-hover:scale-105'
+							className='h-full w-full object-contain transition-transform duration-500 group-hover:scale-105'
 						/>
 					) : (
 						<Placeholder title={blog.title} tall />
@@ -127,12 +127,12 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 					<Pin className='h-4 w-4' />
 				</span>
 			)}
-			<div className='overflow-hidden'>
+			<div className='overflow-hidden bg-gray-100'>
 				{blog.featured_image ? (
 					<img
 						src={blog.featured_image}
 						alt={blog.title}
-						className='aspect-[16/9] w-full object-cover transition-transform duration-500 group-hover:scale-105'
+						className='aspect-[16/9] w-full object-contain transition-transform duration-500 group-hover:scale-105'
 					/>
 				) : (
 					<Placeholder title={blog.title} />
