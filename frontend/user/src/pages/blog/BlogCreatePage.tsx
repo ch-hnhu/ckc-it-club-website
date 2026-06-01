@@ -26,6 +26,7 @@ const BlogCreatePage: React.FC = () => {
 	const [title, setTitle] = useState("");
 	const [excerpt, setExcerpt] = useState("");
 	const [tags, setTags] = useState<BlogTag[]>([]);
+	const [tagsLoading, setTagsLoading] = useState(true);
 	const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 	const [coverImage, setCoverImage] = useState<File | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,10 +44,12 @@ const BlogCreatePage: React.FC = () => {
 	}, [coverPreviewUrl]);
 
 	useEffect(() => {
+		setTagsLoading(true);
 		blogService
 			.getTags()
 			.then((res) => setTags(res.data))
-			.catch(() => setTags([]));
+			.catch(() => setTags([]))
+			.finally(() => setTagsLoading(false));
 	}, []);
 
 	const openCoverDialog = () => {
@@ -117,8 +120,18 @@ const BlogCreatePage: React.FC = () => {
 				tagIds: selectedTagIds,
 				featuredImage: coverImage,
 			});
-			toast.success("Đã tạo blog!");
-			navigate(`/blog/${response.data.slug}`);
+
+			const isPendingReview = response.data.status === "pending_review";
+			if (isPendingReview) {
+				toast.success("Blog đã được gửi và đang chờ duyệt.", {
+					description: "Ban quản trị sẽ xem xét và duyệt bài viết của bạn sớm nhất.",
+					duration: 5000,
+				});
+				navigate("/blog");
+			} else {
+				toast.success("Đã tạo blog!");
+				navigate(`/blog/${response.data.slug}`);
+			}
 		} catch (error) {
 			setFormError(getErrorMessage(error));
 		} finally {
@@ -187,7 +200,14 @@ const BlogCreatePage: React.FC = () => {
 							Tag
 						</label>
 						<div className='flex flex-wrap gap-2'>
-							{tags.length > 0 ? (
+							{tagsLoading ? (
+								Array.from({ length: 6 }).map((_, i) => (
+									<div
+										key={i}
+										className='h-7 w-20 animate-pulse rounded-full border-2 border-black bg-gray-200'
+									/>
+								))
+							) : tags.length > 0 ? (
 								tags.map((tag) => {
 									const selected = selectedTagIds.includes(tag.id);
 									return (
@@ -248,12 +268,32 @@ const BlogCreatePage: React.FC = () => {
 										aria-label='Xóa ảnh bìa đã chọn'>
 										<X className='h-4 w-4' />
 									</button>
-									<img
-										src={coverPreviewUrl}
-										alt={coverImage?.name ?? "Ảnh bìa blog"}
-										className='aspect-[21/9] w-full object-cover'
-									/>
-									<figcaption className='truncate border-t-2 border-black px-3 py-2 text-xs font-bold text-gray-700'>
+
+									{/* Preview 1: Trang chi tiết (16:9) */}
+									<div className='border-b-2 border-black'>
+										<p className='bg-gray-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500'>
+											Trang chi tiết (16:9)
+										</p>
+										<img
+											src={coverPreviewUrl}
+											alt={coverImage?.name ?? "Ảnh bìa blog"}
+											className='aspect-[16/9] w-full object-cover'
+										/>
+									</div>
+
+									{/* Preview 2: Card danh sách (21:9) */}
+									<div className='border-b-2 border-black'>
+										<p className='bg-gray-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500'>
+											Card danh sách (21:9)
+										</p>
+										<img
+											src={coverPreviewUrl}
+											alt={coverImage?.name ?? "Ảnh bìa blog"}
+											className='aspect-[21/9] w-full object-cover'
+										/>
+									</div>
+
+									<figcaption className='truncate bg-gray-50 px-3 py-2 text-xs font-bold text-gray-700'>
 										{coverImage?.name}
 									</figcaption>
 								</figure>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	ArrowLeft,
@@ -70,10 +70,20 @@ interface BlogCoverProps {
 const BlogCover: React.FC<BlogCoverProps> = ({ loading, title, imageUrl }) => {
 	const [imageLoaded, setImageLoaded] = useState(false);
 	const [imageFailed, setImageFailed] = useState(false);
+	const imgRef = useRef<HTMLImageElement>(null);
 
 	useEffect(() => {
 		setImageLoaded(false);
 		setImageFailed(false);
+	}, [imageUrl]);
+
+	// Ảnh từ cache: onLoad fire trước khi React attach handler → dùng useLayoutEffect
+	// để check img.complete ngay sau khi DOM cập nhật, trước khi browser paint
+	useLayoutEffect(() => {
+		const el = imgRef.current;
+		if (el && el.complete && el.naturalWidth > 0) {
+			setImageLoaded(true);
+		}
 	}, [imageUrl]);
 
 	if (loading) return <CoverSkeleton />;
@@ -92,6 +102,7 @@ const BlogCover: React.FC<BlogCoverProps> = ({ loading, title, imageUrl }) => {
 		<div className='relative mb-8 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-gray-200'>
 			{!imageLoaded && <div className='absolute inset-0 animate-pulse bg-gray-200' />}
 			<img
+				ref={imgRef}
 				src={imageUrl}
 				alt={title || "Ảnh bìa blog"}
 				className={`h-full w-full object-cover transition-opacity duration-300 ${
@@ -269,7 +280,7 @@ const AuthorBioCard: React.FC<AuthorBioCardProps> = ({
 						)}
 						<Link
 							to={profileUrl}
-							className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-gray-900 px-5 font-heading text-sm font-extrabold text-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-white px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 							Xem hồ sơ
 						</Link>
 					</div>

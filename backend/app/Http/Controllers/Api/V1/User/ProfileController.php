@@ -129,8 +129,13 @@ class ProfileController extends BaseApiController
      */
     public function showPublic(string $username): JsonResponse
     {
-        $user = User::where('username', $username)
-            ->where('is_active', true)
+        // Tìm theo username trước; nếu không có thì fallback theo email prefix
+        // (vì buildProfileUrl() dùng email.split("@")[0] khi user chưa đặt username)
+        $user = User::where('is_active', true)
+            ->where(function ($q) use ($username) {
+                $q->where('username', $username)
+                  ->orWhere('email', 'like', "{$username}@%");
+            })
             ->first();
 
         if (! $user) {

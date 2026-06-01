@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\ApiMessage;
+use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
 use App\Models\Comment;
@@ -19,13 +20,13 @@ class BlogController extends BaseApiController
     public function tags(): JsonResponse
     {
         $tags = Tag::query()
-            ->select('id', 'name', 'color')
+            ->select('id', 'name')
             ->orderBy('name')
             ->get()
             ->map(fn (Tag $tag) => [
                 'id'    => $tag->id,
                 'name'  => $tag->name,
-                'color' => $tag->color,
+                'color' => null,
             ])
             ->values()
             ->toArray();
@@ -151,7 +152,9 @@ class BlogController extends BaseApiController
             $i++;
         }
 
-        $blog = DB::transaction(function () use ($request, $slug, $coverImagePath) {
+        $isAdmin = $request->user()->hasRole(RolesEnum::adminRoles());
+
+        $blog = DB::transaction(function () use ($request, $slug, $coverImagePath, $isAdmin) {
             $blog = Blog::create([
                 'author_id'    => $request->user()->id,
                 'title'        => $request->input('title'),
@@ -159,8 +162,8 @@ class BlogController extends BaseApiController
                 'content'      => $request->input('content'),
                 'excerpt'      => $request->input('excerpt'),
                 'cover_image'  => $coverImagePath,
-                'status'       => 'published',
-                'published_at' => now(),
+                'status'       => $isAdmin ? 'published' : 'pending_review',
+                'published_at' => $isAdmin ? now() : null,
                 'view_count'   => 0,
             ]);
 
@@ -173,7 +176,9 @@ class BlogController extends BaseApiController
 
         $blog->load(['author:id,full_name,email,avatar,username', 'tags:id,name']);
 
-        return $this->createdResponse($this->transformBlog($blog), 'Tạo blog thành công.');
+        $message = $isAdmin ? 'Tạo blog thành công.' : 'Blog đã được gửi và đang chờ duyệt.';
+
+        return $this->createdResponse($this->transformBlog($blog), $message);
     }
 
     public function react(Request $request, int $id): JsonResponse
