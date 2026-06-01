@@ -388,7 +388,8 @@ const PostCard: React.FC<PostCardProps> = ({
 				</div>
 			)}
 
-			<div className='mt-4 flex flex-wrap items-center gap-2 border-t-2 border-black pt-3 text-black'>
+			<div className='mt-4 border-t-2 border-black' />
+			<div className='mt-3 flex flex-wrap items-center gap-2 text-black'>
 				<button
 					onClick={handleLike}
 					disabled={loading}
