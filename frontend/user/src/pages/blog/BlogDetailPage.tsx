@@ -267,7 +267,7 @@ const AuthorBioCard: React.FC<AuthorBioCardProps> = ({
 								className={`inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black px-5 font-heading text-sm font-extrabold shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-70 ${
 									followed
 										? "translate-x-[1px] translate-y-[1px] bg-white text-black shadow-none"
-										: "bg-sky-400 text-white"
+										: "bg-[var(--color-primary)] text-black"
 								}`}>
 								{followLoading ? (
 									<Loader2 className='h-4 w-4 animate-spin' />
