@@ -325,14 +325,14 @@ function ChatRoomListPage() {
 				</div>
 
 <div className="flex flex-col gap-4">
-					<div className="flex flex-wrap items-center gap-3">
+					<div className="flex flex-row items-center gap-3">
 						<Input
 							placeholder="Tìm kiếm theo tên phòng..."
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
-							className="h-8 w-full sm:w-64 md:w-80"
+							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
-						<Button size="sm" className="ml-auto h-8 gap-1.5" onClick={openCreateRoom}>
+						<Button size="sm" className="ml-auto h-8 shrink-0 gap-1.5" onClick={openCreateRoom}>
 							<Plus className="h-4 w-4" />
 							Tạo phòng
 						</Button>

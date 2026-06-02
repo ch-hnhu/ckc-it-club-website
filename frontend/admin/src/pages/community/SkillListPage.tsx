@@ -417,16 +417,16 @@ function SkillListPage() {
 
 				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-						<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-							<Input
-								placeholder="Tìm kiếm theo tên skill..."
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-								className="h-8 w-full sm:w-64 md:w-80"
-							/>
+					<div className="flex flex-row items-center gap-3">
+						<Input
+							placeholder="Tìm kiếm theo tên skill..."
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							className="h-8 min-w-0 flex-1 max-w-64"
+						/>
+						<div className="ml-auto flex shrink-0 items-center gap-2">
 							<Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-								<SelectTrigger className="h-8 w-full sm:w-36">
+								<SelectTrigger className="h-8 w-36">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -435,11 +435,11 @@ function SkillListPage() {
 									<SelectItem value="inactive">Đã tắt</SelectItem>
 								</SelectContent>
 							</Select>
+							<Button size="sm" onClick={openCreate} className="h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
+								<Plus className="h-4 w-4" />
+								Thêm skill
+							</Button>
 						</div>
-						<Button size="sm" onClick={openCreate} className="h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
-							<Plus className="h-4 w-4" />
-							Thêm skill
-						</Button>
 					</div>
 
 					<div className="overflow-hidden rounded-md border">

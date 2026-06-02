@@ -362,18 +362,16 @@ function PostListPage() {
 
 				{/* ── Filter bar + Table ── */}
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-						<div className="flex flex-1 items-center gap-2">
-							<Input
-								placeholder="Lọc theo tên tác giả hoặc nội dung bài đăng..."
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-								className="h-8 w-full sm:w-64 md:w-80"
-							/>
-						</div>
+					<div className="flex flex-row items-center justify-between gap-3">
+						<Input
+							placeholder="Lọc theo tên tác giả hoặc nội dung bài đăng..."
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							className="h-8 min-w-0 flex-1 max-w-80"
+						/>
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="outline" size="sm" className="h-8">
+								<Button variant="outline" size="sm" className="h-8 shrink-0">
 									<Filter className="h-4 w-4" />
 									{statusFilter === "all"
 										? "Tất cả trạng thái"

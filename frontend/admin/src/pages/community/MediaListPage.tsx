@@ -440,14 +440,14 @@ function MediaListPage() {
 
 				{/* Filter + Table */}
 				<div className='flex flex-col gap-4'>
-					<div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
+					<div className='flex flex-row items-center gap-3'>
 						<Input
 							placeholder='Tìm theo tên chủ sở hữu hoặc URL...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className='h-8 w-full sm:w-64 md:w-80'
+							className='h-8 min-w-0 flex-1 max-w-80'
 						/>
-						<div className='flex items-center gap-2'>
+						<div className='ml-auto flex shrink-0 items-center gap-2'>
 							{/* File type filter */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>

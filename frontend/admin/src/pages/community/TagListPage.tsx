@@ -267,14 +267,14 @@ function TagListPage() {
 
 				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+					<div className="flex flex-row items-center gap-3">
 						<Input
 							placeholder="Tìm kiếm theo tên tag..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="h-8 w-full sm:w-64 md:w-80"
+							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
-						<Button size="sm" onClick={openCreate} className="h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
+						<Button size="sm" onClick={openCreate} className="ml-auto h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
 							<Plus className="h-4 w-4" />
 							Thêm tag
 						</Button>
