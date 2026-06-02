@@ -348,42 +348,15 @@ function MediaListPage() {
 	return (
 		<div className='min-h-full bg-background'>
 			<div className='space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8'>
-				{/* Hero */}
-				<section className='overflow-hidden rounded-[30px] border border-indigo-500/15 bg-[linear-gradient(135deg,rgba(99,102,241,0.13),rgba(248,250,255,0.96)_44%,rgba(252,252,255,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(99,102,241,0.13),rgba(10,10,18,0.96)_45%,rgba(8,8,14,0.98)_100%)]'>
-					<div className='px-6 py-7 md:px-8 md:py-9'>
-						<div className='max-w-3xl space-y-4'>
-							<Badge className='w-fit rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-indigo-800 hover:bg-indigo-500/10 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-200'>
-								Quản lý tài nguyên
-							</Badge>
-							<div className='space-y-2'>
-								<h1 className='text-foreground text-[1.85rem] font-semibold leading-tight md:text-[2.4rem] md:leading-[1.1]'>
-									Tài nguyên media cộng đồng
-								</h1>
-								<p className='text-sm leading-7 text-indigo-950/70 md:text-base dark:text-indigo-50/65'>
-									Theo dõi toàn bộ hình ảnh, video, tài liệu và GIF được tải lên
-									bởi thành viên trong bài đăng, blog và tin nhắn.
-								</p>
-							</div>
-							<div className='flex flex-wrap items-center gap-3 pt-1'>
-								<Button
-									variant='outline'
-									className='h-10 rounded-2xl border-indigo-500/20 bg-background/80 px-4 text-indigo-800 shadow-sm hover:bg-indigo-500/10 dark:bg-background/70 dark:text-indigo-200'
-									onClick={() => {
-										setSearch("");
-										setFileTypeFilter("all");
-										setTargetTypeFilter("all");
-									}}>
-									<RefreshCw className='size-4' />
-									Đặt lại bộ lọc
-								</Button>
-								<div className='inline-flex h-10 items-center gap-2 rounded-2xl border border-indigo-500/20 bg-background/72 px-4 text-sm font-medium text-indigo-800 dark:text-indigo-200'>
-									<Filter className='size-4' />
-									{activeFilterCount} điều kiện đang áp dụng
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
+				{/* Header */}
+				<div className='space-y-2'>
+					<h2 className='text-2xl font-semibold tracking-tight'>
+						Tài nguyên media cộng đồng
+					</h2>
+					<p className='text-muted-foreground'>
+						Theo dõi toàn bộ hình ảnh, video, tài liệu và GIF được tải lên bởi thành viên trong bài đăng, blog và tin nhắn.
+					</p>
+				</div>
 
 				{/* Stats */}
 				<section className='grid gap-4 sm:grid-cols-2 xl:grid-cols-3'>

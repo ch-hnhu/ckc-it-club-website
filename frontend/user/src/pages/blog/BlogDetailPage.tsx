@@ -490,6 +490,7 @@ const BlogDetailPage: React.FC = () => {
 	const [heartCount, setHeartCount] = useState(0);
 	const [reactionLoading, setReactionLoading] = useState(false);
 	const [saved, setSaved] = useState(false);
+	const [saveLoading, setSaveLoading] = useState(false);
 
 	const [followed, setFollowed] = useState(false);
 	const [followLoading, setFollowLoading] = useState(false);
@@ -517,6 +518,7 @@ const BlogDetailPage: React.FC = () => {
 				setBlog(res.data);
 				setLiked(res.data.my_reaction === "heart");
 				setHeartCount(res.data.reactions_count);
+				setSaved(res.data.my_bookmark ?? false);
 				setFollowed(res.data.user?.is_following ?? false);
 			})
 			.catch(() => setBlogError("Không tìm thấy bài viết."))
@@ -624,6 +626,28 @@ const BlogDetailPage: React.FC = () => {
 	};
 
 	const isOwnProfile = Boolean(user?.id && blog?.user?.id && Number(user.id) === blog.user.id);
+
+	const handleToggleSaved = async () => {
+		if (!user) {
+			navigate("/login", { state: { from: window.location.pathname } });
+			return;
+		}
+		if (!blog || saveLoading) return;
+
+		const wasSaved = saved;
+		setSaved(!wasSaved);
+		setSaveLoading(true);
+		try {
+			const res = await blogService.toggleBookmark(blog.id);
+			setSaved(res.data.bookmarked);
+			toast.success(res.data.bookmarked ? "Đã lưu bài viết." : "Đã bỏ lưu bài viết.");
+		} catch {
+			setSaved(wasSaved);
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setSaveLoading(false);
+		}
+	};
 
 	// Cleanup copy timeout on unmount
 	useEffect(() => {
@@ -841,8 +865,9 @@ const BlogDetailPage: React.FC = () => {
 										</button>
 
 										<button
-											onClick={() => setSaved((p) => !p)}
-											className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+											onClick={handleToggleSaved}
+											disabled={saveLoading}
+											className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
 											style={{
 												background: saved ? "var(--color-primary)" : "#fff",
 											}}

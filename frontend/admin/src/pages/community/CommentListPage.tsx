@@ -238,37 +238,15 @@ function CommentListPage() {
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
 
-				{/* Hero */}
-				<section className="overflow-hidden rounded-[30px] border border-orange-500/15 bg-[linear-gradient(135deg,rgba(249,115,22,0.12),rgba(255,251,247,0.96)_44%,rgba(255,253,250,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(249,115,22,0.12),rgba(18,12,8,0.96)_45%,rgba(12,8,5,0.98)_100%)]">
-					<div className="px-6 py-7 md:px-8 md:py-9">
-						<div className="max-w-3xl space-y-4">
-							<Badge className="w-fit rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-orange-800 hover:bg-orange-500/10 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-200">
-								Kiểm duyệt bình luận
-							</Badge>
-							<div className="space-y-2">
-								<h1 className="text-foreground text-[1.85rem] font-semibold leading-tight md:text-[2.4rem] md:leading-[1.1]">
-									Quản lý bình luận cộng đồng
-								</h1>
-								<p className="text-sm leading-7 text-orange-950/70 md:text-base dark:text-orange-50/65">
-									Xem và kiểm duyệt toàn bộ bình luận trên bài đăng và blog. Ẩn hoặc xóa bình luận vi phạm nội quy.
-								</p>
-							</div>
-							<div className="flex flex-wrap items-center gap-3 pt-1">
-								<Button
-									variant="outline"
-									className="h-10 rounded-2xl border-orange-500/20 bg-background/80 px-4 text-orange-800 shadow-sm hover:bg-orange-500/10 dark:bg-background/70 dark:text-orange-200"
-									onClick={() => { setSearch(""); setVisibilityFilter("all"); setTypeFilter("all"); }}>
-									<RefreshCw className="size-4" />
-									Đặt lại bộ lọc
-								</Button>
-								<div className="inline-flex h-10 items-center gap-2 rounded-2xl border border-orange-500/20 bg-background/72 px-4 text-sm font-medium text-orange-800 dark:text-orange-200">
-									<Filter className="size-4" />
-									{activeFilterCount} điều kiện đang áp dụng
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
+				{/* Header */}
+				<div className="space-y-2">
+					<h2 className="text-2xl font-semibold tracking-tight">
+						Quản lý bình luận cộng đồng
+					</h2>
+					<p className="text-muted-foreground">
+						Xem và kiểm duyệt toàn bộ bình luận trên bài đăng và blog. Ẩn hoặc xóa bình luận vi phạm nội quy.
+					</p>
+				</div>
 
 				{/* Stats */}
 				<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

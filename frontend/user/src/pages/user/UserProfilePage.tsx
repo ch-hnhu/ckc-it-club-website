@@ -38,6 +38,7 @@ import type { AuthUser } from "@/services/auth.service";
 import { api } from "@/services/api.service";
 import { userService } from "@/services/user.service";
 import { postService } from "@/services/post.service";
+import { blogService } from "@/services/blog.service";
 import type { ApiResponse } from "@/types/api.types";
 import type { Blog } from "@/types/blog.types";
 import {
@@ -1133,6 +1134,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
 const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 	const [posts, setPosts] = useState<Post[]>([]);
+	const [blogs, setBlogs] = useState<Blog[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);
 
@@ -1141,10 +1143,12 @@ const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 		setLoading(true);
 		setError(false);
 
-		userService
-			.getBookmarks()
-			.then((res) => {
-				if (!cancelled) setPosts(res.data);
+		Promise.all([userService.getBookmarks(), blogService.getBookmarkedBlogs()])
+			.then(([postsRes, blogsRes]) => {
+				if (!cancelled) {
+					setPosts(postsRes.data);
+					setBlogs(blogsRes.data);
+				}
 			})
 			.catch(() => {
 				if (!cancelled) setError(true);
@@ -1180,30 +1184,56 @@ const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 		);
 	}
 
-	if (posts.length === 0) {
+	const isEmpty = posts.length === 0 && blogs.length === 0;
+
+	if (isEmpty) {
 		return (
 			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
 				<Bookmark className='mx-auto mb-4 h-10 w-10 text-gray-300' />
 				<p className='font-heading text-base font-extrabold text-black'>
-					Chưa có bài viết nào được lưu
+					Chưa có nội dung nào được lưu
 				</p>
 				<p className='mt-1 text-sm text-gray-400'>
-					Những bài viết bạn lưu sẽ hiển thị ở đây.
+					Bài viết và blog bạn lưu sẽ hiển thị ở đây.
 				</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
-			{posts.map((post) => (
-				<PostCard
-					key={post.id}
-					post={post}
-					user={user}
-					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
-				/>
-			))}
+		<div className='mt-5 mb-5 space-y-8 px-6 sm:px-0'>
+			{/* Posts đã lưu */}
+			{posts.length > 0 && (
+				<section>
+					<h3 className='mb-4 font-heading text-base font-extrabold text-black'>
+						Bài viết cộng đồng ({posts.length})
+					</h3>
+					<div className='space-y-5'>
+						{posts.map((post) => (
+							<PostCard
+								key={post.id}
+								post={post}
+								user={user}
+								onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+							/>
+						))}
+					</div>
+				</section>
+			)}
+
+			{/* Blogs đã lưu */}
+			{blogs.length > 0 && (
+				<section>
+					<h3 className='mb-4 font-heading text-base font-extrabold text-black'>
+						Blog ({blogs.length})
+					</h3>
+					<div className='grid gap-5 sm:grid-cols-2'>
+						{blogs.map((blog) => (
+							<BlogCard key={blog.id} blog={blog} />
+						))}
+					</div>
+				</section>
+			)}
 		</div>
 	);
 };

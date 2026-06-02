@@ -281,7 +281,7 @@ function ChannelListPage() {
 				{/* Header */}
 				<div className="space-y-1">
 					<h2 className="text-2xl font-semibold tracking-tight">Quản lý kênh</h2>
-					<p className="text-muted-foreground text-sm">
+					<p className="text-muted-foreground">
 						Tạo và quản lý các kênh thảo luận trong cộng đồng CLB.
 					</p>
 				</div>

@@ -302,37 +302,15 @@ function PostListPage() {
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
 
-				{/* ── Hero banner ── */}
-				<section className="overflow-hidden rounded-[30px] border border-violet-500/15 bg-[linear-gradient(135deg,rgba(139,92,246,0.15),rgba(248,250,255,0.96)_44%,rgba(252,252,255,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(139,92,246,0.15),rgba(12,12,18,0.96)_45%,rgba(8,8,12,0.98)_100%)]">
-					<div className="px-6 py-7 md:px-8 md:py-9">
-						<div className="max-w-3xl space-y-4">
-							<Badge className="w-fit rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-violet-800 hover:bg-violet-500/10 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-200">
-								Quản lý bài đăng cộng đồng
-							</Badge>
-							<div className="space-y-2">
-								<h1 className="text-foreground text-[1.85rem] font-semibold leading-tight md:text-[2.4rem] md:leading-[1.1]">
-									Kiểm duyệt và quản lý bài đăng
-								</h1>
-								<p className="text-sm leading-7 text-violet-950/70 md:text-base dark:text-violet-50/65">
-									Xem toàn bộ bài đăng từ thành viên, kiểm duyệt nội dung, ghim bài nổi bật và xóa bài vi phạm.
-								</p>
-							</div>
-							<div className="flex flex-wrap items-center gap-3 pt-1">
-								<Button
-									variant="outline"
-									className="h-10 rounded-2xl border-violet-500/20 bg-background/80 px-4 text-violet-800 shadow-sm hover:bg-violet-500/10 dark:bg-background/70 dark:text-violet-200"
-									onClick={() => { setSearch(""); setStatusFilter("all"); }}>
-									<RefreshCw className="size-4" />
-									Đặt lại bộ lọc
-								</Button>
-								<div className="inline-flex h-10 items-center gap-2 rounded-2xl border border-violet-500/20 bg-background/72 px-4 text-sm font-medium text-violet-800 dark:text-violet-200">
-									<Filter className="size-4" />
-									{activeFilterCount} điều kiện đang áp dụng
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
+				{/* ── Header ── */}
+				<div className="space-y-2">
+					<h2 className="text-2xl font-semibold tracking-tight">
+						Kiểm duyệt và quản lý bài đăng
+					</h2>
+					<p className="text-muted-foreground">
+						Xem toàn bộ bài đăng từ thành viên, kiểm duyệt nội dung, ghim bài nổi bật và xóa bài vi phạm.
+					</p>
+				</div>
 
 				{/* ── Stats cards ── */}
 				<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

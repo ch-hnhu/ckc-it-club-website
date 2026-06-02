@@ -363,23 +363,15 @@ function ChatRoomListPage() {
 	return (
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
-				<section className="overflow-hidden rounded-[30px] border border-sky-500/15 bg-[linear-gradient(135deg,rgba(14,165,233,0.10),rgba(248,252,255,0.96)_44%,rgba(252,254,255,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.10),rgba(8,14,18,0.96)_45%,rgba(5,9,12,0.98)_100%)]">
-					<div className="px-6 py-7 md:px-8 md:py-9">
-						<div className="max-w-3xl space-y-4">
-							<Badge className="w-fit rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-sky-800 hover:bg-sky-500/10 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200">
-								Phòng chat
-							</Badge>
-							<div className="space-y-2">
-								<h1 className="text-foreground text-[1.85rem] font-semibold leading-tight md:text-[2.4rem] md:leading-[1.1]">
-									Quản lý phòng chat
-								</h1>
-								<p className="text-sm leading-7 text-sky-950/70 md:text-base dark:text-sky-50/65">
-									Quản lý các phòng chat nhóm trong CLB, theo dõi số thành viên, tin nhắn và thời điểm hoạt động gần nhất.
-								</p>
-							</div>
-						</div>
-					</div>
-				</section>
+				{/* Header */}
+				<div className="space-y-2">
+					<h2 className="text-2xl font-semibold tracking-tight">
+						Quản lý phòng chat
+					</h2>
+					<p className="text-muted-foreground">
+						Quản lý các phòng chat nhóm trong CLB, theo dõi số thành viên, tin nhắn và thời điểm hoạt động gần nhất.
+					</p>
+				</div>
 
 				<div className="grid gap-4 sm:grid-cols-2">
 					<StatCard

@@ -406,23 +406,6 @@ function ApplicationRequestsPage() {
 								Lọc nhanh theo trạng thái và từ khóa, chuyển sang chi tiết để xử lý
 								từng ứng viên.
 							</p>
-							<div className='flex flex-wrap items-center gap-2'>
-								<Button
-									variant='outline'
-									size='sm'
-									className='h-8 rounded-xl border-emerald-500/20 bg-background/80 px-3 text-emerald-800 shadow-sm hover:bg-emerald-500/10 dark:bg-background/70 dark:text-emerald-200'
-									onClick={() => {
-										setSearch("");
-										setStatusFilter("all");
-									}}>
-									<RefreshCw className='size-3.5' />
-									Đặt lại bộ lọc
-								</Button>
-								<div className='inline-flex h-8 items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-background/72 px-3 text-xs font-medium text-emerald-800 dark:text-emerald-200'>
-									<Filter className='size-3.5' />
-									{activeFilterCount} điều kiện đang áp dụng
-								</div>
-							</div>
 						</div>
 
 						{/* Right — compact stats card */}
