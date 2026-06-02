@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Api\BaseApiController;
+use App\Models\ChatMember;
 use App\Models\ChatRoom;
 use App\Models\Message;
 use Illuminate\Http\JsonResponse;
@@ -11,82 +12,127 @@ use Illuminate\Support\Facades\DB;
 
 class ChatRoomController extends BaseApiController
 {
-    // ─── Danh sách phòng chat ─────────────────────────────────────────────────
-
     public function index(Request $request): JsonResponse
     {
-        $perPage  = min(50, max(1, (int) $request->query('per_page', 20)));
-        $search   = $request->query('search');
-        $type     = $request->query('type'); // 'direct' | 'group'
+        $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
+        $search = $request->query('search');
 
-        $allowedSorts = ['id', 'name', 'member_count', 'system_events_count', 'last_message_at', 'created_at'];
-        $sort  = in_array($request->query('sort', 'last_message_at'), $allowedSorts)
+        $allowedSorts = ['id', 'name', 'member_count', 'message_count', 'last_message_at', 'created_at'];
+        $sort = in_array($request->query('sort', 'last_message_at'), $allowedSorts, true)
             ? $request->query('sort', 'last_message_at')
             : 'last_message_at';
-        $order = in_array($request->query('order', 'desc'), ['asc', 'desc'])
+        $order = in_array($request->query('order', 'desc'), ['asc', 'desc'], true)
             ? $request->query('order', 'desc')
             : 'desc';
 
+        $sortColumn = match ($sort) {
+            'member_count' => DB::raw('members_count'),
+            'message_count' => DB::raw('messages_count'),
+            default => $sort,
+        };
+
         $paginated = ChatRoom::query()
-            ->withCount([
-                'members',
-                'messages',
-                'messages as system_events_count' => fn ($q) => $q->where('type', 'system'),
-            ])
-            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
-            ->when($type && in_array($type, ['direct', 'group']), fn ($q) => $q->where('type', $type))
-            ->orderBy($sort === 'member_count' || $sort === 'system_events_count'
-                ? DB::raw($sort)  // calculated columns
-                : $sort, $order)
+            ->withCount(['members', 'messages'])
+            ->when($search, fn ($query) => $query->where('name', 'like', "%{$search}%"))
+            ->orderBy($sortColumn, $order)
             ->paginate($perPage);
 
-        $items = collect($paginated->items())->map(fn ($room) => $this->transformRoom($room));
+        $items = collect($paginated->items())->map(fn (ChatRoom $room) => $this->transformRoom($room));
 
         return response()->json([
             'success' => true,
             'message' => 'Lấy danh sách phòng chat thành công.',
-            'data'    => $items,
-            'meta'    => [
+            'data' => $items,
+            'meta' => [
                 'current_page' => $paginated->currentPage(),
-                'from'         => $paginated->firstItem(),
-                'last_page'    => $paginated->lastPage(),
-                'per_page'     => $paginated->perPage(),
-                'to'           => $paginated->lastItem(),
-                'total'        => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'to' => $paginated->lastItem(),
+                'total' => $paginated->total(),
             ],
             'links' => [
                 'first' => $paginated->url(1),
-                'last'  => $paginated->url($paginated->lastPage()),
-                'prev'  => $paginated->previousPageUrl(),
-                'next'  => $paginated->nextPageUrl(),
+                'last' => $paginated->url($paginated->lastPage()),
+                'prev' => $paginated->previousPageUrl(),
+                'next' => $paginated->nextPageUrl(),
             ],
         ]);
     }
 
-    // ─── Thống kê ─────────────────────────────────────────────────────────────
-
     public function stats(): JsonResponse
     {
-        $total        = ChatRoom::count();
-        $groupCount   = ChatRoom::where('type', 'group')->count();
-        $directCount  = ChatRoom::where('type', 'direct')->count();
-        $systemEvents = Message::where('type', 'system')->count();
-
         return $this->successResponse(true, [
-            'total'         => $total,
-            'group_count'   => $groupCount,
-            'direct_count'  => $directCount,
-            'system_events' => $systemEvents,
+            'total' => ChatRoom::count(),
+            'system_events' => Message::where('type', 'system')->count(),
         ], 'Lấy thống kê phòng chat thành công.');
     }
 
-    // ─── Nhật ký sự kiện hệ thống của 1 phòng ────────────────────────────────
+    public function store(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'min:2', 'max:50'],
+        ]);
+
+        $name = trim((string) $request->input('name'));
+
+        if ($this->roomNameExists($name)) {
+            return $this->validationErrorResponse([
+                'name' => ['Tên phòng chat đã tồn tại.'],
+            ], 'Tên phòng chat đã tồn tại.');
+        }
+
+        $room = DB::transaction(function () use ($request, $name) {
+            $room = ChatRoom::create(['name' => $name]);
+
+            if ($request->user()) {
+                ChatMember::create([
+                    'room_id' => $room->id,
+                    'user_id' => $request->user()->id,
+                    'role' => 'admin',
+                    'last_read_at' => now(),
+                ]);
+            }
+
+            return $room;
+        });
+
+        $room->loadCount(['members', 'messages']);
+
+        return $this->createdResponse($this->transformRoom($room), 'Tạo phòng chat thành công.');
+    }
+
+    public function update(Request $request, ChatRoom $room): JsonResponse
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'min:2', 'max:50'],
+        ]);
+
+        $name = trim((string) $request->input('name'));
+
+        if ($this->roomNameExists($name, $room->id)) {
+            return $this->validationErrorResponse([
+                'name' => ['Tên phòng chat đã tồn tại.'],
+            ], 'Tên phòng chat đã tồn tại.');
+        }
+
+        $room->update(['name' => $name]);
+        $room->loadCount(['members', 'messages']);
+
+        return $this->successResponse(true, $this->transformRoom($room), 'Cập nhật phòng chat thành công.');
+    }
+
+    public function destroy(ChatRoom $room): JsonResponse
+    {
+        $room->delete();
+
+        return $this->successResponse(true, null, 'Xóa phòng chat thành công.');
+    }
 
     public function systemMessages(Request $request, int $roomId): JsonResponse
     {
         $room = ChatRoom::findOrFail($roomId);
-
-        $perPage   = min(50, max(1, (int) $request->query('per_page', 20)));
+        $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
         $eventType = $request->query('event_type');
 
         $paginated = Message::query()
@@ -95,40 +141,37 @@ class ChatRoomController extends BaseApiController
             ->with('creator:id,full_name,email,avatar')
             ->when(
                 $eventType && $eventType !== 'all',
-                fn ($q) => $q->where('event_type', $eventType)
+                fn ($query) => $query->where('event_type', $eventType)
             )
-            ->orderBy('created_at', 'desc')
+            ->orderByDesc('created_at')
             ->paginate($perPage);
 
-        $items = collect($paginated->items())->map(fn ($msg) => $this->transformMessage($msg));
+        $items = collect($paginated->items())->map(fn (Message $message) => $this->transformMessage($message));
 
         return response()->json([
             'success' => true,
             'message' => 'Lấy nhật ký sự kiện thành công.',
-            'data'    => $items,
-            'meta'    => [
+            'data' => $items,
+            'meta' => [
                 'current_page' => $paginated->currentPage(),
-                'from'         => $paginated->firstItem(),
-                'last_page'    => $paginated->lastPage(),
-                'per_page'     => $paginated->perPage(),
-                'to'           => $paginated->lastItem(),
-                'total'        => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'to' => $paginated->lastItem(),
+                'total' => $paginated->total(),
             ],
             'links' => [
                 'first' => $paginated->url(1),
-                'last'  => $paginated->url($paginated->lastPage()),
-                'prev'  => $paginated->previousPageUrl(),
-                'next'  => $paginated->nextPageUrl(),
+                'last' => $paginated->url($paginated->lastPage()),
+                'prev' => $paginated->previousPageUrl(),
+                'next' => $paginated->nextPageUrl(),
             ],
             'room' => [
-                'id'   => $room->id,
+                'id' => $room->id,
                 'name' => $room->name,
-                'type' => $room->type,
             ],
         ]);
     }
-
-    // ─── Xóa 1 system message ─────────────────────────────────────────────────
 
     public function destroyMessage(int $roomId, int $messageId): JsonResponse
     {
@@ -146,35 +189,39 @@ class ChatRoomController extends BaseApiController
         return $this->successResponse(true, null, 'Đã xóa sự kiện.');
     }
 
-    // ─── Transforms ───────────────────────────────────────────────────────────
-
     private function transformRoom(ChatRoom $room): array
     {
         return [
-            'id'                   => $room->id,
-            'type'                 => $room->type,
-            'name'                 => $room->name,
-            'member_count'         => $room->members_count ?? 0,
-            'message_count'        => $room->messages_count ?? 0,
-            'system_events_count'  => $room->system_events_count ?? 0,
-            'last_message_at'      => $room->last_message_at?->toISOString(),
-            'created_at'           => $room->created_at->toISOString(),
+            'id' => $room->id,
+            'name' => $room->name,
+            'member_count' => $room->members_count ?? 0,
+            'message_count' => $room->messages_count ?? 0,
+            'last_message_at' => $room->last_message_at?->toISOString(),
+            'created_at' => $room->created_at->toISOString(),
         ];
     }
 
-    private function transformMessage(Message $msg): array
+    private function transformMessage(Message $message): array
     {
         return [
-            'id'         => $msg->id,
-            'event_type' => $msg->event_type,
-            'content'    => $msg->content,
-            'created_at' => $msg->created_at->toISOString(),
-            'creator'    => $msg->creator ? [
-                'id'        => $msg->creator->id,
-                'full_name' => $msg->creator->full_name,
-                'email'     => $msg->creator->email,
-                'avatar'    => $msg->creator->avatar,
+            'id' => $message->id,
+            'event_type' => $message->event_type,
+            'content' => $message->content,
+            'created_at' => $message->created_at->toISOString(),
+            'creator' => $message->creator ? [
+                'id' => $message->creator->id,
+                'full_name' => $message->creator->full_name,
+                'email' => $message->creator->email,
+                'avatar' => $message->creator->avatar,
             ] : null,
         ];
+    }
+
+    private function roomNameExists(string $name, ?int $ignoreId = null): bool
+    {
+        return ChatRoom::query()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->exists();
     }
 }

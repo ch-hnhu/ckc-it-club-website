@@ -37,7 +37,6 @@ import BlogCreatePage from "@/pages/community/BlogCreatePage";
 import BlogDetailPage from "@/pages/community/BlogDetailPage";
 import CommentListPage from "@/pages/community/CommentListPage";
 import TagListPage from "@/pages/community/TagListPage";
-import SystemNotificationPage from "@/pages/community/SystemNotificationPage";
 import ChatRoomListPage from "@/pages/community/ChatRoomListPage";
 import MediaListPage from "@/pages/community/MediaListPage";
 import SkillListPage from "@/pages/community/SkillListPage";
@@ -313,14 +312,6 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.tags.manage">
 						<TagListPage />
-					</PermissionRoute>
-				),
-			},
-			{
-				path: "community/notifications",
-				element: (
-					<PermissionRoute permission="community.notifications.send">
-						<SystemNotificationPage />
 					</PermissionRoute>
 				),
 			},

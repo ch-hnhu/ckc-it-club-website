@@ -179,11 +179,6 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "community.chat.view",
 			},
 			{
-				title: "Thông báo hệ thống",
-				url: "/community/notifications",
-				permission: "community.notifications.send",
-			},
-			{
 				title: "Tài nguyên",
 				url: "/community/media",
 				permission: "community.media.view",

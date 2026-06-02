@@ -60,19 +60,10 @@ export interface TagRecord {
 	id: number;
 	name: string;
 	slug: string;
-	color: string | null;
 	posts_count: number;
 	blogs_count: number;
 	created_at: string;
 }
-
-// ─── Preset colors ───────────────────────────────────────────────────────────
-
-const PRESET_COLORS = [
-	"#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
-	"#f97316", "#eab308", "#22c55e", "#14b8a6",
-	"#3b82f6", "#06b6d4", "#64748b", "#a855f7",
-];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -85,16 +76,15 @@ function formatDate(value: string | null) {
 }
 
 
-type SortKey = "id" | "name" | "posts_count" | "blogs_count" | "created_at";
+type SortKey = "id" | "name" | "slug" | "blogs_count" | "created_at";
 
 // ─── Form state ──────────────────────────────────────────────────────────────
 
 interface TagFormState {
 	name: string;
-	color: string;
 }
 
-const emptyForm: TagFormState = { name: "", color: "#6366f1" };
+const emptyForm: TagFormState = { name: "" };
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -181,7 +171,7 @@ function TagListPage() {
 
 	const openEdit = (tag: TagRecord) => {
 		setEditTarget(tag);
-		setForm({ name: tag.name, color: tag.color ?? "#6366f1" });
+		setForm({ name: tag.name });
 		setFormOpen(true);
 	};
 
@@ -204,13 +194,22 @@ function TagListPage() {
 				const res = await tagService.createTag({
 					name: form.name,
 				});
-				setTags((prev) => [{ ...res.data, color: form.color }, ...prev]);
+				setTags((prev) => [res.data, ...prev]);
 				toast.success("Đã tạo tag mới.");
 			}
 			setFormOpen(false);
 			setReloadToken((p) => p + 1);
-		} catch {
-			toast.error("Không thể lưu tag. Vui lòng thử lại.");
+		} catch (err) {
+			const msg =
+				(err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })
+					?.response?.data?.errors
+					? Object.values(
+						(err as { response: { data: { errors: Record<string, string[]> } } })
+							.response.data.errors
+					).flat()[0]
+					: (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+						?? "Không thể lưu tag. Vui lòng thử lại.";
+			toast.error(msg);
 		} finally {
 			setIsSaving(false);
 		}
@@ -232,17 +231,17 @@ function TagListPage() {
 		}
 	};
 
-	const totalUsage = tags.reduce((s, t) => s + t.posts_count + t.blogs_count, 0);
-	const unusedCount = tags.filter((t) => t.posts_count + t.blogs_count === 0).length;
+	const totalUsage = tags.reduce((s, t) => s + t.blogs_count, 0);
+	const unusedCount = tags.filter((t) => t.blogs_count === 0).length;
 
 	return (
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
 
 				{/* Header */}
-				<div className="space-y-1">
+				<div className="space-y-2">
 					<h2 className="text-2xl font-semibold tracking-tight">Quản lý Tags</h2>
-					<p className="text-muted-foreground text-sm">
+					<p className="text-muted-foreground">
 						Tạo và quản lý tags dùng chung cho bài đăng và blog của cộng đồng.
 					</p>
 				</div>
@@ -257,7 +256,7 @@ function TagListPage() {
 					<div className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-5 shadow-sm">
 						<p className="text-sm font-semibold text-foreground">Lượt sử dụng</p>
 						<p className="mt-1 text-3xl font-semibold tracking-tight text-violet-700 dark:text-violet-300">{totalUsage}</p>
-						<p className="mt-1 text-xs text-muted-foreground">Tổng số lần được gán trên bài đăng và blog.</p>
+						<p className="mt-1 text-xs text-muted-foreground">Tổng số lần được gán trên blog.</p>
 					</div>
 					<div className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-5 shadow-sm">
 						<p className="text-sm font-semibold text-foreground">Chưa dùng</p>
@@ -268,14 +267,14 @@ function TagListPage() {
 
 				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+					<div className="flex flex-row items-center gap-3">
 						<Input
 							placeholder="Tìm kiếm theo tên tag..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="h-8 w-full sm:w-64 md:w-80"
+							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
-						<Button size="sm" onClick={openCreate} className="h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
+						<Button size="sm" onClick={openCreate} className="ml-auto h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
 							<Plus className="h-4 w-4" />
 							Thêm tag
 						</Button>
@@ -299,12 +298,11 @@ function TagListPage() {
 											Tên tag {getSortIcon("name")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[180px] text-sm font-medium">Slug</TableHead>
-									<TableHead className="w-[120px]">
-										<Button variant="ghost" onClick={() => handleSort("posts_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Bài đăng {getSortIcon("posts_count")}
-										</Button>
-									</TableHead>
+									<TableHead className="w-[180px]">
+									<Button variant="ghost" onClick={() => handleSort("slug")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Slug {getSortIcon("slug")}
+									</Button>
+								</TableHead>
 									<TableHead className="w-[100px]">
 										<Button variant="ghost" onClick={() => handleSort("blogs_count")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Blog {getSortIcon("blogs_count")}
@@ -336,18 +334,12 @@ function TagListPage() {
 											</TableCell>
 											<TableCell className="font-medium text-muted-foreground">#{tag.id}</TableCell>
 											<TableCell>
-												<Badge
-													variant="outline"
-													className="rounded-full border-transparent px-3 py-0.5 text-sm font-medium text-black dark:text-black"
-													style={{
-														backgroundColor: tag.color ?? "#64748b",
-													}}>
+												<Badge variant="outline" className="rounded-full px-3 py-0.5 text-sm font-medium">
 													<Tag className="mr-1.5 h-3 w-3" />
 													{tag.name}
 												</Badge>
 											</TableCell>
 											<TableCell className="text-sm text-muted-foreground font-mono">{tag.slug}</TableCell>
-											<TableCell className="text-sm text-muted-foreground">{tag.posts_count}</TableCell>
 											<TableCell className="text-sm text-muted-foreground">{tag.blogs_count}</TableCell>
 											<TableCell className="text-sm text-muted-foreground">{formatDate(tag.created_at)}</TableCell>
 											<TableCell>
@@ -448,41 +440,6 @@ function TagListPage() {
 								onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
 							/>
 						</div>
-						<div className="space-y-2">
-							<Label>Màu sắc</Label>
-							<div className="flex flex-wrap gap-2">
-								{PRESET_COLORS.map((color) => (
-									<button
-										key={color}
-										type="button"
-										onClick={() => setForm((p) => ({ ...p, color }))}
-										className={`h-7 w-7 rounded-full ring-offset-background transition-all hover:scale-110 ${
-											form.color === color ? "ring-2 ring-ring ring-offset-2" : ""
-										}`}
-										style={{ backgroundColor: color }}
-										aria-label={color}
-									/>
-								))}
-							</div>
-							<div className="flex items-center gap-3 pt-1">
-								<span
-									className="h-8 w-8 shrink-0 rounded-full ring-1 ring-black/10"
-									style={{ backgroundColor: form.color }}
-								/>
-								<Input
-									type="color"
-									value={form.color}
-									onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))}
-									className="h-8 w-20 cursor-pointer px-1 py-0.5"
-								/>
-								<Badge
-									variant="outline"
-									className="rounded-full px-3"
-									style={{ borderColor: `${form.color}50`, color: form.color }}>
-									{form.name || "Xem trước"}
-								</Badge>
-							</div>
-						</div>
 					</div>
 					<DialogFooter>
 						<Button variant="outline" onClick={() => setFormOpen(false)} disabled={isSaving}>Hủy</Button>
@@ -502,15 +459,13 @@ function TagListPage() {
 							<div className="space-y-3 text-sm text-muted-foreground">
 								<p>Bạn sắp xóa tag:</p>
 								<div className="flex items-center gap-2">
-									<span className="h-3 w-3 rounded-full" style={{ backgroundColor: deleteTarget.color ?? "#64748b" }} />
-									<Badge variant="outline" className="rounded-full"
-										style={deleteTarget.color ? { borderColor: `${deleteTarget.color}50`, color: deleteTarget.color } : undefined}>
+									<Badge variant="outline" className="rounded-full">
 										{deleteTarget.name}
 									</Badge>
 								</div>
-								{(deleteTarget.posts_count + deleteTarget.blogs_count) > 0 && (
+								{deleteTarget.blogs_count > 0 && (
 									<p className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-amber-700">
-										Tag này đang được dùng trong {deleteTarget.posts_count} bài đăng và {deleteTarget.blogs_count} blog.
+										Tag này đang được dùng trong {deleteTarget.blogs_count} blog.
 										Xóa tag sẽ gỡ nó khỏi tất cả nội dung liên quan.
 									</p>
 								)}

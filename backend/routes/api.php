@@ -82,12 +82,18 @@ Route::prefix('v1')->group(function () {
         // Authenticated actions
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('/posts/bookmarks', [UserPostController::class, 'bookmarks']);
+            Route::get('/posts/archived', [UserPostController::class, 'archived']);
             Route::post('/posts', [UserPostController::class, 'store']);
+            Route::patch('/posts/{id}', [UserPostController::class, 'update']);
+            Route::delete('/posts/{id}', [UserPostController::class, 'destroy']);
             Route::post('/posts/{id}/reactions', [UserPostController::class, 'react']);
             Route::post('/posts/{id}/comments', [UserPostController::class, 'comment']);
             Route::post('/posts/{id}/bookmark', [UserPostController::class, 'bookmark']);
+            Route::post('/posts/{id}/report', [UserPostController::class, 'report']);
             Route::post('/blogs', [UserBlogController::class, 'store']);
+            Route::get('/blogs/bookmarks', [UserBlogController::class, 'bookmarks']);
             Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
+            Route::post('/blogs/{id}/bookmark', [UserBlogController::class, 'bookmark']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
         });
 
@@ -324,6 +330,10 @@ Route::prefix('v1')->group(function () {
             Route::get('chat-rooms/{room}/system-messages', [ChatRoomController::class, 'systemMessages']);
         });
         Route::middleware('permission:community.chat.manage')->group(function () {
+            Route::post('chat-rooms', [ChatRoomController::class, 'store']);
+            Route::put('chat-rooms/{room}', [ChatRoomController::class, 'update']);
+            Route::patch('chat-rooms/{room}', [ChatRoomController::class, 'update']);
+            Route::delete('chat-rooms/{room}', [ChatRoomController::class, 'destroy']);
             Route::delete('chat-rooms/{room}/messages/{message}', [ChatRoomController::class, 'destroyMessage']);
         });
 

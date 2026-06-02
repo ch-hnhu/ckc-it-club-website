@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Flame, Hash, List, PenSquare, Search, Sparkles } from "lucide-react";
+import { Flame, Hash, Menu, PenSquare, Search, Sparkles } from "lucide-react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { buildProfileUrl } from "@/lib/utils";
 import type { CommunityLayoutContext } from "./CommunityLayout";
@@ -193,12 +193,12 @@ const CommunityFeedPage: React.FC = () => {
 		<div className='community-content'>
 			<main className='community-feed min-w-0 px-4 pb-5 md:px-4 md:pt-5'>
 				{/* Mobile header */}
-				<div className='sticky top-16 z-30 -mx-3 mb-3 flex h-14 items-center gap-2 border-b border-gray-200 bg-[var(--color-surface)] px-3 md:hidden'>
+				<div className='sticky top-16 z-30 -mx-3 mb-3 flex h-14 items-center gap-2 border-b border-gray-200 bg-[var(--color-surface)] px-3 lg:hidden'>
 					<button
 						onClick={() => setIsSidebarOpen(true)}
 						className='inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-black transition hover:bg-gray-100'
 						aria-label='Mở menu cộng đồng'>
-						<List className='h-5 w-5' />
+						<Menu className='h-5 w-5' />
 					</button>
 					<ChannelIcon image={pageInfo.image} title={pageInfo.title} size='sm' />
 					<h1 className='min-w-0 truncate font-heading text-sm font-bold text-black'>
@@ -288,7 +288,16 @@ const CommunityFeedPage: React.FC = () => {
 							</button>
 						</div>
 					) : posts.length > 0 ? (
-						posts.map((post) => <PostCard key={post.id} post={post} user={user} />)
+						posts.map((post) => (
+								<PostCard
+									key={post.id}
+									post={post}
+									user={user}
+									onPostDeleted={(id) =>
+										setPosts((prev) => prev.filter((p) => p.id !== id))
+									}
+								/>
+							))
 					) : (
 						<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
 							<Search className='mx-auto h-10 w-10 text-gray-500' />

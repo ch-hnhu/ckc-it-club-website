@@ -7,7 +7,6 @@ const chatService = {
 		page?: number;
 		per_page?: number;
 		search?: string;
-		type?: "direct" | "group";
 		sort?: string;
 		order?: "asc" | "desc";
 	}): Promise<PaginatedResponse<ChatRoomRecord>> {
@@ -16,6 +15,18 @@ const chatService = {
 
 	async getStats(): Promise<ApiResponse<ChatRoomStats>> {
 		return api.get("/chat-rooms/stats");
+	},
+
+	async createRoom(payload: { name: string }): Promise<ApiResponse<ChatRoomRecord>> {
+		return api.post("/chat-rooms", payload);
+	},
+
+	async updateRoom(id: number, payload: { name: string }): Promise<ApiResponse<ChatRoomRecord>> {
+		return api.put(`/chat-rooms/${id}`, payload);
+	},
+
+	async deleteRoom(id: number): Promise<ApiResponse<null>> {
+		return api.delete(`/chat-rooms/${id}`);
 	},
 
 	async getSystemMessages(

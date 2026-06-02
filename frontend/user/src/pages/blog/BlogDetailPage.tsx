@@ -1,15 +1,18 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	ArrowLeft,
 	Bookmark,
+	Check,
 	Clock,
 	Eye,
 	Heart,
+	Loader2,
 	MessageCircle,
 	Send,
 	Share2,
 	User,
+	UserCheck,
 	UserPlus,
 } from "lucide-react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
@@ -22,8 +25,9 @@ import {
 } from "@/components/ui/breadcrumb";
 import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
+import { userService } from "@/services/user.service";
 import type { Blog, BlogDetail, BlogComment } from "@/types/blog.types";
-import { buildAvatar, formatRelativeTime, getHandle, readingTime } from "@/lib/utils";
+import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle, readingTime } from "@/lib/utils";
 import { renderMarkdownContent } from "@/lib/markdown";
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -55,7 +59,7 @@ const DetailSkeleton: React.FC = () => (
 );
 
 const CoverSkeleton: React.FC = () => (
-	<div className='mb-6 aspect-[16/9] w-full animate-pulse rounded-2xl bg-gray-200 md:aspect-[21/10]' />
+	<div className='mb-6 h-64 w-full animate-pulse rounded-2xl bg-gray-200 md:h-80' />
 );
 
 interface BlogCoverProps {
@@ -67,10 +71,20 @@ interface BlogCoverProps {
 const BlogCover: React.FC<BlogCoverProps> = ({ loading, title, imageUrl }) => {
 	const [imageLoaded, setImageLoaded] = useState(false);
 	const [imageFailed, setImageFailed] = useState(false);
+	const imgRef = useRef<HTMLImageElement>(null);
 
 	useEffect(() => {
 		setImageLoaded(false);
 		setImageFailed(false);
+	}, [imageUrl]);
+
+	// Ảnh từ cache: onLoad fire trước khi React attach handler → dùng useLayoutEffect
+	// để check img.complete ngay sau khi DOM cập nhật, trước khi browser paint
+	useLayoutEffect(() => {
+		const el = imgRef.current;
+		if (el && el.complete && el.naturalWidth > 0) {
+			setImageLoaded(true);
+		}
 	}, [imageUrl]);
 
 	if (loading) return <CoverSkeleton />;
@@ -86,13 +100,14 @@ const BlogCover: React.FC<BlogCoverProps> = ({ loading, title, imageUrl }) => {
 	}
 
 	return (
-		<div className='relative mb-8 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-gray-200'>
-			{!imageLoaded && <div className='absolute inset-0 animate-pulse bg-gray-200' />}
+		<div className='relative mb-8 w-full overflow-hidden rounded-2xl bg-gray-100'>
+			{!imageLoaded && <div className='h-64 w-full animate-pulse bg-gray-200 md:h-80' />}
 			<img
+				ref={imgRef}
 				src={imageUrl}
 				alt={title || "Ảnh bìa blog"}
-				className={`h-full w-full object-cover transition-opacity duration-300 ${
-					imageLoaded ? "opacity-100" : "opacity-0"
+				className={`block max-h-[75vh] w-full object-contain transition-opacity duration-300 ${
+					imageLoaded ? "opacity-100" : "opacity-0 absolute inset-0"
 				}`}
 				onLoad={() => setImageLoaded(true)}
 				onError={() => setImageFailed(true)}
@@ -205,45 +220,70 @@ const BlogSuggestionSection: React.FC<BlogSuggestionSectionProps> = ({
 
 interface AuthorBioCardProps {
 	author: NonNullable<BlogDetail["user"]>;
+	isOwnProfile: boolean;
+	followed: boolean;
+	followLoading: boolean;
+	onFollow: () => void;
 }
 
-const AuthorBioCard: React.FC<AuthorBioCardProps> = ({ author }) => {
+const AuthorBioCard: React.FC<AuthorBioCardProps> = ({
+	author,
+	isOwnProfile,
+	followed,
+	followLoading,
+	onFollow,
+}) => {
 	const avatar = buildAvatar(author.full_name, author.avatar);
 	const handle = getHandle(author.username, author.email);
+	const profileUrl = buildProfileUrl(author.username, author.email);
 
 	return (
 		<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[3px_3px_0_#111] md:p-8'>
-			<p className='mb-5 text-xs font-bold uppercase tracking-widest text-gray-400'>
-				Viết bởi
-			</p>
 			<div className='flex flex-col gap-5 sm:flex-row sm:items-start'>
 				<div className='shrink-0'>
-					<img
-						src={avatar}
-						alt={author.full_name}
-						className='h-20 w-20 rounded-full border-2 border-black object-cover shadow-[3px_3px_0_#111]'
-					/>
+					<Link to={profileUrl}>
+						<img
+							src={avatar}
+							alt={author.full_name}
+							className='h-20 w-20 rounded-full border-2 border-black object-cover shadow-[3px_3px_0_#111] transition hover:opacity-80'
+						/>
+					</Link>
 				</div>
 				<div className='min-w-0 flex-1'>
-					<p className='font-heading text-xl font-extrabold leading-tight text-black'>
-						{author.full_name}
-					</p>
+					<Link to={profileUrl} className='hover:underline'>
+						<p className='font-heading text-xl font-extrabold leading-tight text-black'>
+							{author.full_name}
+						</p>
+					</Link>
 					<p className='mt-1 flex items-center gap-1.5 text-sm text-gray-500'>
 						<User className='h-3.5 w-3.5 shrink-0' />
 						{handle} · Thành viên CKC IT Club
 					</p>
 					<div className='mt-5 flex flex-wrap gap-3'>
-						<button
-							disabled
-							className='inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-lg border-2 border-black bg-sky-400 px-5 font-heading text-sm font-extrabold text-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-90'>
-							<UserPlus className='h-4 w-4' strokeWidth={2.5} />
-							Follow
-						</button>
-						<button
-							disabled
-							className='inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-lg border-2 border-black bg-gray-900 px-5 font-heading text-sm font-extrabold text-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-90'>
-							View profile
-						</button>
+						{!isOwnProfile && (
+							<button
+								onClick={onFollow}
+								disabled={followLoading}
+								className={`inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black px-5 font-heading text-sm font-extrabold shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-70 ${
+									followed
+										? "translate-x-[1px] translate-y-[1px] bg-white text-black shadow-none"
+										: "bg-[var(--color-primary)] text-black"
+								}`}>
+								{followLoading ? (
+									<Loader2 className='h-4 w-4 animate-spin' />
+								) : followed ? (
+									<UserCheck className='h-4 w-4' strokeWidth={2.5} />
+								) : (
+									<UserPlus className='h-4 w-4' strokeWidth={2.5} />
+								)}
+								{followed ? "Đang theo dõi" : "Follow"}
+							</button>
+						)}
+						<Link
+							to={profileUrl}
+							className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-white px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							Xem hồ sơ
+						</Link>
 					</div>
 				</div>
 			</div>
@@ -314,7 +354,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 		`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserDisplayName)}&background=A3E635&color=111111&bold=true`;
 
 	return (
-		<div className={depth > 0 ? "ml-11 mt-3" : ""}>
+		<div id={depth === 0 ? `comment-${comment.id}` : undefined} className={depth > 0 ? "ml-11 mt-3" : ""}>
 			<div className='flex gap-3'>
 				<div className='shrink-0'>
 					<img
@@ -450,6 +490,12 @@ const BlogDetailPage: React.FC = () => {
 	const [heartCount, setHeartCount] = useState(0);
 	const [reactionLoading, setReactionLoading] = useState(false);
 	const [saved, setSaved] = useState(false);
+	const [saveLoading, setSaveLoading] = useState(false);
+
+	const [followed, setFollowed] = useState(false);
+	const [followLoading, setFollowLoading] = useState(false);
+	const [copiedLink, setCopiedLink] = useState(false);
+	const copyResetRef = useRef<number | null>(null);
 
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
@@ -472,6 +518,8 @@ const BlogDetailPage: React.FC = () => {
 				setBlog(res.data);
 				setLiked(res.data.my_reaction === "heart");
 				setHeartCount(res.data.reactions_count);
+				setSaved(res.data.my_bookmark ?? false);
+				setFollowed(res.data.user?.is_following ?? false);
 			})
 			.catch(() => setBlogError("Không tìm thấy bài viết."))
 			.finally(() => setBlogLoading(false));
@@ -554,6 +602,87 @@ const BlogDetailPage: React.FC = () => {
 		setBlog((prev) => (prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev));
 	};
 
+	const handleFollow = async () => {
+		if (!user) {
+			navigate("/login", { state: { from: window.location.pathname } });
+			return;
+		}
+		const authorUsername = blog?.user?.username;
+		if (!authorUsername || followLoading) return;
+
+		const wasFollowed = followed;
+		setFollowed(!wasFollowed);
+		setFollowLoading(true);
+		try {
+			const res = await userService.toggleFollow(authorUsername);
+			setFollowed(res.data.is_following);
+			toast.success(res.data.is_following ? "Đã theo dõi tác giả." : "Đã bỏ theo dõi.");
+		} catch {
+			setFollowed(wasFollowed);
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setFollowLoading(false);
+		}
+	};
+
+	const isOwnProfile = Boolean(user?.id && blog?.user?.id && Number(user.id) === blog.user.id);
+
+	const handleToggleSaved = async () => {
+		if (!user) {
+			navigate("/login", { state: { from: window.location.pathname } });
+			return;
+		}
+		if (!blog || saveLoading) return;
+
+		const wasSaved = saved;
+		setSaved(!wasSaved);
+		setSaveLoading(true);
+		try {
+			const res = await blogService.toggleBookmark(blog.id);
+			setSaved(res.data.bookmarked);
+			toast.success(res.data.bookmarked ? "Đã lưu bài viết." : "Đã bỏ lưu bài viết.");
+		} catch {
+			setSaved(wasSaved);
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setSaveLoading(false);
+		}
+	};
+
+	// Cleanup copy timeout on unmount
+	useEffect(() => {
+		return () => {
+			if (copyResetRef.current) window.clearTimeout(copyResetRef.current);
+		};
+	}, []);
+
+	const handleCopyLink = async () => {
+		const url = `${window.location.origin}/blog/${blog?.slug ?? ""}`;
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(url);
+			} else {
+				const el = document.createElement("textarea");
+				el.value = url;
+				el.style.position = "fixed";
+				el.style.top = "-9999px";
+				document.body.appendChild(el);
+				el.select();
+				document.execCommand("copy");
+				document.body.removeChild(el);
+			}
+			setCopiedLink(true);
+			toast.success("Đã sao chép liên kết bài viết.");
+			if (copyResetRef.current) window.clearTimeout(copyResetRef.current);
+			copyResetRef.current = window.setTimeout(() => {
+				setCopiedLink(false);
+				copyResetRef.current = null;
+			}, 2500);
+		} catch {
+			toast.error("Không thể sao chép. Vui lòng thử lại.");
+		}
+	};
+
 	return (
 		<div className='w-full min-h-screen pt-16'>
 			<main className='mx-auto w-full max-w-5xl px-4 pb-16 md:px-6'>
@@ -632,7 +761,7 @@ const BlogDetailPage: React.FC = () => {
 				)}
 
 				{!blogError && (
-					<article className='overflow-hidden rounded-2xl bg-white'>
+					<article className='rounded-2xl bg-white'>
 						{blogLoading ? (
 							<div>
 								<DetailSkeleton />
@@ -716,7 +845,7 @@ const BlogDetailPage: React.FC = () => {
 												}
 											}}
 											disabled={reactionLoading}
-											className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
+											className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
 											style={{
 												background: liked
 													? "var(--color-pastel-pink)"
@@ -736,8 +865,9 @@ const BlogDetailPage: React.FC = () => {
 										</button>
 
 										<button
-											onClick={() => setSaved((p) => !p)}
-											className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+											onClick={handleToggleSaved}
+											disabled={saveLoading}
+											className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
 											style={{
 												background: saved ? "var(--color-primary)" : "#fff",
 											}}
@@ -748,15 +878,37 @@ const BlogDetailPage: React.FC = () => {
 										</button>
 
 										<button
-											className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-											aria-label='Chia sẻ'>
-											<Share2 className='h-4 w-4' />
+											onClick={handleCopyLink}
+											className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${
+												copiedLink
+													? "bg-[var(--color-primary)] translate-x-[1px] translate-y-[1px] shadow-none"
+													: "bg-white"
+											}`}
+											aria-label='Sao chép liên kết'>
+											{copiedLink ? (
+												<Check className='h-4 w-4 text-black' />
+											) : (
+												<Share2 className='h-4 w-4' />
+											)}
 										</button>
 									</div>
 								</div>
 							</>
 						) : null}
 					</article>
+				)}
+
+				{/* Author bio */}
+				{!blogError && blog?.user && (
+					<div className='mt-6'>
+						<AuthorBioCard
+							author={blog.user}
+							isOwnProfile={isOwnProfile}
+							followed={followed}
+							followLoading={followLoading}
+							onFollow={handleFollow}
+						/>
+					</div>
 				)}
 
 				{/* Comments section */}
@@ -843,13 +995,6 @@ const BlogDetailPage: React.FC = () => {
 							)}
 						</div>
 					</section>
-				)}
-
-				{/* Author bio */}
-				{!blogError && blog?.user && (
-					<div className='mt-6'>
-						<AuthorBioCard author={blog.user} />
-					</div>
 				)}
 
 				{!blogError && blog && (

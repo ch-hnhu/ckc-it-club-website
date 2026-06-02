@@ -9,10 +9,10 @@ import {
 	ChevronsRight,
 	Eye,
 	EyeOff,
+	ExternalLink,
 	Filter,
 	MessageSquare,
 	MoreHorizontal,
-	RefreshCw,
 	Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -74,6 +74,7 @@ export interface CommentRecord {
 	user: CommentAuthor;
 	commentable_type: CommentableType;
 	commentable_id: number;
+	article_url: string | null;
 	parent_id: number | null;
 	content: string;
 	is_hidden: boolean;
@@ -227,46 +228,19 @@ function CommentListPage() {
 		}
 	};
 
-	const activeFilterCount =
-		Number(Boolean(search.trim())) +
-		Number(visibilityFilter !== "all") +
-		Number(typeFilter !== "all");
-
 	return (
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
 
-				{/* Hero */}
-				<section className="overflow-hidden rounded-[30px] border border-orange-500/15 bg-[linear-gradient(135deg,rgba(249,115,22,0.12),rgba(255,251,247,0.96)_44%,rgba(255,253,250,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(249,115,22,0.12),rgba(18,12,8,0.96)_45%,rgba(12,8,5,0.98)_100%)]">
-					<div className="px-6 py-7 md:px-8 md:py-9">
-						<div className="max-w-3xl space-y-4">
-							<Badge className="w-fit rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-orange-800 hover:bg-orange-500/10 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-200">
-								Kiểm duyệt bình luận
-							</Badge>
-							<div className="space-y-2">
-								<h1 className="text-foreground text-[1.85rem] font-semibold leading-tight md:text-[2.4rem] md:leading-[1.1]">
-									Quản lý bình luận cộng đồng
-								</h1>
-								<p className="text-sm leading-7 text-orange-950/70 md:text-base dark:text-orange-50/65">
-									Xem và kiểm duyệt toàn bộ bình luận trên bài đăng và blog. Ẩn hoặc xóa bình luận vi phạm nội quy.
-								</p>
-							</div>
-							<div className="flex flex-wrap items-center gap-3 pt-1">
-								<Button
-									variant="outline"
-									className="h-10 rounded-2xl border-orange-500/20 bg-background/80 px-4 text-orange-800 shadow-sm hover:bg-orange-500/10 dark:bg-background/70 dark:text-orange-200"
-									onClick={() => { setSearch(""); setVisibilityFilter("all"); setTypeFilter("all"); }}>
-									<RefreshCw className="size-4" />
-									Đặt lại bộ lọc
-								</Button>
-								<div className="inline-flex h-10 items-center gap-2 rounded-2xl border border-orange-500/20 bg-background/72 px-4 text-sm font-medium text-orange-800 dark:text-orange-200">
-									<Filter className="size-4" />
-									{activeFilterCount} điều kiện đang áp dụng
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
+				{/* Header */}
+				<div className="space-y-2">
+					<h2 className="text-2xl font-semibold tracking-tight">
+						Quản lý bình luận cộng đồng
+					</h2>
+					<p className="text-muted-foreground">
+						Xem và kiểm duyệt toàn bộ bình luận trên bài đăng và blog. Ẩn hoặc xóa bình luận vi phạm nội quy.
+					</p>
+				</div>
 
 				{/* Stats */}
 				<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -296,14 +270,14 @@ function CommentListPage() {
 
 				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+					<div className="flex flex-row items-center gap-3">
 						<Input
 							placeholder="Lọc theo tên tác giả hoặc nội dung..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="h-8 w-full sm:w-64 md:w-80"
+							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
-						<div className="flex items-center gap-2">
+						<div className="ml-auto flex shrink-0 items-center gap-2">
 							{/* Filter trạng thái */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -323,7 +297,6 @@ function CommentListPage() {
 									))}
 								</DropdownMenuContent>
 							</DropdownMenu>
-
 							{/* Filter loại */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -345,6 +318,7 @@ function CommentListPage() {
 							</DropdownMenu>
 						</div>
 					</div>
+
 
 					<div className="overflow-hidden rounded-md border">
 						<Table>
@@ -369,9 +343,9 @@ function CommentListPage() {
 											Nội dung {getSortIcon("content")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[130px]">
+									<TableHead className="min-w-[260px]">
 										<Button variant="ghost" onClick={() => handleSort("post_id")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Thuộc về {getSortIcon("post_id")}
+											URL bài viết {getSortIcon("post_id")}
 										</Button>
 									</TableHead>
 									<TableHead className="w-[130px]">
@@ -437,13 +411,19 @@ function CommentListPage() {
 												</div>
 											</TableCell>
 											<TableCell>
-												<Badge variant="outline" className={`rounded-full px-2 py-0 text-xs ${
-													comment.commentable_type === "post"
-														? "border-violet-500/20 bg-violet-500/10 text-violet-700"
-														: "border-sky-500/20 bg-sky-500/10 text-sky-700"
-												}`}>
-													{comment.commentable_type === "post" ? "Bài đăng" : "Blog"} #{comment.commentable_id}
-												</Badge>
+												{comment.article_url ? (
+													<a
+														href={comment.article_url}
+														target="_blank"
+														rel="noreferrer"
+														title={comment.article_url}
+														className="inline-flex max-w-[300px] items-center gap-1.5 truncate text-sm font-medium text-primary underline-offset-4 hover:underline">
+														<span className="truncate">{comment.article_url}</span>
+														<ExternalLink className="h-3.5 w-3.5 shrink-0" />
+													</a>
+												) : (
+													<span className="text-sm text-muted-foreground">--</span>
+												)}
 											</TableCell>
 											<TableCell>
 												{comment.is_hidden ? (
@@ -565,15 +545,17 @@ function CommentListPage() {
 										<p className="text-sm font-medium">{selectedComment.user.full_name ?? "Ẩn danh"}</p>
 										<p className="text-xs text-muted-foreground">{selectedComment.user.email}</p>
 									</div>
-									<div className="ml-auto flex items-center gap-2">
-										<Badge variant="outline" className={`rounded-full px-2 py-0 text-xs ${
-											selectedComment.commentable_type === "post"
-												? "border-violet-500/20 bg-violet-500/10 text-violet-700"
-												: "border-sky-500/20 bg-sky-500/10 text-sky-700"
-										}`}>
-											{selectedComment.commentable_type === "post" ? "Bài đăng" : "Blog"} #{selectedComment.commentable_id}
-										</Badge>
-									</div>
+									{selectedComment.article_url && (
+										<a
+											href={selectedComment.article_url}
+											target="_blank"
+											rel="noreferrer"
+											title={selectedComment.article_url}
+											className="ml-auto inline-flex max-w-[220px] items-center gap-1.5 truncate text-sm font-medium text-primary underline-offset-4 hover:underline">
+											<span className="truncate">Mở bài viết</span>
+											<ExternalLink className="h-3.5 w-3.5 shrink-0" />
+										</a>
+									)}
 								</div>
 								{selectedComment.parent_id && (
 									<div className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">

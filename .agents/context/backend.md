@@ -60,7 +60,7 @@
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/admin/login`
 - `POST /api/v1/contacts`
-- Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /blogs`, `GET /blog-tags`, `GET /blogs/{slug}`, and `GET /blogs/{id}/comments`.
+- Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /blogs`, `GET /blog-tags`, `GET /blogs/{slug}`, and `GET /blogs/{id}/comments`. Post detail and post comments return published posts for everyone, plus archived posts only to their authenticated owner.
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
@@ -264,13 +264,14 @@
 - Community module:
 - user-facing community routes expose published channels/posts/blogs, comments, and reactions under `/api/v1/community`.
 - user-facing post list items include `content`, `excerpt`, and `is_excerpt_truncated` so the frontend can render collapsed Markdown and expand the full post content inline without navigating away.
+- user-facing post listing with a `username` profile filter orders pinned posts before unpinned posts, then applies the requested sort/order.
 - authenticated users can create published posts through `POST /api/v1/community/posts` with `channel_slug` or `channel_id`, `title`, `content`, optional `visibility`, and optional `media` image/video upload up to 20 MB. Uploaded post media is stored on the public disk under `community/posts/{post_id}`, mirrored into `posts.media_urls`, and tracked in `media_files`.
 - `posts` now has schema support for author profile pinning (`is_pinned`, `pinned_at`), author-owned archiving through `status = archived`, soft delete metadata, and `visibility`; pinning is scoped to the post author's profile, not global community feed ordering. The backend must enforce a maximum of 3 pinned posts per author when the pin endpoint is implemented.
 - `post_bookmarks` stores one saved post per user/post pair, while `post_reports` stores report reason/status/resolution metadata.
 - `channels`, `posts`, `post_reports`, and `comments` support topic feeds, reports, nested comments, and soft-deleted comments.
 - `reactions` is polymorphic by `target_type`/`target_id` for posts, comments, and blogs.
 - authenticated users can create published blogs through `POST /api/v1/community/blogs` with `title`, `content`, optional `excerpt`, optional `tag_ids[]`, and optional `featured_image` image upload up to 5 MB. Uploaded blog cover images are stored on the public disk under `blog-covers`.
-- `chat_rooms`, `chat_members`, and `messages` support direct/group chat, unread tracking through `last_read_at`, message replies, and soft-deleted messages.
+- `chat_rooms`, `chat_members`, and `messages` support named chat rooms, unread tracking through `last_read_at`, message replies, and soft-deleted messages.
 - `blogs`, `tags`, and `blog_tags` support long-form posts with normalized blog tags.
 - `media_files` stores shared uploads for posts, messages, and blogs.
 - Community module tables are defined in separate table-specific migrations dated `2026_05_25_000010` through `2026_05_25_000023`, not one combined community migration.
@@ -440,6 +441,19 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-06-01`: Admin channel create/update now accepts an uploaded image file in `image`, stores it on the public disk under `channels/`, and returns a public image URL while preserving existing external image URLs.
+- `2026-06-01`: `chat_rooms` no longer has a `type` column; chat room APIs, model fillable fields, and `ChatRoomSeeder` now treat every room as a named chat room without direct/group filtering.
+- `2026-06-01`: Admin chat room management supports CRUD through `POST /chat-rooms`, `PUT/PATCH /chat-rooms/{room}`, and `DELETE /chat-rooms/{room}`.
+- `2026-06-01`: Admin comment list payload includes `article_url` pointing to the user-facing post/blog URL; admin comment filtering now supports both post and blog comments.
+- `2026-06-01`: User chat message pagination accepts `per_page`, `before`, and optional `before_id`; messages are ordered by `created_at desc, id desc` so scroll-up loading can fetch older batches without cursor boundary gaps.
+
+- `2026-06-01`: Admin channel create/update now accepts an uploaded image file in `image`, stores it on the public disk under `channels/`, and returns a public image URL while preserving existing external image URLs.
+- `2026-06-01`: `chat_rooms` no longer has a `type` column; chat room APIs, model fillable fields, and `ChatRoomSeeder` now treat every room as a named chat room without direct/group filtering.
+- `2026-06-01`: Admin chat room management supports CRUD through `POST /chat-rooms`, `PUT/PATCH /chat-rooms/{room}`, and `DELETE /chat-rooms/{room}`.
+- `2026-06-01`: Admin comment list payload includes `article_url` pointing to the user-facing post/blog URL; admin comment filtering now supports both post and blog comments.
+- `2026-06-01`: User chat message pagination accepts `per_page`, `before`, and optional `before_id`; messages are ordered by `created_at desc, id desc` so scroll-up loading can fetch older batches without cursor boundary gaps.
+
+- `2026-05-31`: Added the missing `posts.pinned_at` migration required by user post pin/unpin updates.
 - `2026-05-30`: Public/user profile payload now returns separate `posts_count`, `blogs_count`, and `content_count` (`posts + blogs`); community blog listing accepts `username` to filter blogs by author handle/email prefix.
 - `2026-05-24`: Department member leadership is tied to each department's configured Spatie head role (`head_role_id`); updating a head only assigns/removes that one user role, so the same user can hold multiple department-head roles.
 - `2026-05-24`: User create/update role sync now also propagates department head roles into department membership/head ownership, so editing user roles and editing department chức vụ stay consistent.

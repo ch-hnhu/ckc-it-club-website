@@ -130,10 +130,6 @@ const RoomItem: React.FC<{
 				className={`truncate text-[13px] font-extrabold ${active ? "text-black" : "text-gray-800"}`}>
 				{room.name}
 			</p>
-			<p
-				className={`mt-0.5 text-[11px] font-medium ${active ? "text-black/60" : "text-gray-400"}`}>
-				{room.member_count} thành viên
-			</p>
 		</div>
 	</button>
 );
@@ -432,6 +428,8 @@ const CommunityChatPage: React.FC = () => {
 	// ── Message state ──────────────────────────────────────────────────────────
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [messagesLoading, setMessagesLoading] = useState(false);
+	const [hasMore, setHasMore] = useState(false);
+	const [loadingMore, setLoadingMore] = useState(false);
 
 	// ── Input state ────────────────────────────────────────────────────────────
 	const [input, setInput] = useState("");
@@ -445,8 +443,11 @@ const CommunityChatPage: React.FC = () => {
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	const emojiRef = useRef<HTMLDivElement>(null);
 	const gifRef = useRef<HTMLDivElement>(null);
+	const isComposingRef = useRef(false);
 	const joinedRoomsRef = useRef<Set<number>>(new Set());
-	const isComposingRef = useRef(false); // track IME composition
+	const msgListRef = useRef<HTMLDivElement>(null);
+	const loadingMoreRef = useRef(false);
+	const loadCooldownRef = useRef(false);
 
 	// ── Helpers ────────────────────────────────────────────────────────────────
 	const userId = user?.id;
@@ -486,11 +487,16 @@ const CommunityChatPage: React.FC = () => {
 		setMessages([]);
 		setMessagesLoading(true);
 		setReplyTo(null);
+		setHasMore(false);
+		setLoadingMore(false);
+		loadingMoreRef.current = false;
+		loadCooldownRef.current = false;
 
 		chatService
-			.getMessages(activeRoom.id, { per_page: 50 })
+			.getMessages(activeRoom.id, { per_page: 30 })
 			.then((res) => {
 				setMessages(res.data);
+				setHasMore(res.data.length === 30);
 				if (userId && res.data.some((m) => m.created_by?.id?.toString() === userId))
 					joinedRoomsRef.current.add(activeRoom.id);
 			})
@@ -530,6 +536,56 @@ const CommunityChatPage: React.FC = () => {
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeRoom?.id]);
+
+	// ── Load older messages (scroll-up pagination) ────────────────────────────
+	const loadMoreMessages = async () => {
+		if (!activeRoom || loadingMoreRef.current || loadCooldownRef.current || !hasMore || messages.length === 0) return;
+
+		loadingMoreRef.current = true;
+		setLoadingMore(true);
+
+		const scrollWrapper = msgListRef.current?.querySelector<HTMLElement>(
+			".cs-message-list__scroll-wrapper",
+		);
+		const oldScrollHeight = scrollWrapper?.scrollHeight ?? 0;
+		const oldest = messages[0];
+
+		try {
+			const res = await chatService.getMessages(activeRoom.id, {
+				per_page: 30,
+				before: oldest.created_at,
+				before_id: oldest.id,
+			});
+
+			if (res.data.length === 0) {
+				setHasMore(false);
+				return;
+			}
+
+			flushSync(() => {
+				setMessages((prev) => {
+					const existingIds = new Set(prev.map((m) => m.id));
+					const newMsgs = res.data.filter((m) => !existingIds.has(m.id));
+					return [...newMsgs, ...prev];
+				});
+			});
+
+			// Preserve scroll position after prepend
+			if (scrollWrapper && oldScrollHeight > 0) {
+				const delta = scrollWrapper.scrollHeight - oldScrollHeight;
+				if (delta > 0) scrollWrapper.scrollTop = delta;
+			}
+
+			setHasMore(res.data.length === 30);
+		} catch {
+			// silent
+		} finally {
+			loadingMoreRef.current = false;
+			setLoadingMore(false);
+			loadCooldownRef.current = true;
+			setTimeout(() => { loadCooldownRef.current = false; }, 1500);
+		}
+	};
 
 	// ── Send text ──────────────────────────────────────────────────────────────
 	const handleSend = async () => {
@@ -775,21 +831,27 @@ const CommunityChatPage: React.FC = () => {
 				</div>
 
 				{/* ── Message list (chatscope) ────────────────────────── */}
-				<div className='csc-wrap relative min-h-0 flex-1'>
+				<div className='csc-wrap relative min-h-0 flex-1' ref={msgListRef}>
 					<MessageList
 						loading={messagesLoading}
 						autoScrollToBottom={true}
 						scrollBehavior='smooth'
-						className='!h-full !bg-[#fafafa]'>
+						className='!h-full !bg-[#fafafa]'
+						onYReachStart={() => { void loadMoreMessages(); }}>
 						{!user ? (
 							<GuestWall />
 						) : msgGroups.length === 0 && activeRoom && !messagesLoading ? (
 							<EmptyChat roomName={activeRoom.name ?? ""} />
 						) : (
 							<div className='py-2'>
+								{loadingMore && (
+									<div className='flex items-center justify-center py-3'>
+										<Loader2 className='h-4 w-4 animate-spin text-gray-400' />
+									</div>
+								)}
 								{msgGroups.map((group) => (
 									<MessageGroupItem
-										key={`${group.senderId ?? "anon"}-${group.firstTime}`}
+										key={group.messages[0].id}
 										group={group}
 										isOwn={group.senderId?.toString() === userId}
 										onReply={user ? setReplyTo : () => {}}

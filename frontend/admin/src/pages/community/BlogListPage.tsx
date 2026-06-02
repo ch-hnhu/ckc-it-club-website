@@ -12,7 +12,6 @@ import {
 	Filter,
 	MoreHorizontal,
 	Plus,
-	RefreshCw,
 	Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -285,33 +284,15 @@ function BlogListPage() {
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
 
-				{/* Hero */}
-				<section className="overflow-hidden rounded-[30px] border border-sky-500/15 bg-[linear-gradient(135deg,rgba(14,165,233,0.13),rgba(248,252,255,0.96)_44%,rgba(252,253,255,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.13),rgba(10,14,20,0.96)_45%,rgba(8,10,14,0.98)_100%)]">
-					<div className="px-6 py-7 md:px-8 md:py-9">
-						<div className="max-w-3xl space-y-4">
-							<Badge className="w-fit rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-sky-800 hover:bg-sky-500/10 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200">
-								Quản lý Blog
-							</Badge>
-							<div className="space-y-2">
-								<h1 className="text-foreground text-[1.85rem] font-semibold leading-tight md:text-[2.4rem] md:leading-[1.1]">
-									Quản lý bài viết Blog của CLB
-								</h1>
-								<p className="text-sm leading-7 text-sky-950/70 md:text-base dark:text-sky-50/65">
-									Soạn thảo, xuất bản và quản lý toàn bộ bài viết chính thức của CLB. Kiểm soát trạng thái từng bài từ bản nháp đến xuất bản.
-								</p>
-							</div>
-							<div className="flex flex-wrap items-center gap-3 pt-1">
-								<Button
-									variant="outline"
-									className="h-10 rounded-2xl border-sky-500/20 bg-background/80 px-4 text-sky-800 shadow-sm hover:bg-sky-500/10 dark:bg-background/70 dark:text-sky-200"
-									onClick={() => { setSearch(""); setStatusFilter("all"); }}>
-									<RefreshCw className="size-4" />
-									Đặt lại bộ lọc
-								</Button>
-							</div>
-						</div>
-					</div>
-				</section>
+				{/* Header */}
+				<div className="space-y-2">
+					<h2 className="text-2xl font-semibold tracking-tight">
+						Quản lý bài viết Blog của CLB
+					</h2>
+					<p className="text-muted-foreground">
+						Soạn thảo, xuất bản và quản lý toàn bộ bài viết chính thức của CLB. Kiểm soát trạng thái từng bài từ bản nháp đến xuất bản.
+					</p>
+				</div>
 
 				{/* Stats */}
 				<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -341,14 +322,14 @@ function BlogListPage() {
 
 				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+					<div className="flex flex-row items-center gap-3">
 						<Input
 							placeholder="Lọc theo tiêu đề hoặc tác giả..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="h-8 w-full sm:w-64 md:w-80"
+							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
-						<div className="flex items-center gap-2">
+						<div className="flex shrink-0 items-center gap-2">
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button variant="outline" size="sm" className="h-8">

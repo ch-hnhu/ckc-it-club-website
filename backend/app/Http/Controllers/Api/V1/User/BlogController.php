@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\ApiMessage;
+use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
+use App\Models\MediaFile;
 use App\Models\Comment;
 use App\Models\Reaction;
 use App\Models\Tag;
@@ -19,13 +21,13 @@ class BlogController extends BaseApiController
     public function tags(): JsonResponse
     {
         $tags = Tag::query()
-            ->select('id', 'name', 'color')
+            ->select('id', 'name')
             ->orderBy('name')
             ->get()
             ->map(fn (Tag $tag) => [
                 'id'    => $tag->id,
                 'name'  => $tag->name,
-                'color' => $tag->color,
+                'color' => null,
             ])
             ->values()
             ->toArray();
@@ -116,6 +118,20 @@ class BlogController extends BaseApiController
                 ->value('type')
             : null;
 
+        if ($data['user'] && $userId && $blog->author) {
+            $data['user']['is_following'] = auth('sanctum')->user()
+                ->following()
+                ->where('following_id', $blog->author->id)
+                ->exists();
+        }
+
+        $data['my_bookmark'] = $userId
+            ? DB::table('blog_bookmarks')
+                ->where('user_id', $userId)
+                ->where('blog_id', $blog->id)
+                ->exists()
+            : false;
+
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
     }
 
@@ -144,7 +160,9 @@ class BlogController extends BaseApiController
             $i++;
         }
 
-        $blog = DB::transaction(function () use ($request, $slug, $coverImagePath) {
+        $isAdmin = $request->user()->hasRole(RolesEnum::adminRoles());
+
+        $blog = DB::transaction(function () use ($request, $slug, $coverImagePath, $isAdmin) {
             $blog = Blog::create([
                 'author_id'    => $request->user()->id,
                 'title'        => $request->input('title'),
@@ -152,8 +170,8 @@ class BlogController extends BaseApiController
                 'content'      => $request->input('content'),
                 'excerpt'      => $request->input('excerpt'),
                 'cover_image'  => $coverImagePath,
-                'status'       => 'published',
-                'published_at' => now(),
+                'status'       => $isAdmin ? 'published' : 'pending_review',
+                'published_at' => $isAdmin ? now() : null,
                 'view_count'   => 0,
             ]);
 
@@ -166,7 +184,76 @@ class BlogController extends BaseApiController
 
         $blog->load(['author:id,full_name,email,avatar,username', 'tags:id,name']);
 
-        return $this->createdResponse($this->transformBlog($blog), 'Tạo blog thành công.');
+        // Track ảnh bìa vào media_files nếu có
+        if ($coverImagePath) {
+            MediaFile::create([
+                'owner_id'    => $request->user()->id,
+                'url'         => Storage::disk('public')->url($coverImagePath),
+                'file_type'   => 'image',
+                'size_kb'     => (int) ceil($request->file('featured_image')->getSize() / 1024),
+                'target_type' => 'blog',
+                'target_id'   => $blog->id,
+            ]);
+        }
+
+        $message = $isAdmin ? 'Tạo blog thành công.' : 'Blog đã được gửi và đang chờ duyệt.';
+
+        return $this->createdResponse($this->transformBlog($blog), $message);
+    }
+
+    public function bookmarks(Request $request): JsonResponse
+    {
+        $perPage = min((int) $request->query('per_page', 20), 50);
+        $userId  = $request->user()->id;
+
+        $blogs = Blog::with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
+            ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count')
+            ->where('blogs.status', 'published')
+            ->whereExists(fn ($q) => $q->from('blog_bookmarks')
+                ->whereColumn('blog_bookmarks.blog_id', 'blogs.id')
+                ->where('blog_bookmarks.user_id', $userId)
+            )
+            ->orderBy('blogs.created_at', 'desc')
+            ->paginate($perPage);
+
+        $blogs->getCollection()->transform(fn (Blog $blog) => [
+            ...$this->transformBlog($blog),
+            'my_reaction' => null,
+            'my_bookmark' => true,
+        ]);
+
+        return $this->paginatedResponse($blogs, ApiMessage::RETRIEVED);
+    }
+
+    public function bookmark(Request $request, int $id): JsonResponse
+    {
+        Blog::where('status', 'published')->findOrFail($id);
+
+        $userId = $request->user()->id;
+        $exists = DB::table('blog_bookmarks')
+            ->where('user_id', $userId)
+            ->where('blog_id', $id)
+            ->exists();
+
+        if ($exists) {
+            DB::table('blog_bookmarks')
+                ->where('user_id', $userId)
+                ->where('blog_id', $id)
+                ->delete();
+            $bookmarked = false;
+        } else {
+            DB::table('blog_bookmarks')->insert([
+                'user_id'    => $userId,
+                'blog_id'    => $id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $bookmarked = true;
+        }
+
+        return $this->successResponse(true, [
+            'bookmarked' => $bookmarked,
+        ], $bookmarked ? 'Đã lưu blog.' : 'Đã bỏ lưu blog.');
     }
 
     public function react(Request $request, int $id): JsonResponse

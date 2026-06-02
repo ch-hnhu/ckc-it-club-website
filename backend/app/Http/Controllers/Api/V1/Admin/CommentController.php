@@ -24,13 +24,14 @@ class CommentController extends BaseApiController
         $visibility = $request->query('visibility');
 
         $comments = Comment::query()
-            ->with('user:id,full_name,email,avatar,student_code')
+            ->with('user:id,full_name,email,avatar,student_code', 'blog:id,slug')
             ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count')
             ->when($search, fn ($q) => $q->where(fn ($s) => $s
                 ->where('comments.content', 'like', "%{$search}%")
                 ->orWhereHas('user', fn ($u) => $u->where('full_name', 'like', "%{$search}%"))
             ))
-            ->when($type === 'blog', fn ($q) => $q->whereRaw('0 = 1'))
+            ->when($type === 'post', fn ($q) => $q->whereNotNull('comments.post_id'))
+            ->when($type === 'blog', fn ($q) => $q->whereNotNull('comments.blog_id'))
             ->when($visibility === 'visible', fn ($q) => $q->where('comments.is_hidden', false))
             ->when($visibility === 'hidden',  fn ($q) => $q->where('comments.is_hidden', true))
             ->when(in_array($sort, ['id', 'created_at', 'content', 'post_id']), fn ($q) => $q->orderBy("comments.{$sort}", $order))
@@ -65,12 +66,14 @@ class CommentController extends BaseApiController
 
         $comment->update(['is_hidden' => $request->boolean('is_hidden')]);
 
-        // Broadcast to all clients viewing this post
-        broadcast(new CommentVisibilityChanged(
-            commentId: $comment->id,
-            postId:    $comment->post_id,
-            isHidden:  $comment->is_hidden,
-        ))->toOthers();
+        if ($comment->post_id) {
+            // Broadcast to all clients viewing this post
+            broadcast(new CommentVisibilityChanged(
+                commentId: $comment->id,
+                postId:    $comment->post_id,
+                isHidden:  $comment->is_hidden,
+            ))->toOthers();
+        }
 
         return $this->successResponse(true, ['is_hidden' => $comment->is_hidden], 'Cập nhật trạng thái bình luận thành công.');
     }
@@ -85,6 +88,8 @@ class CommentController extends BaseApiController
     private function transformComment(Comment $comment): array
     {
         $user = $comment->user;
+        $commentableType = $comment->blog_id ? 'blog' : 'post';
+        $commentableId   = $comment->blog_id ?? $comment->post_id;
 
         return [
             'id'               => $comment->id,
@@ -95,8 +100,9 @@ class CommentController extends BaseApiController
                 'avatar'       => $user->avatar,
                 'student_code' => $user->student_code,
             ] : null,
-            'commentable_type' => 'post',
-            'commentable_id'   => $comment->post_id,
+            'commentable_type' => $commentableType,
+            'commentable_id'   => $commentableId,
+            'article_url'      => $this->articleUrl($comment),
             'parent_id'        => $comment->parent_id,
             'content'          => $comment->content,
             'is_hidden'        => (bool) $comment->is_hidden,
@@ -104,5 +110,20 @@ class CommentController extends BaseApiController
             'created_at'       => $comment->created_at?->toIso8601String(),
             'updated_at'       => $comment->updated_at?->toIso8601String(),
         ];
+    }
+
+    private function articleUrl(Comment $comment): ?string
+    {
+        $frontendUrl = rtrim((string) env('USER_FRONTEND_URL', 'http://localhost:5174'), '/');
+
+        if ($comment->blog_id && $comment->blog?->slug) {
+            return "{$frontendUrl}/blog/{$comment->blog->slug}";
+        }
+
+        if ($comment->post_id) {
+            return "{$frontendUrl}/cong-dong/bai-viet/{$comment->post_id}";
+        }
+
+        return null;
     }
 }
