@@ -14,7 +14,6 @@ import {
 	MoreHorizontal,
 	Pin,
 	PinOff,
-	RefreshCw,
 	SquarePen,
 	Trash2,
 } from "lucide-react";
@@ -294,9 +293,6 @@ function PostListPage() {
 			setIsDeleting(false);
 		}
 	};
-
-	const activeFilterCount =
-		Number(Boolean(search.trim())) + Number(statusFilter !== "all");
 
 	return (
 		<div className="min-h-full bg-background">

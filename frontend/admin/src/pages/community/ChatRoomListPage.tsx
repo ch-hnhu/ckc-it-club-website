@@ -25,9 +25,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -62,7 +60,6 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
-import { cn } from "@/lib/utils";
 import chatService from "@/services/chat.service";
 
 export interface ChatRoomRecord {
@@ -103,40 +100,6 @@ function formatDate(value: string | null | undefined) {
 	if (!value) return "--";
 	const date = new Date(value);
 	return Number.isNaN(date.getTime()) ? "--" : dateFormatter.format(date);
-}
-
-function StatCard({
-	label,
-	value,
-	loading,
-	icon: Icon,
-	accent,
-}: {
-	label: string;
-	value: number;
-	loading: boolean;
-	icon: React.ElementType;
-	accent: string;
-}) {
-	return (
-		<Card className="border-border/80 shadow-sm">
-			<CardContent className="pt-5">
-				<div className="flex items-start justify-between gap-3">
-					<div className="min-w-0 space-y-1">
-						<p className="truncate text-sm text-muted-foreground">{label}</p>
-						{loading ? (
-							<Skeleton className="h-7 w-14" />
-						) : (
-							<p className="text-2xl font-bold tabular-nums">{value}</p>
-						)}
-					</div>
-					<div className={cn("shrink-0 rounded-lg p-2.5", accent)}>
-						<Icon className="h-5 w-5" />
-					</div>
-				</div>
-			</CardContent>
-		</Card>
-	);
 }
 
 function PaginationFooter({
@@ -214,8 +177,6 @@ function PaginationFooter({
 function ChatRoomListPage() {
 	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Phòng chat" }]);
 
-	const [stats, setStats] = useState<ChatRoomStats>({ total: 0, system_events: 0 });
-	const [loadingStats, setLoadingStats] = useState(true);
 	const [rooms, setRooms] = useState<ChatRoomRecord[]>([]);
 	const [loadingRooms, setLoadingRooms] = useState(true);
 	const [search, setSearch] = useState("");
@@ -242,16 +203,6 @@ function ChatRoomListPage() {
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
 	}, [debouncedSearch, sortConfig]);
-
-	useEffect(() => {
-		setLoadingStats(true);
-		chatService.getStats()
-			.then((response) => {
-				if (response.data) setStats(response.data);
-			})
-			.catch(() => {})
-			.finally(() => setLoadingStats(false));
-	}, [reloadToken]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -373,24 +324,7 @@ function ChatRoomListPage() {
 					</p>
 				</div>
 
-				<div className="grid gap-4 sm:grid-cols-2">
-					<StatCard
-						label="Tổng phòng chat"
-						value={stats.total}
-						loading={loadingStats}
-						icon={MessagesSquare}
-						accent="bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400"
-					/>
-					<StatCard
-						label="Sự kiện hệ thống"
-						value={stats.system_events}
-						loading={loadingStats}
-						icon={Users}
-						accent="bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400"
-					/>
-				</div>
-
-				<div className="flex flex-col gap-4">
+<div className="flex flex-col gap-4">
 					<div className="flex flex-wrap items-center gap-3">
 						<Input
 							placeholder="Tìm kiếm theo tên phòng..."

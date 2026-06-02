@@ -13,7 +13,6 @@ import {
 	HardDrive,
 	Image,
 	MoreHorizontal,
-	RefreshCw,
 	Trash2,
 	Video,
 } from "lucide-react";
@@ -339,11 +338,6 @@ function MediaListPage() {
 		if (targetType === "blog") return `/community/blogs/${targetId}`;
 		return null;
 	};
-
-	const activeFilterCount =
-		Number(Boolean(search.trim())) +
-		Number(fileTypeFilter !== "all") +
-		Number(targetTypeFilter !== "all");
 
 	return (
 		<div className='min-h-full bg-background'>

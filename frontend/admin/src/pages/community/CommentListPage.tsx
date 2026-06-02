@@ -13,7 +13,6 @@ import {
 	Filter,
 	MessageSquare,
 	MoreHorizontal,
-	RefreshCw,
 	Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -228,11 +227,6 @@ function CommentListPage() {
 			setIsDeleting(false);
 		}
 	};
-
-	const activeFilterCount =
-		Number(Boolean(search.trim())) +
-		Number(visibilityFilter !== "all") +
-		Number(typeFilter !== "all");
 
 	return (
 		<div className="min-h-full bg-background">
