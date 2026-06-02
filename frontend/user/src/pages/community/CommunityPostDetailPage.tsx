@@ -7,7 +7,7 @@ import {
 	Flag,
 	Hash,
 	Heart,
-	List,
+	Menu,
 	LockKeyhole,
 	MessageCircle,
 	MoreHorizontal,
@@ -549,7 +549,7 @@ const CommunityPostDetailPage: React.FC = () => {
 						onClick={() => setIsSidebarOpen(true)}
 						className='inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-black transition hover:bg-gray-100'
 						aria-label='Mở menu cộng đồng'>
-						<List className='h-5 w-5' />
+						<Menu className='h-5 w-5' />
 					</button>
 					<button
 						onClick={() => navigate(-1)}

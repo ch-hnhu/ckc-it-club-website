@@ -146,7 +146,6 @@ const CommunityLayout: React.FC = () => {
 
 	const renderSidebarContent = (isMobile = false) => (
 		<div className={isMobile ? "px-4 py-4" : "px-3 py-4"}>
-			{/* Primary nav */}
 			<nav className='space-y-2'>
 				{PRIMARY_NAV.map((item) => {
 					const Icon = item.icon;
@@ -178,7 +177,6 @@ const CommunityLayout: React.FC = () => {
 				})}
 			</nav>
 
-			{/* Channel list */}
 			<div
 				className={`font-bold uppercase tracking-[0.2em] text-gray-500 ${
 					isMobile ? "mt-6 px-1 text-xs" : "mt-7 px-3 text-[11px]"
