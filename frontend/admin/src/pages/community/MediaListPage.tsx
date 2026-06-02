@@ -348,7 +348,8 @@ function MediaListPage() {
 						Tài nguyên media cộng đồng
 					</h2>
 					<p className='text-muted-foreground'>
-						Theo dõi toàn bộ hình ảnh, video, tài liệu và GIF được tải lên bởi thành viên trong bài đăng, blog và tin nhắn.
+						Theo dõi toàn bộ hình ảnh, video, tài liệu và GIF được tải lên bởi thành
+						viên trong bài đăng, blog và tin nhắn.
 					</p>
 				</div>
 
@@ -561,7 +562,7 @@ function MediaListPage() {
 											variant='ghost'
 											onClick={() => handleSort("owner_name")}
 											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-											Chủ sở hữu {getSortIcon("owner_name")}
+											Người upload {getSortIcon("owner_name")}
 										</Button>
 									</TableHead>
 									<TableHead className='min-w-[220px]'>
@@ -569,7 +570,7 @@ function MediaListPage() {
 											variant='ghost'
 											onClick={() => handleSort("url")}
 											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-											Tài nguyên {getSortIcon("url")}
+											File {getSortIcon("url")}
 										</Button>
 									</TableHead>
 									<TableHead className='w-[120px]'>
@@ -577,7 +578,7 @@ function MediaListPage() {
 											variant='ghost'
 											onClick={() => handleSort("file_type")}
 											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-											Loại file {getSortIcon("file_type")}
+											Loại {getSortIcon("file_type")}
 										</Button>
 									</TableHead>
 									<TableHead className='w-[110px]'>
@@ -705,23 +706,36 @@ function MediaListPage() {
 											{/* Target */}
 											<TableCell>
 												{(() => {
-													const sourceUrl = getSourceUrl(file.target_type, file.target_id);
+													const sourceUrl = getSourceUrl(
+														file.target_type,
+														file.target_id,
+													);
 													const badge = (
 														<Badge
 															variant='outline'
 															className={cn(
 																"rounded-full px-2 py-0.5 text-xs",
-																TARGET_TYPE_MAP[file.target_type].className,
+																TARGET_TYPE_MAP[file.target_type]
+																	.className,
 															)}>
-															{TARGET_TYPE_MAP[file.target_type].label} #{file.target_id}
+															{
+																TARGET_TYPE_MAP[file.target_type]
+																	.label
+															}{" "}
+															#{file.target_id}
 														</Badge>
 													);
 													return sourceUrl ? (
-														<a href={sourceUrl} title='Xem nguồn' className='inline-flex items-center gap-1 hover:opacity-80'>
+														<a
+															href={sourceUrl}
+															title='Xem nguồn'
+															className='inline-flex items-center gap-1 hover:opacity-80'>
 															{badge}
 															<ExternalLink className='h-3 w-3 text-muted-foreground' />
 														</a>
-													) : badge;
+													) : (
+														badge
+													);
 												})()}
 											</TableCell>
 
@@ -752,10 +766,18 @@ function MediaListPage() {
 																Xem tệp
 															</a>
 														</DropdownMenuItem>
-														{getSourceUrl(file.target_type, file.target_id) && (
+														{getSourceUrl(
+															file.target_type,
+															file.target_id,
+														) && (
 															<DropdownMenuItem asChild>
 																<a
-																	href={getSourceUrl(file.target_type, file.target_id)!}
+																	href={
+																		getSourceUrl(
+																			file.target_type,
+																			file.target_id,
+																		)!
+																	}
 																	target='_blank'
 																	rel='noopener noreferrer'>
 																	<ExternalLink className='h-4 w-4' />
