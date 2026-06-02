@@ -302,12 +302,12 @@ function ChannelListPage() {
 
 				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+					<div className="flex flex-row items-center justify-between gap-3">
 						<Input
 							placeholder="Tìm kiếm theo tên kênh hoặc slug..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="h-8 w-full sm:w-64 md:w-80"
+							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
 						<Button size="sm" onClick={openCreate} className="h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
 							<Plus className="h-4 w-4" />
@@ -338,7 +338,7 @@ function ChannelListPage() {
 											Slug {getSortIcon("slug")}
 										</Button>
 									</TableHead>
-									<TableHead className="min-w-[200px]">
+									<TableHead className="w-[240px] max-w-[240px]">
 										<Button variant="ghost" onClick={() => handleSort("description")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Mô tả {getSortIcon("description")}
 										</Button>
@@ -385,11 +385,11 @@ function ChannelListPage() {
 												</div>
 											</TableCell>
 											<TableCell className="font-mono text-sm text-muted-foreground">{channel.slug}</TableCell>
-											<TableCell>
+											<TableCell className="max-w-[240px]">
 												{channel.description ? (
-													<span className="line-clamp-2 text-sm text-muted-foreground">{channel.description}</span>
+													<span className="block truncate text-sm text-muted-foreground" title={channel.description}>{channel.description}</span>
 												) : (
-													<span className="text-xs text-muted-foreground/50 italic">Chưa có mô tả</span>
+													<span className="text-xs italic text-muted-foreground/50">Chưa có mô tả</span>
 												)}
 											</TableCell>
 											<TableCell>
