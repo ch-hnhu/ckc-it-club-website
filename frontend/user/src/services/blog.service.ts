@@ -44,6 +44,12 @@ export const blogService = {
 	toggleReaction: (blogId: number, type: string) =>
 		api.post<ApiResponse<BlogReactionResponse>>(`/community/blogs/${blogId}/reactions`, { type }),
 
+	toggleBookmark: (blogId: number) =>
+		api.post<ApiResponse<{ bookmarked: boolean }>>(`/community/blogs/${blogId}/bookmark`),
+
+	getBookmarkedBlogs: (page = 1) =>
+		api.get<PaginatedResponse<Blog>>("/community/blogs/bookmarks", { page, per_page: 20 }),
+
 	createComment: (blogId: number, content: string, parentId?: number) =>
 		api.post<ApiResponse<BlogComment>>(`/community/blogs/${blogId}/comments`, {
 			content,

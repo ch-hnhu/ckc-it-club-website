@@ -125,6 +125,13 @@ class BlogController extends BaseApiController
                 ->exists();
         }
 
+        $data['my_bookmark'] = $userId
+            ? DB::table('blog_bookmarks')
+                ->where('user_id', $userId)
+                ->where('blog_id', $blog->id)
+                ->exists()
+            : false;
+
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
     }
 
@@ -192,6 +199,61 @@ class BlogController extends BaseApiController
         $message = $isAdmin ? 'Tạo blog thành công.' : 'Blog đã được gửi và đang chờ duyệt.';
 
         return $this->createdResponse($this->transformBlog($blog), $message);
+    }
+
+    public function bookmarks(Request $request): JsonResponse
+    {
+        $perPage = min((int) $request->query('per_page', 20), 50);
+        $userId  = $request->user()->id;
+
+        $blogs = Blog::with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
+            ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count')
+            ->where('blogs.status', 'published')
+            ->whereExists(fn ($q) => $q->from('blog_bookmarks')
+                ->whereColumn('blog_bookmarks.blog_id', 'blogs.id')
+                ->where('blog_bookmarks.user_id', $userId)
+            )
+            ->orderBy('blogs.created_at', 'desc')
+            ->paginate($perPage);
+
+        $blogs->getCollection()->transform(fn (Blog $blog) => [
+            ...$this->transformBlog($blog),
+            'my_reaction' => null,
+            'my_bookmark' => true,
+        ]);
+
+        return $this->paginatedResponse($blogs, ApiMessage::RETRIEVED);
+    }
+
+    public function bookmark(Request $request, int $id): JsonResponse
+    {
+        Blog::where('status', 'published')->findOrFail($id);
+
+        $userId = $request->user()->id;
+        $exists = DB::table('blog_bookmarks')
+            ->where('user_id', $userId)
+            ->where('blog_id', $id)
+            ->exists();
+
+        if ($exists) {
+            DB::table('blog_bookmarks')
+                ->where('user_id', $userId)
+                ->where('blog_id', $id)
+                ->delete();
+            $bookmarked = false;
+        } else {
+            DB::table('blog_bookmarks')->insert([
+                'user_id'    => $userId,
+                'blog_id'    => $id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $bookmarked = true;
+        }
+
+        return $this->successResponse(true, [
+            'bookmarked' => $bookmarked,
+        ], $bookmarked ? 'Đã lưu blog.' : 'Đã bỏ lưu blog.');
     }
 
     public function react(Request $request, int $id): JsonResponse

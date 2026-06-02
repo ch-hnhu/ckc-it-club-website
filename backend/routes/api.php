@@ -91,7 +91,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/posts/{id}/bookmark', [UserPostController::class, 'bookmark']);
             Route::post('/posts/{id}/report', [UserPostController::class, 'report']);
             Route::post('/blogs', [UserBlogController::class, 'store']);
+            Route::get('/blogs/bookmarks', [UserBlogController::class, 'bookmarks']);
             Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
+            Route::post('/blogs/{id}/bookmark', [UserBlogController::class, 'bookmark']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
         });
 

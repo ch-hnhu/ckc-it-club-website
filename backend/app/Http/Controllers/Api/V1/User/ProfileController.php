@@ -49,7 +49,10 @@ class ProfileController extends BaseApiController
             'followers_count' => $user->followers()->count(),
             'following_count' => $user->following()->count(),
             'is_following'      => auth('sanctum')->check() ? auth('sanctum')->user()->following()->where('following_id', $user->id)->exists() : false,
-            'bookmarks_count'   => $isOwnProfile ? DB::table('post_bookmarks')->where('user_id', $user->id)->count() : null,
+            'bookmarks_count'   => $isOwnProfile
+                ? DB::table('post_bookmarks')->where('user_id', $user->id)->count()
+                  + DB::table('blog_bookmarks')->where('user_id', $user->id)->count()
+                : null,
             'archived_count'    => $isOwnProfile ? Post::where('user_id', $user->id)->where('status', 'archived')->count() : null,
             'skills'            => $user->skills->pluck('name')->values(),
             'social_github'    => $user->social_github,

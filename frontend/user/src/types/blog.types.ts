@@ -37,6 +37,7 @@ export interface Blog {
 export interface BlogDetail extends Blog {
 	content: string;
 	reaction_summary: Record<string, number>;
+	my_bookmark: boolean;
 }
 
 export interface BlogComment {
