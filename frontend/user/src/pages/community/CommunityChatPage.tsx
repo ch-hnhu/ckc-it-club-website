@@ -289,12 +289,12 @@ const EmptyChat: React.FC<{ roomName: string }> = ({ roomName }) => (
 
 const GuestWall: React.FC = () => (
 	<div className='flex h-full flex-col items-center justify-center gap-5 px-6 text-center'>
-		<div className='flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-black bg-[var(--color-pastel-blue)] shadow-[3px_3px_0_#111]'>
-			<Lock className='h-7 w-7 text-black' />
+		<div className='flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-300'>
+			<Lock strokeWidth={3} className='h-7 w-7 text-white' />
 		</div>
 		<div>
 			<p className='font-heading text-xl font-extrabold text-black'>Đăng nhập để chat</p>
-			<p className='mt-1 text-sm text-gray-500'>Kết nối cùng các thành viên CKC IT Club.</p>
+			<p className='mt-1 text-sm text-gray-500'>Kết nối cùng các thành viên CKC IT CLUB.</p>
 		</div>
 		<Link
 			to='/login'
@@ -539,7 +539,14 @@ const CommunityChatPage: React.FC = () => {
 
 	// ── Load older messages (scroll-up pagination) ────────────────────────────
 	const loadMoreMessages = async () => {
-		if (!activeRoom || loadingMoreRef.current || loadCooldownRef.current || !hasMore || messages.length === 0) return;
+		if (
+			!activeRoom ||
+			loadingMoreRef.current ||
+			loadCooldownRef.current ||
+			!hasMore ||
+			messages.length === 0
+		)
+			return;
 
 		loadingMoreRef.current = true;
 		setLoadingMore(true);
@@ -583,7 +590,9 @@ const CommunityChatPage: React.FC = () => {
 			loadingMoreRef.current = false;
 			setLoadingMore(false);
 			loadCooldownRef.current = true;
-			setTimeout(() => { loadCooldownRef.current = false; }, 1500);
+			setTimeout(() => {
+				loadCooldownRef.current = false;
+			}, 1500);
 		}
 	};
 
@@ -837,7 +846,9 @@ const CommunityChatPage: React.FC = () => {
 						autoScrollToBottom={true}
 						scrollBehavior='smooth'
 						className='!h-full !bg-[#fafafa]'
-						onYReachStart={() => { void loadMoreMessages(); }}>
+						onYReachStart={() => {
+							void loadMoreMessages();
+						}}>
 						{!user ? (
 							<GuestWall />
 						) : msgGroups.length === 0 && activeRoom && !messagesLoading ? (
@@ -940,10 +951,18 @@ const CommunityChatPage: React.FC = () => {
 										e.target.style.height = "auto";
 										e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
 									}}
-									onCompositionStart={() => { isComposingRef.current = true; }}
-									onCompositionEnd={() => { isComposingRef.current = false; }}
+									onCompositionStart={() => {
+										isComposingRef.current = true;
+									}}
+									onCompositionEnd={() => {
+										isComposingRef.current = false;
+									}}
 									onKeyDown={(e) => {
-										if (e.key === "Enter" && !e.shiftKey && !isComposingRef.current) {
+										if (
+											e.key === "Enter" &&
+											!e.shiftKey &&
+											!isComposingRef.current
+										) {
 											e.preventDefault();
 											void handleSend();
 										}

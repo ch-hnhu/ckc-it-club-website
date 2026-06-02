@@ -1201,38 +1201,12 @@ const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 	}
 
 	return (
-		<div className='mt-5 mb-5 space-y-8 px-6 sm:px-0'>
-			{/* Posts đã lưu */}
+		<div className='mt-5 mb-5 space-y-10 px-6 sm:px-0'>
 			{posts.length > 0 && (
-				<section>
-					<h3 className='mb-4 font-heading text-base font-extrabold text-black'>
-						Bài viết cộng đồng ({posts.length})
-					</h3>
-					<div className='space-y-5'>
-						{posts.map((post) => (
-							<PostCard
-								key={post.id}
-								post={post}
-								user={user}
-								onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
-							/>
-						))}
-					</div>
-				</section>
+				<PostCarousel posts={posts} user={user} isOwnProfile={true} onShowAll={() => {}} />
 			)}
-
-			{/* Blogs đã lưu */}
 			{blogs.length > 0 && (
-				<section>
-					<h3 className='mb-4 font-heading text-base font-extrabold text-black'>
-						Blog ({blogs.length})
-					</h3>
-					<div className='grid gap-5 sm:grid-cols-2'>
-						{blogs.map((blog) => (
-							<BlogCard key={blog.id} blog={blog} />
-						))}
-					</div>
-				</section>
+				<BlogCarousel blogs={blogs} isOwnProfile={true} onShowAll={() => {}} />
 			)}
 		</div>
 	);
@@ -1628,7 +1602,7 @@ const UserProfilePage: React.FC = () => {
 							};
 							return (
 								<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
-									<nav className='flex gap-2 sm:gap-4'>
+									<nav className='no-scrollbar flex gap-2 overflow-x-auto overflow-y-hidden sm:gap-4'>
 										{tabs.map((tab) => {
 											const isActive = activeTab === tab.id;
 											const Icon = tab.icon;

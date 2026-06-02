@@ -27,7 +27,13 @@ import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
 import { userService } from "@/services/user.service";
 import type { Blog, BlogDetail, BlogComment } from "@/types/blog.types";
-import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle, readingTime } from "@/lib/utils";
+import {
+	buildAvatar,
+	buildProfileUrl,
+	formatRelativeTime,
+	getHandle,
+	readingTime,
+} from "@/lib/utils";
 import { renderMarkdownContent } from "@/lib/markdown";
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -195,11 +201,7 @@ interface BlogSuggestionSectionProps {
 	loading: boolean;
 }
 
-const BlogSuggestionSection: React.FC<BlogSuggestionSectionProps> = ({
-	title,
-	blogs,
-	loading,
-}) => {
+const BlogSuggestionSection: React.FC<BlogSuggestionSectionProps> = ({ title, blogs, loading }) => {
 	if (!loading && blogs.length === 0) return null;
 
 	return (
@@ -256,8 +258,7 @@ const AuthorBioCard: React.FC<AuthorBioCardProps> = ({
 						</p>
 					</Link>
 					<p className='mt-1 flex items-center gap-1.5 text-sm text-gray-500'>
-						<User className='h-3.5 w-3.5 shrink-0' />
-						{handle} · Thành viên CKC IT Club
+						{handle} · Thành viên CKC IT CLUB
 					</p>
 					<div className='mt-5 flex flex-wrap gap-3'>
 						{!isOwnProfile && (
@@ -354,7 +355,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
 		`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserDisplayName)}&background=A3E635&color=111111&bold=true`;
 
 	return (
-		<div id={depth === 0 ? `comment-${comment.id}` : undefined} className={depth > 0 ? "ml-11 mt-3" : ""}>
+		<div
+			id={depth === 0 ? `comment-${comment.id}` : undefined}
+			className={depth > 0 ? "ml-11 mt-3" : ""}>
 			<div className='flex gap-3'>
 				<div className='shrink-0'>
 					<img
@@ -803,13 +806,15 @@ const BlogDetailPage: React.FC = () => {
 												</div>
 											</div>
 										</div>
-													</div>
+									</div>
 
 									{/* Content */}
 									{blog.content && (
 										<div
 											className='prose prose-sm mt-7 max-w-none leading-7 text-gray-800 [&_a]:text-lime-700 [&_a:hover]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--color-primary)] [&_blockquote]:pl-4 [&_blockquote]:text-gray-600 [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:font-mono [&_code]:text-sm [&_h2]:mt-8 [&_h2]:font-heading [&_h2]:text-2xl [&_h2]:font-extrabold [&_h3]:mt-6 [&_h3]:font-heading [&_h3]:text-xl [&_h3]:font-extrabold [&_img]:rounded-xl [&_img]:border-2 [&_img]:border-black [&_pre]:rounded-xl [&_pre]:border-2 [&_pre]:border-black [&_pre]:bg-gray-900 [&_pre]:p-4 [&_pre]:text-white [&_strong]:font-extrabold'
-											dangerouslySetInnerHTML={{ __html: renderMarkdownContent(blog.content) }}
+											dangerouslySetInnerHTML={{
+												__html: renderMarkdownContent(blog.content),
+											}}
 										/>
 									)}
 
