@@ -34,7 +34,14 @@ type NavbarProps = {
 	onAuthSuccess: () => Promise<void>;
 };
 
-const BASE_NAV_ITEMS = [
+type NavItem = {
+	label: string;
+	href: string;
+	dropdown?: boolean;
+	highlight?: boolean;
+};
+
+const BASE_NAV_ITEMS: NavItem[] = [
 	{ label: "Cộng đồng", href: "/cong-dong", dropdown: true },
 	{ label: "Tài nguyên", href: "#resources" },
 	{ label: "Bảng xếp hạng", href: "#leaderboard" },
@@ -43,7 +50,7 @@ const BASE_NAV_ITEMS = [
 	{ label: "Liên hệ", href: "/lien-he" },
 ];
 
-const APPLY_NAV_ITEM = { label: "Ứng tuyển", href: "/ung-tuyen", highlight: true };
+const APPLY_NAV_ITEM: NavItem = { label: "Ứng tuyển", href: "/ung-tuyen", highlight: true };
 
 const COMMUNITY_DROPDOWN = [
 	{ id: "home", label: "Trang chủ", to: "/cong-dong", icon: Home },
