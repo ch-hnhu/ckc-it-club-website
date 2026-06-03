@@ -8,6 +8,7 @@ interface BlogCardProps {
 	blog: Blog;
 	featured?: boolean;
 	showPinnedBadge?: boolean;
+	linkTo?: string;
 }
 
 const TAG_BG = [
@@ -33,10 +34,11 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 	blog,
 	featured = false,
 	showPinnedBadge = false,
+	linkTo,
 }) => {
 	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = buildAvatar(blog.user?.full_name, blog.user?.avatar);
-	const detailUrl = `/blog/${blog.slug}`;
+	const detailUrl = linkTo ?? `/blog/${blog.slug}`;
 	const date = blog.published_at ?? blog.created_at;
 
 	if (featured) {

@@ -661,6 +661,87 @@ const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) =
 	);
 };
 
+// ─── Tab Content: Drafts ──────────────────────────────────────────────────────
+
+const DraftBlogsTab: React.FC = () => {
+	const [blogs, setBlogs] = useState<Blog[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+		setLoading(true);
+		setError(false);
+		blogService
+			.getMyDraftBlogs()
+			.then((res) => {
+				if (!cancelled) setBlogs(res.data);
+			})
+			.catch(() => {
+				if (!cancelled) setError(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	if (loading) {
+		return (
+			<div className='mt-5 grid gap-5 px-6 sm:grid-cols-2 sm:px-0'>
+				{Array.from({ length: 4 }).map((_, i) => (
+					<div
+						key={i}
+						className='h-80 animate-pulse rounded-2xl border-2 border-black bg-gray-200'
+					/>
+				))}
+			</div>
+		);
+	}
+
+	if (error || blogs.length === 0) {
+		return (
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<BookOpenText className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
+					{error ? "Không thể tải nháp" : "Chưa có bài nháp nào"}
+				</p>
+				<p className='mt-1 text-sm text-gray-400'>
+					{error ? "Vui lòng thử lại sau." : "Hãy viết blog và lưu nháp để tiếp tục sau."}
+				</p>
+				{!error && (
+					<Link
+						to='/blog/dang-bai'
+						className='mt-5 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						<Plus className='h-4 w-4' />
+						Tạo blog
+					</Link>
+				)}
+			</div>
+		);
+	}
+
+	return (
+		<div className='mt-5 mb-5 grid gap-5 px-6 sm:grid-cols-2 sm:px-0'>
+			{blogs.map((blog) => (
+				<div key={blog.id} className='relative'>
+					{blog.status === "pending_review" && (
+						<div className='absolute right-3 top-3 z-10'>
+							<span className='inline-flex items-center gap-1.5 rounded-full border-2 border-amber-400 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700'>
+								<span className='h-1.5 w-1.5 rounded-full bg-amber-500' />
+								Chờ duyệt
+							</span>
+						</div>
+					)}
+					<BlogCard blog={blog} linkTo={`/blog/${blog.slug}/chinh-sua`} />
+				</div>
+			))}
+		</div>
+	);
+};
+
 // ─── Compact Post Card (for horizontal carousel) ─────────────────────────────
 
 interface PostCardCompactProps {
@@ -1319,7 +1400,7 @@ const ArchivedTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 
 // ─── UserProfilePage ──────────────────────────────────────────────────────────
 
-type Tab = "overview" | "posts" | "blog" | "bookmarks" | "archived";
+type Tab = "overview" | "posts" | "blog" | "bookmarks" | "archived" | "drafts";
 
 type TabDef = { id: Tab; label: string; icon: React.ElementType };
 
@@ -1331,6 +1412,7 @@ const BASE_TABS: TabDef[] = [
 
 const BOOKMARKS_TAB: TabDef = { id: "bookmarks", label: "Đã lưu", icon: Bookmark };
 const ARCHIVED_TAB: TabDef = { id: "archived", label: "Lưu trữ", icon: Archive };
+const DRAFTS_TAB: TabDef = { id: "drafts", label: "Nháp", icon: BookOpenText };
 
 const writeClipboardText = async (text: string) => {
 	if (navigator.clipboard?.writeText) {
@@ -1366,6 +1448,7 @@ const UserProfilePage: React.FC = () => {
 	const [followed, setFollowed] = useState(false);
 	const [followLoading, setFollowLoading] = useState(false);
 	const [copiedProfileLink, setCopiedProfileLink] = useState(false);
+	const [draftsCount, setDraftsCount] = useState<number | null>(null);
 	const copyResetTimeoutRef = useRef<number | null>(null);
 
 	// ── Tab state synced with URL ?tab= query param ──────────────────────────
@@ -1380,7 +1463,9 @@ const UserProfilePage: React.FC = () => {
 					? "bookmarks"
 					: tabParam === "archived"
 						? "archived"
-						: "overview";
+						: tabParam === "drafts"
+							? "drafts"
+							: "overview";
 	const previousUsernameRef = useRef<string | undefined>(undefined);
 
 	const setActiveTab = (tab: Tab) => {
@@ -1410,10 +1495,19 @@ const UserProfilePage: React.FC = () => {
 		previousUsernameRef.current = username;
 	}, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
+	// Fetch số lượng bài nháp cho own profile
+	useEffect(() => {
+		if (!isOwnProfile) return;
+		blogService
+			.getMyDraftBlogs(1)
+			.then((res) => setDraftsCount(res.meta?.total ?? res.data.length))
+			.catch(() => setDraftsCount(null));
+	}, [isOwnProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+
 	// Guard: if someone manually types ?tab=bookmarks or ?tab=archived on another user's profile,
 	// redirect to overview once we know it's not their own profile.
 	useEffect(() => {
-		if (!loading && (activeTab === "bookmarks" || activeTab === "archived") && !isOwnProfile) {
+		if (!loading && (activeTab === "bookmarks" || activeTab === "archived" || activeTab === "drafts") && !isOwnProfile) {
 			setSearchParams({}, { replace: true });
 		}
 	}, [loading, activeTab, isOwnProfile]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1619,7 +1713,7 @@ const UserProfilePage: React.FC = () => {
 						{/* Tabs — "Đã lưu" and "Lưu trữ" only visible on own profile */}
 						{(() => {
 							const tabs: TabDef[] = isOwnProfile
-								? [...BASE_TABS, BOOKMARKS_TAB, ARCHIVED_TAB]
+								? [...BASE_TABS, BOOKMARKS_TAB, ARCHIVED_TAB, DRAFTS_TAB]
 								: BASE_TABS;
 							const badgeCount: Partial<Record<Tab, number>> = {
 								posts: profile.posts_count,
@@ -1629,6 +1723,9 @@ const UserProfilePage: React.FC = () => {
 									: {}),
 								...(profile.archived_count != null
 									? { archived: profile.archived_count }
+									: {}),
+								...(draftsCount != null && draftsCount > 0
+									? { drafts: draftsCount }
 									: {}),
 							};
 							return (
@@ -1681,6 +1778,8 @@ const UserProfilePage: React.FC = () => {
 							<BookmarksTab user={user} />
 						) : activeTab === "archived" ? (
 							<ArchivedTab user={user} />
+						) : activeTab === "drafts" ? (
+							<DraftBlogsTab />
 						) : activeTab === "blog" ? (
 							<UserBlogsTab username={username} isOwnProfile={isOwnProfile} />
 						) : (

@@ -104,6 +104,13 @@ const StacksEditorWrapper = forwardRef<StacksEditorHandle, StacksEditorWrapperPr
 			const inner = innerRef.current;
 			if (!inner) return;
 
+			// Suppress StacksEditor's internal [DEBUG] logs (no public API to disable them)
+			const originalLog = console.log;
+			console.log = (...args: unknown[]) => {
+				if (typeof args[0] === "string" && args[0].startsWith("[DEBUG]")) return;
+				originalLog.apply(console, args);
+			};
+
 			// Clear any DOM artifacts from StrictMode's first (dry-run) mount
 			while (inner.firstChild) inner.removeChild(inner.firstChild);
 
@@ -377,6 +384,7 @@ const StacksEditorWrapper = forwardRef<StacksEditorHandle, StacksEditorWrapperPr
 				document.removeEventListener("selectionchange", scheduleEditorMenuSync);
 				editor.destroy();
 				editorRef.current = null;
+				console.log = originalLog;
 			};
 		}, []); // eslint-disable-line react-hooks/exhaustive-deps
 

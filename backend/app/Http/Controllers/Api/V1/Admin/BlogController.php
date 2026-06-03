@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
+use App\Notifications\AdminActionNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -126,11 +127,32 @@ class BlogController extends BaseApiController
     {
         $request->validate(['status' => 'required|in:draft,pending_review,published,archived']);
 
+        $previousStatus = $blog->status;
         $status = $request->string('status')->value();
+
         $blog->update([
             'status'       => $status,
             'published_at' => $status === 'published' && ! $blog->published_at ? now() : $blog->published_at,
         ]);
+
+        // Gửi notification cho tác giả khi blog được duyệt
+        if ($previousStatus !== 'published' && $status === 'published') {
+            $blog->load('author:id,full_name,email');
+            $author = $blog->author;
+            $admin  = auth()->user();
+
+            if ($author) {
+                $author->notify(new AdminActionNotification(
+                    'Bài viết của bạn đã được duyệt 🎉',
+                    "Bài viết \"{$blog->title}\" đã được duyệt và xuất bản thành công.",
+                    'blog_approved',
+                    'blog',
+                    $blog->id,
+                    $admin?->full_name ?? 'Admin',
+                    "/blog/{$blog->slug}",
+                ));
+            }
+        }
 
         return $this->successResponse(true, ['status' => $blog->status], 'Cập nhật trạng thái blog thành công.');
     }

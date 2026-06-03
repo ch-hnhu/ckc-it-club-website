@@ -73,6 +73,7 @@ export interface CreateBlogPayload {
 	excerpt?: string;
 	tagIds?: number[];
 	featuredImage?: File | null;
+	status?: "draft" | "pending_review";
 }
 
 export interface BlogReactionResponse {

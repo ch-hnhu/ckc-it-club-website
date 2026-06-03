@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\ApiMessage;
+use App\Enums\HttpStatus;
 use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
@@ -88,20 +89,32 @@ class BlogController extends BaseApiController
 
     public function show(string $slug): JsonResponse
     {
+        $authUserId = auth('sanctum')->id();
+
         $blog = Blog::with([
                 'author' => fn ($q) => $q->select('id', 'full_name', 'email', 'avatar', 'username')->with('roles:id,name'),
                 'tags:id,name',
             ])
             ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count,
                          (SELECT COUNT(*) FROM comments WHERE blog_id = blogs.id AND deleted_at IS NULL AND is_hidden = 0) as blog_comments_count')
-            ->where('status', 'published')
             ->where(fn ($q) => $q
                 ->where('slug', $slug)
                 ->orWhere('id', is_numeric($slug) ? (int) $slug : 0)
             )
+            // Cho phép tác giả xem blog của chính mình dù chưa published
+            ->where(fn ($q) => $q
+                ->where('status', 'published')
+                ->orWhere(fn ($inner) => $inner
+                    ->where('author_id', $authUserId ?? 0)
+                    ->whereIn('status', ['draft', 'pending_review'])
+                )
+            )
             ->firstOrFail();
 
-        $blog->increment('view_count');
+        // Chỉ tăng view_count cho blog published (không đếm lượt xem nháp của tác giả)
+        if ($blog->status === 'published') {
+            $blog->increment('view_count');
+        }
 
         $data = $this->transformBlog($blog);
         if ($data['user'] && $blog->author) {
@@ -151,6 +164,7 @@ class BlogController extends BaseApiController
             'featured_image' => ['nullable', 'image', 'max:5120'],
             'tag_ids'        => ['nullable', 'array'],
             'tag_ids.*'      => ['integer', 'exists:tags,id'],
+            'status'         => ['nullable', 'in:draft,pending_review'],
         ]);
 
         $coverImagePath = null;
@@ -168,7 +182,12 @@ class BlogController extends BaseApiController
 
         $isAdmin = $request->user()->hasRole(RolesEnum::adminRoles());
 
-        $blog = DB::transaction(function () use ($request, $slug, $coverImagePath, $isAdmin) {
+        // Admin always publishes; user chooses draft or pending_review (default: pending_review)
+        $status = $isAdmin
+            ? 'published'
+            : ($request->input('status', 'pending_review') === 'draft' ? 'draft' : 'pending_review');
+
+        $blog = DB::transaction(function () use ($request, $slug, $coverImagePath, $status) {
             $blog = Blog::create([
                 'author_id'    => $request->user()->id,
                 'title'        => $request->input('title'),
@@ -176,8 +195,8 @@ class BlogController extends BaseApiController
                 'content'      => $request->input('content'),
                 'excerpt'      => $request->input('excerpt'),
                 'cover_image'  => $coverImagePath,
-                'status'       => $isAdmin ? 'published' : 'pending_review',
-                'published_at' => $isAdmin ? now() : null,
+                'status'       => $status,
+                'published_at' => $status === 'published' ? now() : null,
                 'view_count'   => 0,
             ]);
 
@@ -202,9 +221,93 @@ class BlogController extends BaseApiController
             ]);
         }
 
-        $message = $isAdmin ? 'Tạo blog thành công.' : 'Blog đã được gửi và đang chờ duyệt.';
+        $messages = [
+            'published'      => 'Tạo blog thành công.',
+            'pending_review' => 'Blog đã được gửi và đang chờ duyệt.',
+            'draft'          => 'Đã lưu nháp.',
+        ];
 
-        return $this->createdResponse($this->transformBlog($blog), $message);
+        return $this->createdResponse($this->transformBlog($blog), $messages[$status] ?? 'Tạo blog thành công.');
+    }
+
+    public function myDraftBlogs(Request $request): JsonResponse
+    {
+        $userId  = $request->user()->id;
+        $perPage = min((int) $request->query('per_page', 20), 50);
+
+        $blogs = Blog::with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
+            ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count')
+            ->where('author_id', $userId)
+            ->whereIn('status', ['draft', 'pending_review'])
+            ->orderBy('updated_at', 'desc')
+            ->paginate($perPage);
+
+        $blogs->getCollection()->transform(fn (Blog $blog) => [
+            ...$this->transformBlog($blog),
+            'my_reaction' => null,
+            'my_bookmark' => false,
+        ]);
+
+        return $this->paginatedResponse($blogs, ApiMessage::RETRIEVED);
+    }
+
+    public function update(Request $request, string $slug): JsonResponse
+    {
+        $userId = $request->user()->id;
+
+        $blog = Blog::where(fn ($q) => $q->where('slug', $slug)->orWhere('id', is_numeric($slug) ? (int)$slug : 0))
+            ->where('author_id', $userId)
+            ->whereIn('status', ['draft', 'pending_review'])
+            ->firstOrFail();
+
+        $request->validate([
+            'title'          => ['sometimes', 'required', 'string', 'min:5', 'max:500'],
+            'content'        => ['sometimes', 'required', 'string'],
+            'excerpt'        => ['nullable', 'string', 'max:1000'],
+            'featured_image' => ['nullable', 'image', 'max:5120'],
+            'tag_ids'        => ['nullable', 'array'],
+            'tag_ids.*'      => ['integer', 'exists:tags,id'],
+            'status'         => ['nullable', 'in:draft,pending_review'],
+        ]);
+
+        if ($request->filled('title') && $request->input('title') !== $blog->title) {
+            $baseSlug = Str::slug($request->input('title')) ?: 'blog';
+            $newSlug  = $baseSlug;
+            $i        = 1;
+            while (Blog::where('slug', $newSlug)->where('id', '!=', $blog->id)->exists()) {
+                $newSlug = "{$baseSlug}-{$i}";
+                $i++;
+            }
+            $blog->slug  = $newSlug;
+            $blog->title = $request->input('title');
+        }
+
+        if ($request->has('content'))  $blog->content  = $request->input('content');
+        if ($request->has('excerpt'))  $blog->excerpt  = $request->input('excerpt');
+        if ($request->has('status'))   $blog->status   = $request->input('status');
+
+        if ($request->hasFile('featured_image')) {
+            // Xóa ảnh cũ nếu có
+            if ($blog->cover_image) {
+                Storage::disk('public')->delete($blog->cover_image);
+            }
+            $blog->cover_image = $request->file('featured_image')->store('blog-covers', 'public');
+        }
+
+        $blog->save();
+
+        if ($request->has('tag_ids')) {
+            $blog->tags()->sync($request->input('tag_ids', []));
+        }
+
+        $blog->load(['author:id,full_name,email,avatar,username', 'tags:id,name']);
+
+        $messages = [
+            'pending_review' => 'Blog đã được gửi và đang chờ duyệt.',
+            'draft'          => 'Đã lưu nháp.',
+        ];
+
+        return $this->successResponse(true, $this->transformBlog($blog), $messages[$blog->status] ?? 'Cập nhật blog thành công.', HttpStatus::OK);
     }
 
     public function bookmarks(Request $request): JsonResponse

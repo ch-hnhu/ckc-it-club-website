@@ -329,7 +329,7 @@ function BlogListPage() {
 							onChange={(e) => setSearch(e.target.value)}
 							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
-						<div className="flex shrink-0 items-center gap-2">
+						<div className="ml-auto flex shrink-0 items-center gap-2">
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button variant="outline" size="sm" className="h-8">
