@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\User;
 use App\Enums\HttpStatus;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\User;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -12,7 +13,10 @@ class FollowController extends BaseApiController
 {
     public function toggle(Request $request, string $username): JsonResponse
     {
-        $target = User::where('username', $username)
+        $target = User::where(function ($q) use ($username) {
+                $q->where('username', $username)
+                  ->orWhere('email', 'like', "{$username}@%");
+            })
             ->where('is_active', true)
             ->first();
 
@@ -31,6 +35,10 @@ class FollowController extends BaseApiController
         $isFollowing = $me->following()->where('following_id', $target->id)->exists();
         $followersCount = $target->followers()->count();
 
+        if ($isFollowing) {
+            UserNotificationService::dispatchFollow($target, $me);
+        }
+
         return $this->successResponse(true, [
             'is_following'    => $isFollowing,
             'followers_count' => $followersCount,
@@ -39,7 +47,12 @@ class FollowController extends BaseApiController
 
     public function followers(string $username): JsonResponse
     {
-        $user = User::where('username', $username)->where('is_active', true)->first();
+        $user = User::where(function ($q) use ($username) {
+                $q->where('username', $username)
+                  ->orWhere('email', 'like', "{$username}@%");
+            })
+            ->where('is_active', true)
+            ->first();
 
         if (! $user) {
             return $this->errorResponse(false, 'Không tìm thấy người dùng.', HttpStatus::NOT_FOUND);
@@ -61,7 +74,12 @@ class FollowController extends BaseApiController
 
     public function following(string $username): JsonResponse
     {
-        $user = User::where('username', $username)->where('is_active', true)->first();
+        $user = User::where(function ($q) use ($username) {
+                $q->where('username', $username)
+                  ->orWhere('email', 'like', "{$username}@%");
+            })
+            ->where('is_active', true)
+            ->first();
 
         if (! $user) {
             return $this->errorResponse(false, 'Không tìm thấy người dùng.', HttpStatus::NOT_FOUND);

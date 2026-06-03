@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\HttpStatus;
+use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\ClubApplication\UpdateClubApplicationStatusRequest;
 use App\Models\ClubApplication;
@@ -66,6 +67,11 @@ class ClubApplicationController extends BaseApiController
             : $clubApplication->note;
         $clubApplication->updated_by = auth()->id();
         $clubApplication->save();
+
+        if ($nextStatus === 'passed' && $clubApplication->applicant) {
+            $clubApplication->applicant->syncRoles([RolesEnum::CLUB_MEMBER->value]);
+        }
+
         $clubApplication->refresh()->load([
             'applicant.faculty',
             'applicant.major',

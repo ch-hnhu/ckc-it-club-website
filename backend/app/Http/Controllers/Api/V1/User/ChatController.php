@@ -7,8 +7,11 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\ChatMember;
 use App\Models\ChatRoom;
 use App\Models\Message;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ChatController extends BaseApiController
 {
@@ -17,7 +20,6 @@ class ChatController extends BaseApiController
     public function index(): JsonResponse
     {
         $rooms = ChatRoom::query()
-            ->where('type', 'group')
             ->withCount('members')
             ->withCount(['messages as message_count' => fn ($q) => $q->where('type', 'text')])
             ->orderByDesc('last_message_at')
@@ -38,12 +40,11 @@ class ChatController extends BaseApiController
         $name = trim($request->input('name'));
 
         // Kiểm tra tên phòng đã tồn tại chưa
-        if (ChatRoom::where('type', 'group')->whereRaw('LOWER(name) = ?', [strtolower($name)])->exists()) {
+        if (ChatRoom::whereRaw('LOWER(name) = ?', [strtolower($name)])->exists()) {
             return $this->errorResponse(false, 'Tên phòng chat đã tồn tại. Vui lòng chọn tên khác.', 422);
         }
 
         $room = ChatRoom::create([
-            'type' => 'group',
             'name' => $name,
         ]);
 
@@ -65,20 +66,32 @@ class ChatController extends BaseApiController
 
     public function messages(Request $request, int $roomId): JsonResponse
     {
-        $room = ChatRoom::where('type', 'group')->findOrFail($roomId);
+        $room = ChatRoom::findOrFail($roomId);
 
         $perPage = min(50, max(1, (int) $request->query('per_page', 30)));
-        $before  = $request->query('before'); // ISO timestamp for pagination
+        $before   = $request->query('before'); // ISO timestamp for pagination
+        $beforeId = (int) $request->query('before_id', 0);
 
         $query = Message::query()
             ->where('room_id', $room->id)
             ->where('type', 'text')
             ->whereNull('deleted_at')
             ->with('creator:id,full_name,email,avatar,username')
-            ->orderByDesc('created_at');
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
 
         if ($before) {
-            $query->where('created_at', '<', $before);
+            $beforeTime = Carbon::parse($before);
+            $query->where(function ($q) use ($beforeTime, $beforeId) {
+                $q->where('created_at', '<', $beforeTime);
+
+                if ($beforeId > 0) {
+                    $q->orWhere(function ($q) use ($beforeTime, $beforeId) {
+                        $q->where('created_at', '=', $beforeTime)
+                            ->where('id', '<', $beforeId);
+                    });
+                }
+            });
         }
 
         $messages = $query->limit($perPage)->get()->reverse()->values();
@@ -94,7 +107,7 @@ class ChatController extends BaseApiController
 
     public function send(Request $request, int $roomId): JsonResponse
     {
-        $room = ChatRoom::where('type', 'group')->findOrFail($roomId);
+        $room = ChatRoom::findOrFail($roomId);
 
         $request->validate([
             'content'     => ['required', 'string', 'min:1', 'max:2000'],
@@ -134,7 +147,7 @@ class ChatController extends BaseApiController
 
     public function poll(Request $request, int $roomId): JsonResponse
     {
-        $room  = ChatRoom::where('type', 'group')->findOrFail($roomId);
+        $room  = ChatRoom::findOrFail($roomId);
         $after = $request->query('after'); // ISO timestamp
 
         $query = Message::query()
@@ -164,12 +177,19 @@ class ChatController extends BaseApiController
         return [
             'id'               => $room->id,
             'name'             => $room->name,
-            'type'             => $room->type,
+            'image'            => $this->resolveImageUrl($room->image),
             'member_count'     => $room->members_count ?? 0,
             'message_count'    => $room->message_count ?? 0,
             'last_message_at'  => $room->last_message_at?->toIso8601String(),
             'created_at'       => $room->created_at->toIso8601String(),
         ];
+    }
+
+    private function resolveImageUrl(?string $image): ?string
+    {
+        if (! $image) return null;
+        if (Str::startsWith($image, ['http://', 'https://', '/storage/'])) return $image;
+        return Storage::disk('public')->url($image);
     }
 
     private function transformMessage(Message $message): array

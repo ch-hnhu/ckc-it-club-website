@@ -352,6 +352,14 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-01`: Admin channel create/edit dialog uses a file input for channel avatar images and submits channel forms as `multipart/form-data`.
+- `2026-06-01`: Admin chat room management no longer depends on room `type`; the list removed direct/group filtering and type stats because `chat_rooms.type` was dropped.
+- `2026-06-01`: Admin `/community/chat-rooms` page has create, update, and delete controls for chat rooms, and the row action UI uses an ellipsis menu without exposing the system-message log.
+
+- `2026-06-01`: Admin post management table no longer shows the `Ghim` column; pin/unpin remains available from each row's action menu.
+- `2026-06-01`: Admin comment list changed the `Thuộc về` table column to `URL bài viết`, rendering `article_url` as an external link to the user-facing post/blog.
+- `2026-06-01`: Shared `ui/dialog` only suppresses `aria-describedby` when no `DialogDescription` is present, preserving description linking when available; built-in close button is explicitly `type="button"`.
+
 - `2026-05-24`: Wired department member chức vụ changes from the detail table to `PATCH /departments/{department}/users/{user}`; the backend maps head/member changes to the user's configured head role for that department.
 - `2026-05-24`: User create/update role forms can affect department head display because backend maps selected head roles to the corresponding department ownership.
 - `2026-04-20`: Updated CreateUser avatar behavior so clearing selected image restores default avatar preview (`/img/default-avatar.jpg`) while preserving all other form field state.

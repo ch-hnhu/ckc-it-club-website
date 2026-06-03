@@ -50,10 +50,31 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  'aria-describedby': ariaDescribedBy,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const hasDescription = React.Children.toArray(children).some((child) => {
+    if (!React.isValidElement(child)) return false
+    if (child.type === DialogDescription) return true
+
+    const nestedChildren = (child.props as { children?: React.ReactNode }).children
+    return nestedChildren
+      ? React.Children.toArray(nestedChildren).some(
+          (nestedChild) =>
+            React.isValidElement(nestedChild) &&
+            nestedChild.type === DialogDescription,
+        )
+      : false
+  })
+  const describedByProps =
+    ariaDescribedBy !== undefined
+      ? { 'aria-describedby': ariaDescribedBy }
+      : hasDescription
+        ? {}
+        : { 'aria-describedby': undefined }
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -64,10 +85,12 @@ function DialogContent({
           className,
         )}
         {...props}
+        {...describedByProps}
       >
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
+            type="button"
             data-slot="dialog-close"
             className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >

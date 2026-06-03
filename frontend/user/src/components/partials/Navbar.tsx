@@ -20,21 +20,25 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
-	clearAccessToken,
-	getGoogleAuthUrl,
-	listenOAuthAuthMessage,
 	logout,
-	setAccessToken,
 	type AuthUser,
 } from "../../services/auth.service";
 import { buildProfileUrl } from "@/lib/utils";
+import NotificationBell from "@/components/partials/NotificationBell";
 
 type NavbarProps = {
 	user: AuthUser | null;
 	onAuthSuccess: () => Promise<void>;
 };
 
-const NAV_ITEMS = [
+type NavItem = {
+	label: string;
+	href: string;
+	dropdown?: boolean;
+	highlight?: boolean;
+};
+
+const BASE_NAV_ITEMS: NavItem[] = [
 	{ label: "Cộng đồng", href: "/cong-dong", dropdown: true },
 	{ label: "Tài nguyên", href: "#resources" },
 	{ label: "Bảng xếp hạng", href: "#leaderboard" },
@@ -42,6 +46,8 @@ const NAV_ITEMS = [
 	{ label: "Khóa học", href: "#courses" },
 	{ label: "Liên hệ", href: "/lien-he" },
 ];
+
+const APPLY_NAV_ITEM: NavItem = { label: "Ứng tuyển", href: "/ung-tuyen", highlight: true };
 
 const COMMUNITY_DROPDOWN = [
 	{ id: "home", label: "Trang chủ", to: "/cong-dong", icon: Home },
@@ -61,6 +67,13 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const profileMenuRef = useRef<HTMLDivElement>(null);
 	const communityDropdownRef = useRef<HTMLDivElement>(null);
 	const location = useLocation();
+
+	const isClubMember = user?.roles?.includes("club-member") ?? false;
+	const shouldShowApplyButton = Boolean(user && !isClubMember);
+	const desktopNavItems = BASE_NAV_ITEMS;
+	const mobileNavItems = shouldShowApplyButton
+		? [...BASE_NAV_ITEMS, APPLY_NAV_ITEM]
+		: BASE_NAV_ITEMS;
 	const isCommunityPage =
 		location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
 	const navbarContainerClass = isCommunityPage ? "mx-0 max-w-none" : "";
@@ -71,21 +84,6 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 		`https://ui-avatars.com/api/?name=${encodeURIComponent(
 			userDisplayName,
 		)}&background=A3E635&color=111111&bold=true`;
-
-	useEffect(() => {
-		return listenOAuthAuthMessage({
-			onSuccess: async (payload) => {
-				if (payload.token) {
-					setAccessToken(payload.token);
-				}
-
-				await onAuthSuccess();
-			},
-			onError: (payload) => {
-				console.error("Login error:", payload.message);
-			},
-		});
-	}, [onAuthSuccess]);
 
 	useEffect(() => {
 		if (!isProfileOpen) return;
@@ -131,27 +129,6 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
 	}, [isCommunityOpen]);
-
-	const handleLogin = async () => {
-		try {
-			setLoading(true);
-			clearAccessToken();
-			const url = await getGoogleAuthUrl();
-			const width = 520;
-			const height = 640;
-			const left = window.screenX + (window.outerWidth - width) / 2;
-			const top = window.screenY + (window.outerHeight - height) / 2;
-			window.open(
-				url,
-				"google_oauth",
-				`width=${width},height=${height},left=${left},top=${top}`,
-			);
-		} catch (err) {
-			console.error("Login error:", err);
-		} finally {
-			setLoading(false);
-		}
-	};
 
 	const handleLogout = async () => {
 		try {
@@ -292,7 +269,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 						</Link>
 
 						<nav className='hidden min-w-0 items-center gap-1 xl:flex'>
-							{NAV_ITEMS.map((item) => {
+							{desktopNavItems.map((item) => {
 								const isActive = isNavItemActive(item.href);
 								const className = getNavItemClass(isActive);
 
@@ -356,6 +333,18 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 									);
 								}
 
+								if (item.highlight) {
+									return (
+										<Link
+											key={item.label}
+											to={item.href}
+											className='neo-btn neo-btn-primary px-4 py-2 text-sm'
+											style={{ fontFamily: "var(--font-body)" }}>
+											{item.label}
+										</Link>
+									);
+								}
+
 								return item.href.startsWith("/") ? (
 									<Link
 										key={item.label}
@@ -387,22 +376,33 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 
 					<div className='hidden shrink-0 items-center gap-3 xl:flex'>
 						{user ? (
-							<div ref={profileMenuRef} className='relative'>
-								<button
-									type='button'
-									onClick={() => setIsProfileOpen((current) => !current)}
-									className='flex h-11 w-11 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-blue)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 cursor-pointer'
-									aria-label={`Mở menu tài khoản của ${userDisplayName}`}
-									aria-haspopup='menu'
-									aria-expanded={isProfileOpen}>
-									<img
-										src={userAvatar}
-										alt={userDisplayName}
-										className='h-full w-full rounded-full object-cover'
-									/>
-								</button>
-								{isProfileOpen && renderProfileMenu()}
-							</div>
+							<>
+								<NotificationBell user={user} />
+								<div ref={profileMenuRef} className='relative'>
+									<button
+										type='button'
+										onClick={() => setIsProfileOpen((current) => !current)}
+										className='flex h-11 w-11 items-center justify-center rounded-full border-2 border-gray-700 bg-[var(--color-pastel-blue)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 cursor-pointer'
+										aria-label={`Mở menu tài khoản của ${userDisplayName}`}
+										aria-haspopup='menu'
+										aria-expanded={isProfileOpen}>
+										<img
+											src={userAvatar}
+											alt={userDisplayName}
+											className='h-full w-full rounded-full object-cover'
+										/>
+									</button>
+									{isProfileOpen && renderProfileMenu()}
+								</div>
+								{shouldShowApplyButton && (
+									<Link
+										to={APPLY_NAV_ITEM.href}
+										className='neo-btn neo-btn-primary px-4 py-2 text-sm'
+										style={{ fontFamily: "var(--font-body)" }}>
+										{APPLY_NAV_ITEM.label}
+									</Link>
+								)}
+							</>
 						) : (
 							<>
 								<Link
@@ -412,13 +412,12 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 									<LogIn className='h-4 w-4' />
 									Đăng nhập
 								</Link>
-								<button
-									onClick={handleLogin}
-									disabled={loading}
-									className='neo-btn neo-btn-primary px-4 py-2 text-sm disabled:opacity-50'>
+								<Link
+									to={APPLY_NAV_ITEM.href}
+									className='neo-btn neo-btn-primary px-4 py-2 text-sm'>
 									<UserPlus className='h-4 w-4' />
-									{loading ? "Đang xử lý..." : "Tham gia ngay"}
-								</button>
+									Tham gia ngay
+								</Link>
 							</>
 						)}
 					</div>
@@ -438,7 +437,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 						{mobileMenuView === "nav" && (
 							<>
 								<nav className='flex flex-col gap-3 py-5'>
-									{NAV_ITEMS.map((item) => {
+									{mobileNavItems.map((item) => {
 										const isActive = isNavItemActive(item.href);
 										const className = getNavItemClass(isActive, true);
 
@@ -453,6 +452,19 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 													{item.label}
 													<ChevronRight className='h-4 w-4 shrink-0 text-gray-500' />
 												</button>
+											);
+										}
+
+										if (item.highlight) {
+											return (
+												<Link
+													key={item.label}
+													to={item.href}
+													onClick={closeMobileMenu}
+													className='neo-btn neo-btn-primary w-full justify-center py-3 text-base'
+													style={{ fontFamily: "var(--font-body)" }}>
+													{item.label}
+												</Link>
 											);
 										}
 
@@ -514,13 +526,12 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 												className='neo-btn neo-btn-secondary w-full justify-center'>
 												<LogIn className='h-4 w-4' /> Đăng nhập
 											</Link>
-											<button
-												onClick={handleLogin}
-												disabled={loading}
-												className='neo-btn neo-btn-primary w-full justify-center disabled:opacity-50'>
-												<UserPlus className='h-4 w-4' />{" "}
-												{loading ? "Đang xử lý..." : "Tham gia ngay"}
-											</button>
+											<Link
+												to={APPLY_NAV_ITEM.href}
+												onClick={closeMobileMenu}
+												className='neo-btn neo-btn-primary w-full justify-center'>
+												<UserPlus className='h-4 w-4' /> Tham gia ngay
+											</Link>
 										</div>
 									)}
 								</div>
@@ -616,13 +627,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 										<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
 										<span>Đã lưu</span>
 									</Link>
-									<button
-										type='button'
+									<Link
+										to='/tai-khoan?tabIndex=0'
 										onClick={closeMobileMenu}
-										className={profileMenuItemClass}>
+										className={profileMenuItemClass}
+										role='menuitem'>
 										<SlidersHorizontal className='h-5 w-5 shrink-0 text-gray-600' />
-										<span>Cài đặt</span>
-									</button>
+										<span>Tài khoản</span>
+									</Link>
 									<button
 										type='button'
 										onClick={() => {

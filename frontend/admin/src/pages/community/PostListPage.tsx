@@ -14,7 +14,6 @@ import {
 	MoreHorizontal,
 	Pin,
 	PinOff,
-	RefreshCw,
 	SquarePen,
 	Trash2,
 } from "lucide-react";
@@ -158,7 +157,7 @@ function getVisibilityLabel(v: PostVisibility) {
 	return v === "public" ? "Công khai" : "Thành viên";
 }
 
-type SortKey = "id" | "status" | "created_at" | "reactions_count" | "user_name" | "channel_name" | "content" | "tags" | "is_pinned";
+type SortKey = "id" | "status" | "created_at" | "reactions_count" | "user_name" | "channel_name" | "content" | "is_pinned";
 
 const statusFilterOptions: Array<{ value: PostStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -295,44 +294,19 @@ function PostListPage() {
 		}
 	};
 
-	const activeFilterCount =
-		Number(Boolean(search.trim())) + Number(statusFilter !== "all");
-
 	return (
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
 
-				{/* ── Hero banner ── */}
-				<section className="overflow-hidden rounded-[30px] border border-violet-500/15 bg-[linear-gradient(135deg,rgba(139,92,246,0.15),rgba(248,250,255,0.96)_44%,rgba(252,252,255,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(139,92,246,0.15),rgba(12,12,18,0.96)_45%,rgba(8,8,12,0.98)_100%)]">
-					<div className="px-6 py-7 md:px-8 md:py-9">
-						<div className="max-w-3xl space-y-4">
-							<Badge className="w-fit rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-violet-800 hover:bg-violet-500/10 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-200">
-								Quản lý bài đăng cộng đồng
-							</Badge>
-							<div className="space-y-2">
-								<h1 className="text-foreground text-[1.85rem] font-semibold leading-tight md:text-[2.4rem] md:leading-[1.1]">
-									Kiểm duyệt và quản lý bài đăng
-								</h1>
-								<p className="text-sm leading-7 text-violet-950/70 md:text-base dark:text-violet-50/65">
-									Xem toàn bộ bài đăng từ thành viên, kiểm duyệt nội dung, ghim bài nổi bật và xóa bài vi phạm.
-								</p>
-							</div>
-							<div className="flex flex-wrap items-center gap-3 pt-1">
-								<Button
-									variant="outline"
-									className="h-10 rounded-2xl border-violet-500/20 bg-background/80 px-4 text-violet-800 shadow-sm hover:bg-violet-500/10 dark:bg-background/70 dark:text-violet-200"
-									onClick={() => { setSearch(""); setStatusFilter("all"); }}>
-									<RefreshCw className="size-4" />
-									Đặt lại bộ lọc
-								</Button>
-								<div className="inline-flex h-10 items-center gap-2 rounded-2xl border border-violet-500/20 bg-background/72 px-4 text-sm font-medium text-violet-800 dark:text-violet-200">
-									<Filter className="size-4" />
-									{activeFilterCount} điều kiện đang áp dụng
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
+				{/* ── Header ── */}
+				<div className="space-y-2">
+					<h2 className="text-2xl font-semibold tracking-tight">
+						Kiểm duyệt và quản lý bài đăng
+					</h2>
+					<p className="text-muted-foreground">
+						Xem toàn bộ bài đăng từ thành viên, kiểm duyệt nội dung, ghim bài nổi bật và xóa bài vi phạm.
+					</p>
+				</div>
 
 				{/* ── Stats cards ── */}
 				<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -388,18 +362,16 @@ function PostListPage() {
 
 				{/* ── Filter bar + Table ── */}
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-						<div className="flex flex-1 items-center gap-2">
-							<Input
-								placeholder="Lọc theo tên tác giả hoặc nội dung bài đăng..."
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-								className="h-8 w-full sm:w-64 md:w-80"
-							/>
-						</div>
+					<div className="flex flex-row items-center justify-between gap-3">
+						<Input
+							placeholder="Lọc theo tên tác giả hoặc nội dung bài đăng..."
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							className="h-8 min-w-0 flex-1 max-w-80"
+						/>
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="outline" size="sm" className="h-8">
+								<Button variant="outline" size="sm" className="h-8 shrink-0">
 									<Filter className="h-4 w-4" />
 									{statusFilter === "all"
 										? "Tất cả trạng thái"
@@ -448,11 +420,6 @@ function PostListPage() {
 										</Button>
 									</TableHead>
 									<TableHead className="min-w-[120px]">
-										<Button variant="ghost" onClick={() => handleSort("tags")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Tags {getSortIcon("tags")}
-										</Button>
-									</TableHead>
-									<TableHead className="min-w-[120px]">
 										<Button variant="ghost" onClick={() => handleSort("channel_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Kênh {getSortIcon("channel_name")}
 										</Button>
@@ -460,11 +427,6 @@ function PostListPage() {
 									<TableHead className="w-[130px]">
 										<Button variant="ghost" onClick={() => handleSort("status")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Trạng thái {getSortIcon("status")}
-										</Button>
-									</TableHead>
-									<TableHead className="w-[70px]">
-										<Button variant="ghost" onClick={() => handleSort("is_pinned")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Ghim {getSortIcon("is_pinned")}
 										</Button>
 									</TableHead>
 									<TableHead className="w-[160px]">
@@ -486,7 +448,7 @@ function PostListPage() {
 									Array.from({ length: meta.per_page }).map((_, i) => (
 										<TableRow key={`skeleton-${i}`}>
 											<TableCell><Skeleton className="h-4 w-4" /></TableCell>
-											<TableCell colSpan={10}><Skeleton className="h-4 w-full" /></TableCell>
+											<TableCell colSpan={9}><Skeleton className="h-4 w-full" /></TableCell>
 										</TableRow>
 									))
 								) : posts.length > 0 ? (
@@ -537,26 +499,6 @@ function PostListPage() {
 												</div>
 											</TableCell>
 
-											{/* Tags */}
-											<TableCell>
-												<div className="flex flex-wrap gap-1">
-													{post.tags.slice(0, 2).map((tag) => (
-														<Badge
-															key={tag.id}
-															variant="outline"
-															className="rounded-full px-2 py-0 text-xs"
-															style={tag.color ? { borderColor: `${tag.color}40`, color: tag.color } : undefined}>
-															{tag.name}
-														</Badge>
-													))}
-													{post.tags.length > 2 && (
-														<Badge variant="secondary" className="rounded-full px-2 py-0 text-xs">
-															+{post.tags.length - 2}
-														</Badge>
-													)}
-												</div>
-											</TableCell>
-
 											{/* Channel */}
 											<TableCell>
 												<CompactBadgeList
@@ -567,15 +509,6 @@ function PostListPage() {
 
 											{/* Status */}
 											<TableCell>{getStatusBadge(post.status)}</TableCell>
-
-											{/* Pin */}
-											<TableCell className="text-center">
-												{post.is_pinned ? (
-													<Pin className="mx-auto h-4 w-4 text-amber-500" />
-												) : (
-													<span className="text-muted-foreground/30">—</span>
-												)}
-											</TableCell>
 
 											{/* Reactions + Comments */}
 											<TableCell>
@@ -635,7 +568,7 @@ function PostListPage() {
 									))
 								) : (
 									<TableRow>
-										<TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
+										<TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
 											Không tìm thấy bài đăng nào phù hợp.
 										</TableCell>
 									</TableRow>
@@ -644,7 +577,7 @@ function PostListPage() {
 
 							<TableFooter className="bg-transparent">
 								<TableRow>
-									<TableCell colSpan={11}>
+									<TableCell colSpan={10}>
 										<div className="flex items-center justify-between px-2">
 											<p className="flex-1 text-sm text-muted-foreground">
 												Đang hiển thị {posts.length} trên tổng {meta.total} bài đăng.
@@ -743,28 +676,13 @@ function PostListPage() {
 									</div>
 								</div>
 
-								{/* Tags + Stats */}
-								<div className="grid gap-4 sm:grid-cols-2">
-									<div className="space-y-1.5">
-										<p className="text-sm font-medium">Tags</p>
-										<div className="flex flex-wrap gap-1.5">
-											{selectedPost.tags.length > 0 ? selectedPost.tags.map((tag) => (
-												<Badge key={tag.id} variant="outline" className="rounded-full text-xs"
-													style={tag.color ? { borderColor: `${tag.color}40`, color: tag.color } : undefined}>
-													{tag.name}
-												</Badge>
-											)) : (
-												<span className="text-sm text-muted-foreground">Không có tag</span>
-											)}
-										</div>
-									</div>
-									<div className="space-y-1.5">
-										<p className="text-sm font-medium">Thống kê</p>
-										<div className="space-y-1 text-sm text-muted-foreground">
-											<p>{selectedPost.reactions_count} lượt cảm xúc</p>
-											<p>{selectedPost.comments_count} bình luận</p>
-											<p>{selectedPost.media.length} tệp đính kèm</p>
-										</div>
+								{/* Stats */}
+								<div className="space-y-1.5">
+									<p className="text-sm font-medium">Thống kê</p>
+									<div className="space-y-1 text-sm text-muted-foreground">
+										<p>{selectedPost.reactions_count} lượt cảm xúc</p>
+										<p>{selectedPost.comments_count} bình luận</p>
+										<p>{selectedPost.media.length} tệp đính kèm</p>
 									</div>
 								</div>
 

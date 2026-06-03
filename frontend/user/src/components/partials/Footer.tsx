@@ -1,7 +1,8 @@
 import React from "react";
 import { Facebook, Github, Youtube, Instagram, Mail, MapPin, Code2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
-const FOOTER_NAV = {
+const FOOTER_NAV_LINKS = {
 	"Khám phá": [
 		{ label: "Tài nguyên", href: "#resources" },
 		{ label: "Blog", href: "#blog" },
@@ -14,13 +15,14 @@ const FOOTER_NAV = {
 		{ label: "Ban Chủ Nhiệm", href: "#board" },
 		{ label: "Đóng góp", href: "#contribute" },
 	],
-	CLB: [
-		{ label: "Về chúng tôi", href: "#about" },
-		{ label: "Tham gia CLB", href: "#join" },
-		{ label: "Liên hệ", href: "mailto:contact@ckcitclub.edu.vn" },
-		{ label: "Chính sách", href: "#" },
-	],
 };
+
+const FOOTER_CLB_LINKS = [
+	{ label: "Về chúng tôi", href: "#about", internal: false },
+	{ label: "Tham gia CLB", href: "/ung-tuyen", internal: true },
+	{ label: "Liên hệ", href: "mailto:contact@ckcitclub.edu.vn", internal: false },
+	{ label: "Chính sách", href: "#", internal: false },
+];
 
 const SOCIALS = [
 	{ icon: Facebook, href: "#", label: "Facebook" },
@@ -91,7 +93,7 @@ const Footer: React.FC = () => {
 					</div>
 
 					{/* Nav links */}
-					{Object.entries(FOOTER_NAV).map(([section, links]) => (
+					{Object.entries(FOOTER_NAV_LINKS).map(([section, links]) => (
 						<div key={section}>
 							<h4
 								className='font-bold text-white mb-5 text-sm uppercase tracking-wider'
@@ -111,6 +113,33 @@ const Footer: React.FC = () => {
 							</ul>
 						</div>
 					))}
+
+					<div>
+						<h4
+							className='font-bold text-white mb-5 text-sm uppercase tracking-wider'
+							style={{ fontFamily: "var(--font-heading)" }}>
+							CLB
+						</h4>
+						<ul className='space-y-3'>
+							{FOOTER_CLB_LINKS.map((link) => (
+								<li key={link.label}>
+									{link.internal ? (
+										<Link
+											to={link.href}
+											className='text-gray-400 hover:text-[#A3E635] text-sm transition-colors duration-200'>
+											{link.label}
+										</Link>
+									) : (
+										<a
+											href={link.href}
+											className='text-gray-400 hover:text-[#A3E635] text-sm transition-colors duration-200'>
+											{link.label}
+										</a>
+									)}
+								</li>
+							))}
+						</ul>
+					</div>
 				</div>
 
 				{/* Bottom bar */}

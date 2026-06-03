@@ -96,6 +96,13 @@ const CommunityLayout: React.FC = () => {
 	const [channels, setChannels] = useState<ChannelItem[]>(buildFallbackChannels());
 
 	useEffect(() => {
+		document.documentElement.classList.add("no-scrollbar");
+		return () => {
+			document.documentElement.classList.remove("no-scrollbar");
+		};
+	}, []);
+
+	useEffect(() => {
 		if (!isSidebarOpen) return;
 		const prevBody = document.body.style.overflow;
 		const prevHtml = document.documentElement.style.overflow;
@@ -139,7 +146,6 @@ const CommunityLayout: React.FC = () => {
 
 	const renderSidebarContent = (isMobile = false) => (
 		<div className={isMobile ? "px-4 py-4" : "px-3 py-4"}>
-			{/* Primary nav */}
 			<nav className='space-y-2'>
 				{PRIMARY_NAV.map((item) => {
 					const Icon = item.icon;
@@ -171,7 +177,6 @@ const CommunityLayout: React.FC = () => {
 				})}
 			</nav>
 
-			{/* Channel list */}
 			<div
 				className={`font-bold uppercase tracking-[0.2em] text-gray-500 ${
 					isMobile ? "mt-6 px-1 text-xs" : "mt-7 px-3 text-[11px]"
@@ -220,7 +225,7 @@ const CommunityLayout: React.FC = () => {
 	return (
 		<div className='min-h-screen bg-[var(--color-surface)] pt-16 text-black'>
 			<div className='community-shell'>
-				<aside className='hidden border-r-2 border-black bg-white md:block'>
+				<aside className='hidden border-r-2 border-black bg-white lg:block'>
 					<div className='no-scrollbar sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto'>
 						{renderSidebarContent()}
 					</div>
@@ -232,7 +237,7 @@ const CommunityLayout: React.FC = () => {
 			</div>
 
 			{isSidebarOpen && (
-				<div className='fixed inset-x-0 bottom-0 top-16 z-50 md:hidden'>
+				<div className='fixed inset-0 z-50 lg:hidden'>
 					<button
 						className='absolute inset-0 h-full w-full bg-black/55'
 						onClick={() => setIsSidebarOpen(false)}

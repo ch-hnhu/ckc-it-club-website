@@ -10,6 +10,7 @@ use App\Models\Comment;
 use App\Models\MediaFile;
 use App\Models\Post;
 use App\Models\Reaction;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,8 @@ class PostController extends BaseApiController
         $channel = $request->query('channel');
         $username = $request->query('username');
 
+        $viewer = $request->user('sanctum');
+
         $posts = Post::query()
             ->with([
                 'user:id,full_name,username,email,avatar,student_code',
@@ -40,13 +43,20 @@ class PostController extends BaseApiController
             ->withCount('comments')
             ->selectRaw('posts.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "post" AND target_id = posts.id) as reactions_count')
             ->where('posts.status', 'published')
+            ->visibleTo($viewer)
             ->when(
                 $channel && $channel !== 'all',
                 fn ($q) => $q->whereHas('channel', fn ($c) => $c->where('slug', $channel))
             )
             ->when(
                 $username,
-                fn ($q) => $q->whereHas('user', fn ($u) => $u->where('username', $username))
+                fn ($q) => $q->whereHas('user', fn ($u) => $u
+                    ->where('username', $username)
+                    ->orWhere('email', 'like', "{$username}@%"))
+            )
+            ->when(
+                $username,
+                fn ($q) => $q->orderByDesc('posts.is_pinned')->orderByDesc('posts.pinned_at')
             )
             ->orderBy(
                 $sort === 'reactions_count' ? 'reactions_count' : "posts.{$sort}",
@@ -55,9 +65,10 @@ class PostController extends BaseApiController
             ->paginate($perPage);
 
         // Optionally enrich with current user's reactions and bookmarks (batch queries)
-        $userId = auth('sanctum')->id();
+        $userId = $viewer?->id;
         $myReactions = [];
         $myBookmarks = [];
+        $myReports = [];
         if ($userId) {
             $postIds = $posts->pluck('id')->toArray();
             $myReactions = Reaction::where('user_id', $userId)
@@ -72,12 +83,20 @@ class PostController extends BaseApiController
                     ->pluck('post_id')
                     ->all()
             );
+            $myReports = array_flip(
+                DB::table('post_reports')
+                    ->where('reporter_id', $userId)
+                    ->whereIn('post_id', $postIds)
+                    ->pluck('post_id')
+                    ->all()
+            );
         }
 
-        $posts->getCollection()->transform(function (Post $post) use ($myReactions, $myBookmarks) {
+        $posts->getCollection()->transform(function (Post $post) use ($myReactions, $myBookmarks, $myReports) {
             $data = $this->transformPost($post);
             $data['my_reaction'] = $myReactions[$post->id] ?? null;
             $data['my_bookmark'] = isset($myBookmarks[$post->id]);
+            $data['my_report'] = isset($myReports[$post->id]);
 
             return $data;
         });
@@ -98,6 +117,7 @@ class PostController extends BaseApiController
             ->withCount('comments')
             ->selectRaw('posts.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "post" AND target_id = posts.id) as reactions_count')
             ->where('posts.status', 'published')
+            ->visibleTo($request->user())
             ->whereHas('bookmarkedBy', fn ($q) => $q->where('user_id', $userId))
             ->orderBy('posts.created_at', 'desc')
             ->paginate($perPage);
@@ -108,11 +128,19 @@ class PostController extends BaseApiController
             ->whereIn('target_id', $postIds)
             ->pluck('type', 'target_id')
             ->toArray();
+        $myReports = array_flip(
+            DB::table('post_reports')
+                ->where('reporter_id', $userId)
+                ->whereIn('post_id', $postIds)
+                ->pluck('post_id')
+                ->all()
+        );
 
-        $posts->getCollection()->transform(function (Post $post) use ($myReactions) {
+        $posts->getCollection()->transform(function (Post $post) use ($myReactions, $myReports) {
             $data = $this->transformPost($post);
             $data['my_reaction'] = $myReactions[$post->id] ?? null;
             $data['my_bookmark'] = true;
+            $data['my_report'] = isset($myReports[$post->id]);
 
             return $data;
         });
@@ -122,7 +150,10 @@ class PostController extends BaseApiController
 
     public function bookmark(Request $request, int $id): JsonResponse
     {
-        Post::where('status', 'published')->findOrFail($id);
+        Post::query()
+            ->where('status', 'published')
+            ->visibleTo($request->user())
+            ->findOrFail($id);
 
         $userId = $request->user()->id;
         $exists = DB::table('post_bookmarks')
@@ -239,15 +270,202 @@ class PostController extends BaseApiController
         return $this->createdResponse($data, 'Đăng bài viết thành công.');
     }
 
-    public function show(int $id): JsonResponse
+    public function archived(Request $request): JsonResponse
     {
+        $perPage = min((int) $request->query('per_page', 10), 50);
+        $userId = $request->user()->id;
+
+        $posts = Post::query()
+            ->with([
+                'user:id,full_name,username,email,avatar,student_code',
+                'channel:id,name,slug',
+            ])
+            ->withCount('comments')
+            ->selectRaw('posts.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "post" AND target_id = posts.id) as reactions_count')
+            ->where('user_id', $userId)
+            ->where('status', 'archived')
+            ->orderBy('posts.created_at', 'desc')
+            ->paginate($perPage);
+
+        $postIds = $posts->pluck('id')->toArray();
+        $myReactions = Reaction::where('user_id', $userId)
+            ->where('target_type', 'post')
+            ->whereIn('target_id', $postIds)
+            ->pluck('type', 'target_id')
+            ->toArray();
+
+        $posts->getCollection()->transform(function (Post $post) use ($myReactions) {
+            $data = $this->transformPost($post);
+            $data['my_reaction'] = $myReactions[$post->id] ?? null;
+            $data['my_bookmark'] = false;
+
+            return $data;
+        });
+
+        return $this->paginatedResponse($posts, ApiMessage::RETRIEVED);
+    }
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $post = Post::where('user_id', $request->user()->id)->find($id);
+        if (! $post) {
+            abort(403, 'Bạn không có quyền chỉnh sửa bài viết này.');
+        }
+
+        $validated = $request->validate([
+            'title' => ['sometimes', 'string', 'min:5', 'max:255'],
+            'content' => ['sometimes', 'string', 'min:1', 'max:50000'],
+            'channel_slug' => ['sometimes', 'nullable', 'string', 'max:255', 'exists:channels,slug'],
+            'visibility' => ['sometimes', 'nullable', Rule::in(['public', 'members', 'private'])],
+            'is_pinned' => ['sometimes', 'boolean'],
+            'status' => ['sometimes', Rule::in(['published', 'archived'])],
+            'media' => ['sometimes', 'nullable', 'file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime', 'max:20480'],
+        ]);
+
+        $updates = [];
+
+        if ($request->filled('title')) {
+            $updates['title'] = trim($validated['title']);
+        }
+
+        if ($request->filled('content')) {
+            $content = $this->sanitizePostContent($validated['content']);
+            $updates['content'] = $content;
+        }
+
+        if ($request->filled('channel_slug')) {
+            $channel = Channel::where('slug', $validated['channel_slug'])->firstOrFail();
+            $updates['channel_id'] = $channel->id;
+        }
+
+        if ($request->has('visibility')) {
+            $updates['visibility'] = $validated['visibility'] ?? 'public';
+        }
+
+        if ($request->has('is_pinned')) {
+            $pinning = (bool) $validated['is_pinned'];
+            if ($pinning && ! $post->is_pinned) {
+                $pinnedCount = Post::where('user_id', $request->user()->id)
+                    ->where('is_pinned', true)
+                    ->count();
+                if ($pinnedCount >= 3) {
+                    return $this->errorResponse(false, 'Bạn chỉ có thể ghim tối đa 3 bài viết.', 422);
+                }
+            }
+            $updates['is_pinned'] = $pinning;
+            $updates['pinned_at'] = $pinning ? now() : null;
+        }
+
+        if ($request->has('status')) {
+            $updates['status'] = $validated['status'];
+        }
+
+        if ($request->hasFile('media')) {
+            $file = $request->file('media');
+            $storedPath = $file->store("community/posts/{$post->id}", 'public');
+            $mediaUrl = Storage::disk('public')->url($storedPath);
+
+            MediaFile::create([
+                'owner_id' => $request->user()->id,
+                'url' => $mediaUrl,
+                'file_type' => $this->detectMediaType($file->getMimeType()),
+                'size_kb' => (int) ceil($file->getSize() / 1024),
+                'target_type' => 'post',
+                'target_id' => $post->id,
+            ]);
+
+            $updates['media_urls'] = [$mediaUrl];
+        }
+
+        if (! empty($updates)) {
+            $post->update($updates);
+        }
+
+        $post->load([
+            'user:id,full_name,username,email,avatar,student_code',
+            'channel:id,name,slug',
+        ])->loadCount('comments');
+        $post->reactions_count = $post->reactions_count ?? 0;
+
+        $data = $this->transformPost($post);
+        $data['my_reaction'] = null;
+        $data['my_bookmark'] = false;
+
+        return $this->successResponse(true, $data, ApiMessage::UPDATED);
+    }
+
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $post = Post::where('user_id', $request->user()->id)->find($id);
+        if (! $post) {
+            abort(403, 'Bạn không có quyền xóa bài viết này.');
+        }
+
+        $post->update(['deleted_by' => $request->user()->id]);
+        $post->delete();
+
+        return $this->successResponse(true, [], 'Bài viết đã được xóa.');
+    }
+
+    public function report(Request $request, int $id): JsonResponse
+    {
+        $post = Post::query()
+            ->where('status', 'published')
+            ->visibleTo($request->user())
+            ->findOrFail($id);
+
+        if ($post->user_id === $request->user()->id) {
+            abort(403, 'Bạn không thể báo cáo bài viết của chính mình.');
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', Rule::in(['spam', 'offensive', 'misinformation', 'inappropriate', 'other'])],
+            'description' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $alreadyReported = DB::table('post_reports')
+            ->where('post_id', $id)
+            ->where('reporter_id', $request->user()->id)
+            ->exists();
+
+        if (! $alreadyReported) {
+            DB::table('post_reports')->insert([
+                'post_id' => $id,
+                'reporter_id' => $request->user()->id,
+                'reason' => $validated['reason'],
+                'description' => $validated['description'] ?? null,
+                'status' => 'pending',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return $this->successResponse(true, [], 'Báo cáo đã được ghi nhận.');
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $viewer = $request->user('sanctum');
+        $userId = $viewer?->id;
+
         $post = Post::with([
             'user:id,full_name,username,email,avatar,student_code',
             'channel:id,name,slug',
         ])
             ->withCount('comments')
             ->selectRaw('posts.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "post" AND target_id = posts.id) as reactions_count')
-            ->where('status', 'published')
+            ->where(function ($query) use ($userId) {
+                $query->where('status', 'published');
+
+                if ($userId) {
+                    $query->orWhere(function ($ownArchived) use ($userId) {
+                        $ownArchived
+                            ->where('status', 'archived')
+                            ->where('user_id', $userId);
+                    });
+                }
+            })
+            ->visibleTo($viewer)
             ->findOrFail($id);
 
         $data = $this->transformPost($post);
@@ -260,14 +478,24 @@ class PostController extends BaseApiController
             ->groupBy('type')
             ->pluck('count', 'type');
 
-        // Current user's own reaction (null for guests)
-        $userId = auth('sanctum')->id();
         $data['my_reaction'] = $userId
             ? Reaction::where('user_id', $userId)
                 ->where('target_type', 'post')
                 ->where('target_id', $id)
                 ->value('type')
             : null;
+        $data['my_bookmark'] = $userId
+            ? DB::table('post_bookmarks')
+                ->where('user_id', $userId)
+                ->where('post_id', $id)
+                ->exists()
+            : false;
+        $data['my_report'] = $userId
+            ? DB::table('post_reports')
+                ->where('reporter_id', $userId)
+                ->where('post_id', $id)
+                ->exists()
+            : false;
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
     }
@@ -282,7 +510,11 @@ class PostController extends BaseApiController
             'type' => ['required', Rule::enum(ReactionType::class)],
         ]);
 
-        Post::where('status', 'published')->findOrFail($id);
+        $post = Post::query()
+            ->with('user:id,full_name,avatar,username')
+            ->where('status', 'published')
+            ->visibleTo($request->user())
+            ->findOrFail($id);
 
         $userId = $request->user()->id;
         $type = $request->input('type');
@@ -294,6 +526,7 @@ class PostController extends BaseApiController
 
         $reacted = false;
         $myReaction = null;
+        $isNewReaction = false;
 
         if ($existing) {
             if ($existing->type === $type) {
@@ -316,6 +549,7 @@ class PostController extends BaseApiController
             ]);
             $reacted = true;
             $myReaction = $type;
+            $isNewReaction = true;
         }
 
         // Updated summary
@@ -324,6 +558,13 @@ class PostController extends BaseApiController
             ->selectRaw('type, COUNT(*) as count')
             ->groupBy('type')
             ->pluck('count', 'type');
+
+        // Notify post owner on new reaction via UserNotificationService
+        if ($isNewReaction) {
+            if ($post?->user) {
+                UserNotificationService::dispatchReaction($post->user, $request->user(), $post, $type);
+            }
+        }
 
         return $this->successResponse(true, [
             'reacted' => $reacted,
@@ -343,7 +584,11 @@ class PostController extends BaseApiController
             'parent_id' => ['nullable', 'integer', 'exists:comments,id'],
         ]);
 
-        Post::where('status', 'published')->findOrFail($id);
+        $post = Post::query()
+            ->with('user:id,full_name,avatar,username')
+            ->where('status', 'published')
+            ->visibleTo($request->user())
+            ->findOrFail($id);
 
         $parentId = $request->input('parent_id');
         $depth = 0;
@@ -364,19 +609,54 @@ class PostController extends BaseApiController
 
         $comment->load('user:id,full_name,username,email,avatar');
 
+        if ($parentId) {
+            // Reply: notify the parent comment author
+            $parent->load('user:id,full_name,avatar,username');
+            if ($parent->user) {
+                UserNotificationService::dispatchCommentReply(
+                    $parent->user, $request->user(), $comment->id, $post, $comment->content,
+                );
+            }
+        } else {
+            // Top-level comment: notify the post owner
+            if ($post?->user) {
+                UserNotificationService::dispatchComment($post->user, $request->user(), $post, $comment->content, $comment->id);
+            }
+        }
+
         return $this->createdResponse($this->transformComment($comment));
     }
 
     public function comments(Request $request, int $id): JsonResponse
     {
-        // Ensure post exists and is published
-        Post::where('status', 'published')->findOrFail($id);
+        $viewer = $request->user('sanctum');
+        $userId = $viewer?->id;
+
+        // Ensure the post is visible to the requester, or is the current user's own archived post.
+        Post::query()
+            ->whereKey($id)
+            ->where(function ($query) use ($userId) {
+                $query->where('status', 'published');
+
+                if ($userId) {
+                    $query->orWhere(function ($ownArchived) use ($userId) {
+                        $ownArchived
+                            ->where('status', 'archived')
+                            ->where('user_id', $userId);
+                    });
+                }
+            })
+            ->visibleTo($viewer)
+            ->firstOrFail();
 
         // Load ALL visible (non-hidden, non-deleted) comments for this post ordered by date
+        $myReactionSelect = $userId
+            ? ", (SELECT type FROM reactions WHERE target_type = 'comment' AND target_id = comments.id AND user_id = {$userId} LIMIT 1) as my_reaction"
+            : ', NULL as my_reaction';
+
         $allComments = Comment::with('user:id,full_name,username,email,avatar')
-            ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count')
+            ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count'.$myReactionSelect)
             ->where('post_id', $id)
-            ->where('is_hidden', false)
             ->whereNull('deleted_at')
             ->orderBy('created_at', 'asc')
             ->get();
@@ -480,9 +760,76 @@ class PostController extends BaseApiController
                 'email' => $user->email,
                 'avatar' => $user->avatar,
             ] : null,
-            'content' => $comment->content,
+            'content' => $comment->is_hidden ? null : $comment->content,
+            'is_hidden' => (bool) $comment->is_hidden,
             'reactions_count' => (int) ($comment->reactions_count ?? 0),
+            'my_reaction' => $comment->my_reaction ?? null,
             'created_at' => $comment->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Toggle a reaction on a comment (auth required).
+     */
+    public function reactComment(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'type' => ['required', Rule::enum(ReactionType::class)],
+        ]);
+
+        $comment = Comment::query()
+            ->whereNull('deleted_at')
+            ->where('is_hidden', false)
+            ->findOrFail($id);
+
+        if ($comment->post_id) {
+            Post::query()
+                ->whereKey($comment->post_id)
+                ->where('status', 'published')
+                ->visibleTo($request->user())
+                ->firstOrFail();
+        }
+
+        $userId = $request->user()->id;
+        $type = $request->input('type');
+
+        $existing = Reaction::where('user_id', $userId)
+            ->where('target_type', 'comment')
+            ->where('target_id', $id)
+            ->first();
+
+        $reacted = false;
+        $myReaction = null;
+
+        if ($existing) {
+            if ($existing->type === $type) {
+                $existing->delete();
+            } else {
+                $existing->type = $type;
+                $existing->save();
+                $reacted = true;
+                $myReaction = $type;
+            }
+        } else {
+            Reaction::create([
+                'user_id' => $userId,
+                'target_type' => 'comment',
+                'target_id' => $id,
+                'type' => $type,
+                'created_at' => now(),
+            ]);
+            $reacted = true;
+            $myReaction = $type;
+        }
+
+        $reactionsCount = Reaction::where('target_type', 'comment')
+            ->where('target_id', $id)
+            ->count();
+
+        return $this->successResponse(true, [
+            'reacted' => $reacted,
+            'my_reaction' => $myReaction,
+            'reactions_count' => $reactionsCount,
+        ], ApiMessage::UPDATED);
     }
 }

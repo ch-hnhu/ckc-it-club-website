@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, PenSquare, Search, X } from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
@@ -167,6 +167,9 @@ const BlogFeedPage: React.FC = () => {
 	const [search, setSearch] = useState("");
 	const [activeTag, setActiveTag] = useState<string | null>(null);
 
+	// Load tags một lần riêng — không derive từ blogs để tránh mất tags khi filter
+	const [allTags, setAllTags] = useState<BlogTag[]>([]);
+
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const tagsScrollRef = useRef<HTMLDivElement>(null);
 	const [canScrollRight, setCanScrollRight] = useState(false);
@@ -235,15 +238,13 @@ const BlogFeedPage: React.FC = () => {
 		};
 	}, [search, activeTag]);
 
-	const allTags = useMemo<BlogTag[]>(() => {
-		const map = new Map<string, BlogTag>();
-		blogs.forEach((b) => b.tags.forEach((t) => map.set(t.name, t)));
-		return Array.from(map.values());
-	}, [blogs]);
+	// Load tất cả tags một lần khi mount
+	useEffect(() => {
+		blogService.getTags().then((res) => setAllTags(res.data)).catch(() => {});
+	}, []);
 
 	// Re-check scroll when tags list changes
 	useEffect(() => {
-		// Use rAF to wait for DOM to update with new tags
 		const id = requestAnimationFrame(updateScrollState);
 		return () => cancelAnimationFrame(id);
 	}, [allTags, updateScrollState]);

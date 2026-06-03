@@ -4,11 +4,15 @@ import CommunityLayout from "@/pages/community/CommunityLayout";
 import CommunityFeedPage from "@/pages/community/CommunityFeedPage";
 import CommunityChatPage from "@/pages/community/CommunityChatPage";
 import CommunityCreatePage from "@/pages/community/CommunityCreatePage";
+import EditPostPage from "@/pages/community/EditPostPage";
 import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
 import BlogFeedPage from "@/pages/blog/BlogFeedPage";
 import BlogCreatePage from "@/pages/blog/BlogCreatePage";
 import BlogDetailPage from "@/pages/blog/BlogDetailPage";
+import BlogEditPage from "@/pages/blog/BlogEditPage";
 import LandingPage from "@/pages/LandingPage";
+import NotificationsPage from "@/pages/notification/NotificationsPage";
+import ApplicationPage from "@/pages/ApplicationPage";
 import UserProfilePage from "@/pages/user/UserProfilePage";
 import AccountPage from "@/pages/user/AccountPage";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -38,12 +42,24 @@ const router = createBrowserRouter([
 				element: <AccountPage />,
 			},
 			{
+				path: "thong-bao",
+				element: <NotificationsPage />,
+			},
+			{
+				path: "ung-tuyen",
+				element: <ApplicationPage />,
+			},
+			{
 				path: "blog",
 				element: <BlogFeedPage />,
 			},
 			{
 				path: "blog/dang-bai",
 				element: <BlogCreatePage />,
+			},
+			{
+				path: "blog/:slug/chinh-sua",
+				element: <BlogEditPage />,
 			},
 			{
 				path: "blog/:slug",
@@ -66,6 +82,10 @@ const router = createBrowserRouter([
 					{
 						path: "bai-viet/:id",
 						element: <CommunityPostDetailPage />,
+					},
+					{
+						path: "bai-viet/:id/chinh-sua",
+						element: <EditPostPage />,
 					},
 					{
 						path: "chat",

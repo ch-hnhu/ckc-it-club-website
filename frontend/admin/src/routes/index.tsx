@@ -37,10 +37,10 @@ import BlogCreatePage from "@/pages/community/BlogCreatePage";
 import BlogDetailPage from "@/pages/community/BlogDetailPage";
 import CommentListPage from "@/pages/community/CommentListPage";
 import TagListPage from "@/pages/community/TagListPage";
-import SystemNotificationPage from "@/pages/community/SystemNotificationPage";
 import ChatRoomListPage from "@/pages/community/ChatRoomListPage";
 import MediaListPage from "@/pages/community/MediaListPage";
 import SkillListPage from "@/pages/community/SkillListPage";
+import ReportListPage from "@/pages/community/ReportListPage";
 
 const router = createBrowserRouter([
 	{
@@ -317,14 +317,6 @@ const router = createBrowserRouter([
 				),
 			},
 			{
-				path: "community/notifications",
-				element: (
-					<PermissionRoute permission="community.notifications.send">
-						<SystemNotificationPage />
-					</PermissionRoute>
-				),
-			},
-			{
 				path: "community/chat",
 				element: (
 					<PermissionRoute permission="community.chat.view">
@@ -345,6 +337,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.skills.manage">
 						<SkillListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/reports",
+				element: (
+					<PermissionRoute permission="community.reports.view">
+						<ReportListPage />
 					</PermissionRoute>
 				),
 			},

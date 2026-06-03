@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
+use App\Http\Controllers\Api\V1\Admin\ReportController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\SkillController;
@@ -26,16 +27,24 @@ use App\Http\Controllers\Api\V1\User\AcademicController;
 use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
+use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
+use App\Http\Controllers\Api\V1\User\UserNotificationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+
+    // WebSocket private-channel auth — must use auth:sanctum (Bearer token),
+    // NOT the default BroadcastServiceProvider route which uses web/session middleware.
+    Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
+        return \Illuminate\Support\Facades\Broadcast::auth($request);
+    })->middleware('auth:sanctum');
 
     // public routes
     Route::get('/health', function () {
@@ -82,13 +91,25 @@ Route::prefix('v1')->group(function () {
         // Authenticated actions
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('/posts/bookmarks', [UserPostController::class, 'bookmarks']);
+            Route::get('/posts/archived', [UserPostController::class, 'archived']);
             Route::post('/posts', [UserPostController::class, 'store']);
+            Route::patch('/posts/{id}', [UserPostController::class, 'update']);
+            Route::delete('/posts/{id}', [UserPostController::class, 'destroy']);
             Route::post('/posts/{id}/reactions', [UserPostController::class, 'react']);
             Route::post('/posts/{id}/comments', [UserPostController::class, 'comment']);
+            Route::post('/comments/{id}/reactions', [UserPostController::class, 'reactComment']);
             Route::post('/posts/{id}/bookmark', [UserPostController::class, 'bookmark']);
+            Route::post('/posts/{id}/report', [UserPostController::class, 'report']);
             Route::post('/blogs', [UserBlogController::class, 'store']);
+            Route::get('/blogs/bookmarks', [UserBlogController::class, 'bookmarks']);
+            Route::get('/blogs/my-drafts', [UserBlogController::class, 'myDraftBlogs']);
+            Route::patch('/blogs/{slug}', [UserBlogController::class, 'update']);
+            Route::post('/blogs/{slug}/update', [UserBlogController::class, 'update']);
+            Route::get('/blogs/archived', [UserBlogController::class, 'archived']);
             Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
+            Route::post('/blogs/{id}/bookmark', [UserBlogController::class, 'bookmark']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
+            Route::post('/blogs/{id}/pin', [UserBlogController::class, 'pin']);
         });
 
         // Wildcard routes registered last to avoid masking specific paths above
@@ -112,6 +133,18 @@ Route::prefix('v1')->group(function () {
 
     // user logged-in routes
     Route::middleware('auth:sanctum')->group(function () {
+        // user notifications (realtime + REST)
+        Route::prefix('user-notifications')->group(function () {
+            Route::get('/', [UserNotificationController::class, 'index']);
+            Route::get('/unread-count', [UserNotificationController::class, 'unreadCount']);
+            Route::patch('/read-all', [UserNotificationController::class, 'markAllAsRead']);
+            Route::patch('/{id}/read', [UserNotificationController::class, 'markAsRead']);
+        });
+        // club applications (user-facing)
+        Route::get('/user/application-questions', [UserClubApplicationController::class, 'questions']);
+        Route::get('/user/club-applications/me', [UserClubApplicationController::class, 'myApplication']);
+        Route::post('/user/club-applications', [UserClubApplicationController::class, 'store']);
+
         // academic structure
         Route::prefix('academic')->group(function () {
             Route::get('/faculties', [AcademicController::class, 'faculties']);
@@ -324,6 +357,10 @@ Route::prefix('v1')->group(function () {
             Route::get('chat-rooms/{room}/system-messages', [ChatRoomController::class, 'systemMessages']);
         });
         Route::middleware('permission:community.chat.manage')->group(function () {
+            Route::post('chat-rooms', [ChatRoomController::class, 'store']);
+            Route::put('chat-rooms/{room}', [ChatRoomController::class, 'update']);
+            Route::patch('chat-rooms/{room}', [ChatRoomController::class, 'update']);
+            Route::delete('chat-rooms/{room}', [ChatRoomController::class, 'destroy']);
             Route::delete('chat-rooms/{room}/messages/{message}', [ChatRoomController::class, 'destroyMessage']);
         });
 
@@ -352,6 +389,14 @@ Route::prefix('v1')->group(function () {
             Route::patch('skills/{skill}', [SkillController::class, 'update']);
             Route::patch('skills/{skill}/toggle-status', [SkillController::class, 'toggleStatus']);
             Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
+        });
+
+        // reports
+        Route::middleware('permission:community.reports.view')->group(function () {
+            Route::get('reports/stats', [ReportController::class, 'stats']);
+            Route::get('reports', [ReportController::class, 'index']);
+            Route::patch('reports/{report}/status', [ReportController::class, 'updateStatus']);
+            Route::post('reports/{report}/hide-post', [ReportController::class, 'hidePost']);
         });
     });
 });

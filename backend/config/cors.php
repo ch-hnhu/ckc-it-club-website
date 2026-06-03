@@ -5,6 +5,7 @@ return [
         'api/*',
         'sanctum/csrf-cookie',
         'storage/*',
+        'broadcasting/*',
     ],
 
     'allowed_methods' => ['*'], // GET, POST, PUT, PATCH, DELETE, OPTIONS

@@ -179,11 +179,6 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "community.chat.view",
 			},
 			{
-				title: "Thông báo hệ thống",
-				url: "/community/notifications",
-				permission: "community.notifications.send",
-			},
-			{
 				title: "Tài nguyên",
 				url: "/community/media",
 				permission: "community.media.view",
@@ -192,6 +187,11 @@ export const adminNavMain: AdminNavItem[] = [
 				title: "Skills",
 				url: "/community/skills",
 				permission: "community.skills.manage",
+			},
+			{
+				title: "Báo cáo vi phạm",
+				url: "/community/reports",
+				permission: "community.reports.view",
 			},
 		],
 	},
@@ -250,6 +250,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/community\/notifications$/, permission: "community.notifications.send" },
 	{ pattern: /^\/community\/media$/, permission: "community.media.view" },
 	{ pattern: /^\/community\/skills$/, permission: "community.skills.manage" },
+	{ pattern: /^\/community\/reports$/, permission: "community.reports.view" },
 ];
 
 export function getRequiredPermissionForPath(pathname: string): string | null {

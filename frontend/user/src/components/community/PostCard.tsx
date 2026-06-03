@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
 	Archive,
 	Bookmark,
+	Check,
 	Flag,
 	Heart,
 	LockKeyhole,
@@ -12,7 +13,6 @@ import {
 	Pin,
 	Share2,
 	Trash2,
-	Zap,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Post } from "@/types/post.types";
@@ -20,13 +20,25 @@ import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
 import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle, isVideoMediaUrl } from "@/lib/utils";
 import { renderMarkdownContent, renderMarkdownPreview } from "@/lib/markdown";
+import ReportPostModal from "./ReportPostModal";
+import PrivacyPostModal from "./PrivacyPostModal";
+import DeletePostConfirm from "./DeletePostConfirm";
 
 interface PostCardProps {
 	post: Post;
 	user: AuthUser | null;
+	showPinnedBadge?: boolean;
+	onPostDeleted?: (id: number, reason?: "archived" | "restored" | "deleted") => void;
+	onPostUpdated?: (post: Post) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
+const PostCard: React.FC<PostCardProps> = ({
+	post,
+	user,
+	showPinnedBadge = false,
+	onPostDeleted,
+	onPostUpdated,
+}) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const authorName = post.user?.full_name ?? "Ẩn danh";
@@ -46,6 +58,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 	const [saved, setSaved] = useState(post.my_bookmark ?? false);
 	const [saveLoading, setSaveLoading] = useState(false);
 	const [showPostMenu, setShowPostMenu] = useState(false);
+
+	// Own-post action state
+	const [isPinned, setIsPinned] = useState(post.is_pinned);
+	const [currentVisibility, setCurrentVisibility] = useState<"public" | "members" | "private">(
+		(post.visibility as "public" | "members" | "private") ?? "public",
+	);
+	const [pinLoading, setPinLoading] = useState(false);
+	const [archiveLoading, setArchiveLoading] = useState(false);
+	const [deleteLoading, setDeleteLoading] = useState(false);
+
+	// Modal visibility
+	const [showReportModal, setShowReportModal] = useState(false);
+	const [hasReported, setHasReported] = useState(post.my_report ?? false);
+	const [copiedLink, setCopiedLink] = useState(false);
+	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
 	const menuBtnRef = useRef<HTMLButtonElement>(null);
 	const menuDropdownRef = useRef<HTMLDivElement>(null);
@@ -71,7 +99,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 		}
 		if (loading) return;
 
-		// Optimistic update
 		const wasLiked = liked;
 		setLiked(!wasLiked);
 		setHeartCount((c) => (wasLiked ? Math.max(0, c - 1) : c + 1));
@@ -116,13 +143,98 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 		}
 	};
 
-	const handleUnavailablePostAction = (message: string) => {
+	const handleTogglePin = async () => {
+		if (pinLoading) return;
 		closePostMenu();
-		toast.info(message);
+		const next = !isPinned;
+		setIsPinned(next);
+		setPinLoading(true);
+		try {
+			await postService.updatePost(post.id, { isPinned: next });
+			toast.success(next ? "Đã ghim bài viết lên trang cá nhân." : "Đã bỏ ghim bài viết.");
+		} catch (err: unknown) {
+			setIsPinned(!next);
+			const msg =
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+				"Không thể thực hiện. Vui lòng thử lại.";
+			toast.error(msg);
+		} finally {
+			setPinLoading(false);
+		}
+	};
+
+	const isArchived = post.status === "archived";
+	const pinnedBadgeVisible = showPinnedBadge && isPinned;
+
+	const handleToggleArchive = async () => {
+		if (archiveLoading) return;
+		closePostMenu();
+		setArchiveLoading(true);
+		try {
+			await postService.updatePost(post.id, { status: isArchived ? "published" : "archived" });
+			toast.success(isArchived ? "Đã khôi phục bài viết." : "Đã lưu trữ bài viết.");
+			onPostDeleted?.(post.id, isArchived ? "restored" : "archived");
+		} catch {
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setArchiveLoading(false);
+		}
+	};
+
+	const handleDelete = async () => {
+		if (deleteLoading) return;
+		setDeleteLoading(true);
+		try {
+			await postService.deletePost(post.id);
+			toast.success("Đã xóa bài viết.");
+			setShowDeleteConfirm(false);
+			onPostDeleted?.(post.id, "deleted");
+		} catch {
+			toast.error("Không thể xóa. Vui lòng thử lại.");
+		} finally {
+			setDeleteLoading(false);
+		}
+	};
+
+	const handlePrivacySaved = (visibility: "public" | "members" | "private") => {
+		setCurrentVisibility(visibility);
+		if (onPostUpdated) {
+			onPostUpdated({ ...post, visibility });
+		}
+	};
+
+	const handleCopyLink = async () => {
+		const url = `${window.location.origin}${detailUrl}`;
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(url);
+			} else {
+				const ta = document.createElement("textarea");
+				ta.value = url;
+				ta.style.cssText = "position:fixed;top:-9999px;left:-9999px";
+				document.body.appendChild(ta);
+				ta.select();
+				document.execCommand("copy");
+				document.body.removeChild(ta);
+			}
+			setCopiedLink(true);
+			toast.success("Đã sao chép liên kết bài viết.");
+			setTimeout(() => setCopiedLink(false), 2000);
+		} catch {
+			toast.error("Không thể sao chép liên kết.");
+		}
 	};
 
 	return (
-		<article className='rounded-2xl border-2 border-black bg-white p-4'>
+		<article className='relative rounded-2xl border-2 border-black bg-white p-4'>
+			{pinnedBadgeVisible && (
+				<span
+					className='absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl border-2 border-black bg-primary text-black shadow-[3px_3px_0_#111]'
+					aria-label='Bài viết đã ghim'
+					title='Bài viết đã ghim'>
+					<Pin className='h-5 w-5' />
+				</span>
+			)}
 			<div className='mb-3 flex items-start justify-between gap-3'>
 				<div className='flex min-w-0 items-center gap-3'>
 					<Link
@@ -134,11 +246,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 							alt={authorName}
 							className='h-10 w-10 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover transition hover:opacity-80'
 						/>
-						{post.is_pinned && (
-							<span className='absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)] text-black'>
-								<Zap className='h-3 w-3 fill-current' />
-							</span>
-						)}
 					</Link>
 					<div className='min-w-0'>
 						<div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
@@ -161,7 +268,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 					</div>
 				</div>
 
-				<div className='relative shrink-0'>
+				<div className={`relative shrink-0 ${pinnedBadgeVisible ? "mr-12" : ""}`}>
 					<button
 						ref={menuBtnRef}
 						onClick={() => setShowPostMenu((current) => !current)}
@@ -180,53 +287,44 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 							{isOwnPost ? (
 								<>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												post.is_pinned
-													? "Chức năng bỏ ghim khỏi trang cá nhân đang được phát triển."
-													: "Chức năng ghim lên trang cá nhân đang được phát triển.",
-											)
-										}
-										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+										onClick={handleTogglePin}
+										disabled={pinLoading}
+										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
 										<Pin className='h-4 w-4' />
-										{post.is_pinned ? "Bỏ ghim" : "Ghim"}
+										{isPinned ? "Bỏ ghim" : "Ghim"}
 									</button>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												"Chức năng chỉnh sửa bài viết đang được phát triển.",
-											)
-										}
+										onClick={() => {
+											closePostMenu();
+											navigate(`/cong-dong/bai-viet/${post.id}/chinh-sua`);
+										}}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
 										<Pencil className='h-4 w-4' />
 										Chỉnh sửa
 									</button>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												"Chức năng đổi quyền riêng tư đang được phát triển.",
-											)
-										}
+										onClick={() => {
+											closePostMenu();
+											setShowPrivacyModal(true);
+										}}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
 										<LockKeyhole className='h-4 w-4' />
 										Quyền riêng tư
 									</button>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												"Chức năng lưu trữ bài viết đang được phát triển.",
-											)
-										}
-										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+										onClick={handleToggleArchive}
+										disabled={archiveLoading}
+										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
 										<Archive className='h-4 w-4' />
-										Lưu trữ
+										{archiveLoading
+											? (isArchived ? "Đang khôi phục..." : "Đang lưu trữ...")
+											: (isArchived ? "Bỏ lưu trữ" : "Lưu trữ")}
 									</button>
 									<button
-										onClick={() =>
-											handleUnavailablePostAction(
-												"Chức năng xóa bài viết đang được phát triển.",
-											)
-										}
+										onClick={() => {
+											closePostMenu();
+											setShowDeleteConfirm(true);
+										}}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
 										<Trash2 className='h-4 w-4' />
 										Xóa
@@ -248,9 +346,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 									<button
 										onClick={() => {
 											if (!requireAuthenticatedUser()) return;
-											handleUnavailablePostAction(
-												"Chức năng báo cáo đang được phát triển.",
-											);
+											closePostMenu();
+											setShowReportModal(true);
 										}}
 										className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
 										<Flag className='h-4 w-4' />
@@ -323,7 +420,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 				</div>
 			)}
 
-			<div className='mt-4 flex flex-wrap items-center gap-2 border-t-2 border-black pt-3 text-black'>
+			<div className='mt-4 border-t-2 border-black' />
+			<div className='mt-3 flex flex-wrap items-center gap-2 text-black'>
 				<button
 					onClick={handleLike}
 					disabled={loading}
@@ -350,11 +448,43 @@ const PostCard: React.FC<PostCardProps> = ({ post, user }) => {
 				</button>
 
 				<button
+					onClick={handleCopyLink}
 					className='inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-					aria-label='Chia sẻ bài viết'>
-					<Share2 className='h-4 w-4' />
+					aria-label='Sao chép liên kết bài viết'>
+					{copiedLink ? (
+						<Check className='h-4 w-4 text-lime-600' />
+					) : (
+						<Share2 className='h-4 w-4' />
+					)}
 				</button>
 			</div>
+
+			{showReportModal && (
+				<ReportPostModal
+					postId={post.id}
+					onClose={() => setShowReportModal(false)}
+					isAlreadyReported={hasReported}
+					onSuccess={() => setHasReported(true)}
+				/>
+			)}
+
+			{showPrivacyModal && (
+				<PrivacyPostModal
+					postId={post.id}
+					currentVisibility={currentVisibility}
+					onClose={() => setShowPrivacyModal(false)}
+					onSaved={handlePrivacySaved}
+				/>
+			)}
+
+			{showDeleteConfirm && (
+				<DeletePostConfirm
+					postTitle={post.title}
+					deleting={deleteLoading}
+					onClose={() => setShowDeleteConfirm(false)}
+					onConfirm={handleDelete}
+				/>
+			)}
 		</article>
 	);
 };

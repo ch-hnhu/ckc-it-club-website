@@ -6,6 +6,8 @@ export interface BlogAuthor {
 	email: string;
 	avatar: string | null;
 	username: string | null;
+	role?: string | null;
+	is_following?: boolean;
 }
 
 export interface BlogTag {
@@ -22,6 +24,7 @@ export interface Blog {
 	excerpt: string | null;
 	featured_image: string | null;
 	status: string;
+	is_pinned?: boolean;
 	published_at: string | null;
 	view_count: number;
 	comments_count: number;
@@ -35,6 +38,7 @@ export interface Blog {
 export interface BlogDetail extends Blog {
 	content: string;
 	reaction_summary: Record<string, number>;
+	my_bookmark: boolean;
 }
 
 export interface BlogComment {
@@ -69,6 +73,7 @@ export interface CreateBlogPayload {
 	excerpt?: string;
 	tagIds?: number[];
 	featuredImage?: File | null;
+	status?: "draft" | "pending_review";
 }
 
 export interface BlogReactionResponse {

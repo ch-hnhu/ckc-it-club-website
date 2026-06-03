@@ -7,12 +7,12 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	ExternalLink,
 	FileText,
 	Filter,
 	HardDrive,
 	Image,
 	MoreHorizontal,
-	RefreshCw,
 	Trash2,
 	Video,
 } from "lucide-react";
@@ -221,9 +221,10 @@ function MediaListPage() {
 		order: "desc",
 	});
 
-	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+	const { allSelected, isSelected, selectedIds, toggleAll, toggleOne } = useTableSelection(
 		files.map((f) => f.id),
 	);
+	const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
 	useEffect(() => {
 		const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -316,50 +317,41 @@ function MediaListPage() {
 		}
 	};
 
-	const activeFilterCount =
-		Number(Boolean(search.trim())) +
-		Number(fileTypeFilter !== "all") +
-		Number(targetTypeFilter !== "all");
+	const handleBulkDelete = async () => {
+		if (selectedIds.length === 0 || isBulkDeleting) return;
+		setIsBulkDeleting(true);
+		try {
+			await Promise.all(selectedIds.map((id) => mediaService.deleteMediaFile(id)));
+			setFiles((prev) => prev.filter((f) => !selectedIds.includes(f.id)));
+			setReloadToken((p) => p + 1);
+			toast.success(`Đã xóa ${selectedIds.length} tài nguyên.`);
+			toggleAll(false);
+		} catch {
+			toast.error("Không thể xóa một số tài nguyên. Vui lòng thử lại.");
+		} finally {
+			setIsBulkDeleting(false);
+		}
+	};
+
+	const getSourceUrl = (targetType: TargetType, targetId: number): string | null => {
+		if (targetType === "post") return `/community/posts/${targetId}`;
+		if (targetType === "blog") return `/community/blogs/${targetId}`;
+		return null;
+	};
 
 	return (
 		<div className='min-h-full bg-background'>
 			<div className='space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8'>
-				{/* Hero */}
-				<section className='overflow-hidden rounded-[30px] border border-indigo-500/15 bg-[linear-gradient(135deg,rgba(99,102,241,0.13),rgba(248,250,255,0.96)_44%,rgba(252,252,255,0.98)_100%)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(99,102,241,0.13),rgba(10,10,18,0.96)_45%,rgba(8,8,14,0.98)_100%)]'>
-					<div className='px-6 py-7 md:px-8 md:py-9'>
-						<div className='max-w-3xl space-y-4'>
-							<Badge className='w-fit rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-indigo-800 hover:bg-indigo-500/10 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-200'>
-								Quản lý tài nguyên
-							</Badge>
-							<div className='space-y-2'>
-								<h1 className='text-foreground text-[1.85rem] font-semibold leading-tight md:text-[2.4rem] md:leading-[1.1]'>
-									Tài nguyên media cộng đồng
-								</h1>
-								<p className='text-sm leading-7 text-indigo-950/70 md:text-base dark:text-indigo-50/65'>
-									Theo dõi toàn bộ hình ảnh, video, tài liệu và GIF được tải lên
-									bởi thành viên trong bài đăng, blog và tin nhắn.
-								</p>
-							</div>
-							<div className='flex flex-wrap items-center gap-3 pt-1'>
-								<Button
-									variant='outline'
-									className='h-10 rounded-2xl border-indigo-500/20 bg-background/80 px-4 text-indigo-800 shadow-sm hover:bg-indigo-500/10 dark:bg-background/70 dark:text-indigo-200'
-									onClick={() => {
-										setSearch("");
-										setFileTypeFilter("all");
-										setTargetTypeFilter("all");
-									}}>
-									<RefreshCw className='size-4' />
-									Đặt lại bộ lọc
-								</Button>
-								<div className='inline-flex h-10 items-center gap-2 rounded-2xl border border-indigo-500/20 bg-background/72 px-4 text-sm font-medium text-indigo-800 dark:text-indigo-200'>
-									<Filter className='size-4' />
-									{activeFilterCount} điều kiện đang áp dụng
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
+				{/* Header */}
+				<div className='space-y-2'>
+					<h2 className='text-2xl font-semibold tracking-tight'>
+						Tài nguyên media cộng đồng
+					</h2>
+					<p className='text-muted-foreground'>
+						Theo dõi toàn bộ hình ảnh, video, tài liệu và GIF được tải lên bởi thành
+						viên trong bài đăng, blog và tin nhắn.
+					</p>
+				</div>
 
 				{/* Stats */}
 				<section className='grid gap-4 sm:grid-cols-2 xl:grid-cols-3'>
@@ -449,14 +441,14 @@ function MediaListPage() {
 
 				{/* Filter + Table */}
 				<div className='flex flex-col gap-4'>
-					<div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
+					<div className='flex flex-row items-center gap-3'>
 						<Input
 							placeholder='Tìm theo tên chủ sở hữu hoặc URL...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className='h-8 w-full sm:w-64 md:w-80'
+							className='h-8 min-w-0 flex-1 max-w-80'
 						/>
-						<div className='flex items-center gap-2'>
+						<div className='ml-auto flex shrink-0 items-center gap-2'>
 							{/* File type filter */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -521,6 +513,31 @@ function MediaListPage() {
 						</div>
 					</div>
 
+					{/* Bulk delete toolbar */}
+					{selectedIds.length > 0 && (
+						<div className='flex items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-2.5'>
+							<span className='text-sm font-medium text-destructive'>
+								Đã chọn {selectedIds.length} tài nguyên
+							</span>
+							<Button
+								variant='destructive'
+								size='sm'
+								className='h-7 gap-1.5'
+								disabled={isBulkDeleting}
+								onClick={handleBulkDelete}>
+								<Trash2 className='h-3.5 w-3.5' />
+								{isBulkDeleting ? "Đang xóa..." : "Xóa tất cả đã chọn"}
+							</Button>
+							<Button
+								variant='ghost'
+								size='sm'
+								className='h-7 ml-auto'
+								onClick={() => toggleAll(false)}>
+								Bỏ chọn
+							</Button>
+						</div>
+					)}
+
 					<div className='overflow-hidden rounded-md border'>
 						<Table>
 							<TableHeader>
@@ -545,7 +562,7 @@ function MediaListPage() {
 											variant='ghost'
 											onClick={() => handleSort("owner_name")}
 											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-											Chủ sở hữu {getSortIcon("owner_name")}
+											Người upload {getSortIcon("owner_name")}
 										</Button>
 									</TableHead>
 									<TableHead className='min-w-[220px]'>
@@ -553,7 +570,7 @@ function MediaListPage() {
 											variant='ghost'
 											onClick={() => handleSort("url")}
 											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-											Tài nguyên {getSortIcon("url")}
+											File {getSortIcon("url")}
 										</Button>
 									</TableHead>
 									<TableHead className='w-[120px]'>
@@ -561,7 +578,7 @@ function MediaListPage() {
 											variant='ghost'
 											onClick={() => handleSort("file_type")}
 											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-											Loại file {getSortIcon("file_type")}
+											Loại {getSortIcon("file_type")}
 										</Button>
 									</TableHead>
 									<TableHead className='w-[110px]'>
@@ -688,15 +705,38 @@ function MediaListPage() {
 
 											{/* Target */}
 											<TableCell>
-												<Badge
-													variant='outline'
-													className={cn(
-														"rounded-full px-2 py-0.5 text-xs",
-														TARGET_TYPE_MAP[file.target_type].className,
-													)}>
-													{TARGET_TYPE_MAP[file.target_type].label} #
-													{file.target_id}
-												</Badge>
+												{(() => {
+													const sourceUrl = getSourceUrl(
+														file.target_type,
+														file.target_id,
+													);
+													const badge = (
+														<Badge
+															variant='outline'
+															className={cn(
+																"rounded-full px-2 py-0.5 text-xs",
+																TARGET_TYPE_MAP[file.target_type]
+																	.className,
+															)}>
+															{
+																TARGET_TYPE_MAP[file.target_type]
+																	.label
+															}{" "}
+															#{file.target_id}
+														</Badge>
+													);
+													return sourceUrl ? (
+														<a
+															href={sourceUrl}
+															title='Xem nguồn'
+															className='inline-flex items-center gap-1 hover:opacity-80'>
+															{badge}
+															<ExternalLink className='h-3 w-3 text-muted-foreground' />
+														</a>
+													) : (
+														badge
+													);
+												})()}
 											</TableCell>
 
 											{/* Date */}
@@ -716,7 +756,7 @@ function MediaListPage() {
 													</DropdownMenuTrigger>
 													<DropdownMenuContent
 														align='end'
-														className='w-[160px]'>
+														className='w-[170px]'>
 														<DropdownMenuItem asChild>
 															<a
 																href={file.url}
@@ -726,6 +766,25 @@ function MediaListPage() {
 																Xem tệp
 															</a>
 														</DropdownMenuItem>
+														{getSourceUrl(
+															file.target_type,
+															file.target_id,
+														) && (
+															<DropdownMenuItem asChild>
+																<a
+																	href={
+																		getSourceUrl(
+																			file.target_type,
+																			file.target_id,
+																		)!
+																	}
+																	target='_blank'
+																	rel='noopener noreferrer'>
+																	<ExternalLink className='h-4 w-4' />
+																	Xem bài nguồn
+																</a>
+															</DropdownMenuItem>
+														)}
 														<DropdownMenuSeparator />
 														<DropdownMenuItem
 															className='text-destructive focus:bg-destructive/10 focus:text-destructive'

@@ -13,7 +13,7 @@ class TagController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $allowedSorts = ['id', 'name', 'blogs_count', 'created_at'];
+        $allowedSorts = ['id', 'name', 'slug', 'blogs_count', 'created_at'];
         $sort    = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
         $order   = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
         $perPage = (int) $request->query('per_page', 10);
@@ -36,10 +36,12 @@ class TagController extends BaseApiController
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'name'        => 'required|string|max:255',
+            'name'        => 'required|string|max:255|unique:tags,name',
             'slug'        => 'nullable|string|max:255|unique:tags,slug',
             'description' => 'nullable|string',
-            'color'       => 'nullable|string|max:7',
+        ], [
+            'name.unique' => 'Tag này đã tồn tại.',
+            'slug.unique' => 'Slug này đã được sử dụng.',
         ]);
 
         $name = trim($request->string('name')->value());
@@ -47,7 +49,6 @@ class TagController extends BaseApiController
             'name'        => $name,
             'slug'        => $request->filled('slug') ? trim($request->string('slug')->value()) : Str::slug($name),
             'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
-            'color'       => $request->filled('color') ? trim($request->string('color')->value()) : null,
             'created_by'  => $request->user()?->id,
             'updated_by'  => $request->user()?->id,
         ]);
@@ -60,10 +61,12 @@ class TagController extends BaseApiController
     public function update(Request $request, Tag $tag): JsonResponse
     {
         $request->validate([
-            'name'        => 'required|string|max:255',
+            'name'        => "required|string|max:255|unique:tags,name,{$tag->id}",
             'slug'        => "nullable|string|max:255|unique:tags,slug,{$tag->id}",
             'description' => 'nullable|string',
-            'color'       => 'nullable|string|max:7',
+        ], [
+            'name.unique' => 'Tag này đã tồn tại.',
+            'slug.unique' => 'Slug này đã được sử dụng.',
         ]);
 
         $name = trim($request->string('name')->value());
@@ -71,7 +74,6 @@ class TagController extends BaseApiController
             'name'        => $name,
             'slug'        => $request->filled('slug') ? trim($request->string('slug')->value()) : Str::slug($name),
             'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
-            'color'       => $request->filled('color') ? trim($request->string('color')->value()) : $tag->color,
             'updated_by'  => $request->user()?->id,
         ]);
 
@@ -93,7 +95,6 @@ class TagController extends BaseApiController
             'id'          => $tag->id,
             'name'        => $tag->name,
             'slug'        => $tag->slug,
-            'color'       => $tag->color,
             'posts_count' => 0,
             'blogs_count' => $tag->blogs_count ?? 0,
             'created_at'  => $tag->created_at?->toIso8601String(),

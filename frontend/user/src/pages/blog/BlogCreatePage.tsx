@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AlertCircle, ChevronLeft, ImagePlus, Loader2, Send, X } from "lucide-react";
+import { AlertCircle, BookMarked, ChevronLeft, ImagePlus, Loader2, Send, X } from "lucide-react";
 import { Link, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import StacksEditorWrapper, { type StacksEditorHandle } from "@/components/ui/StacksEditorWrapper";
 import type { AuthUser } from "@/services/auth.service";
@@ -26,9 +26,11 @@ const BlogCreatePage: React.FC = () => {
 	const [title, setTitle] = useState("");
 	const [excerpt, setExcerpt] = useState("");
 	const [tags, setTags] = useState<BlogTag[]>([]);
+	const [tagsLoading, setTagsLoading] = useState(true);
 	const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 	const [coverImage, setCoverImage] = useState<File | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isSavingDraft, setIsSavingDraft] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
 
 	const coverPreviewUrl = useMemo(() => {
@@ -43,10 +45,12 @@ const BlogCreatePage: React.FC = () => {
 	}, [coverPreviewUrl]);
 
 	useEffect(() => {
+		setTagsLoading(true);
 		blogService
 			.getTags()
 			.then((res) => setTags(res.data))
-			.catch(() => setTags([]));
+			.catch(() => setTags([]))
+			.finally(() => setTagsLoading(false));
 	}, []);
 
 	const openCoverDialog = () => {
@@ -83,31 +87,64 @@ const BlogCreatePage: React.FC = () => {
 		);
 	};
 
+	const validateForm = (requireContent = true) => {
+		if (title.trim().length < 5) {
+			setFormError("Tiêu đề blog cần tối thiểu 5 ký tự.");
+			return null;
+		}
+		const content = editorRef.current?.getContent() ?? "";
+		if (requireContent && !content.replace(/<[^>]*>/g, "").trim().length) {
+			setFormError("Vui lòng nhập nội dung blog.");
+			editorRef.current?.focus();
+			return null;
+		}
+		setFormError(null);
+		return content;
+	};
+
+	const handleSaveDraft = async () => {
+		if (isSavingDraft || isSubmitting) return;
+		if (!user) {
+			navigate("/login", { state: { from: location.pathname + location.search } });
+			return;
+		}
+		const content = validateForm(false);
+		if (content === null) return;
+
+		setIsSavingDraft(true);
+		try {
+			await blogService.createBlog({
+				title: title.trim(),
+				excerpt: excerpt.trim() || undefined,
+				content,
+				tagIds: selectedTagIds,
+				featuredImage: coverImage,
+				status: "draft",
+			});
+			toast.success("Đã lưu nháp!", {
+				description: "Bạn có thể xem lại ở mục Nháp trong trang cá nhân.",
+			});
+			navigate("/blog");
+		} catch (error) {
+			setFormError(getErrorMessage(error));
+		} finally {
+			setIsSavingDraft(false);
+		}
+	};
+
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		if (isSubmitting) return;
+		if (isSubmitting || isSavingDraft) return;
 
 		if (!user) {
 			navigate("/login", { state: { from: location.pathname + location.search } });
 			return;
 		}
 
-		const content = editorRef.current?.getContent() ?? "";
-		const hasContent = content.replace(/<[^>]*>/g, "").trim().length > 0;
-
-		if (title.trim().length < 5) {
-			setFormError("Tiêu đề blog cần tối thiểu 5 ký tự.");
-			return;
-		}
-
-		if (!hasContent) {
-			setFormError("Vui lòng nhập nội dung blog.");
-			editorRef.current?.focus();
-			return;
-		}
+		const content = validateForm(true);
+		if (content === null) return;
 
 		setIsSubmitting(true);
-		setFormError(null);
 
 		try {
 			const response = await blogService.createBlog({
@@ -116,9 +153,20 @@ const BlogCreatePage: React.FC = () => {
 				content,
 				tagIds: selectedTagIds,
 				featuredImage: coverImage,
+				status: "pending_review",
 			});
-			toast.success("Đã tạo blog!");
-			navigate(`/blog/${response.data.slug}`);
+
+			const isPendingReview = response.data.status === "pending_review";
+			if (isPendingReview) {
+				toast.success("Blog đã được gửi và đang chờ duyệt.", {
+					description: "Ban quản trị sẽ xem xét và duyệt bài viết của bạn sớm nhất.",
+					duration: 5000,
+				});
+				navigate("/blog");
+			} else {
+				toast.success("Đã tạo blog!");
+				navigate(`/blog/${response.data.slug}`);
+			}
 		} catch (error) {
 			setFormError(getErrorMessage(error));
 		} finally {
@@ -187,7 +235,14 @@ const BlogCreatePage: React.FC = () => {
 							Tag
 						</label>
 						<div className='flex flex-wrap gap-2'>
-							{tags.length > 0 ? (
+							{tagsLoading ? (
+								Array.from({ length: 6 }).map((_, i) => (
+									<div
+										key={i}
+										className='h-7 w-20 animate-pulse rounded-full border-2 border-black bg-gray-200'
+									/>
+								))
+							) : tags.length > 0 ? (
 								tags.map((tag) => {
 									const selected = selectedTagIds.includes(tag.id);
 									return (
@@ -248,12 +303,36 @@ const BlogCreatePage: React.FC = () => {
 										aria-label='Xóa ảnh bìa đã chọn'>
 										<X className='h-4 w-4' />
 									</button>
-									<img
-										src={coverPreviewUrl}
-										alt={coverImage?.name ?? "Ảnh bìa blog"}
-										className='aspect-[21/9] w-full object-cover'
-									/>
-									<figcaption className='truncate border-t-2 border-black px-3 py-2 text-xs font-bold text-gray-700'>
+
+									{/* Preview 1: Trang chi tiết */}
+									<div className='border-b-2 border-black'>
+										<p className='bg-gray-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500'>
+											Trang chi tiết
+										</p>
+										<div className='bg-gray-100'>
+											<img
+												src={coverPreviewUrl}
+												alt={coverImage?.name ?? "Ảnh bìa blog"}
+												className='max-h-[340px] w-full object-contain'
+											/>
+										</div>
+									</div>
+
+									{/* Preview 2: Card danh sách */}
+									<div className='border-b-2 border-black'>
+										<p className='bg-gray-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500'>
+											Card danh sách
+										</p>
+										<div className='bg-gray-100'>
+											<img
+												src={coverPreviewUrl}
+												alt={coverImage?.name ?? "Ảnh bìa blog"}
+												className='aspect-[21/9] w-full object-contain'
+											/>
+										</div>
+									</div>
+
+									<figcaption className='truncate bg-gray-50 px-3 py-2 text-xs font-bold text-gray-700'>
 										{coverImage?.name}
 									</figcaption>
 								</figure>
@@ -282,17 +361,29 @@ const BlogCreatePage: React.FC = () => {
 						</div>
 					</div>
 
-					<div className='flex items-center justify-end'>
+					<div className='flex items-center justify-end gap-3'>
+						<button
+							type='button'
+							onClick={() => void handleSaveDraft()}
+							disabled={isSavingDraft || isSubmitting}
+							className='neo-btn neo-btn-secondary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
+							{isSavingDraft ? (
+								<Loader2 className='h-4 w-4 animate-spin' />
+							) : (
+								<BookMarked className='h-4 w-4' />
+							)}
+							{isSavingDraft ? "Đang lưu..." : "Lưu nháp"}
+						</button>
 						<button
 							type='submit'
-							disabled={isSubmitting}
+							disabled={isSubmitting || isSavingDraft}
 							className='neo-btn neo-btn-primary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
 							{isSubmitting ? (
 								<Loader2 className='h-4 w-4 animate-spin' />
 							) : (
 								<Send className='h-4 w-4' />
 							)}
-							{isSubmitting ? "Đang tạo..." : "Đăng blog"}
+							{isSubmitting ? "Đang gửi..." : "Đăng"}
 						</button>
 					</div>
 				</form>
