@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\User\AcademicController;
 use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
+use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\FollowController;
@@ -119,6 +120,11 @@ Route::prefix('v1')->group(function () {
 
     // user logged-in routes
     Route::middleware('auth:sanctum')->group(function () {
+        // club applications (user-facing)
+        Route::get('/user/application-questions', [UserClubApplicationController::class, 'questions']);
+        Route::get('/user/club-applications/me', [UserClubApplicationController::class, 'myApplication']);
+        Route::post('/user/club-applications', [UserClubApplicationController::class, 'store']);
+
         // academic structure
         Route::prefix('academic')->group(function () {
             Route::get('/faculties', [AcademicController::class, 'faculties']);

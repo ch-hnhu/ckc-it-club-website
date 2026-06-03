@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { ArrowRight, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const FinalCTA: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
@@ -63,8 +64,8 @@ const FinalCTA: React.FC = () => {
 
 						{/* CTA Button */}
 						<div className='flex justify-center pt-2'>
-							<a
-								href='#'
+							<Link
+								to='/ung-tuyen'
 								className='inline-flex items-center justify-center gap-3 w-full max-w-[280px] sm:w-auto px-5 sm:px-10 py-3 sm:py-4 bg-black text-white rounded-xl neo-btn text-sm sm:text-lg'
 								style={{
 									fontFamily: "var(--font-heading)",
@@ -72,7 +73,7 @@ const FinalCTA: React.FC = () => {
 								}}>
 								Tham gia ngay miễn phí
 								<ArrowRight className='w-4 h-4 sm:w-5 sm:h-5' />
-							</a>
+							</Link>
 						</div>
 
 						{/* Trust micro-text */}
