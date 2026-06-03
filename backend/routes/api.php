@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\User\ContactController as PublicContactControlle
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
+use App\Http\Controllers\Api\V1\User\UserNotificationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
@@ -120,6 +121,14 @@ Route::prefix('v1')->group(function () {
 
     // user logged-in routes
     Route::middleware('auth:sanctum')->group(function () {
+        // user notifications (realtime + REST)
+        Route::prefix('user-notifications')->group(function () {
+            Route::get('/', [UserNotificationController::class, 'index']);
+            Route::get('/unread-count', [UserNotificationController::class, 'unreadCount']);
+            Route::patch('/read-all', [UserNotificationController::class, 'markAllAsRead']);
+            Route::patch('/{id}/read', [UserNotificationController::class, 'markAsRead']);
+        });
+
         // academic structure
         Route::prefix('academic')->group(function () {
             Route::get('/faculties', [AcademicController::class, 'faculties']);

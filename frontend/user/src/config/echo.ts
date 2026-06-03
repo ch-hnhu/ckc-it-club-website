@@ -1,13 +1,8 @@
-/**
- * Laravel Echo (Reverb) configuration.
- *
- * Connects to the Reverb WebSocket server using Pusher-compatible protocol.
- * Uses a public channel (no auth) for broadcasting comment visibility changes.
- */
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
 
 const reverbAppKey = import.meta.env.VITE_REVERB_APP_KEY as string | undefined;
+const backendUrl = (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "http://localhost:8000";
 
 const echo = reverbAppKey
 	? (() => {
@@ -22,11 +17,31 @@ const echo = reverbAppKey
 				wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
 				forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? "http") === "https",
 				enabledTransports: ["ws", "wss"],
-				// Disable activity checks to avoid unnecessary pings on low-traffic dev setup.
 				activityTimeout: 120_000,
 				pongTimeout: 30_000,
+				// Private channel auth — token is re-read lazily via updateAuthToken()
+				authEndpoint: `${backendUrl}/broadcasting/auth`,
+				auth: {
+					headers: {
+						Authorization: `Bearer ${localStorage.getItem("access_token") ?? ""}`,
+						Accept: "application/json",
+					},
+				},
 			});
 		})()
 	: null;
+
+/**
+ * Call after login/token-refresh so Echo picks up the new Bearer token
+ * before subscribing to private channels.
+ */
+export function updateEchoAuthToken(token: string): void {
+	if (!echo) return;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const pusher = (echo.connector as any).pusher;
+	if (pusher?.config?.auth?.headers) {
+		pusher.config.auth.headers.Authorization = `Bearer ${token}`;
+	}
+}
 
 export default echo;

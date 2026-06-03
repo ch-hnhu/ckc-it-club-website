@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\ApiMessage;
 use App\Enums\ReactionType;
+use App\Events\NotificationSent;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Channel;
 use App\Models\Comment;
 use App\Models\MediaFile;
 use App\Models\Post;
 use App\Models\Reaction;
+use App\Notifications\UserCommunityNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -500,6 +502,7 @@ class PostController extends BaseApiController
 
         $reacted = false;
         $myReaction = null;
+        $isNewReaction = false;
 
         if ($existing) {
             if ($existing->type === $type) {
@@ -522,6 +525,7 @@ class PostController extends BaseApiController
             ]);
             $reacted = true;
             $myReaction = $type;
+            $isNewReaction = true;
         }
 
         // Updated summary
@@ -530,6 +534,47 @@ class PostController extends BaseApiController
             ->selectRaw('type, COUNT(*) as count')
             ->groupBy('type')
             ->pluck('count', 'type');
+
+        // Notify post owner on new reaction (skip self-reactions)
+        if ($isNewReaction) {
+            $post = Post::with('user:id,full_name,avatar,username')->find($id);
+            if ($post && $post->user_id !== $userId) {
+                $actor = $request->user();
+                $reactionLabel = match ($type) {
+                    'heart' => 'tim',
+                    'like'  => 'thích',
+                    'haha'  => 'haha',
+                    'wow'   => 'wow',
+                    'sad'   => 'buồn',
+                    default => 'thích',
+                };
+
+                $notificationData = [
+                    'title'         => 'Bài viết được yêu thích',
+                    'message'       => "{$actor->full_name} đã thả {$reactionLabel} bài viết của bạn",
+                    'type'          => 'reaction',
+                    'actor'         => [
+                        'id'        => $actor->id,
+                        'full_name' => $actor->full_name,
+                        'avatar'    => $actor->avatar,
+                        'username'  => $actor->username,
+                    ],
+                    'reaction_type' => $type,
+                    'target_type'   => 'post',
+                    'target_id'     => $id,
+                    'link'          => "/cong-dong/bai-viet/{$id}",
+                ];
+
+                $post->user->notify(new UserCommunityNotification($notificationData));
+
+                $latestNotification = $post->user->notifications()->latest()->first();
+
+                broadcast(new NotificationSent(
+                    $post->user_id,
+                    array_merge(['id' => $latestNotification?->id, 'created_at' => now()->toISOString()], $notificationData),
+                ));
+            }
+        }
 
         return $this->successResponse(true, [
             'reacted' => $reacted,

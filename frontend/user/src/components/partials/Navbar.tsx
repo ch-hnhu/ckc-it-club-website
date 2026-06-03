@@ -28,6 +28,7 @@ import {
 	type AuthUser,
 } from "../../services/auth.service";
 import { buildProfileUrl } from "@/lib/utils";
+import NotificationBell from "@/components/partials/NotificationBell";
 
 type NavbarProps = {
 	user: AuthUser | null;
@@ -387,22 +388,25 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 
 					<div className='hidden shrink-0 items-center gap-3 xl:flex'>
 						{user ? (
-							<div ref={profileMenuRef} className='relative'>
-								<button
-									type='button'
-									onClick={() => setIsProfileOpen((current) => !current)}
-									className='flex h-11 w-11 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-blue)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 cursor-pointer'
-									aria-label={`Mở menu tài khoản của ${userDisplayName}`}
-									aria-haspopup='menu'
-									aria-expanded={isProfileOpen}>
-									<img
-										src={userAvatar}
-										alt={userDisplayName}
-										className='h-full w-full rounded-full object-cover'
-									/>
-								</button>
-								{isProfileOpen && renderProfileMenu()}
-							</div>
+							<>
+								<NotificationBell user={user} />
+								<div ref={profileMenuRef} className='relative'>
+									<button
+										type='button'
+										onClick={() => setIsProfileOpen((current) => !current)}
+										className='flex h-11 w-11 items-center justify-center rounded-full border-2 border-gray-700 bg-[var(--color-pastel-blue)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 cursor-pointer'
+										aria-label={`Mở menu tài khoản của ${userDisplayName}`}
+										aria-haspopup='menu'
+										aria-expanded={isProfileOpen}>
+										<img
+											src={userAvatar}
+											alt={userDisplayName}
+											className='h-full w-full rounded-full object-cover'
+										/>
+									</button>
+									{isProfileOpen && renderProfileMenu()}
+								</div>
+							</>
 						) : (
 							<>
 								<Link
