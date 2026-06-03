@@ -19,8 +19,10 @@ const echo = reverbAppKey
 				enabledTransports: ["ws", "wss"],
 				activityTimeout: 120_000,
 				pongTimeout: 30_000,
-				// Private channel auth — token is re-read lazily via updateAuthToken()
-				authEndpoint: `${backendUrl}/broadcasting/auth`,
+				// Custom broadcasting auth route using auth:sanctum (Bearer token).
+				// Cannot use /broadcasting/auth because BroadcastServiceProvider registers
+				// that path first with web/session middleware (ignores Bearer tokens).
+				authEndpoint: `${backendUrl}/api/v1/broadcasting/auth`,
 				auth: {
 					headers: {
 						Authorization: `Bearer ${localStorage.getItem("access_token") ?? ""}`,

@@ -112,13 +112,17 @@ class UserNotificationService
         // 2. Retrieve the just-created notification ID
         $saved = $recipient->notifications()->latest()->first();
 
-        // 3. Push real-time via Reverb WebSocket (private channel per user)
+        // 3. Push real-time via Reverb WebSocket (private channel per user).
+        //    Payload mirrors the DB notification shape so the frontend can
+        //    handle WS events and REST responses with one type.
         broadcast(new NotificationSent(
             $recipient->id,
-            array_merge(
-                ['id' => $saved?->id, 'created_at' => now()->toISOString()],
-                $data,
-            ),
+            [
+                'id'         => $saved?->id,
+                'data'       => $data,   // nested under 'data' — matches $user->notifications() format
+                'read_at'    => null,
+                'created_at' => now()->toISOString(),
+            ],
         ));
     }
 }

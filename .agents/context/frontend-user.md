@@ -69,6 +69,8 @@
 - landing page composed from multiple section components
 - `/lien-he`
 - contact page
+- `/thong-bao`
+- authenticated user notification center. The navbar notification dropdown links here through “Xem tất cả”; the page loads personal notifications from `GET /user-notifications` in pages of 20, supports load more/infinite sentinel behavior, unread state, item navigation, and mark-all-read.
 - `/blog`
 - standalone blog feed page linked from the community dropdown in the navbar
 - `/blog/dang-bai`
@@ -91,6 +93,7 @@
 - `ContactPage` posts real data to `POST /api/v1/contacts`, shows backend success or error feedback, and resets the form on success.
 - `Navbar` and auth service use `localStorage` for the access token.
 - When a user is authenticated, `Navbar` shows an avatar-only account trigger. Clicking it opens a neo-styled profile dropdown with Profile, Bookmarks, Account, Switch theme, and Sign Out actions.
+- Authenticated users also see a notification bell. Its dropdown shows recent personal notifications, supports marking all as read, and links to `/thong-bao` for the full paginated notification center.
 - `src/config/axios.config.ts` tries to read the token from `sessionStorage`, not `localStorage`.
 - The same Axios interceptor redirects `401` responses to `/login`.
 - Conclusion: token storage is internally inconsistent between the shared Axios client and the auth service. Agents must treat auth/session handling carefully.
@@ -182,6 +185,7 @@
 - redirects to `/login`
 - If you standardize auth, update:
 - `src/services/auth.service.ts`
+- `src/services/notification.service.ts`
 - `src/config/axios.config.ts`
 - navbar login/logout behavior
 - this file

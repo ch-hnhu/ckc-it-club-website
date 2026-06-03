@@ -38,6 +38,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
+    // WebSocket private-channel auth — must use auth:sanctum (Bearer token),
+    // NOT the default BroadcastServiceProvider route which uses web/session middleware.
+    Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
+        return \Illuminate\Support\Facades\Broadcast::auth($request);
+    })->middleware('auth:sanctum');
+
     // public routes
     Route::get('/health', function () {
         return response()->json([

@@ -1,22 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import notificationService from "@/services/notification.service";
 import echo, { updateEchoAuthToken } from "@/config/echo";
 import type { UserNotification } from "@/types/notification.types";
 import type { AuthUser } from "@/services/auth.service";
+import { formatNotificationTime } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 30_000;
-
-function timeAgo(isoString: string): string {
-	const diff = Date.now() - new Date(isoString).getTime();
-	const minutes = Math.floor(diff / 60_000);
-	if (minutes < 1) return "Vừa xong";
-	if (minutes < 60) return `${minutes} phút trước`;
-	const hours = Math.floor(minutes / 60);
-	if (hours < 24) return `${hours} giờ trước`;
-	return `${Math.floor(hours / 24)} ngày trước`;
-}
 
 type Props = { user: AuthUser };
 
@@ -24,33 +15,28 @@ export default function NotificationBell({ user }: Props) {
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
 	const [notifications, setNotifications] = useState<UserNotification[]>([]);
-	const [unreadCount, setUnreadCount] = useState(0);
 	const [loading, setLoading] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
+	// Derived — always in sync with loaded list, zero race conditions.
+	const unreadCount = notifications.filter((n) => !n.read_at).length;
+	// Ref-based dedup: tracks IDs already processed by the WS handler.
+	// Unlike state-updater dedup, a ref is synchronously updated so even
+	// two listeners firing in the same React 18 batch see each other's writes.
+	const handledWsIds = useRef<Set<string>>(new Set());
 
 	const fetchAll = async () => {
 		try {
 			const res = await notificationService.getNotifications();
 			setNotifications(res.data.notifications);
-			setUnreadCount(res.data.unread_count);
 		} catch {
 			// silently ignore
 		}
 	};
 
-	const fetchUnreadCount = async () => {
-		try {
-			const res = await notificationService.getUnreadCount();
-			setUnreadCount(res.data.count);
-		} catch {
-			// silently ignore
-		}
-	};
-
-	// Initial load + polling fallback
+	// Initial load + polling fallback (fetchAll also re-syncs if WS drops)
 	useEffect(() => {
 		fetchAll();
-		const timer = setInterval(fetchUnreadCount, POLL_INTERVAL_MS);
+		const timer = setInterval(fetchAll, POLL_INTERVAL_MS);
 		return () => clearInterval(timer);
 	}, []);
 
@@ -72,13 +58,19 @@ export default function NotificationBell({ user }: Props) {
 
 		const channel = echo.private(`App.Models.User.${user.id}`);
 
-		channel.listen(".notification.sent", (data: UserNotification) => {
-			setNotifications((prev) => [data, ...prev]);
-			setUnreadCount((c) => c + 1);
-		});
+		channel
+			.listen(".notification.sent", (data: UserNotification) => {
+				// Ref-based dedup: synchronous check/mark prevents double-fire
+				// even when React 18 batches multiple listeners in one cycle.
+				if (!data.id || handledWsIds.current.has(data.id)) return;
+				handledWsIds.current.add(data.id);
+
+				setNotifications((prev) => [data, ...prev]);
+				// unreadCount re-derives automatically — no extra fetch needed.
+			});
 
 		return () => {
-			echo.leave(`App.Models.User.${user.id}`);
+			echo?.leave(`App.Models.User.${user.id}`);
 		};
 	}, [user.id]);
 
@@ -98,7 +90,7 @@ export default function NotificationBell({ user }: Props) {
 		setNotifications((prev) =>
 			prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)),
 		);
-		setUnreadCount((c) => Math.max(0, c - 1));
+		// unreadCount re-derives automatically from the updated list.
 	};
 
 	const handleClickItem = async (n: UserNotification) => {
@@ -114,7 +106,7 @@ export default function NotificationBell({ user }: Props) {
 		setNotifications((prev) =>
 			prev.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })),
 		);
-		setUnreadCount(0);
+		// unreadCount re-derives automatically from the updated list.
 	};
 
 	return (
@@ -188,12 +180,21 @@ export default function NotificationBell({ user }: Props) {
 												{n.data.message}
 											</p>
 											<p className='mt-1 text-[11px] text-gray-400'>
-												{timeAgo(n.created_at)}
+												{formatNotificationTime(n.created_at)}
 											</p>
 										</div>
 									</div>
 								</div>
 							))}
+					</div>
+
+					<div className='border-t-2 border-black bg-[var(--color-surface)] p-2 text-center'>
+						<Link
+							to='/thong-bao'
+							onClick={() => setOpen(false)}
+							className='inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-extrabold text-[var(--color-text-primary)] transition hover:bg-white'>
+							Xem tất cả
+						</Link>
 					</div>
 				</div>
 			)}
