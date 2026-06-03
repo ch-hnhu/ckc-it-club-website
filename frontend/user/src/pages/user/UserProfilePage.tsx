@@ -57,6 +57,8 @@ import PostCard from "@/components/community/PostCard";
 const sortPinnedFirst = <T extends { is_pinned?: boolean }>(items: T[]): T[] =>
 	[...items].sort((a, b) => Number(Boolean(b.is_pinned)) - Number(Boolean(a.is_pinned)));
 
+type PostMutationReason = "archived" | "restored" | "deleted";
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 const ProfileSkeleton: React.FC = () => (
@@ -499,9 +501,15 @@ interface UserPostsTabProps {
 	username: string;
 	user: AuthUser | null;
 	isOwnProfile: boolean;
+	onPostDeleted?: (id: number, reason?: PostMutationReason) => void;
 }
 
-const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfile }) => {
+const UserPostsTab: React.FC<UserPostsTabProps> = ({
+	username,
+	user,
+	isOwnProfile,
+	onPostDeleted,
+}) => {
 	const [posts, setPosts] = useState<Post[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);
@@ -572,7 +580,10 @@ const UserPostsTab: React.FC<UserPostsTabProps> = ({ username, user, isOwnProfil
 					post={post}
 					user={user}
 					showPinnedBadge
-					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+					onPostDeleted={(id, reason) => {
+						setPosts((prev) => prev.filter((p) => p.id !== id));
+						onPostDeleted?.(id, reason);
+					}}
 				/>
 			))}
 		</div>
@@ -683,6 +694,29 @@ const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
 	const [liked, setLiked] = useState(post.my_reaction === "heart");
 	const [heartCount, setHeartCount] = useState(post.reactions_count);
 	const [loading, setLoading] = useState(false);
+	const [copiedLink, setCopiedLink] = useState(false);
+
+	const handleCopyLink = async (e: React.MouseEvent) => {
+		e.preventDefault();
+		const url = `${window.location.origin}${detailUrl}`;
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(url);
+			} else {
+				const ta = document.createElement("textarea");
+				ta.value = url;
+				ta.style.cssText = "position:fixed;top:-9999px;left:-9999px";
+				document.body.appendChild(ta);
+				ta.select();
+				document.execCommand("copy");
+				document.body.removeChild(ta);
+			}
+			setCopiedLink(true);
+			setTimeout(() => setCopiedLink(false), 2000);
+		} catch {
+			// silently fail
+		}
+	};
 
 	const handleLike = async (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -789,9 +823,15 @@ const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
 					{post.comments_count}
 				</Link>
 				<button
+					onClick={handleCopyLink}
 					className='ml-auto text-gray-400 transition hover:text-black'
-					aria-label='Chia sẻ'>
-					<Share2 className='h-4 w-4' />
+					aria-label='Sao chép liên kết bài viết'
+					title={copiedLink ? "Đã sao chép!" : "Sao chép liên kết"}>
+					{copiedLink ? (
+						<Check className='h-4 w-4 text-lime-600' />
+					) : (
+						<Share2 className='h-4 w-4' />
+					)}
 				</button>
 			</div>
 		</article>
@@ -1214,8 +1254,11 @@ const BookmarksTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 
 // ─── Tab Content: Archived ────────────────────────────────────────────────────
 
-const ArchivedTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
+const ArchivedTab: React.FC<{
+	user: AuthUser | null;
+}> = ({ user }) => {
 	const [posts, setPosts] = useState<Post[]>([]);
+	const [blogs, setBlogs] = useState<Blog[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);
 
@@ -1224,10 +1267,12 @@ const ArchivedTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 		setLoading(true);
 		setError(false);
 
-		postService
-			.getArchivedPosts()
-			.then((res) => {
-				if (!cancelled) setPosts(res.data);
+		Promise.all([postService.getArchivedPosts(), blogService.getArchivedBlogs()])
+			.then(([postsRes, blogsRes]) => {
+				if (!cancelled) {
+					setPosts(postsRes.data);
+					setBlogs(blogsRes.data);
+				}
 			})
 			.catch(() => {
 				if (!cancelled) setError(true);
@@ -1243,9 +1288,21 @@ const ArchivedTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 
 	if (loading) {
 		return (
-			<div className='mt-5 space-y-5 px-6 sm:px-0'>
-				{Array.from({ length: 3 }).map((_, i) => (
-					<PostSkeleton key={i} />
+			<div className='mt-5 space-y-10 px-6 sm:px-0'>
+				{[0, 1].map((i) => (
+					<div key={i}>
+						<div className='mb-4 flex items-center justify-between'>
+							<div className='h-7 w-24 animate-pulse rounded bg-gray-200' />
+						</div>
+						<div className='no-scrollbar flex gap-4 overflow-x-hidden pb-2'>
+							{Array.from({ length: 3 }).map((_, j) => (
+								<div
+									key={j}
+									className='h-56 w-68 shrink-0 animate-pulse rounded-2xl border-2 border-black bg-gray-200'
+								/>
+							))}
+						</div>
+					</div>
 				))}
 			</div>
 		);
@@ -1256,37 +1313,40 @@ const ArchivedTab: React.FC<{ user: AuthUser | null }> = ({ user }) => {
 			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
 				<Archive className='mx-auto mb-4 h-10 w-10 text-gray-300' />
 				<p className='font-heading text-base font-extrabold text-black'>
-					Không thể tải bài viết lưu trữ
+					Không thể tải nội dung lưu trữ
 				</p>
 				<p className='mt-1 text-sm text-gray-400'>Vui lòng thử lại sau.</p>
 			</div>
 		);
 	}
 
-	if (posts.length === 0) {
+	if (posts.length === 0 && blogs.length === 0) {
 		return (
 			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
 				<Archive className='mx-auto mb-4 h-10 w-10 text-gray-300' />
 				<p className='font-heading text-base font-extrabold text-black'>
-					Chưa có bài viết lưu trữ nào
+					Chưa có nội dung lưu trữ nào
 				</p>
 				<p className='mt-1 text-sm text-gray-400'>
-					Những bài viết bạn lưu trữ sẽ hiển thị ở đây.
+					Bài viết và blog bạn lưu trữ sẽ hiển thị ở đây.
 				</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className='mt-5 mb-5 space-y-5 px-6 sm:px-0'>
-			{posts.map((post) => (
-				<PostCard
-					key={post.id}
-					post={post}
+		<div className='mt-5 mb-5 space-y-10 px-6 sm:px-0'>
+			{posts.length > 0 && (
+				<PostCarousel
+					posts={posts}
 					user={user}
-					onPostDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+					isOwnProfile={true}
+					onShowAll={() => {}}
 				/>
-			))}
+			)}
+			{blogs.length > 0 && (
+				<BlogCarousel blogs={blogs} isOwnProfile={true} onShowAll={() => {}} />
+			)}
 		</div>
 	);
 };
@@ -1570,6 +1630,24 @@ const UserProfilePage: React.FC = () => {
 		}
 	};
 
+	const handlePublishedPostRemoved = (_id: number, reason?: PostMutationReason) => {
+		if (reason !== "archived" && reason !== "deleted") return;
+
+		setProfile((prev) =>
+			prev
+				? {
+						...prev,
+						posts_count: Math.max(0, prev.posts_count - 1),
+						content_count: Math.max(0, prev.content_count - 1),
+						archived_count:
+							reason === "archived" && prev.archived_count != null
+								? prev.archived_count + 1
+								: prev.archived_count,
+					}
+				: prev,
+		);
+	};
+
 	return (
 		<div className='w-full min-h-screen pt-16'>
 			<div className='neo-container px-0 py-0 sm:px-4 sm:py-8 md:px-6'>
@@ -1657,6 +1735,7 @@ const UserProfilePage: React.FC = () => {
 								username={username}
 								user={user}
 								isOwnProfile={isOwnProfile}
+								onPostDeleted={handlePublishedPostRemoved}
 							/>
 						)}
 					</div>

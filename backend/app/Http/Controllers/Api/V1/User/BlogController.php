@@ -225,6 +225,27 @@ class BlogController extends BaseApiController
         return $this->paginatedResponse($blogs, ApiMessage::RETRIEVED);
     }
 
+    public function archived(Request $request): JsonResponse
+    {
+        $perPage = min((int) $request->query('per_page', 20), 50);
+        $userId  = $request->user()->id;
+
+        $blogs = Blog::with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
+            ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count')
+            ->where('blogs.author_id', $userId)
+            ->where('blogs.status', 'archived')
+            ->orderBy('blogs.created_at', 'desc')
+            ->paginate($perPage);
+
+        $blogs->getCollection()->transform(fn (Blog $blog) => [
+            ...$this->transformBlog($blog),
+            'my_reaction' => null,
+            'my_bookmark' => false,
+        ]);
+
+        return $this->paginatedResponse($blogs, ApiMessage::RETRIEVED);
+    }
+
     public function bookmark(Request $request, int $id): JsonResponse
     {
         Blog::where('status', 'published')->findOrFail($id);

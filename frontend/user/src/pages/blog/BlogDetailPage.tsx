@@ -11,7 +11,6 @@ import {
 	MessageCircle,
 	Send,
 	Share2,
-	User,
 	UserCheck,
 	UserPlus,
 } from "lucide-react";

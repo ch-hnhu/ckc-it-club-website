@@ -50,6 +50,10 @@ export const blogService = {
 	getBookmarkedBlogs: (page = 1) =>
 		api.get<PaginatedResponse<Blog>>("/community/blogs/bookmarks", { page, per_page: 20 }),
 
+	/** Get current user's archived blogs (requires auth). */
+	getArchivedBlogs: (page = 1) =>
+		api.get<PaginatedResponse<Blog>>("/community/blogs/archived", { page, per_page: 20 }),
+
 	createComment: (blogId: number, content: string, parentId?: number) =>
 		api.post<ApiResponse<BlogComment>>(`/community/blogs/${blogId}/comments`, {
 			content,

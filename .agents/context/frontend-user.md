@@ -61,6 +61,7 @@
 - Community post detail owner menu is wired to real actions: pin/unpin, edit route, privacy modal, archive/restore, and delete confirmation. Viewer menu actions use real bookmark and report flows.
 - Own-profile empty states for Posts and Blog show direct create CTAs linking to `/cong-dong/dang-bai` and `/blog/dang-bai`; the same CTAs appear in overview carousel panels when those lists are empty.
 - Profile post lists and overview carousels display pinned posts first and mark pinned content with a `Pin` badge instead of the older energy/Zap marker.
+- Profile tab badges and stats update optimistically when a published post is archived or deleted so archived posts are not counted in the published Posts badge.
 
 ## Route Surface
 

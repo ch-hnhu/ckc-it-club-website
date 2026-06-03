@@ -6,6 +6,7 @@ import {
 	Bookmark,
 	Flag,
 	Hash,
+	Check,
 	Heart,
 	Menu,
 	LockKeyhole,
@@ -307,6 +308,7 @@ const CommunityPostDetailPage: React.FC = () => {
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [showReportModal, setShowReportModal] = useState(false);
 	const [hasReported, setHasReported] = useState(false);
+	const [copiedLink, setCopiedLink] = useState(false);
 
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
 	const menuBtnRef = useRef<HTMLButtonElement>(null);
@@ -498,6 +500,28 @@ const CommunityPostDetailPage: React.FC = () => {
 
 	const handlePrivacySaved = (visibility: "public" | "members" | "private") => {
 		setPost((prev) => (prev ? { ...prev, visibility } : prev));
+	};
+
+	const handleCopyPostLink = async () => {
+		const url = `${window.location.origin}/cong-dong/bai-viet/${post?.id}`;
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(url);
+			} else {
+				const ta = document.createElement("textarea");
+				ta.value = url;
+				ta.style.cssText = "position:fixed;top:-9999px;left:-9999px";
+				document.body.appendChild(ta);
+				ta.select();
+				document.execCommand("copy");
+				document.body.removeChild(ta);
+			}
+			setCopiedLink(true);
+			toast.success("Đã sao chép liên kết bài viết.");
+			setTimeout(() => setCopiedLink(false), 2000);
+		} catch {
+			toast.error("Không thể sao chép liên kết.");
+		}
 	};
 
 	const handleDeletePost = async () => {
@@ -841,9 +865,14 @@ const CommunityPostDetailPage: React.FC = () => {
 									</button>
 
 									<button
+										onClick={handleCopyPostLink}
 										className='inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-										aria-label='Chia sẻ'>
-										<Share2 className='h-4 w-4' />
+										aria-label='Sao chép liên kết bài viết'>
+										{copiedLink ? (
+											<Check className='h-4 w-4 text-lime-600' />
+										) : (
+											<Share2 className='h-4 w-4' />
+										)}
 									</button>
 								</div>
 							</>

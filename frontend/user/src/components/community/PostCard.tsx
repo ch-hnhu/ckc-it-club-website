@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
 	Archive,
 	Bookmark,
+	Check,
 	Flag,
 	Heart,
 	LockKeyhole,
@@ -27,7 +28,7 @@ interface PostCardProps {
 	post: Post;
 	user: AuthUser | null;
 	showPinnedBadge?: boolean;
-	onPostDeleted?: (id: number) => void;
+	onPostDeleted?: (id: number, reason?: "archived" | "restored" | "deleted") => void;
 	onPostUpdated?: (post: Post) => void;
 }
 
@@ -70,6 +71,7 @@ const PostCard: React.FC<PostCardProps> = ({
 	// Modal visibility
 	const [showReportModal, setShowReportModal] = useState(false);
 	const [hasReported, setHasReported] = useState(post.my_report ?? false);
+	const [copiedLink, setCopiedLink] = useState(false);
 	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -159,6 +161,7 @@ const PostCard: React.FC<PostCardProps> = ({
 	};
 
 	const isArchived = post.status === "archived";
+	const pinnedBadgeVisible = showPinnedBadge && isPinned;
 
 	const handleToggleArchive = async () => {
 		if (archiveLoading) return;
@@ -167,7 +170,7 @@ const PostCard: React.FC<PostCardProps> = ({
 		try {
 			await postService.updatePost(post.id, { status: isArchived ? "published" : "archived" });
 			toast.success(isArchived ? "Đã khôi phục bài viết." : "Đã lưu trữ bài viết.");
-			onPostDeleted?.(post.id);
+			onPostDeleted?.(post.id, isArchived ? "restored" : "archived");
 		} catch {
 			toast.error("Không thể thực hiện. Vui lòng thử lại.");
 		} finally {
@@ -182,7 +185,7 @@ const PostCard: React.FC<PostCardProps> = ({
 			await postService.deletePost(post.id);
 			toast.success("Đã xóa bài viết.");
 			setShowDeleteConfirm(false);
-			onPostDeleted?.(post.id);
+			onPostDeleted?.(post.id, "deleted");
 		} catch {
 			toast.error("Không thể xóa. Vui lòng thử lại.");
 		} finally {
@@ -197,8 +200,38 @@ const PostCard: React.FC<PostCardProps> = ({
 		}
 	};
 
+	const handleCopyLink = async () => {
+		const url = `${window.location.origin}${detailUrl}`;
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(url);
+			} else {
+				const ta = document.createElement("textarea");
+				ta.value = url;
+				ta.style.cssText = "position:fixed;top:-9999px;left:-9999px";
+				document.body.appendChild(ta);
+				ta.select();
+				document.execCommand("copy");
+				document.body.removeChild(ta);
+			}
+			setCopiedLink(true);
+			toast.success("Đã sao chép liên kết bài viết.");
+			setTimeout(() => setCopiedLink(false), 2000);
+		} catch {
+			toast.error("Không thể sao chép liên kết.");
+		}
+	};
+
 	return (
-		<article className='rounded-2xl border-2 border-black bg-white p-4'>
+		<article className='relative rounded-2xl border-2 border-black bg-white p-4'>
+			{pinnedBadgeVisible && (
+				<span
+					className='absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl border-2 border-black bg-primary text-black shadow-[3px_3px_0_#111]'
+					aria-label='Bài viết đã ghim'
+					title='Bài viết đã ghim'>
+					<Pin className='h-5 w-5' />
+				</span>
+			)}
 			<div className='mb-3 flex items-start justify-between gap-3'>
 				<div className='flex min-w-0 items-center gap-3'>
 					<Link
@@ -210,11 +243,6 @@ const PostCard: React.FC<PostCardProps> = ({
 							alt={authorName}
 							className='h-10 w-10 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover transition hover:opacity-80'
 						/>
-						{showPinnedBadge && isPinned && (
-							<span className='absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)] text-black'>
-								<Pin className='h-3 w-3' />
-							</span>
-						)}
 					</Link>
 					<div className='min-w-0'>
 						<div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
@@ -237,7 +265,7 @@ const PostCard: React.FC<PostCardProps> = ({
 					</div>
 				</div>
 
-				<div className='relative shrink-0'>
+				<div className={`relative shrink-0 ${pinnedBadgeVisible ? "mr-12" : ""}`}>
 					<button
 						ref={menuBtnRef}
 						onClick={() => setShowPostMenu((current) => !current)}
@@ -417,9 +445,14 @@ const PostCard: React.FC<PostCardProps> = ({
 				</button>
 
 				<button
+					onClick={handleCopyLink}
 					className='inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-					aria-label='Chia sẻ bài viết'>
-					<Share2 className='h-4 w-4' />
+					aria-label='Sao chép liên kết bài viết'>
+					{copiedLink ? (
+						<Check className='h-4 w-4 text-lime-600' />
+					) : (
+						<Share2 className='h-4 w-4' />
+					)}
 				</button>
 			</div>
 

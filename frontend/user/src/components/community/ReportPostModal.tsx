@@ -20,7 +20,7 @@ const REASON_OPTIONS: { value: PostReportReason; label: string }[] = [
 
 const ReportPostModal: React.FC<Props> = ({ postId, onClose, isAlreadyReported, onSuccess }) => {
 	const [step, setStep] = useState<"form" | "done" | "already">(
-		isAlreadyReported ? "already" : "form"
+		isAlreadyReported ? "already" : "form",
 	);
 	const [reason, setReason] = useState<PostReportReason>("spam");
 	const [description, setDescription] = useState("");
@@ -31,7 +31,11 @@ const ReportPostModal: React.FC<Props> = ({ postId, onClose, isAlreadyReported, 
 		if (submitting) return;
 		setSubmitting(true);
 		try {
-			await postService.reportPost(postId, reason, reason === "other" ? description : undefined);
+			await postService.reportPost(
+				postId,
+				reason,
+				reason === "other" ? description : undefined,
+			);
 			onSuccess?.();
 			setStep("done");
 		} catch {
@@ -47,27 +51,26 @@ const ReportPostModal: React.FC<Props> = ({ postId, onClose, isAlreadyReported, 
 			onClick={(e) => e.target === e.currentTarget && onClose()}>
 			<div className='w-full max-w-md rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111]'>
 				{step === "already" ? (
-				<div className='flex flex-col items-center px-8 py-10 text-center'>
-					<div className='mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-yellow)]'>
-						<Flag className='h-7 w-7 text-black' />
+					<div className='flex flex-col items-center px-8 py-10 text-center'>
+						<div className='mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-300'>
+							<Flag strokeWidth={3} className='h-7 w-7 text-white' />
+						</div>
+						<h2 className='font-heading text-lg font-extrabold text-black'>
+							Bạn đã báo cáo bài viết này
+						</h2>
+						<p className='mt-2 text-sm text-gray-500'>
+							Chúng tôi đã nhận được báo cáo của bạn trước đó và đang xem xét.
+						</p>
+						<button
+							onClick={onClose}
+							className='mt-6 rounded-lg border-2 border-black bg-primary px-6 py-2.5 text-sm font-bold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							Đóng
+						</button>
 					</div>
-					<h2 className='font-heading text-lg font-extrabold text-black'>
-						Bạn đã báo cáo bài viết này
-					</h2>
-					<p className='mt-2 text-sm text-gray-500'>
-						Chúng tôi đã nhận được báo cáo của bạn trước đó và đang xem xét.
-					</p>
-					<button
-						onClick={onClose}
-						className='mt-6 rounded-xl border-2 border-black bg-[var(--color-pastel-yellow)] px-6 py-2.5 text-sm font-bold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-						Đóng
-					</button>
-				</div>
-			) : step === "form" ? (
+				) : step === "form" ? (
 					<>
 						<div className='flex items-center justify-between border-b-2 border-black px-5 py-4'>
 							<div className='flex items-center gap-2'>
-								<Flag className='h-5 w-5 text-red-500' />
 								<h2 className='font-heading text-base font-extrabold text-black'>
 									Báo cáo bài viết
 								</h2>
@@ -85,7 +88,7 @@ const ReportPostModal: React.FC<Props> = ({ postId, onClose, isAlreadyReported, 
 								{REASON_OPTIONS.map((opt) => (
 									<label
 										key={opt.value}
-										className='flex cursor-pointer items-center gap-3 rounded-xl border-2 border-black px-4 py-3 transition hover:bg-gray-50 has-[:checked]:bg-[var(--color-pastel-yellow)]'>
+										className='flex cursor-pointer items-center gap-3 rounded-xl border-2 border-black px-4 py-3 transition hover:bg-gray-50 has-[:checked]:bg-primary'>
 										<input
 											type='radio'
 											name='reason'
@@ -94,7 +97,9 @@ const ReportPostModal: React.FC<Props> = ({ postId, onClose, isAlreadyReported, 
 											onChange={() => setReason(opt.value)}
 											className='accent-black'
 										/>
-										<span className='text-sm font-bold text-black'>{opt.label}</span>
+										<span className='text-sm font-bold text-black'>
+											{opt.label}
+										</span>
 									</label>
 								))}
 							</div>
@@ -106,7 +111,7 @@ const ReportPostModal: React.FC<Props> = ({ postId, onClose, isAlreadyReported, 
 									placeholder='Mô tả chi tiết lý do báo cáo...'
 									maxLength={1000}
 									rows={3}
-									className='w-full resize-none rounded-xl border-2 border-black p-3 text-sm font-medium text-black placeholder-gray-400 outline-none focus:ring-2 focus:ring-black'
+									className='w-full resize-none rounded-lg border-2 border-black p-3 text-sm font-medium text-black placeholder-gray-400 outline-none focus:ring-2 focus:ring-primary'
 								/>
 							)}
 
@@ -114,13 +119,13 @@ const ReportPostModal: React.FC<Props> = ({ postId, onClose, isAlreadyReported, 
 								<button
 									type='button'
 									onClick={onClose}
-									className='rounded-xl border-2 border-black px-4 py-2 text-sm font-bold text-black transition hover:bg-gray-100'>
+									className='rounded-lg px-4 py-2 text-sm font-bold text-black transition hover:bg-gray-100'>
 									Hủy
 								</button>
 								<button
 									type='submit'
 									disabled={submitting}
-									className='rounded-xl border-2 border-red-600 bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-[2px_2px_0_#991b1b] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'>
+									className='rounded-lg border-2 border-black bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'>
 									{submitting ? "Đang gửi..." : "Gửi báo cáo"}
 								</button>
 							</div>
@@ -139,7 +144,7 @@ const ReportPostModal: React.FC<Props> = ({ postId, onClose, isAlreadyReported, 
 						</p>
 						<button
 							onClick={onClose}
-							className='mt-6 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-2.5 text-sm font-bold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							className='mt-6 rounded-lg border-2 border-black bg-[var(--color-primary)] px-6 py-2.5 text-sm font-bold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 							Đóng
 						</button>
 					</div>
