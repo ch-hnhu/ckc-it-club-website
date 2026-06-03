@@ -36,7 +36,6 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -71,7 +70,6 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
-import { useTableSelection } from "@/hooks/useTableSelection";
 import skillService from "@/services/skill.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -112,8 +110,6 @@ const emptyForm: SkillFormState = { name: "", sort_order: 0, is_active: true };
 
 interface SortableRowProps {
 	skill: SkillRecord;
-	selected: boolean;
-	onToggleSelect: (checked: boolean) => void;
 	onEdit: () => void;
 	onToggleStatus: () => void;
 	onDelete: () => void;
@@ -122,8 +118,6 @@ interface SortableRowProps {
 
 function SortableSkillRow({
 	skill,
-	selected,
-	onToggleSelect,
 	onEdit,
 	onToggleStatus,
 	onDelete,
@@ -235,10 +229,6 @@ function SkillListPage() {
 	const [deleteTarget, setDeleteTarget] = useState<SkillRecord | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [togglingId, setTogglingId] = useState<number | null>(null);
-
-	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
-		skills.map((s) => s.id),
-	);
 
 	const sensors = useSensors(
 		useSensor(PointerSensor),
@@ -550,14 +540,12 @@ function SkillListPage() {
 										<SortableContext
 											items={skills.map((s) => s.id)}
 											strategy={verticalListSortingStrategy}>
-											{skills.map((skill) => (
-												<SortableSkillRow
-													key={skill.id}
-													skill={skill}
-													selected={isSelected(skill.id)}
-													onToggleSelect={(c) => toggleOne(skill.id, c)}
-													onEdit={() => openEdit(skill)}
-													onToggleStatus={() => handleToggleStatus(skill)}
+												{skills.map((skill) => (
+													<SortableSkillRow
+														key={skill.id}
+														skill={skill}
+														onEdit={() => openEdit(skill)}
+														onToggleStatus={() => handleToggleStatus(skill)}
 													onDelete={() => setDeleteTarget(skill)}
 													isTogglingStatus={togglingId === skill.id}
 												/>
