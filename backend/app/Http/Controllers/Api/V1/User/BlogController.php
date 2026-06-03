@@ -89,7 +89,10 @@ class BlogController extends BaseApiController
 
     public function show(string $slug): JsonResponse
     {
-        $blog = Blog::with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
+        $blog = Blog::with([
+                'author' => fn ($q) => $q->select('id', 'full_name', 'email', 'avatar', 'username')->with('roles:id,name'),
+                'tags:id,name',
+            ])
             ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count,
                          (SELECT COUNT(*) FROM comments WHERE blog_id = blogs.id AND deleted_at IS NULL AND is_hidden = 0) as blog_comments_count')
             ->where('status', 'published')
@@ -102,6 +105,9 @@ class BlogController extends BaseApiController
         $blog->increment('view_count');
 
         $data = $this->transformBlog($blog);
+        if ($data['user'] && $blog->author) {
+            $data['user']['role'] = $blog->author->getRoleNames()->first();
+        }
         $data['content']        = $blog->content;
         $data['comments_count'] = (int) ($blog->blog_comments_count ?? 0);
 

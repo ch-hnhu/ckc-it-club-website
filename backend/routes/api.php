@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
+use App\Http\Controllers\Api\V1\Admin\ReportController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\SkillController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\V1\User\AcademicController;
 use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
+use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\FollowController;
@@ -134,6 +136,10 @@ Route::prefix('v1')->group(function () {
             Route::patch('/read-all', [UserNotificationController::class, 'markAllAsRead']);
             Route::patch('/{id}/read', [UserNotificationController::class, 'markAsRead']);
         });
+        // club applications (user-facing)
+        Route::get('/user/application-questions', [UserClubApplicationController::class, 'questions']);
+        Route::get('/user/club-applications/me', [UserClubApplicationController::class, 'myApplication']);
+        Route::post('/user/club-applications', [UserClubApplicationController::class, 'store']);
 
         // academic structure
         Route::prefix('academic')->group(function () {
@@ -379,6 +385,14 @@ Route::prefix('v1')->group(function () {
             Route::patch('skills/{skill}', [SkillController::class, 'update']);
             Route::patch('skills/{skill}/toggle-status', [SkillController::class, 'toggleStatus']);
             Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
+        });
+
+        // reports
+        Route::middleware('permission:community.reports.view')->group(function () {
+            Route::get('reports/stats', [ReportController::class, 'stats']);
+            Route::get('reports', [ReportController::class, 'index']);
+            Route::patch('reports/{report}/status', [ReportController::class, 'updateStatus']);
+            Route::post('reports/{report}/hide-post', [ReportController::class, 'hidePost']);
         });
     });
 });

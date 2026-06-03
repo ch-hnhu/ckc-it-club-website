@@ -11,6 +11,7 @@ import BlogCreatePage from "@/pages/blog/BlogCreatePage";
 import BlogDetailPage from "@/pages/blog/BlogDetailPage";
 import LandingPage from "@/pages/LandingPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
+import ApplicationPage from "@/pages/ApplicationPage";
 import UserProfilePage from "@/pages/user/UserProfilePage";
 import AccountPage from "@/pages/user/AccountPage";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -42,6 +43,10 @@ const router = createBrowserRouter([
 			{
 				path: "thong-bao",
 				element: <NotificationsPage />,
+			},
+			{
+				path: "ung-tuyen",
+				element: <ApplicationPage />,
 			},
 			{
 				path: "blog",

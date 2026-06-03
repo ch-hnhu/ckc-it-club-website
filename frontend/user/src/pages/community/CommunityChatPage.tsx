@@ -121,10 +121,18 @@ const RoomItem: React.FC<{
 				? "border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
 				: "border-transparent text-gray-700 hover:bg-gray-50"
 		}`}>
-		<div
-			className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(index)}`}>
-			<Hash className='h-3.5 w-3.5 text-black' />
-		</div>
+		{room.image ? (
+			<img
+				src={room.image}
+				alt={room.name}
+				className='h-8 w-8 shrink-0 rounded-lg border-2 border-black object-cover'
+			/>
+		) : (
+			<div
+				className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(index)}`}>
+				<Hash className='h-3.5 w-3.5 text-black' />
+			</div>
+		)}
 		<div className='min-w-0 flex-1'>
 			<p
 				className={`truncate text-[13px] font-extrabold ${active ? "text-black" : "text-gray-800"}`}>
@@ -820,10 +828,18 @@ const CommunityChatPage: React.FC = () => {
 
 					{activeRoom ? (
 						<>
-							<div
-								className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(activeRoomIdx)}`}>
-								<Hash className='h-3.5 w-3.5 text-black' />
-							</div>
+							{activeRoom.image ? (
+								<img
+									src={activeRoom.image}
+									alt={activeRoom.name}
+									className='h-8 w-8 shrink-0 rounded-lg border-2 border-black object-cover'
+								/>
+							) : (
+								<div
+									className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(activeRoomIdx)}`}>
+									<Hash className='h-3.5 w-3.5 text-black' />
+								</div>
+							)}
 							<div className='min-w-0 flex-1'>
 								<p className='truncate font-heading text-sm font-extrabold leading-none text-black'>
 									{activeRoom.name}

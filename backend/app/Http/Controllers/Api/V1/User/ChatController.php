@@ -10,6 +10,8 @@ use App\Models\Message;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ChatController extends BaseApiController
 {
@@ -175,12 +177,19 @@ class ChatController extends BaseApiController
         return [
             'id'               => $room->id,
             'name'             => $room->name,
-            'image'            => $room->image,
+            'image'            => $this->resolveImageUrl($room->image),
             'member_count'     => $room->members_count ?? 0,
             'message_count'    => $room->message_count ?? 0,
             'last_message_at'  => $room->last_message_at?->toIso8601String(),
             'created_at'       => $room->created_at->toIso8601String(),
         ];
+    }
+
+    private function resolveImageUrl(?string $image): ?string
+    {
+        if (! $image) return null;
+        if (Str::startsWith($image, ['http://', 'https://', '/storage/'])) return $image;
+        return Storage::disk('public')->url($image);
     }
 
     private function transformMessage(Message $message): array

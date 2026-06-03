@@ -11,6 +11,7 @@ import {
 	MessageCircle,
 	Send,
 	Share2,
+	User,
 	UserCheck,
 	UserPlus,
 } from "lucide-react";
@@ -217,6 +218,22 @@ const BlogSuggestionSection: React.FC<BlogSuggestionSectionProps> = ({ title, bl
 	);
 };
 
+// ─── Role label map ───────────────────────────────────────────────────────────
+
+const ROLE_LABELS: Record<string, string> = {
+	admin: "Quản trị viên",
+	president: "Chủ nhiệm CLB",
+	"vice-president": "Phó chủ nhiệm CLB",
+	"academic-head": "Trưởng ban Học thuật",
+	"communications-head": "Trưởng ban Truyền thông",
+	"volunteer-head": "Trưởng ban Tình nguyện",
+	"club-member": "Thành viên CKC IT Club",
+	user: "Thành viên",
+};
+
+const getRoleLabel = (role?: string | null) =>
+	role ? (ROLE_LABELS[role] ?? "Thành viên CKC IT Club") : "Thành viên CKC IT Club";
+
 // ─── AuthorBioCard ────────────────────────────────────────────────────────────
 
 interface AuthorBioCardProps {
@@ -257,7 +274,8 @@ const AuthorBioCard: React.FC<AuthorBioCardProps> = ({
 						</p>
 					</Link>
 					<p className='mt-1 flex items-center gap-1.5 text-sm text-gray-500'>
-						{handle} · Thành viên CKC IT CLUB
+						<User className='h-3.5 w-3.5 shrink-0' />
+						{handle} · {getRoleLabel(author.role)}
 					</p>
 					<div className='mt-5 flex flex-wrap gap-3'>
 						{!isOwnProfile && (
@@ -361,7 +379,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 		<div
 			id={`comment-${comment.id}`}
 			className={`scroll-mt-24 ${depth > 0 ? "ml-11 mt-3" : ""}`}>
-			<div className={`flex gap-3 rounded-xl transition-all duration-700 ${isHighlighted ? "bg-[var(--color-primary)]/15 p-1.5 ring-2 ring-[var(--color-primary)] ring-offset-2" : ""}`}>
+			<div
+				className={`flex gap-3 rounded-xl transition-all duration-700 ${isHighlighted ? "bg-[var(--color-primary)]/15 p-1.5 ring-2 ring-[var(--color-primary)] ring-offset-2" : ""}`}>
 				<div className='shrink-0'>
 					<img
 						src={avatar}
@@ -631,16 +650,21 @@ const BlogDetailPage: React.FC = () => {
 			navigate("/login", { state: { from: window.location.pathname } });
 			return;
 		}
-		const authorUsername = blog?.user?.username;
-		if (!authorUsername || followLoading) return;
+		const authorHandle = blog?.user?.username ?? blog?.user?.email?.split("@")[0];
+		if (!authorHandle || followLoading) return;
 
 		const wasFollowed = followed;
 		setFollowed(!wasFollowed);
 		setFollowLoading(true);
 		try {
-			const res = await userService.toggleFollow(authorUsername);
+			const res = await userService.toggleFollow(authorHandle);
 			setFollowed(res.data.is_following);
-			toast.success(res.data.is_following ? "Đã theo dõi tác giả." : "Đã bỏ theo dõi.");
+			const authorName = blog?.user?.full_name ?? "tác giả";
+			if (res.data.is_following) {
+				toast.success(`Đã theo dõi ${authorName}`);
+			} else {
+				toast.success(`Đã bỏ theo dõi ${authorName}`);
+			}
 		} catch {
 			setFollowed(wasFollowed);
 			toast.error("Không thể thực hiện. Vui lòng thử lại.");

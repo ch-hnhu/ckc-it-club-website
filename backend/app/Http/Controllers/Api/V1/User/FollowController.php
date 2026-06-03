@@ -13,7 +13,10 @@ class FollowController extends BaseApiController
 {
     public function toggle(Request $request, string $username): JsonResponse
     {
-        $target = User::where('username', $username)
+        $target = User::where(function ($q) use ($username) {
+                $q->where('username', $username)
+                  ->orWhere('email', 'like', "{$username}@%");
+            })
             ->where('is_active', true)
             ->first();
 
@@ -44,7 +47,12 @@ class FollowController extends BaseApiController
 
     public function followers(string $username): JsonResponse
     {
-        $user = User::where('username', $username)->where('is_active', true)->first();
+        $user = User::where(function ($q) use ($username) {
+                $q->where('username', $username)
+                  ->orWhere('email', 'like', "{$username}@%");
+            })
+            ->where('is_active', true)
+            ->first();
 
         if (! $user) {
             return $this->errorResponse(false, 'Không tìm thấy người dùng.', HttpStatus::NOT_FOUND);
@@ -66,7 +74,12 @@ class FollowController extends BaseApiController
 
     public function following(string $username): JsonResponse
     {
-        $user = User::where('username', $username)->where('is_active', true)->first();
+        $user = User::where(function ($q) use ($username) {
+                $q->where('username', $username)
+                  ->orWhere('email', 'like', "{$username}@%");
+            })
+            ->where('is_active', true)
+            ->first();
 
         if (! $user) {
             return $this->errorResponse(false, 'Không tìm thấy người dùng.', HttpStatus::NOT_FOUND);

@@ -5,6 +5,7 @@ export interface AuthUser {
 	picture?: string;
 	username?: string | null;
 	permissions?: string[];
+	roles?: string[];
 }
 
 export type OAuthAuthSuccessPayload = {
@@ -152,6 +153,9 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 		picture: user.avatar,
 		username: user.username ?? null,
 		permissions: Array.isArray(user.permissions) ? user.permissions : [],
+		roles: Array.isArray(user.roles)
+			? user.roles.map((r: { name: string }) => r.name)
+			: [],
 	} as AuthUser;
 }
 

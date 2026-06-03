@@ -35,7 +35,14 @@ type NavbarProps = {
 	onAuthSuccess: () => Promise<void>;
 };
 
-const NAV_ITEMS = [
+type NavItem = {
+	label: string;
+	href: string;
+	dropdown?: boolean;
+	highlight?: boolean;
+};
+
+const BASE_NAV_ITEMS: NavItem[] = [
 	{ label: "Cộng đồng", href: "/cong-dong", dropdown: true },
 	{ label: "Tài nguyên", href: "#resources" },
 	{ label: "Bảng xếp hạng", href: "#leaderboard" },
@@ -43,6 +50,8 @@ const NAV_ITEMS = [
 	{ label: "Khóa học", href: "#courses" },
 	{ label: "Liên hệ", href: "/lien-he" },
 ];
+
+const APPLY_NAV_ITEM: NavItem = { label: "Ứng tuyển", href: "/ung-tuyen", highlight: true };
 
 const COMMUNITY_DROPDOWN = [
 	{ id: "home", label: "Trang chủ", to: "/cong-dong", icon: Home },
@@ -62,6 +71,10 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const profileMenuRef = useRef<HTMLDivElement>(null);
 	const communityDropdownRef = useRef<HTMLDivElement>(null);
 	const location = useLocation();
+
+	const isClubMember = user?.roles?.includes("club-member") ?? false;
+	const navItems =
+		user && !isClubMember ? [...BASE_NAV_ITEMS, APPLY_NAV_ITEM] : BASE_NAV_ITEMS;
 	const isCommunityPage =
 		location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
 	const navbarContainerClass = isCommunityPage ? "mx-0 max-w-none" : "";
@@ -293,7 +306,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 						</Link>
 
 						<nav className='hidden min-w-0 items-center gap-1 xl:flex'>
-							{NAV_ITEMS.map((item) => {
+							{navItems.map((item) => {
 								const isActive = isNavItemActive(item.href);
 								const className = getNavItemClass(isActive);
 
@@ -354,6 +367,18 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 												</div>
 											)}
 										</div>
+									);
+								}
+
+								if (item.highlight) {
+									return (
+										<Link
+											key={item.label}
+											to={item.href}
+											className='neo-btn neo-btn-primary px-4 py-2 text-sm'
+											style={{ fontFamily: "var(--font-body)" }}>
+											{item.label}
+										</Link>
 									);
 								}
 
@@ -442,7 +467,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 						{mobileMenuView === "nav" && (
 							<>
 								<nav className='flex flex-col gap-3 py-5'>
-									{NAV_ITEMS.map((item) => {
+									{navItems.map((item) => {
 										const isActive = isNavItemActive(item.href);
 										const className = getNavItemClass(isActive, true);
 
@@ -457,6 +482,19 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 													{item.label}
 													<ChevronRight className='h-4 w-4 shrink-0 text-gray-500' />
 												</button>
+											);
+										}
+
+										if (item.highlight) {
+											return (
+												<Link
+													key={item.label}
+													to={item.href}
+													onClick={closeMobileMenu}
+													className='neo-btn neo-btn-primary w-full justify-center py-3 text-base'
+													style={{ fontFamily: "var(--font-body)" }}>
+													{item.label}
+												</Link>
 											);
 										}
 
