@@ -88,6 +88,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('/posts/{id}', [UserPostController::class, 'destroy']);
             Route::post('/posts/{id}/reactions', [UserPostController::class, 'react']);
             Route::post('/posts/{id}/comments', [UserPostController::class, 'comment']);
+            Route::post('/comments/{id}/reactions', [UserPostController::class, 'reactComment']);
             Route::post('/posts/{id}/bookmark', [UserPostController::class, 'bookmark']);
             Route::post('/posts/{id}/report', [UserPostController::class, 'report']);
             Route::post('/blogs', [UserBlogController::class, 'store']);

@@ -94,8 +94,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	const [liked, setLiked] = useState(false);
+	const [liked, setLiked] = useState(comment.my_reaction === "heart");
 	const [likeCount, setLikeCount] = useState(comment.reactions_count);
+	const [likeLoading, setLikeLoading] = useState(false);
 	const [showReplies, setShowReplies] = useState(true);
 
 	const [showReplyForm, setShowReplyForm] = useState(false);
@@ -148,6 +149,48 @@ const CommentItem: React.FC<CommentItemProps> = ({
 		user?.picture ||
 		`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserDisplayName)}&background=A3E635&color=111111&bold=true`;
 
+	if (comment.is_hidden) {
+		return (
+			<div id={depth === 0 ? `comment-${comment.id}` : undefined} className={depth > 0 ? "ml-11 mt-3" : ""}>
+				<div className='flex gap-3'>
+					<div className='h-9 w-9 shrink-0 rounded-full border-2 border-dashed border-gray-300 bg-gray-100' />
+					<div className='min-w-0 flex-1'>
+						<div className='rounded-[10px] border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-3 shadow-[2px_2px_0_#d1d5db]'>
+							<div className='mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5'>
+								<span className='font-heading text-sm font-extrabold text-gray-300'>●●●</span>
+								<span className='text-xs text-gray-300'>· {time}</span>
+							</div>
+							<p className='text-sm italic text-gray-400'>Bình luận này đã bị ẩn.</p>
+						</div>
+
+						{depth === 0 && hasReplies && (
+							<button
+								onClick={() => setShowReplies((p) => !p)}
+								className='mt-2 ml-1 flex items-center gap-1.5 text-xs font-bold text-lime-700 transition hover:text-black'>
+								<MessageCircle className='h-3.5 w-3.5' />
+								{showReplies ? "Thu gọn" : `${comment.replies.length} trả lời`}
+							</button>
+						)}
+					</div>
+				</div>
+
+				{depth === 0 && hasReplies && showReplies && (
+					<div className='mt-1 space-y-3'>
+						{comment.replies.map((reply) => (
+							<CommentItem
+								key={reply.id}
+								comment={reply}
+								depth={1}
+								postId={postId}
+								user={user}
+							/>
+						))}
+					</div>
+				)}
+			</div>
+		);
+	}
+
 	return (
 		<div id={depth === 0 ? `comment-${comment.id}` : undefined} className={depth > 0 ? "ml-11 mt-3" : ""}>
 			<div className='flex gap-3'>
@@ -177,12 +220,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
 					<div className='mt-1.5 flex items-center gap-3 px-1'>
 						<button
-							onClick={() => {
-								setLiked((p) => {
-									setLikeCount((c) => (p ? c - 1 : c + 1));
-									return !p;
-								});
+							onClick={async () => {
+								if (!user) {
+									navigate("/login", { state: { from: location.pathname + location.search } });
+									return;
+								}
+								if (likeLoading) return;
+								const wasLiked = liked;
+								setLiked(!wasLiked);
+								setLikeCount((c) => (wasLiked ? Math.max(0, c - 1) : c + 1));
+								setLikeLoading(true);
+								try {
+									const res = await postService.toggleCommentReaction(comment.id, "heart");
+									setLiked(res.data.my_reaction === "heart");
+									setLikeCount(res.data.reactions_count);
+								} catch {
+									setLiked(wasLiked);
+									setLikeCount((c) => (wasLiked ? c + 1 : Math.max(0, c - 1)));
+								} finally {
+									setLikeLoading(false);
+								}
 							}}
+							disabled={likeLoading}
 							className={`flex items-center gap-1 text-xs font-bold transition ${liked ? "text-red-500" : "text-gray-500 hover:text-red-500"}`}>
 							<Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
 							{likeCount > 0 && <span>{likeCount}</span>}

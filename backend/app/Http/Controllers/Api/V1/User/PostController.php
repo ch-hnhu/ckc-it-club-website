@@ -594,10 +594,13 @@ class PostController extends BaseApiController
             ->firstOrFail();
 
         // Load ALL visible (non-hidden, non-deleted) comments for this post ordered by date
+        $myReactionSelect = $userId
+            ? ", (SELECT type FROM reactions WHERE target_type = 'comment' AND target_id = comments.id AND user_id = {$userId} LIMIT 1) as my_reaction"
+            : ", NULL as my_reaction";
+
         $allComments = Comment::with('user:id,full_name,username,email,avatar')
-            ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count')
+            ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count' . $myReactionSelect)
             ->where('post_id', $id)
-            ->where('is_hidden', false)
             ->whereNull('deleted_at')
             ->orderBy('created_at', 'asc')
             ->get();
@@ -701,9 +704,65 @@ class PostController extends BaseApiController
                 'email' => $user->email,
                 'avatar' => $user->avatar,
             ] : null,
-            'content' => $comment->content,
+            'content' => $comment->is_hidden ? null : $comment->content,
+            'is_hidden' => (bool) $comment->is_hidden,
             'reactions_count' => (int) ($comment->reactions_count ?? 0),
+            'my_reaction' => $comment->my_reaction ?? null,
             'created_at' => $comment->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Toggle a reaction on a comment (auth required).
+     */
+    public function reactComment(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'type' => ['required', Rule::enum(ReactionType::class)],
+        ]);
+
+        Comment::whereNull('deleted_at')->where('is_hidden', false)->findOrFail($id);
+
+        $userId = $request->user()->id;
+        $type = $request->input('type');
+
+        $existing = Reaction::where('user_id', $userId)
+            ->where('target_type', 'comment')
+            ->where('target_id', $id)
+            ->first();
+
+        $reacted = false;
+        $myReaction = null;
+
+        if ($existing) {
+            if ($existing->type === $type) {
+                $existing->delete();
+            } else {
+                $existing->type = $type;
+                $existing->save();
+                $reacted = true;
+                $myReaction = $type;
+            }
+        } else {
+            Reaction::create([
+                'user_id' => $userId,
+                'target_type' => 'comment',
+                'target_id' => $id,
+                'type' => $type,
+                'created_at' => now(),
+            ]);
+            $reacted = true;
+            $myReaction = $type;
+        }
+
+        $reactionsCount = Reaction::where('target_type', 'comment')
+            ->where('target_id', $id)
+            ->count();
+
+        return $this->successResponse(true, [
+            'reacted' => $reacted,
+            'my_reaction' => $myReaction,
+            'reactions_count' => $reactionsCount,
+        ], ApiMessage::UPDATED);
     }
 }

@@ -112,8 +112,10 @@ export interface PostComment {
 	id: number;
 	parent_id: number | null;
 	user: CommentUser | null;
-	content: string;
+	content: string | null;
+	is_hidden: boolean;
 	reactions_count: number;
+	my_reaction: ReactionType | null;
 	created_at: string;
 	replies: PostComment[];
 }
