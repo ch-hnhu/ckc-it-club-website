@@ -69,6 +69,8 @@
 - landing page composed from multiple section components
 - `/lien-he`
 - contact page
+- `/ung-tuyen`
+- application form page; unauthenticated users can open it from the navbar `Tham gia ngay` CTA and are prompted to log in before submitting.
 - `/thong-bao`
 - authenticated user notification center. The navbar notification dropdown links here through “Xem tất cả”; the page loads personal notifications from `GET /user-notifications` in pages of 20, supports load more/infinite sentinel behavior, unread state, item navigation, and mark-all-read.
 - `/blog`
@@ -92,6 +94,7 @@
 - User credential signup is available at `/register` and posts to `POST /api/v1/auth/register`.
 - `ContactPage` posts real data to `POST /api/v1/contacts`, shows backend success or error feedback, and resets the form on success.
 - `Navbar` and auth service use `localStorage` for the access token.
+- When a user is not authenticated, `Navbar` shows a `/login` link and a `Tham gia ngay` CTA that links to `/ung-tuyen`.
 - When a user is authenticated, `Navbar` shows an avatar-only account trigger. Clicking it opens a neo-styled profile dropdown with Profile, Bookmarks, Account, Switch theme, and Sign Out actions.
 - Authenticated users also see a notification bell. Its dropdown shows recent personal notifications, supports marking all as read, and links to `/thong-bao` for the full paginated notification center.
 - `src/config/axios.config.ts` tries to read the token from `sessionStorage`, not `localStorage`.
@@ -165,7 +168,7 @@
 
 ## Authentication Model
 
-- Login is popup-based and starts from the navbar.
+- Login starts from the dedicated `/login` page, which supports credential login plus Google/GitHub OAuth popup buttons.
 - Auth URL is derived from `VITE_BACKEND_URL` and points to `/user/auth/google`.
 - OAuth completion is communicated back through `postMessage`.
 - Successful auth stores `access_token` in `localStorage`.
