@@ -59,4 +59,7 @@ export const blogService = {
 			content,
 			...(parentId !== undefined ? { parent_id: parentId } : {}),
 		}),
+
+	pinBlog: (blogId: number, isPinned: boolean) =>
+		api.post<ApiResponse<{ is_pinned: boolean }>>(`/community/blogs/${blogId}/pin`, { is_pinned: isPinned }),
 };

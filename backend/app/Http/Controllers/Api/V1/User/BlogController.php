@@ -60,6 +60,7 @@ class BlogController extends BaseApiController
                 ->where('username', $username)
                 ->orWhere('email', 'like', "{$username}@%")
             ))
+            ->when($username, fn ($q) => $q->orderByDesc('blogs.is_pinned')->orderByDesc('blogs.pinned_at'))
             ->when(
                 $sort === 'reactions_count',
                 fn ($q) => $q->orderBy('reactions_count', $order),
@@ -206,6 +207,32 @@ class BlogController extends BaseApiController
         $message = $isAdmin ? 'Tạo blog thành công.' : 'Blog đã được gửi và đang chờ duyệt.';
 
         return $this->createdResponse($this->transformBlog($blog), $message);
+    }
+
+    public function pin(Request $request, int $id): JsonResponse
+    {
+        $blog = Blog::where('author_id', $request->user()->id)->find($id);
+        if (! $blog) {
+            abort(403, 'Bạn không có quyền thực hiện hành động này.');
+        }
+
+        $pinning = (bool) $request->input('is_pinned', true);
+
+        if ($pinning && ! $blog->is_pinned) {
+            $pinnedCount = Blog::where('author_id', $request->user()->id)
+                ->where('is_pinned', true)
+                ->count();
+            if ($pinnedCount >= 3) {
+                return $this->errorResponse(false, 'Bạn chỉ có thể ghim tối đa 3 blog.', 422);
+            }
+        }
+
+        $blog->update([
+            'is_pinned' => $pinning,
+            'pinned_at' => $pinning ? now() : null,
+        ]);
+
+        return $this->successResponse(true, ['is_pinned' => $blog->is_pinned], 'Cập nhật trạng thái ghim thành công.');
     }
 
     public function bookmarks(Request $request): JsonResponse
@@ -447,6 +474,7 @@ class BlogController extends BaseApiController
                 'name'  => $tag->name,
                 'color' => null,
             ])->values()->toArray(),
+            'is_pinned'       => (bool) $blog->is_pinned,
             'created_at'      => $blog->created_at?->toIso8601String(),
             'updated_at'      => $blog->updated_at?->toIso8601String(),
         ];

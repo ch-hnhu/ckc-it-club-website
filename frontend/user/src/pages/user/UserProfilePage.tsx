@@ -984,7 +984,19 @@ const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) =
 	return (
 		<div className='mt-5 mb-5 grid gap-5 px-6 sm:grid-cols-2 sm:px-0'>
 			{blogs.map((blog) => (
-				<BlogCard key={blog.id} blog={blog} showPinnedBadge />
+				<BlogCard
+					key={blog.id}
+					blog={blog}
+					showPinnedBadge
+					canPin={isOwnProfile}
+					onPinToggled={(blogId, pinned) =>
+						setBlogs((prev) =>
+							sortPinnedFirst(
+								prev.map((b) => (b.id === blogId ? { ...b, is_pinned: pinned } : b)),
+							),
+						)
+					}
+				/>
 			))}
 		</div>
 	);

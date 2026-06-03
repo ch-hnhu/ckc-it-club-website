@@ -343,8 +343,17 @@ class PostController extends BaseApiController
         }
 
         if ($request->has('is_pinned')) {
-            $updates['is_pinned'] = (bool) $validated['is_pinned'];
-            $updates['pinned_at'] = $updates['is_pinned'] ? now() : null;
+            $pinning = (bool) $validated['is_pinned'];
+            if ($pinning && ! $post->is_pinned) {
+                $pinnedCount = Post::where('user_id', $request->user()->id)
+                    ->where('is_pinned', true)
+                    ->count();
+                if ($pinnedCount >= 3) {
+                    return $this->errorResponse(false, 'Bạn chỉ có thể ghim tối đa 3 bài viết.', 422);
+                }
+            }
+            $updates['is_pinned'] = $pinning;
+            $updates['pinned_at'] = $pinning ? now() : null;
         }
 
         if ($request->has('status')) {

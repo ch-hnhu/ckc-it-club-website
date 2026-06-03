@@ -152,9 +152,12 @@ const PostCard: React.FC<PostCardProps> = ({
 		try {
 			await postService.updatePost(post.id, { isPinned: next });
 			toast.success(next ? "Đã ghim bài viết lên trang cá nhân." : "Đã bỏ ghim bài viết.");
-		} catch {
+		} catch (err: unknown) {
 			setIsPinned(!next);
-			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+			const msg =
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+				"Không thể thực hiện. Vui lòng thử lại.";
+			toast.error(msg);
 		} finally {
 			setPinLoading(false);
 		}

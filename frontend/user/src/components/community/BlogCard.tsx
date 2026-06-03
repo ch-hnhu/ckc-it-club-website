@@ -1,13 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import { Eye, Heart, MessageCircle, Pin } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import type { Blog } from "@/types/blog.types";
 import { buildAvatar, formatRelativeTime } from "@/lib/utils";
+import { blogService } from "@/services/blog.service";
 
 interface BlogCardProps {
 	blog: Blog;
 	featured?: boolean;
 	showPinnedBadge?: boolean;
+	canPin?: boolean;
+	onPinToggled?: (blogId: number, isPinned: boolean) => void;
 }
 
 const TAG_BG = [
@@ -33,7 +37,34 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 	blog,
 	featured = false,
 	showPinnedBadge = false,
+	canPin = false,
+	onPinToggled,
 }) => {
+	const [isPinned, setIsPinned] = useState(blog.is_pinned ?? false);
+	const [pinLoading, setPinLoading] = useState(false);
+
+	const handleTogglePin = async (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (pinLoading) return;
+		const next = !isPinned;
+		setIsPinned(next);
+		setPinLoading(true);
+		try {
+			await blogService.pinBlog(blog.id, next);
+			toast.success(next ? "Đã ghim blog lên trang cá nhân." : "Đã bỏ ghim blog.");
+			onPinToggled?.(blog.id, next);
+		} catch (err: unknown) {
+			setIsPinned(!next);
+			const msg =
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+				"Không thể thực hiện. Vui lòng thử lại.";
+			toast.error(msg);
+		} finally {
+			setPinLoading(false);
+		}
+	};
+
 	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = buildAvatar(blog.user?.full_name, blog.user?.avatar);
 	const detailUrl = `/blog/${blog.slug}`;
@@ -42,13 +73,25 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 	if (featured) {
 		return (
 			<Link to={detailUrl} className='group neo-card relative block overflow-hidden bg-white'>
-				{showPinnedBadge && blog.is_pinned && (
+				{showPinnedBadge && isPinned && (
 					<span
 						className='absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-primary text-black shadow-[2px_2px_0_#111]'
 						aria-label='Blog đã ghim'
 						title='Blog đã ghim'>
 						<Pin className='h-4 w-4' />
 					</span>
+				)}
+				{canPin && (
+					<button
+						onClick={handleTogglePin}
+						disabled={pinLoading}
+						className={`absolute right-3 top-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition disabled:opacity-60 ${
+							isPinned ? "bg-primary text-black" : "bg-white text-gray-500 hover:bg-gray-100"
+						}`}
+						aria-label={isPinned ? "Bỏ ghim blog" : "Ghim blog"}
+						title={isPinned ? "Bỏ ghim" : "Ghim lên trang cá nhân"}>
+						<Pin className='h-4 w-4' />
+					</button>
 				)}
 				<div className='aspect-[21/9] overflow-hidden bg-gray-100'>
 					{blog.featured_image ? (
@@ -119,13 +162,25 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 		<Link
 			to={detailUrl}
 			className='group relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-black bg-white'>
-			{showPinnedBadge && blog.is_pinned && (
+			{showPinnedBadge && isPinned && !canPin && (
 				<span
 					className='absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-primary text-black shadow-[2px_2px_0_#111]'
 					aria-label='Blog đã ghim'
 					title='Blog đã ghim'>
 					<Pin className='h-4 w-4' />
 				</span>
+			)}
+			{canPin && (
+				<button
+					onClick={handleTogglePin}
+					disabled={pinLoading}
+					className={`absolute right-3 top-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition disabled:opacity-60 ${
+						isPinned ? "bg-primary text-black" : "bg-white text-gray-500 hover:bg-gray-100"
+					}`}
+					aria-label={isPinned ? "Bỏ ghim blog" : "Ghim blog"}
+					title={isPinned ? "Bỏ ghim" : "Ghim lên trang cá nhân"}>
+					<Pin className='h-4 w-4' />
+				</button>
 			)}
 			<div className='overflow-hidden bg-gray-100'>
 				{blog.featured_image ? (

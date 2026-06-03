@@ -106,6 +106,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
             Route::post('/blogs/{id}/bookmark', [UserBlogController::class, 'bookmark']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
+            Route::post('/blogs/{id}/pin', [UserBlogController::class, 'pin']);
         });
 
         // Wildcard routes registered last to avoid masking specific paths above
