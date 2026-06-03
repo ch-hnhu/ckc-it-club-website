@@ -82,6 +82,8 @@ interface CommentItemProps {
 	postId: number;
 	user: AuthUser | null;
 	onReplyAdded?: (parentId: number, reply: PostComment) => void;
+	isHighlighted?: boolean;
+	highlightedCommentId?: number | null;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -90,6 +92,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 	postId,
 	user,
 	onReplyAdded,
+	isHighlighted = false,
+	highlightedCommentId,
 }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -151,8 +155,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
 	if (comment.is_hidden) {
 		return (
-			<div id={depth === 0 ? `comment-${comment.id}` : undefined} className={depth > 0 ? "ml-11 mt-3" : ""}>
-				<div className='flex gap-3'>
+			<div
+				id={`comment-${comment.id}`}
+				className={`scroll-mt-24 ${depth > 0 ? "ml-11 mt-3" : ""}`}>
+				<div className={`flex gap-3 rounded-xl transition-all duration-700 ${isHighlighted ? "bg-[var(--color-primary)]/15 p-1.5 ring-2 ring-[var(--color-primary)] ring-offset-2" : ""}`}>
 					<div className='h-9 w-9 shrink-0 rounded-full border-2 border-dashed border-gray-300 bg-gray-100' />
 					<div className='min-w-0 flex-1'>
 						<div className='rounded-[10px] border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-3 shadow-[2px_2px_0_#d1d5db]'>
@@ -192,8 +198,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
 	}
 
 	return (
-		<div id={depth === 0 ? `comment-${comment.id}` : undefined} className={depth > 0 ? "ml-11 mt-3" : ""}>
-			<div className='flex gap-3'>
+		<div
+			id={`comment-${comment.id}`}
+			className={`scroll-mt-24 ${depth > 0 ? "ml-11 mt-3" : ""}`}>
+			<div className={`flex gap-3 rounded-xl transition-all duration-700 ${isHighlighted ? "bg-[var(--color-primary)]/15 p-1.5 ring-2 ring-[var(--color-primary)] ring-offset-2" : ""}`}>
 				<div className='shrink-0'>
 					<Link to={profileUrl ?? "#"}>
 						<img
@@ -319,6 +327,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 							depth={1}
 							postId={postId}
 							user={user}
+							isHighlighted={highlightedCommentId === reply.id}
 						/>
 					))}
 				</div>
@@ -360,6 +369,7 @@ const CommunityPostDetailPage: React.FC = () => {
 		following_count: number;
 	} | null>(null);
 
+	const [highlightedCommentId, setHighlightedCommentId] = useState<number | null>(null);
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
 	const [showPostMenu, setShowPostMenu] = useState(false);
@@ -421,6 +431,21 @@ const CommunityPostDetailPage: React.FC = () => {
 			.catch(() => setComments([]))
 			.finally(() => setCommentsLoading(false));
 	}, [id]);
+
+	// Scroll + highlight a specific comment when navigating from a notification link (#comment-{id})
+	useEffect(() => {
+		if (commentsLoading || !location.hash) return;
+		const match = location.hash.match(/^#comment-(\d+)$/);
+		if (!match) return;
+		const commentId = parseInt(match[1], 10);
+		const el = document.getElementById(location.hash.slice(1));
+		if (el) {
+			el.scrollIntoView({ behavior: "smooth", block: "center" });
+			setHighlightedCommentId(commentId);
+			const timer = setTimeout(() => setHighlightedCommentId(null), 3000);
+			return () => clearTimeout(timer);
+		}
+	}, [commentsLoading, location.hash]);
 
 	useEffect(() => {
 		if (!post?.user) return;
@@ -1018,6 +1043,8 @@ const CommunityPostDetailPage: React.FC = () => {
 										postId={Number(id)}
 										user={user}
 										onReplyAdded={handleReplyAdded}
+										isHighlighted={highlightedCommentId === comment.id}
+										highlightedCommentId={highlightedCommentId}
 									/>
 								))
 							)}

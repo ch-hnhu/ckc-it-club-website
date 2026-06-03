@@ -10,6 +10,7 @@ use App\Models\MediaFile;
 use App\Models\Comment;
 use App\Models\Reaction;
 use App\Models\Tag;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -389,6 +390,23 @@ class BlogController extends BaseApiController
         ]);
 
         $comment->load('user:id,full_name,username,email,avatar');
+
+        if ($parentId) {
+            // Reply: notify the parent comment author
+            $parent->load('user:id,full_name,avatar,username');
+            if ($parent->user) {
+                $blog = Blog::find($id);
+                UserNotificationService::dispatchBlogCommentReply(
+                    $parent->user, $request->user(), $comment->id, $blog, $comment->content,
+                );
+            }
+        } else {
+            // Top-level comment: notify the blog author
+            $blog = Blog::with('author:id,full_name,avatar,username')->find($id);
+            if ($blog?->author) {
+                UserNotificationService::dispatchBlogComment($blog->author, $request->user(), $blog, $comment->content, $comment->id);
+            }
+        }
 
         return $this->createdResponse($this->transformComment($comment));
     }

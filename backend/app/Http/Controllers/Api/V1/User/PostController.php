@@ -581,6 +581,23 @@ class PostController extends BaseApiController
 
         $comment->load('user:id,full_name,username,email,avatar');
 
+        if ($parentId) {
+            // Reply: notify the parent comment author
+            $parent->load('user:id,full_name,avatar,username');
+            if ($parent->user) {
+                $post = Post::find($id);
+                UserNotificationService::dispatchCommentReply(
+                    $parent->user, $request->user(), $comment->id, $post, $comment->content,
+                );
+            }
+        } else {
+            // Top-level comment: notify the post owner
+            $post = Post::with('user:id,full_name,avatar,username')->find($id);
+            if ($post?->user) {
+                UserNotificationService::dispatchComment($post->user, $request->user(), $post, $comment->content, $comment->id);
+            }
+        }
+
         return $this->createdResponse($this->transformComment($comment));
     }
 

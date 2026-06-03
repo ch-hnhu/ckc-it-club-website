@@ -14,7 +14,7 @@ import {
 	UserCheck,
 	UserPlus,
 } from "lucide-react";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -299,6 +299,8 @@ interface CommentItemProps {
 	blogId: number;
 	user: AuthUser | null;
 	onReplyAdded: (parentId: number, reply: BlogComment) => void;
+	isHighlighted?: boolean;
+	highlightedCommentId?: number | null;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -307,6 +309,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 	blogId,
 	user,
 	onReplyAdded,
+	isHighlighted = false,
+	highlightedCommentId,
 }) => {
 	const navigate = useNavigate();
 	const [liked, setLiked] = useState(false);
@@ -355,9 +359,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
 	return (
 		<div
-			id={depth === 0 ? `comment-${comment.id}` : undefined}
-			className={depth > 0 ? "ml-11 mt-3" : ""}>
-			<div className='flex gap-3'>
+			id={`comment-${comment.id}`}
+			className={`scroll-mt-24 ${depth > 0 ? "ml-11 mt-3" : ""}`}>
+			<div className={`flex gap-3 rounded-xl transition-all duration-700 ${isHighlighted ? "bg-[var(--color-primary)]/15 p-1.5 ring-2 ring-[var(--color-primary)] ring-offset-2" : ""}`}>
 				<div className='shrink-0'>
 					<img
 						src={avatar}
@@ -466,6 +470,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 							blogId={blogId}
 							user={user}
 							onReplyAdded={onReplyAdded}
+							isHighlighted={highlightedCommentId === reply.id}
 						/>
 					))}
 				</div>
@@ -479,6 +484,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 const BlogDetailPage: React.FC = () => {
 	const { slug } = useParams<{ slug: string }>();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { user } = useOutletContext<{ user: AuthUser | null }>();
 
 	const [blog, setBlog] = useState<BlogDetail | null>(null);
@@ -499,6 +505,7 @@ const BlogDetailPage: React.FC = () => {
 	const [copiedLink, setCopiedLink] = useState(false);
 	const copyResetRef = useRef<number | null>(null);
 
+	const [highlightedCommentId, setHighlightedCommentId] = useState<number | null>(null);
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
@@ -536,6 +543,21 @@ const BlogDetailPage: React.FC = () => {
 			.catch(() => setComments([]))
 			.finally(() => setCommentsLoading(false));
 	}, [blog?.id]);
+
+	// Scroll + highlight a specific comment when navigating from a notification link (#comment-{id})
+	useEffect(() => {
+		if (commentsLoading || !location.hash) return;
+		const match = location.hash.match(/^#comment-(\d+)$/);
+		if (!match) return;
+		const commentId = parseInt(match[1], 10);
+		const el = document.getElementById(location.hash.slice(1));
+		if (el) {
+			el.scrollIntoView({ behavior: "smooth", block: "center" });
+			setHighlightedCommentId(commentId);
+			const timer = setTimeout(() => setHighlightedCommentId(null), 3000);
+			return () => clearTimeout(timer);
+		}
+	}, [commentsLoading, location.hash]);
 
 	useEffect(() => {
 		if (!blog?.id) return;
@@ -994,6 +1016,8 @@ const BlogDetailPage: React.FC = () => {
 										blogId={blog?.id ?? 0}
 										user={user}
 										onReplyAdded={handleReplyAdded}
+										isHighlighted={highlightedCommentId === comment.id}
+										highlightedCommentId={highlightedCommentId}
 									/>
 								))
 							)}

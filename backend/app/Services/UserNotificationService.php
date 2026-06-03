@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\NotificationSent;
+use App\Models\Blog;
 use App\Models\Post;
 use App\Models\User;
 use App\Notifications\UserCommunityNotification;
@@ -51,18 +52,114 @@ class UserNotificationService
         User $recipient,
         User $actor,
         Post $post,
+        string $commentContent,
+        int $commentId,
     ): void {
         if ($recipient->id === $actor->id) {
             return;
         }
 
         self::send($recipient, $actor, [
-            'title'       => 'Bình luận mới',
-            'message'     => "{$actor->full_name} đã bình luận bài viết của bạn",
+            'title'       => "{$actor->full_name} đã bình luận vào bài viết của bạn",
+            'message'     => $commentContent,
             'type'        => 'comment',
             'target_type' => 'post',
             'target_id'   => $post->id,
-            'link'        => "/cong-dong/bai-viet/{$post->id}",
+            'link'        => "/cong-dong/bai-viet/{$post->id}#comment-{$commentId}",
+        ]);
+    }
+
+    /**
+     * Notify a comment author when another user replies to their comment on a post.
+     * Does nothing if the actor is the comment author.
+     * Link points to the parent comment anchor (only depth-0 comments have DOM ids).
+     */
+    public static function dispatchCommentReply(
+        User $recipient,
+        User $actor,
+        int $replyCommentId,
+        Post $post,
+        string $replyContent,
+    ): void {
+        if ($recipient->id === $actor->id) {
+            return;
+        }
+
+        self::send($recipient, $actor, [
+            'title'       => "{$actor->full_name} đã trả lời bình luận của bạn",
+            'message'     => $replyContent,
+            'type'        => 'comment_reply',
+            'target_type' => 'post',
+            'target_id'   => $post->id,
+            'link'        => "/cong-dong/bai-viet/{$post->id}#comment-{$replyCommentId}",
+        ]);
+    }
+
+    /**
+     * Notify a comment author when another user replies to their comment on a blog.
+     * Does nothing if the actor is the comment author.
+     */
+    public static function dispatchBlogCommentReply(
+        User $recipient,
+        User $actor,
+        int $replyCommentId,
+        Blog $blog,
+        string $replyContent,
+    ): void {
+        if ($recipient->id === $actor->id) {
+            return;
+        }
+
+        self::send($recipient, $actor, [
+            'title'       => "{$actor->full_name} đã trả lời bình luận của bạn",
+            'message'     => $replyContent,
+            'type'        => 'blog_comment_reply',
+            'target_type' => 'blog',
+            'target_id'   => $blog->id,
+            'link'        => "/blog/{$blog->slug}#comment-{$replyCommentId}",
+        ]);
+    }
+
+    /**
+     * Notify the blog author when another user comments on their blog.
+     * Does nothing if the actor is the author.
+     */
+    public static function dispatchBlogComment(
+        User $recipient,
+        User $actor,
+        Blog $blog,
+        string $commentContent,
+        int $commentId,
+    ): void {
+        if ($recipient->id === $actor->id) {
+            return;
+        }
+
+        self::send($recipient, $actor, [
+            'title'       => "{$actor->full_name} đã bình luận vào blog của bạn",
+            'message'     => $commentContent,
+            'type'        => 'blog_comment',
+            'target_type' => 'blog',
+            'target_id'   => $blog->id,
+            'link'        => "/blog/{$blog->slug}#comment-{$commentId}",
+        ]);
+    }
+
+    /**
+     * Notify the blog author when an admin approves (publishes) their blog.
+     */
+    public static function dispatchBlogApproved(
+        User $recipient,
+        User $actor,
+        Blog $blog,
+    ): void {
+        self::send($recipient, $actor, [
+            'title'       => 'Blog được duyệt',
+            'message'     => "Blog \"{$blog->title}\" của bạn đã được duyệt và xuất bản",
+            'type'        => 'blog_approved',
+            'target_type' => 'blog',
+            'target_id'   => $blog->id,
+            'link'        => "/blog/{$blog->slug}",
         ]);
     }
 
