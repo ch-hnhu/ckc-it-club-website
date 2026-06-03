@@ -6,6 +6,7 @@ export interface BlogAuthor {
 	email: string;
 	avatar: string | null;
 	username: string | null;
+	role?: string | null;
 	is_following?: boolean;
 }
 

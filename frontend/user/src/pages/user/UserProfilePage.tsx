@@ -1554,6 +1554,11 @@ const UserProfilePage: React.FC = () => {
 			const res = await userService.toggleFollow(username!);
 			setFollowed(res.data.is_following);
 			setProfile((p) => (p ? { ...p, followers_count: res.data.followers_count } : p));
+			if (res.data.is_following) {
+				toast.success(`Đã theo dõi ${profile.full_name}`);
+			} else {
+				toast.success(`Đã bỏ theo dõi ${profile.full_name}`);
+			}
 		} catch {
 			// Rollback
 			setFollowed(wasFollowed);
