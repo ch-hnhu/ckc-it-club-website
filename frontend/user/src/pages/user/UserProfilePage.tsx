@@ -422,14 +422,15 @@ const FollowListModal: React.FC<FollowListModalProps> = ({
 			}
 		};
 		load();
-		return () => { cancelled = true; };
+		return () => {
+			cancelled = true;
+		};
 	}, [username, type]);
 
 	const filtered = users.filter((u) => {
 		const q = search.toLowerCase();
 		return (
-			u.full_name.toLowerCase().includes(q) ||
-			(u.username ?? "").toLowerCase().includes(q)
+			u.full_name.toLowerCase().includes(q) || (u.username ?? "").toLowerCase().includes(q)
 		);
 	});
 
@@ -526,7 +527,9 @@ const FollowListModal: React.FC<FollowListModalProps> = ({
 												{u.full_name}
 											</p>
 											{u.username && (
-												<p className='text-xs text-gray-500'>@{u.username}</p>
+												<p className='text-xs text-gray-500'>
+													@{u.username}
+												</p>
 											)}
 										</button>
 										{isOwnProfile && type === "following" && u.username && (
@@ -992,11 +995,94 @@ const UserBlogsTab: React.FC<UserBlogsTabProps> = ({ username, isOwnProfile }) =
 					onPinToggled={(blogId, pinned) =>
 						setBlogs((prev) =>
 							sortPinnedFirst(
-								prev.map((b) => (b.id === blogId ? { ...b, is_pinned: pinned } : b)),
+								prev.map((b) =>
+									b.id === blogId ? { ...b, is_pinned: pinned } : b,
+								),
 							),
 						)
 					}
 				/>
+			))}
+		</div>
+	);
+};
+
+// ─── Tab Content: Drafts ──────────────────────────────────────────────────────
+
+const DraftBlogsTab: React.FC = () => {
+	const [blogs, setBlogs] = useState<Blog[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+		setLoading(true);
+		setError(false);
+		blogService
+			.getMyDraftBlogs()
+			.then((res) => {
+				if (!cancelled) setBlogs(res.data);
+			})
+			.catch(() => {
+				if (!cancelled) setError(true);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	if (loading) {
+		return (
+			<div className='mt-5 grid gap-5 px-6 sm:grid-cols-2 sm:px-0'>
+				{Array.from({ length: 4 }).map((_, i) => (
+					<div
+						key={i}
+						className='h-80 animate-pulse rounded-2xl border-2 border-black bg-gray-200'
+					/>
+				))}
+			</div>
+		);
+	}
+
+	if (error || blogs.length === 0) {
+		return (
+			<div className='mx-6 mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 py-16 text-center sm:mx-0'>
+				<BookOpenText className='mx-auto mb-4 h-10 w-10 text-gray-300' />
+				<p className='font-heading text-base font-extrabold text-black'>
+					{error ? "Không thể tải nháp" : "Chưa có bài nháp nào"}
+				</p>
+				<p className='mt-1 text-sm text-gray-400'>
+					{error ? "Vui lòng thử lại sau." : "Hãy viết blog và lưu nháp để tiếp tục sau."}
+				</p>
+				{!error && (
+					<Link
+						to='/blog/dang-bai'
+						className='mt-5 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-primary px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						<Plus className='h-4 w-4' />
+						Tạo blog
+					</Link>
+				)}
+			</div>
+		);
+	}
+
+	return (
+		<div className='mt-5 mb-5 grid gap-5 px-6 sm:grid-cols-2 sm:px-0'>
+			{blogs.map((blog) => (
+				<div key={blog.id} className='relative'>
+					{blog.status === "pending_review" && (
+						<div className='absolute right-3 top-3 z-10'>
+							<span className='inline-flex items-center gap-1.5 rounded-full border-2 border-amber-400 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700'>
+								<span className='h-1.5 w-1.5 rounded-full bg-amber-500' />
+								Chờ duyệt
+							</span>
+						</div>
+					)}
+					<BlogCard blog={blog} linkTo={`/blog/${blog.slug}/chinh-sua`} />
+				</div>
 			))}
 		</div>
 	);
@@ -1678,7 +1764,7 @@ const ArchivedTab: React.FC<{
 
 // ─── UserProfilePage ──────────────────────────────────────────────────────────
 
-type Tab = "overview" | "posts" | "blog" | "bookmarks" | "archived";
+type Tab = "overview" | "posts" | "blog" | "bookmarks" | "archived" | "drafts";
 
 type TabDef = { id: Tab; label: string; icon: React.ElementType };
 
@@ -1690,6 +1776,7 @@ const BASE_TABS: TabDef[] = [
 
 const BOOKMARKS_TAB: TabDef = { id: "bookmarks", label: "Đã lưu", icon: Bookmark };
 const ARCHIVED_TAB: TabDef = { id: "archived", label: "Lưu trữ", icon: Archive };
+const DRAFTS_TAB: TabDef = { id: "drafts", label: "Nháp", icon: BookOpenText };
 
 const writeClipboardText = async (text: string) => {
 	if (navigator.clipboard?.writeText) {
@@ -1725,6 +1812,7 @@ const UserProfilePage: React.FC = () => {
 	const [followed, setFollowed] = useState(false);
 	const [followLoading, setFollowLoading] = useState(false);
 	const [copiedProfileLink, setCopiedProfileLink] = useState(false);
+	const [draftsCount, setDraftsCount] = useState<number | null>(null);
 	const [followModal, setFollowModal] = useState<"followers" | "following" | null>(null);
 	const copyResetTimeoutRef = useRef<number | null>(null);
 
@@ -1740,7 +1828,9 @@ const UserProfilePage: React.FC = () => {
 					? "bookmarks"
 					: tabParam === "archived"
 						? "archived"
-						: "overview";
+						: tabParam === "drafts"
+							? "drafts"
+							: "overview";
 	const previousUsernameRef = useRef<string | undefined>(undefined);
 
 	const setActiveTab = (tab: Tab) => {
@@ -1770,10 +1860,23 @@ const UserProfilePage: React.FC = () => {
 		previousUsernameRef.current = username;
 	}, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
+	// Fetch số lượng bài nháp cho own profile
+	useEffect(() => {
+		if (!isOwnProfile) return;
+		blogService
+			.getMyDraftBlogs(1)
+			.then((res) => setDraftsCount(res.meta?.total ?? res.data.length))
+			.catch(() => setDraftsCount(null));
+	}, [isOwnProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+
 	// Guard: if someone manually types ?tab=bookmarks or ?tab=archived on another user's profile,
 	// redirect to overview once we know it's not their own profile.
 	useEffect(() => {
-		if (!loading && (activeTab === "bookmarks" || activeTab === "archived") && !isOwnProfile) {
+		if (
+			!loading &&
+			(activeTab === "bookmarks" || activeTab === "archived" || activeTab === "drafts") &&
+			!isOwnProfile
+		) {
 			setSearchParams({}, { replace: true });
 		}
 	}, [loading, activeTab, isOwnProfile]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1981,188 +2084,195 @@ const UserProfilePage: React.FC = () => {
 
 	return (
 		<>
-		<div className='w-full min-h-screen pt-16'>
-			<div className='neo-container px-0 py-0 sm:px-4 sm:py-8 md:px-6'>
-				<div className='flex gap-6'>
-					{/* ── Main content ── */}
-					<div className='min-w-0 flex-1'>
-						<ProfileHeader
-							profile={profile}
-							isOwnProfile={isOwnProfile}
-							followed={followed}
-							followLoading={followLoading}
-							onFollow={handleFollow}
-							onUpdated={(updated) => setProfile(updated)}
-							onFollowersClick={() => setFollowModal("followers")}
-							onFollowingClick={() => setFollowModal("following")}
-						/>
-
-						{/* Tabs — "Đã lưu" and "Lưu trữ" only visible on own profile */}
-						{(() => {
-							const tabs: TabDef[] = isOwnProfile
-								? [...BASE_TABS, BOOKMARKS_TAB, ARCHIVED_TAB]
-								: BASE_TABS;
-							const badgeCount: Partial<Record<Tab, number>> = {
-								posts: profile.posts_count,
-								blog: profile.blogs_count,
-								...(profile.bookmarks_count != null
-									? { bookmarks: profile.bookmarks_count }
-									: {}),
-								...(profile.archived_count != null
-									? { archived: profile.archived_count }
-									: {}),
-							};
-							return (
-								<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
-									<nav className='no-scrollbar flex gap-2 overflow-x-auto overflow-y-hidden sm:gap-4'>
-										{tabs.map((tab) => {
-											const isActive = activeTab === tab.id;
-											const Icon = tab.icon;
-											const count = badgeCount[tab.id];
-											return (
-												<button
-													key={tab.id}
-													onClick={() => setActiveTab(tab.id)}
-													className={`group relative inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 px-3 pb-2 text-md transition-colors duration-200 md:text-lg ${
-														isActive
-															? "font-bold text-slate-950"
-															: "font-medium text-slate-500 hover:text-slate-950"
-													}`}
-													style={{ fontFamily: "var(--font-body)" }}>
-													<Icon className='h-4 w-4 shrink-0' />
-													<span>{tab.label}</span>
-													{count !== undefined && count > 0 && (
-														<span className='inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-200 px-1.5 text-xs font-bold leading-none text-slate-500'>
-															{count}
-														</span>
-													)}
-													<span
-														className={`absolute -bottom-[2px] left-0 h-1 w-full bg-primary transition-transform duration-200 group-hover:scale-x-100 ${
-															isActive ? "scale-x-100" : "scale-x-0"
-														}`}
-													/>
-												</button>
-											);
-										})}
-									</nav>
-								</div>
-							);
-						})()}
-
-						{/* Tab content */}
-						{activeTab === "overview" ? (
-							<OverviewTab
+			<div className='w-full min-h-screen pt-16'>
+				<div className='neo-container px-0 py-0 sm:px-4 sm:py-8 md:px-6'>
+					<div className='flex gap-6'>
+						{/* ── Main content ── */}
+						<div className='min-w-0 flex-1'>
+							<ProfileHeader
 								profile={profile}
-								user={user}
 								isOwnProfile={isOwnProfile}
-								onSwitchToPostsTab={() => setActiveTab("posts")}
-								onSwitchToBlogTab={() => setActiveTab("blog")}
+								followed={followed}
+								followLoading={followLoading}
+								onFollow={handleFollow}
+								onUpdated={(updated) => setProfile(updated)}
+								onFollowersClick={() => setFollowModal("followers")}
+								onFollowingClick={() => setFollowModal("following")}
 							/>
-						) : activeTab === "bookmarks" ? (
-							<BookmarksTab user={user} />
-						) : activeTab === "archived" ? (
-							<ArchivedTab user={user} />
-						) : activeTab === "blog" ? (
-							<UserBlogsTab username={username} isOwnProfile={isOwnProfile} />
-						) : (
-							<UserPostsTab
-								username={username}
-								user={user}
-								isOwnProfile={isOwnProfile}
-								onPostDeleted={handlePublishedPostRemoved}
-							/>
-						)}
-					</div>
 
-					{/* ── Sidebar ── */}
-					<aside className='hidden w-72 shrink-0 self-start sticky top-24 lg:block'>
-						<div className='space-y-5'>
-							<StatsCard profile={profile} />
+							{/* Tabs — "Đã lưu" and "Lưu trữ" only visible on own profile */}
+							{(() => {
+								const tabs: TabDef[] = isOwnProfile
+									? [...BASE_TABS, BOOKMARKS_TAB, ARCHIVED_TAB, DRAFTS_TAB]
+									: BASE_TABS;
+								const badgeCount: Partial<Record<Tab, number>> = {
+									posts: profile.posts_count,
+									blog: profile.blogs_count,
+									...(profile.bookmarks_count != null
+										? { bookmarks: profile.bookmarks_count }
+										: {}),
+									...(profile.archived_count != null
+										? { archived: profile.archived_count }
+										: {}),
+									...(draftsCount != null && draftsCount > 0
+										? { drafts: draftsCount }
+										: {}),
+								};
+								return (
+									<div className='mx-6 mt-6 border-b-2 border-slate-200 sm:mx-0'>
+										<nav className='no-scrollbar flex gap-2 overflow-x-auto overflow-y-hidden sm:gap-4'>
+											{tabs.map((tab) => {
+												const isActive = activeTab === tab.id;
+												const Icon = tab.icon;
+												const count = badgeCount[tab.id];
+												return (
+													<button
+														key={tab.id}
+														onClick={() => setActiveTab(tab.id)}
+														className={`group relative inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 px-3 pb-2 text-md transition-colors duration-200 md:text-lg ${
+															isActive
+																? "font-bold text-slate-950"
+																: "font-medium text-slate-500 hover:text-slate-950"
+														}`}
+														style={{ fontFamily: "var(--font-body)" }}>
+														<Icon className='h-4 w-4 shrink-0' />
+														<span>{tab.label}</span>
+														{count !== undefined && count > 0 && (
+															<span className='inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-200 px-1.5 text-xs font-bold leading-none text-slate-500'>
+																{count}
+															</span>
+														)}
+														<span
+															className={`absolute -bottom-[2px] left-0 h-1 w-full bg-primary transition-transform duration-200 group-hover:scale-x-100 ${
+																isActive
+																	? "scale-x-100"
+																	: "scale-x-0"
+															}`}
+														/>
+													</button>
+												);
+											})}
+										</nav>
+									</div>
+								);
+							})()}
 
-							{/* Member info card */}
-							<div className='rounded-2xl border-2 border-black bg-white p-4 shadow-[4px_4px_0_#111]'>
-								<h2 className='mb-4 font-heading text-base font-extrabold text-black'>
-									Thông tin thành viên
-								</h2>
-								<div className='space-y-2.5 text-sm'>
-									{profile.student_code && (
-										<div className='flex items-center justify-between'>
-											<span className='text-gray-500'>MSSV</span>
+							{/* Tab content */}
+							{activeTab === "overview" ? (
+								<OverviewTab
+									profile={profile}
+									user={user}
+									isOwnProfile={isOwnProfile}
+									onSwitchToPostsTab={() => setActiveTab("posts")}
+									onSwitchToBlogTab={() => setActiveTab("blog")}
+								/>
+							) : activeTab === "bookmarks" ? (
+								<BookmarksTab user={user} />
+							) : activeTab === "archived" ? (
+								<ArchivedTab user={user} />
+							) : activeTab === "drafts" ? (
+								<DraftBlogsTab />
+							) : activeTab === "blog" ? (
+								<UserBlogsTab username={username} isOwnProfile={isOwnProfile} />
+							) : (
+								<UserPostsTab
+									username={username}
+									user={user}
+									isOwnProfile={isOwnProfile}
+									onPostDeleted={handlePublishedPostRemoved}
+								/>
+							)}
+						</div>
+
+						{/* ── Sidebar ── */}
+						<aside className='hidden w-72 shrink-0 self-start sticky top-24 lg:block'>
+							<div className='space-y-5'>
+								<StatsCard profile={profile} />
+
+								{/* Member info card */}
+								<div className='rounded-2xl border-2 border-black bg-white p-4 shadow-[4px_4px_0_#111]'>
+									<h2 className='mb-4 font-heading text-base font-extrabold text-black'>
+										Thông tin thành viên
+									</h2>
+									<div className='space-y-2.5 text-sm'>
+										{profile.student_code && (
+											<div className='flex items-center justify-between'>
+												<span className='text-gray-500'>MSSV</span>
+												<span className='font-bold text-black'>
+													{profile.student_code}
+												</span>
+											</div>
+										)}
+										{profile.faculty && (
+											<div className='flex items-center justify-between'>
+												<span className='text-gray-500'>Khoa</span>
+												<span className='max-w-[60%] text-right font-bold text-black'>
+													{profile.faculty}
+												</span>
+											</div>
+										)}
+										{profile.major && (
+											<div className='flex items-center justify-between'>
+												<span className='text-gray-500'>Ngành</span>
+												<span className='max-w-[60%] text-right font-bold text-black'>
+													{profile.major}
+												</span>
+											</div>
+										)}
+										{profile.class_name && (
+											<div className='flex items-center justify-between'>
+												<span className='text-gray-500'>Lớp</span>
+												<span className='font-bold text-black'>
+													{profile.class_name}
+												</span>
+											</div>
+										)}
+										<div className='flex items-center justify-between border-t-2 border-dashed border-gray-200 pt-2'>
+											<span className='text-gray-500'>Tham gia</span>
 											<span className='font-bold text-black'>
-												{profile.student_code}
+												{new Date(profile.created_at).toLocaleDateString(
+													"vi-VN",
+													{
+														day: "numeric",
+														month: "short",
+														year: "numeric",
+													},
+												)}
 											</span>
 										</div>
-									)}
-									{profile.faculty && (
-										<div className='flex items-center justify-between'>
-											<span className='text-gray-500'>Khoa</span>
-											<span className='max-w-[60%] text-right font-bold text-black'>
-												{profile.faculty}
-											</span>
-										</div>
-									)}
-									{profile.major && (
-										<div className='flex items-center justify-between'>
-											<span className='text-gray-500'>Ngành</span>
-											<span className='max-w-[60%] text-right font-bold text-black'>
-												{profile.major}
-											</span>
-										</div>
-									)}
-									{profile.class_name && (
-										<div className='flex items-center justify-between'>
-											<span className='text-gray-500'>Lớp</span>
-											<span className='font-bold text-black'>
-												{profile.class_name}
-											</span>
-										</div>
-									)}
-									<div className='flex items-center justify-between border-t-2 border-dashed border-gray-200 pt-2'>
-										<span className='text-gray-500'>Tham gia</span>
-										<span className='font-bold text-black'>
-											{new Date(profile.created_at).toLocaleDateString(
-												"vi-VN",
-												{
-													day: "numeric",
-													month: "short",
-													year: "numeric",
-												},
-											)}
-										</span>
 									</div>
 								</div>
+
+								<SkillsCard skills={profile.skills} />
+
+								{/* Share profile */}
+								<button
+									type='button'
+									onClick={handleCopyProfileLink}
+									aria-label='Sao chép liên kết hồ sơ'
+									className='flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+									{copiedProfileLink ? (
+										<Check className='h-4 w-4 text-lime-600' />
+									) : (
+										<Share2 className='h-4 w-4' />
+									)}
+									{copiedProfileLink ? "Đã sao chép" : "Sao chép liên kết hồ sơ"}
+								</button>
 							</div>
-
-							<SkillsCard skills={profile.skills} />
-
-							{/* Share profile */}
-							<button
-								type='button'
-								onClick={handleCopyProfileLink}
-								aria-label='Sao chép liên kết hồ sơ'
-								className='flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-3 text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-								{copiedProfileLink ? (
-									<Check className='h-4 w-4 text-lime-600' />
-								) : (
-									<Share2 className='h-4 w-4' />
-								)}
-								{copiedProfileLink ? "Đã sao chép" : "Sao chép liên kết hồ sơ"}
-							</button>
-						</div>
-					</aside>
+						</aside>
+					</div>
 				</div>
 			</div>
-		</div>
 
-		{followModal && username && (
-			<FollowListModal
-				username={username}
-				type={followModal}
-				isOwnProfile={isOwnProfile}
-				onClose={() => setFollowModal(null)}
-			/>
-		)}
-	</>
+			{followModal && username && (
+				<FollowListModal
+					username={username}
+					type={followModal}
+					isOwnProfile={isOwnProfile}
+					onClose={() => setFollowModal(null)}
+				/>
+			)}
+		</>
 	);
 };
 

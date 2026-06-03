@@ -10,6 +10,7 @@ interface BlogCardProps {
 	blog: Blog;
 	featured?: boolean;
 	showPinnedBadge?: boolean;
+	linkTo?: string;
 	canPin?: boolean;
 	onPinToggled?: (blogId: number, isPinned: boolean) => void;
 }
@@ -37,6 +38,7 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 	blog,
 	featured = false,
 	showPinnedBadge = false,
+	linkTo,
 	canPin = false,
 	onPinToggled,
 }) => {
@@ -67,7 +69,7 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 
 	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = buildAvatar(blog.user?.full_name, blog.user?.avatar);
-	const detailUrl = `/blog/${blog.slug}`;
+	const detailUrl = linkTo ?? `/blog/${blog.slug}`;
 	const date = blog.published_at ?? blog.created_at;
 
 	if (featured) {
@@ -86,7 +88,9 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 						onClick={handleTogglePin}
 						disabled={pinLoading}
 						className={`absolute right-3 top-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition disabled:opacity-60 ${
-							isPinned ? "bg-primary text-black" : "bg-white text-gray-500 hover:bg-gray-100"
+							isPinned
+								? "bg-primary text-black"
+								: "bg-white text-gray-500 hover:bg-gray-100"
 						}`}
 						aria-label={isPinned ? "Bỏ ghim blog" : "Ghim blog"}
 						title={isPinned ? "Bỏ ghim" : "Ghim lên trang cá nhân"}>
@@ -175,7 +179,9 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 					onClick={handleTogglePin}
 					disabled={pinLoading}
 					className={`absolute right-3 top-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black shadow-[2px_2px_0_#111] transition disabled:opacity-60 ${
-						isPinned ? "bg-primary text-black" : "bg-white text-gray-500 hover:bg-gray-100"
+						isPinned
+							? "bg-primary text-black"
+							: "bg-white text-gray-500 hover:bg-gray-100"
 					}`}
 					aria-label={isPinned ? "Bỏ ghim blog" : "Ghim blog"}
 					title={isPinned ? "Bỏ ghim" : "Ghim lên trang cá nhân"}>

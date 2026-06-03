@@ -9,6 +9,7 @@ import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
 import BlogFeedPage from "@/pages/blog/BlogFeedPage";
 import BlogCreatePage from "@/pages/blog/BlogCreatePage";
 import BlogDetailPage from "@/pages/blog/BlogDetailPage";
+import BlogEditPage from "@/pages/blog/BlogEditPage";
 import LandingPage from "@/pages/LandingPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
 import ApplicationPage from "@/pages/ApplicationPage";
@@ -55,6 +56,10 @@ const router = createBrowserRouter([
 			{
 				path: "blog/dang-bai",
 				element: <BlogCreatePage />,
+			},
+			{
+				path: "blog/:slug/chinh-sua",
+				element: <BlogEditPage />,
 			},
 			{
 				path: "blog/:slug",

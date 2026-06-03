@@ -102,6 +102,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/posts/{id}/report', [UserPostController::class, 'report']);
             Route::post('/blogs', [UserBlogController::class, 'store']);
             Route::get('/blogs/bookmarks', [UserBlogController::class, 'bookmarks']);
+            Route::get('/blogs/my-drafts', [UserBlogController::class, 'myDraftBlogs']);
+            Route::patch('/blogs/{slug}', [UserBlogController::class, 'update']);
+            Route::post('/blogs/{slug}/update', [UserBlogController::class, 'update']);
             Route::get('/blogs/archived', [UserBlogController::class, 'archived']);
             Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
             Route::post('/blogs/{id}/bookmark', [UserBlogController::class, 'bookmark']);

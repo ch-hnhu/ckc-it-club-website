@@ -31,11 +31,30 @@ export const blogService = {
 			formData.append("featured_image", payload.featuredImage);
 		}
 
+		if (payload.status) {
+			formData.append("status", payload.status);
+		}
+
 		payload.tagIds?.forEach((tagId) => {
 			formData.append("tag_ids[]", String(tagId));
 		});
 
 		return api.postForm<ApiResponse<BlogDetail>>("/community/blogs", formData);
+	},
+
+	getMyDraftBlogs: (page = 1) =>
+		api.get<PaginatedResponse<Blog>>("/community/blogs/my-drafts", { page, per_page: 20 }),
+
+	updateBlog: (slug: string, payload: CreateBlogPayload) => {
+		const formData = new FormData();
+		if (payload.title) formData.append("title", payload.title);
+		if (payload.content) formData.append("content", payload.content);
+		if (payload.excerpt !== undefined) formData.append("excerpt", payload.excerpt ?? "");
+		if (payload.status) formData.append("status", payload.status);
+		if (payload.featuredImage) formData.append("featured_image", payload.featuredImage);
+		payload.tagIds?.forEach((id) => formData.append("tag_ids[]", String(id)));
+		// POST /update fallback vì PATCH + FormData không ổn định trên một số browser/server
+		return api.postForm<ApiResponse<BlogDetail>>(`/community/blogs/${slug}/update`, formData);
 	},
 
 	getBlogComments: (id: number) =>
