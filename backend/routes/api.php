@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
+use App\Http\Controllers\Api\V1\Admin\ReportController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\SkillController;
@@ -362,6 +363,14 @@ Route::prefix('v1')->group(function () {
             Route::patch('skills/{skill}', [SkillController::class, 'update']);
             Route::patch('skills/{skill}/toggle-status', [SkillController::class, 'toggleStatus']);
             Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
+        });
+
+        // reports
+        Route::middleware('permission:community.reports.view')->group(function () {
+            Route::get('reports/stats', [ReportController::class, 'stats']);
+            Route::get('reports', [ReportController::class, 'index']);
+            Route::patch('reports/{report}/status', [ReportController::class, 'updateStatus']);
+            Route::post('reports/{report}/hide-post', [ReportController::class, 'hidePost']);
         });
     });
 });
