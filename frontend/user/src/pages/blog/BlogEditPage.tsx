@@ -46,7 +46,6 @@ const BlogEditPage: React.FC = () => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isSavingDraft, setIsSavingDraft] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
-	const [editorReady, setEditorReady] = useState(false);
 
 	const coverPreviewUrl = useMemo(() => {
 		if (!coverImage) return null;
@@ -75,13 +74,6 @@ const BlogEditPage: React.FC = () => {
 			.catch(() => setNotFound(true))
 			.finally(() => setLoadingBlog(false));
 	}, [slug]);
-
-	// Set editor content after blog loads
-	useEffect(() => {
-		if (blog && editorReady && editorRef.current) {
-			editorRef.current.setContent(blog.content ?? "");
-		}
-	}, [blog, editorReady]);
 
 	// Load tags
 	useEffect(() => {
