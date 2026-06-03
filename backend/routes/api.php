@@ -32,12 +32,19 @@ use App\Http\Controllers\Api\V1\User\ContactController as PublicContactControlle
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
+use App\Http\Controllers\Api\V1\User\UserNotificationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+
+    // WebSocket private-channel auth — must use auth:sanctum (Bearer token),
+    // NOT the default BroadcastServiceProvider route which uses web/session middleware.
+    Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
+        return \Illuminate\Support\Facades\Broadcast::auth($request);
+    })->middleware('auth:sanctum');
 
     // public routes
     Route::get('/health', function () {
@@ -90,13 +97,16 @@ Route::prefix('v1')->group(function () {
             Route::delete('/posts/{id}', [UserPostController::class, 'destroy']);
             Route::post('/posts/{id}/reactions', [UserPostController::class, 'react']);
             Route::post('/posts/{id}/comments', [UserPostController::class, 'comment']);
+            Route::post('/comments/{id}/reactions', [UserPostController::class, 'reactComment']);
             Route::post('/posts/{id}/bookmark', [UserPostController::class, 'bookmark']);
             Route::post('/posts/{id}/report', [UserPostController::class, 'report']);
             Route::post('/blogs', [UserBlogController::class, 'store']);
             Route::get('/blogs/bookmarks', [UserBlogController::class, 'bookmarks']);
+            Route::get('/blogs/archived', [UserBlogController::class, 'archived']);
             Route::post('/blogs/{id}/reactions', [UserBlogController::class, 'react']);
             Route::post('/blogs/{id}/bookmark', [UserBlogController::class, 'bookmark']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
+            Route::post('/blogs/{id}/pin', [UserBlogController::class, 'pin']);
         });
 
         // Wildcard routes registered last to avoid masking specific paths above
@@ -120,6 +130,13 @@ Route::prefix('v1')->group(function () {
 
     // user logged-in routes
     Route::middleware('auth:sanctum')->group(function () {
+        // user notifications (realtime + REST)
+        Route::prefix('user-notifications')->group(function () {
+            Route::get('/', [UserNotificationController::class, 'index']);
+            Route::get('/unread-count', [UserNotificationController::class, 'unreadCount']);
+            Route::patch('/read-all', [UserNotificationController::class, 'markAllAsRead']);
+            Route::patch('/{id}/read', [UserNotificationController::class, 'markAsRead']);
+        });
         // club applications (user-facing)
         Route::get('/user/application-questions', [UserClubApplicationController::class, 'questions']);
         Route::get('/user/club-applications/me', [UserClubApplicationController::class, 'myApplication']);

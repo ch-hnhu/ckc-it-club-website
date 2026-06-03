@@ -61,6 +61,7 @@
 - Community post detail owner menu is wired to real actions: pin/unpin, edit route, privacy modal, archive/restore, and delete confirmation. Viewer menu actions use real bookmark and report flows.
 - Own-profile empty states for Posts and Blog show direct create CTAs linking to `/cong-dong/dang-bai` and `/blog/dang-bai`; the same CTAs appear in overview carousel panels when those lists are empty.
 - Profile post lists and overview carousels display pinned posts first and mark pinned content with a `Pin` badge instead of the older energy/Zap marker.
+- Profile tab badges and stats update optimistically when a published post is archived or deleted so archived posts are not counted in the published Posts badge.
 
 ## Route Surface
 
@@ -68,6 +69,10 @@
 - landing page composed from multiple section components
 - `/lien-he`
 - contact page
+- `/ung-tuyen`
+- application form page; unauthenticated users can open it from the navbar `Tham gia ngay` CTA and are prompted to log in before submitting.
+- `/thong-bao`
+- authenticated user notification center. The navbar notification dropdown links here through “Xem tất cả”; the page loads personal notifications from `GET /user-notifications` in pages of 20, supports load more/infinite sentinel behavior, unread state, item navigation, and mark-all-read.
 - `/blog`
 - standalone blog feed page linked from the community dropdown in the navbar
 - `/blog/dang-bai`
@@ -89,7 +94,9 @@
 - User credential signup is available at `/register` and posts to `POST /api/v1/auth/register`.
 - `ContactPage` posts real data to `POST /api/v1/contacts`, shows backend success or error feedback, and resets the form on success.
 - `Navbar` and auth service use `localStorage` for the access token.
+- When a user is not authenticated, `Navbar` shows a `/login` link and a `Tham gia ngay` CTA that links to `/ung-tuyen`.
 - When a user is authenticated, `Navbar` shows an avatar-only account trigger. Clicking it opens a neo-styled profile dropdown with Profile, Bookmarks, Account, Switch theme, and Sign Out actions.
+- Authenticated users also see a notification bell. Its dropdown shows recent personal notifications, supports marking all as read, and links to `/thong-bao` for the full paginated notification center.
 - `src/config/axios.config.ts` tries to read the token from `sessionStorage`, not `localStorage`.
 - The same Axios interceptor redirects `401` responses to `/login`.
 - Conclusion: token storage is internally inconsistent between the shared Axios client and the auth service. Agents must treat auth/session handling carefully.
@@ -161,7 +168,7 @@
 
 ## Authentication Model
 
-- Login is popup-based and starts from the navbar.
+- Login starts from the dedicated `/login` page, which supports credential login plus Google/GitHub OAuth popup buttons.
 - Auth URL is derived from `VITE_BACKEND_URL` and points to `/user/auth/google`.
 - OAuth completion is communicated back through `postMessage`.
 - Successful auth stores `access_token` in `localStorage`.
@@ -181,6 +188,7 @@
 - redirects to `/login`
 - If you standardize auth, update:
 - `src/services/auth.service.ts`
+- `src/services/notification.service.ts`
 - `src/config/axios.config.ts`
 - navbar login/logout behavior
 - this file

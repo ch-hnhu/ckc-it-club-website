@@ -103,4 +103,11 @@ export const postService = {
 			content,
 			...(parentId !== undefined ? { parent_id: parentId } : {}),
 		}),
+
+	/** Toggle a reaction on a comment (requires auth). */
+	toggleCommentReaction: (commentId: number, type: ReactionType) =>
+		api.post<ApiResponse<{ reacted: boolean; my_reaction: ReactionType | null; reactions_count: number }>>(
+			`/community/comments/${commentId}/reactions`,
+			{ type },
+		),
 };

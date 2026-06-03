@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\User;
 use App\Enums\HttpStatus;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\User;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -33,6 +34,10 @@ class FollowController extends BaseApiController
 
         $isFollowing = $me->following()->where('following_id', $target->id)->exists();
         $followersCount = $target->followers()->count();
+
+        if ($isFollowing) {
+            UserNotificationService::dispatchFollow($target, $me);
+        }
 
         return $this->successResponse(true, [
             'is_following'    => $isFollowing,

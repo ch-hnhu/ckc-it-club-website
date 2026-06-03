@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -126,11 +127,21 @@ class BlogController extends BaseApiController
     {
         $request->validate(['status' => 'required|in:draft,pending_review,published,archived']);
 
+        $wasPublished = $blog->status === 'published';
         $status = $request->string('status')->value();
+
         $blog->update([
             'status'       => $status,
             'published_at' => $status === 'published' && ! $blog->published_at ? now() : $blog->published_at,
         ]);
+
+        // Notify author when blog transitions to published (approved for the first time)
+        if ($status === 'published' && ! $wasPublished) {
+            $blog->load('author:id,full_name,avatar,username');
+            if ($blog->author) {
+                UserNotificationService::dispatchBlogApproved($blog->author, $request->user(), $blog);
+            }
+        }
 
         return $this->successResponse(true, ['status' => $blog->status], 'Cập nhật trạng thái blog thành công.');
     }

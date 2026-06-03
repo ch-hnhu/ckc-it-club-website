@@ -10,6 +10,7 @@ import BlogFeedPage from "@/pages/blog/BlogFeedPage";
 import BlogCreatePage from "@/pages/blog/BlogCreatePage";
 import BlogDetailPage from "@/pages/blog/BlogDetailPage";
 import LandingPage from "@/pages/LandingPage";
+import NotificationsPage from "@/pages/notification/NotificationsPage";
 import ApplicationPage from "@/pages/ApplicationPage";
 import UserProfilePage from "@/pages/user/UserProfilePage";
 import AccountPage from "@/pages/user/AccountPage";
@@ -38,6 +39,10 @@ const router = createBrowserRouter([
 			{
 				path: "tai-khoan",
 				element: <AccountPage />,
+			},
+			{
+				path: "thong-bao",
+				element: <NotificationsPage />,
 			},
 			{
 				path: "ung-tuyen",
