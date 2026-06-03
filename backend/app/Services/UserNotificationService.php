@@ -164,6 +164,23 @@ class UserNotificationService
     }
 
     /**
+     * Notify a user when someone follows them.
+     */
+    public static function dispatchFollow(
+        User $recipient,
+        User $actor,
+    ): void {
+        self::send($recipient, $actor, [
+            'title'       => "{$actor->full_name} đã bắt đầu theo dõi bạn",
+            'message'     => "Hãy ghé thăm trang cá nhân của họ!",
+            'type'        => 'follow',
+            'target_type' => 'user',
+            'target_id'   => $actor->id,
+            'link'        => "/@{$actor->username}",
+        ]);
+    }
+
+    /**
      * Notify a user when they are @mentioned in a post or comment.
      */
     public static function dispatchMention(
