@@ -69,6 +69,7 @@ const PostCard: React.FC<PostCardProps> = ({
 
 	// Modal visibility
 	const [showReportModal, setShowReportModal] = useState(false);
+	const [hasReported, setHasReported] = useState(post.my_report ?? false);
 	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -423,7 +424,12 @@ const PostCard: React.FC<PostCardProps> = ({
 			</div>
 
 			{showReportModal && (
-				<ReportPostModal postId={post.id} onClose={() => setShowReportModal(false)} />
+				<ReportPostModal
+					postId={post.id}
+					onClose={() => setShowReportModal(false)}
+					isAlreadyReported={hasReported}
+					onSuccess={() => setHasReported(true)}
+				/>
 			)}
 
 			{showPrivacyModal && (

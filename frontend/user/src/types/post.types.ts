@@ -51,6 +51,8 @@ export interface Post {
 	my_reaction: ReactionType | null;
 	/** Whether the current authenticated user has bookmarked this post */
 	my_bookmark?: boolean;
+	/** Whether the current authenticated user has reported this post */
+	my_report?: boolean;
 	tags: string[];
 	media_urls: string[];
 	created_at: string;

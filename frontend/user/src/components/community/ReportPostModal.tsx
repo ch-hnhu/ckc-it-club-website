@@ -6,6 +6,8 @@ import type { PostReportReason } from "@/types/post.types";
 interface Props {
 	postId: number;
 	onClose: () => void;
+	isAlreadyReported?: boolean;
+	onSuccess?: () => void;
 }
 
 const REASON_OPTIONS: { value: PostReportReason; label: string }[] = [
@@ -16,8 +18,10 @@ const REASON_OPTIONS: { value: PostReportReason; label: string }[] = [
 	{ value: "other", label: "Khác" },
 ];
 
-const ReportPostModal: React.FC<Props> = ({ postId, onClose }) => {
-	const [step, setStep] = useState<"form" | "done">("form");
+const ReportPostModal: React.FC<Props> = ({ postId, onClose, isAlreadyReported, onSuccess }) => {
+	const [step, setStep] = useState<"form" | "done" | "already">(
+		isAlreadyReported ? "already" : "form"
+	);
 	const [reason, setReason] = useState<PostReportReason>("spam");
 	const [description, setDescription] = useState("");
 	const [submitting, setSubmitting] = useState(false);
@@ -28,9 +32,9 @@ const ReportPostModal: React.FC<Props> = ({ postId, onClose }) => {
 		setSubmitting(true);
 		try {
 			await postService.reportPost(postId, reason, reason === "other" ? description : undefined);
+			onSuccess?.();
 			setStep("done");
 		} catch {
-			// already reported or other error — still show thank-you
 			setStep("done");
 		} finally {
 			setSubmitting(false);
@@ -42,7 +46,24 @@ const ReportPostModal: React.FC<Props> = ({ postId, onClose }) => {
 			className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'
 			onClick={(e) => e.target === e.currentTarget && onClose()}>
 			<div className='w-full max-w-md rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111]'>
-				{step === "form" ? (
+				{step === "already" ? (
+				<div className='flex flex-col items-center px-8 py-10 text-center'>
+					<div className='mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-yellow)]'>
+						<Flag className='h-7 w-7 text-black' />
+					</div>
+					<h2 className='font-heading text-lg font-extrabold text-black'>
+						Bạn đã báo cáo bài viết này
+					</h2>
+					<p className='mt-2 text-sm text-gray-500'>
+						Chúng tôi đã nhận được báo cáo của bạn trước đó và đang xem xét.
+					</p>
+					<button
+						onClick={onClose}
+						className='mt-6 rounded-xl border-2 border-black bg-[var(--color-pastel-yellow)] px-6 py-2.5 text-sm font-bold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						Đóng
+					</button>
+				</div>
+			) : step === "form" ? (
 					<>
 						<div className='flex items-center justify-between border-b-2 border-black px-5 py-4'>
 							<div className='flex items-center gap-2'>

@@ -62,6 +62,7 @@ class PostController extends BaseApiController
         $userId = auth('sanctum')->id();
         $myReactions = [];
         $myBookmarks = [];
+        $myReports = [];
         if ($userId) {
             $postIds = $posts->pluck('id')->toArray();
             $myReactions = Reaction::where('user_id', $userId)
@@ -76,12 +77,20 @@ class PostController extends BaseApiController
                     ->pluck('post_id')
                     ->all()
             );
+            $myReports = array_flip(
+                DB::table('post_reports')
+                    ->where('reporter_id', $userId)
+                    ->whereIn('post_id', $postIds)
+                    ->pluck('post_id')
+                    ->all()
+            );
         }
 
-        $posts->getCollection()->transform(function (Post $post) use ($myReactions, $myBookmarks) {
+        $posts->getCollection()->transform(function (Post $post) use ($myReactions, $myBookmarks, $myReports) {
             $data = $this->transformPost($post);
             $data['my_reaction'] = $myReactions[$post->id] ?? null;
             $data['my_bookmark'] = isset($myBookmarks[$post->id]);
+            $data['my_report'] = isset($myReports[$post->id]);
 
             return $data;
         });
@@ -112,11 +121,19 @@ class PostController extends BaseApiController
             ->whereIn('target_id', $postIds)
             ->pluck('type', 'target_id')
             ->toArray();
+        $myReports = array_flip(
+            DB::table('post_reports')
+                ->where('reporter_id', $userId)
+                ->whereIn('post_id', $postIds)
+                ->pluck('post_id')
+                ->all()
+        );
 
-        $posts->getCollection()->transform(function (Post $post) use ($myReactions) {
+        $posts->getCollection()->transform(function (Post $post) use ($myReactions, $myReports) {
             $data = $this->transformPost($post);
             $data['my_reaction'] = $myReactions[$post->id] ?? null;
             $data['my_bookmark'] = true;
+            $data['my_report'] = isset($myReports[$post->id]);
 
             return $data;
         });
@@ -446,6 +463,12 @@ class PostController extends BaseApiController
         $data['my_bookmark'] = $userId
             ? DB::table('post_bookmarks')
                 ->where('user_id', $userId)
+                ->where('post_id', $id)
+                ->exists()
+            : false;
+        $data['my_report'] = $userId
+            ? DB::table('post_reports')
+                ->where('reporter_id', $userId)
                 ->where('post_id', $id)
                 ->exists()
             : false;

@@ -306,6 +306,7 @@ const CommunityPostDetailPage: React.FC = () => {
 	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [showReportModal, setShowReportModal] = useState(false);
+	const [hasReported, setHasReported] = useState(false);
 
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
 	const menuBtnRef = useRef<HTMLButtonElement>(null);
@@ -344,6 +345,7 @@ const CommunityPostDetailPage: React.FC = () => {
 				setLiked(res.data.my_reaction === "heart");
 				setHeartCount(res.data.reactions_count);
 				setSaved(res.data.my_bookmark ?? false);
+				setHasReported(res.data.my_report ?? false);
 			})
 			.catch(() => setPostError("Không tìm thấy bài viết."))
 			.finally(() => setPostLoading(false));
@@ -1118,7 +1120,12 @@ const CommunityPostDetailPage: React.FC = () => {
 			)}
 
 			{post && showReportModal && (
-				<ReportPostModal postId={post.id} onClose={() => setShowReportModal(false)} />
+				<ReportPostModal
+					postId={post.id}
+					onClose={() => setShowReportModal(false)}
+					isAlreadyReported={hasReported}
+					onSuccess={() => setHasReported(true)}
+				/>
 			)}
 		</div>
 	);
