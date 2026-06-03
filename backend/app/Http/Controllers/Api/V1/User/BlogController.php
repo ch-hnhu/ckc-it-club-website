@@ -11,6 +11,7 @@ use App\Models\MediaFile;
 use App\Models\Comment;
 use App\Models\Reaction;
 use App\Models\Tag;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +61,7 @@ class BlogController extends BaseApiController
                 ->where('username', $username)
                 ->orWhere('email', 'like', "{$username}@%")
             ))
+            ->when($username, fn ($q) => $q->orderByDesc('blogs.is_pinned')->orderByDesc('blogs.pinned_at'))
             ->when(
                 $sort === 'reactions_count',
                 fn ($q) => $q->orderBy('reactions_count', $order),
@@ -310,6 +312,32 @@ class BlogController extends BaseApiController
         return $this->successResponse(true, $this->transformBlog($blog), $messages[$blog->status] ?? 'Cập nhật blog thành công.', HttpStatus::OK);
     }
 
+    public function pin(Request $request, int $id): JsonResponse
+    {
+        $blog = Blog::where('author_id', $request->user()->id)->find($id);
+        if (! $blog) {
+            abort(403, 'Bạn không có quyền thực hiện hành động này.');
+        }
+
+        $pinning = (bool) $request->input('is_pinned', true);
+
+        if ($pinning && ! $blog->is_pinned) {
+            $pinnedCount = Blog::where('author_id', $request->user()->id)
+                ->where('is_pinned', true)
+                ->count();
+            if ($pinnedCount >= 3) {
+                return $this->errorResponse(false, 'Bạn chỉ có thể ghim tối đa 3 blog.', 422);
+            }
+        }
+
+        $blog->update([
+            'is_pinned' => $pinning,
+            'pinned_at' => $pinning ? now() : null,
+        ]);
+
+        return $this->successResponse(true, ['is_pinned' => $blog->is_pinned], 'Cập nhật trạng thái ghim thành công.');
+    }
+
     public function bookmarks(Request $request): JsonResponse
     {
         $perPage = min((int) $request->query('per_page', 20), 50);
@@ -329,6 +357,27 @@ class BlogController extends BaseApiController
             ...$this->transformBlog($blog),
             'my_reaction' => null,
             'my_bookmark' => true,
+        ]);
+
+        return $this->paginatedResponse($blogs, ApiMessage::RETRIEVED);
+    }
+
+    public function archived(Request $request): JsonResponse
+    {
+        $perPage = min((int) $request->query('per_page', 20), 50);
+        $userId  = $request->user()->id;
+
+        $blogs = Blog::with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
+            ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count')
+            ->where('blogs.author_id', $userId)
+            ->where('blogs.status', 'archived')
+            ->orderBy('blogs.created_at', 'desc')
+            ->paginate($perPage);
+
+        $blogs->getCollection()->transform(fn (Blog $blog) => [
+            ...$this->transformBlog($blog),
+            'my_reaction' => null,
+            'my_bookmark' => false,
         ]);
 
         return $this->paginatedResponse($blogs, ApiMessage::RETRIEVED);
@@ -478,6 +527,23 @@ class BlogController extends BaseApiController
 
         $comment->load('user:id,full_name,username,email,avatar');
 
+        if ($parentId) {
+            // Reply: notify the parent comment author
+            $parent->load('user:id,full_name,avatar,username');
+            if ($parent->user) {
+                $blog = Blog::find($id);
+                UserNotificationService::dispatchBlogCommentReply(
+                    $parent->user, $request->user(), $comment->id, $blog, $comment->content,
+                );
+            }
+        } else {
+            // Top-level comment: notify the blog author
+            $blog = Blog::with('author:id,full_name,avatar,username')->find($id);
+            if ($blog?->author) {
+                UserNotificationService::dispatchBlogComment($blog->author, $request->user(), $blog, $comment->content, $comment->id);
+            }
+        }
+
         return $this->createdResponse($this->transformComment($comment));
     }
 
@@ -511,6 +577,7 @@ class BlogController extends BaseApiController
                 'name'  => $tag->name,
                 'color' => null,
             ])->values()->toArray(),
+            'is_pinned'       => (bool) $blog->is_pinned,
             'created_at'      => $blog->created_at?->toIso8601String(),
             'updated_at'      => $blog->updated_at?->toIso8601String(),
         ];

@@ -15,7 +15,7 @@ import {
 	UserCheck,
 	UserPlus,
 } from "lucide-react";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -27,7 +27,13 @@ import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
 import { userService } from "@/services/user.service";
 import type { Blog, BlogDetail, BlogComment } from "@/types/blog.types";
-import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle, readingTime } from "@/lib/utils";
+import {
+	buildAvatar,
+	buildProfileUrl,
+	formatRelativeTime,
+	getHandle,
+	readingTime,
+} from "@/lib/utils";
 import { renderMarkdownContent } from "@/lib/markdown";
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -195,11 +201,7 @@ interface BlogSuggestionSectionProps {
 	loading: boolean;
 }
 
-const BlogSuggestionSection: React.FC<BlogSuggestionSectionProps> = ({
-	title,
-	blogs,
-	loading,
-}) => {
+const BlogSuggestionSection: React.FC<BlogSuggestionSectionProps> = ({ title, blogs, loading }) => {
 	if (!loading && blogs.length === 0) return null;
 
 	return (
@@ -315,6 +317,8 @@ interface CommentItemProps {
 	blogId: number;
 	user: AuthUser | null;
 	onReplyAdded: (parentId: number, reply: BlogComment) => void;
+	isHighlighted?: boolean;
+	highlightedCommentId?: number | null;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -323,6 +327,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 	blogId,
 	user,
 	onReplyAdded,
+	isHighlighted = false,
+	highlightedCommentId,
 }) => {
 	const navigate = useNavigate();
 	const [liked, setLiked] = useState(false);
@@ -370,8 +376,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
 		`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserDisplayName)}&background=A3E635&color=111111&bold=true`;
 
 	return (
-		<div id={depth === 0 ? `comment-${comment.id}` : undefined} className={depth > 0 ? "ml-11 mt-3" : ""}>
-			<div className='flex gap-3'>
+		<div
+			id={`comment-${comment.id}`}
+			className={`scroll-mt-24 ${depth > 0 ? "ml-11 mt-3" : ""}`}>
+			<div
+				className={`flex gap-3 rounded-xl transition-all duration-700 ${isHighlighted ? "bg-[var(--color-primary)]/15 p-1.5 ring-2 ring-[var(--color-primary)] ring-offset-2" : ""}`}>
 				<div className='shrink-0'>
 					<img
 						src={avatar}
@@ -480,6 +489,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 							blogId={blogId}
 							user={user}
 							onReplyAdded={onReplyAdded}
+							isHighlighted={highlightedCommentId === reply.id}
 						/>
 					))}
 				</div>
@@ -493,6 +503,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 const BlogDetailPage: React.FC = () => {
 	const { slug } = useParams<{ slug: string }>();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { user } = useOutletContext<{ user: AuthUser | null }>();
 
 	const [blog, setBlog] = useState<BlogDetail | null>(null);
@@ -513,6 +524,7 @@ const BlogDetailPage: React.FC = () => {
 	const [copiedLink, setCopiedLink] = useState(false);
 	const copyResetRef = useRef<number | null>(null);
 
+	const [highlightedCommentId, setHighlightedCommentId] = useState<number | null>(null);
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
@@ -550,6 +562,21 @@ const BlogDetailPage: React.FC = () => {
 			.catch(() => setComments([]))
 			.finally(() => setCommentsLoading(false));
 	}, [blog?.id]);
+
+	// Scroll + highlight a specific comment when navigating from a notification link (#comment-{id})
+	useEffect(() => {
+		if (commentsLoading || !location.hash) return;
+		const match = location.hash.match(/^#comment-(\d+)$/);
+		if (!match) return;
+		const commentId = parseInt(match[1], 10);
+		const el = document.getElementById(location.hash.slice(1));
+		if (el) {
+			el.scrollIntoView({ behavior: "smooth", block: "center" });
+			setHighlightedCommentId(commentId);
+			const timer = setTimeout(() => setHighlightedCommentId(null), 3000);
+			return () => clearTimeout(timer);
+		}
+	}, [commentsLoading, location.hash]);
 
 	useEffect(() => {
 		if (!blog?.id) return;
@@ -623,8 +650,7 @@ const BlogDetailPage: React.FC = () => {
 			navigate("/login", { state: { from: window.location.pathname } });
 			return;
 		}
-		const authorHandle =
-			blog?.user?.username ?? blog?.user?.email?.split("@")[0];
+		const authorHandle = blog?.user?.username ?? blog?.user?.email?.split("@")[0];
 		if (!authorHandle || followLoading) return;
 
 		const wasFollowed = followed;
@@ -825,13 +851,15 @@ const BlogDetailPage: React.FC = () => {
 												</div>
 											</div>
 										</div>
-													</div>
+									</div>
 
 									{/* Content */}
 									{blog.content && (
 										<div
 											className='prose prose-sm mt-7 max-w-none leading-7 text-gray-800 [&_a]:text-lime-700 [&_a:hover]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--color-primary)] [&_blockquote]:pl-4 [&_blockquote]:text-gray-600 [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:font-mono [&_code]:text-sm [&_h2]:mt-8 [&_h2]:font-heading [&_h2]:text-2xl [&_h2]:font-extrabold [&_h3]:mt-6 [&_h3]:font-heading [&_h3]:text-xl [&_h3]:font-extrabold [&_img]:rounded-xl [&_img]:border-2 [&_img]:border-black [&_pre]:rounded-xl [&_pre]:border-2 [&_pre]:border-black [&_pre]:bg-gray-900 [&_pre]:p-4 [&_pre]:text-white [&_strong]:font-extrabold'
-											dangerouslySetInnerHTML={{ __html: renderMarkdownContent(blog.content) }}
+											dangerouslySetInnerHTML={{
+												__html: renderMarkdownContent(blog.content),
+											}}
 										/>
 									)}
 
@@ -1012,6 +1040,8 @@ const BlogDetailPage: React.FC = () => {
 										blogId={blog?.id ?? 0}
 										user={user}
 										onReplyAdded={handleReplyAdded}
+										isHighlighted={highlightedCommentId === comment.id}
+										highlightedCommentId={highlightedCommentId}
 									/>
 								))
 							)}

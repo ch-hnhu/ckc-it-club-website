@@ -12,23 +12,24 @@ interface Props {
 	onSaved: (visibility: Visibility) => void;
 }
 
-const OPTIONS: { value: Visibility; label: string; description: string; icon: React.ElementType }[] = [
+const OPTIONS: {
+	value: Visibility;
+	label: string;
+	icon: React.ElementType;
+}[] = [
 	{
 		value: "public",
 		label: "Công khai",
-		description: "Tất cả mọi người đều có thể xem",
 		icon: Globe,
 	},
 	{
 		value: "members",
-		label: "Thành viên",
-		description: "Thành viên câu lạc bộ đã đăng nhập",
+		label: "Thành viên Câu lạc bộ",
 		icon: Users,
 	},
 	{
 		value: "private",
 		label: "Chỉ mình tôi",
-		description: "Chỉ bạn mới thấy bài viết này",
 		icon: Lock,
 	},
 ];
@@ -61,7 +62,9 @@ const PrivacyPostModal: React.FC<Props> = ({ postId, currentVisibility, onClose,
 			onClick={(e) => e.target === e.currentTarget && onClose()}>
 			<div className='w-full max-w-md rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111]'>
 				<div className='flex items-center justify-between border-b-2 border-black px-5 py-4'>
-					<h2 className='font-heading text-base font-extrabold text-black'>Quyền riêng tư</h2>
+					<h2 className='font-heading text-base font-extrabold text-black'>
+						Quyền riêng tư
+					</h2>
 					<button
 						onClick={onClose}
 						className='rounded-lg border-2 border-transparent p-1 transition hover:border-black hover:bg-gray-100'>
@@ -75,7 +78,7 @@ const PrivacyPostModal: React.FC<Props> = ({ postId, currentVisibility, onClose,
 						return (
 							<label
 								key={opt.value}
-								className='flex cursor-pointer items-center gap-4 rounded-xl border-2 border-black px-4 py-3.5 transition hover:bg-gray-50 has-[:checked]:bg-[var(--color-pastel-yellow)]'>
+								className='flex cursor-pointer items-center gap-4 rounded-xl border-2 border-black px-4 py-3.5 transition hover:bg-gray-50 has-[:checked]:bg-primary'>
 								<input
 									type='radio'
 									name='visibility'
@@ -84,10 +87,9 @@ const PrivacyPostModal: React.FC<Props> = ({ postId, currentVisibility, onClose,
 									onChange={() => setSelected(opt.value)}
 									className='accent-black'
 								/>
-								<Icon className='h-5 w-5 shrink-0 text-black' />
+								<Icon strokeWidth={2} className='h-5 w-5 shrink-0 text-black' />
 								<div>
 									<p className='text-sm font-bold text-black'>{opt.label}</p>
-									<p className='text-xs text-gray-500'>{opt.description}</p>
 								</div>
 							</label>
 						);
@@ -98,14 +100,14 @@ const PrivacyPostModal: React.FC<Props> = ({ postId, currentVisibility, onClose,
 					<button
 						type='button'
 						onClick={onClose}
-						className='rounded-xl border-2 border-black px-4 py-2 text-sm font-bold text-black transition hover:bg-gray-100'>
+						className='rounded-lg px-4 py-2 text-sm font-bold text-black transition hover:bg-gray-100'>
 						Hủy
 					</button>
 					<button
 						type='button'
 						onClick={handleSave}
 						disabled={saving}
-						className='rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'>
+						className='rounded-lg border-2 border-black bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'>
 						{saving ? "Đang lưu..." : "Lưu"}
 					</button>
 				</div>

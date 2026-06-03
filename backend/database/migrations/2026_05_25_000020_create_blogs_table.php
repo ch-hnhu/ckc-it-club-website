@@ -19,9 +19,12 @@ return new class extends Migration
             $table->enum('status', ['draft', 'pending_review', 'published', 'archived'])->default('draft');
             $table->timestamp('published_at')->nullable();
             $table->unsignedBigInteger('view_count')->default(0);
+            $table->boolean('is_pinned')->default(false);
+            $table->timestamp('pinned_at')->nullable();
             $table->timestamps();
 
             $table->index(['author_id', 'status', 'published_at']);
+            $table->index(['author_id', 'is_pinned']);
         });
     }
 

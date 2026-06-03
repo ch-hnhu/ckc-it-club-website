@@ -51,6 +51,8 @@ export interface Post {
 	my_reaction: ReactionType | null;
 	/** Whether the current authenticated user has bookmarked this post */
 	my_bookmark?: boolean;
+	/** Whether the current authenticated user has reported this post */
+	my_report?: boolean;
 	tags: string[];
 	media_urls: string[];
 	created_at: string;
@@ -110,8 +112,10 @@ export interface PostComment {
 	id: number;
 	parent_id: number | null;
 	user: CommentUser | null;
-	content: string;
+	content: string | null;
+	is_hidden: boolean;
 	reactions_count: number;
+	my_reaction: ReactionType | null;
 	created_at: string;
 	replies: PostComment[];
 }

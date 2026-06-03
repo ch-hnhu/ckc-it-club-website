@@ -17,6 +17,16 @@ export function formatRelativeTime(isoString: string): string {
 	return new Date(isoString).toLocaleDateString("vi-VN");
 }
 
+export function formatNotificationTime(isoString: string): string {
+	const diff = Date.now() - new Date(isoString).getTime();
+	const minutes = Math.floor(diff / 60_000);
+	if (minutes < 1) return "Vừa xong";
+	if (minutes < 60) return `${minutes} phút trước`;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours} giờ trước`;
+	return `${Math.floor(hours / 24)} ngày trước`;
+}
+
 export function getHandle(username: string | null, email: string): string {
 	if (username) return `@${username}`;
 	return `@${email.split("@")[0]}`;

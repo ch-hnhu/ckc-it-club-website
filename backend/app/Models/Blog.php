@@ -12,11 +12,16 @@ class Blog extends Model
     protected $fillable = [
         'author_id', 'title', 'slug', 'content', 'excerpt',
         'cover_image', 'status', 'published_at', 'view_count',
+        'is_pinned', 'pinned_at',
     ];
 
     protected function casts(): array
     {
-        return ['published_at' => 'datetime'];
+        return [
+            'published_at' => 'datetime',
+            'is_pinned'    => 'boolean',
+            'pinned_at'    => 'datetime',
+        ];
     }
 
     public function author(): BelongsTo
