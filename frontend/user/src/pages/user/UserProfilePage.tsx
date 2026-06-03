@@ -18,20 +18,27 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	FileText,
+	Github,
+	Globe,
 	GraduationCap,
 	Heart,
 	ImagePlus,
+	Instagram,
 	LayoutGrid,
+	Linkedin,
 	Loader2,
 	MessageCircle,
 	Pin,
 	Plus,
 	Search,
 	Share2,
+	Tv,
 	UserCheck,
 	UserPen,
 	UserPlus,
 	Users,
+	X,
+	Youtube,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { AuthUser } from "@/services/auth.service";
@@ -249,6 +256,126 @@ const SkillsCard: React.FC<SkillsCardProps> = ({ skills }) => {
 
 // ─── Profile Header ───────────────────────────────────────────────────────────
 
+const SOCIAL_CONFIG = [
+	{ key: "social_github" as const, prefix: "https://github.com/", label: "GitHub", Icon: Github },
+	{
+		key: "social_linkedin" as const,
+		prefix: "https://linkedin.com/in/",
+		label: "LinkedIn",
+		Icon: Linkedin,
+	},
+	{
+		key: "social_instagram" as const,
+		prefix: "https://instagram.com/",
+		label: "Instagram",
+		Icon: Instagram,
+	},
+	{
+		key: "social_youtube" as const,
+		prefix: "https://youtube.com/@",
+		label: "YouTube",
+		Icon: Youtube,
+	},
+	{ key: "social_tiktok" as const, prefix: "https://tiktok.com/@", label: "TikTok", Icon: Globe },
+	{ key: "social_twitch" as const, prefix: "https://twitch.tv/", label: "Twitch", Icon: Tv },
+];
+
+const SOCIAL_VISIBLE_LIMIT = 3;
+
+const SocialLinksModal: React.FC<{
+	links: typeof SOCIAL_CONFIG;
+	profile: UserProfile;
+	onClose: () => void;
+}> = ({ links, profile, onClose }) => (
+	<div
+		className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
+		onClick={onClose}>
+		<div
+			className='w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl'
+			onClick={(e) => e.stopPropagation()}>
+			<div className='mb-5 flex items-center justify-between'>
+				<h2 className='text-center text-xl font-bold text-black flex-1'>Links</h2>
+				<button
+					onClick={onClose}
+					className='rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-black'>
+					<X className='h-5 w-5' />
+				</button>
+			</div>
+			<div className='space-y-4'>
+				{links.map(({ key, prefix, label, Icon }) => {
+					const handle = profile[key] as string;
+					return (
+						<a
+							key={key}
+							href={`${prefix}${handle}`}
+							target='_blank'
+							rel='noopener noreferrer'
+							className='flex items-center gap-4 rounded-lg p-2 transition-colors hover:bg-gray-50'>
+							<div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100'>
+								<Icon className='h-5 w-5 text-gray-600' />
+							</div>
+							<div className='min-w-0'>
+								<p className='text-xs font-semibold uppercase tracking-wider text-gray-400'>
+									{label}
+								</p>
+								<p className='truncate text-sm font-medium text-black'>
+									{prefix.replace("https://", "")}
+									{handle}
+								</p>
+							</div>
+						</a>
+					);
+				})}
+			</div>
+		</div>
+	</div>
+);
+
+const SocialLinks: React.FC<{ profile: UserProfile }> = ({ profile }) => {
+	const [modalOpen, setModalOpen] = useState(false);
+	const active = SOCIAL_CONFIG.filter(({ key }) => profile[key]);
+	if (active.length === 0) return null;
+
+	const visible = active.slice(0, SOCIAL_VISIBLE_LIMIT);
+	const overflow = active.length - SOCIAL_VISIBLE_LIMIT;
+
+	return (
+		<>
+			<div className='mt-3 flex flex-wrap items-center gap-x-4 gap-y-2'>
+				{visible.map(({ key, prefix, label, Icon }) => {
+					const handle = profile[key] as string;
+					return (
+						<a
+							key={key}
+							href={`${prefix}${handle}`}
+							target='_blank'
+							rel='noopener noreferrer'
+							title={`${label}: ${handle}`}
+							className='flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-black'>
+							<Icon className='h-4 w-4 shrink-0' />
+							<span>{handle}</span>
+						</a>
+					);
+				})}
+				{overflow > 0 && (
+					<button
+						onClick={() => setModalOpen(true)}
+						className='rounded-full border border-gray-300 px-2.5 py-0.5 text-xs font-semibold text-gray-500 transition-colors hover:border-black hover:text-black'>
+						+{overflow} links
+					</button>
+				)}
+			</div>
+			{modalOpen && (
+				<SocialLinksModal
+					links={active}
+					profile={profile}
+					onClose={() => setModalOpen(false)}
+				/>
+			)}
+		</>
+	);
+};
+
 interface ProfileHeaderProps {
 	profile: UserProfile;
 	isOwnProfile: boolean;
@@ -464,6 +591,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 							<span className='font-medium text-gray-500'>Đang theo dõi</span>
 						</button>
 					</div>
+
+					<SocialLinks profile={profile} />
 				</div>
 			</div>
 		</div>
@@ -1337,12 +1466,7 @@ const ArchivedTab: React.FC<{
 	return (
 		<div className='mt-5 mb-5 space-y-10 px-6 sm:px-0'>
 			{posts.length > 0 && (
-				<PostCarousel
-					posts={posts}
-					user={user}
-					isOwnProfile={true}
-					onShowAll={() => {}}
-				/>
+				<PostCarousel posts={posts} user={user} isOwnProfile={true} onShowAll={() => {}} />
 			)}
 			{blogs.length > 0 && (
 				<BlogCarousel blogs={blogs} isOwnProfile={true} onShowAll={() => {}} />
