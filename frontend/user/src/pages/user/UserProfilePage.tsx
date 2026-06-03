@@ -376,6 +376,187 @@ const SocialLinks: React.FC<{ profile: UserProfile }> = ({ profile }) => {
 	);
 };
 
+// ─── Follow List Modal ────────────────────────────────────────────────────────
+
+type FollowUser = {
+	id: number;
+	full_name: string;
+	username: string | null;
+	avatar: string | null;
+	bio: string | null;
+};
+
+interface FollowListModalProps {
+	username: string;
+	type: "followers" | "following";
+	isOwnProfile: boolean;
+	onClose: () => void;
+}
+
+const FollowListModal: React.FC<FollowListModalProps> = ({
+	username,
+	type,
+	isOwnProfile,
+	onClose,
+}) => {
+	const navigate = useNavigate();
+	const [users, setUsers] = useState<FollowUser[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [search, setSearch] = useState("");
+	const [unfollowingId, setUnfollowingId] = useState<number | null>(null);
+
+	useEffect(() => {
+		let cancelled = false;
+		const load = async () => {
+			setLoading(true);
+			try {
+				const res =
+					type === "followers"
+						? await userService.getFollowers(username)
+						: await userService.getFollowing(username);
+				if (!cancelled) setUsers((res.data as unknown as FollowUser[]) ?? []);
+			} catch {
+				// silent
+			} finally {
+				if (!cancelled) setLoading(false);
+			}
+		};
+		load();
+		return () => { cancelled = true; };
+	}, [username, type]);
+
+	const filtered = users.filter((u) => {
+		const q = search.toLowerCase();
+		return (
+			u.full_name.toLowerCase().includes(q) ||
+			(u.username ?? "").toLowerCase().includes(q)
+		);
+	});
+
+	const handleUnfollow = async (u: FollowUser) => {
+		if (!u.username || unfollowingId !== null) return;
+		setUnfollowingId(u.id);
+		try {
+			await userService.toggleFollow(u.username);
+			setUsers((prev) => prev.filter((x) => x.id !== u.id));
+		} catch {
+			toast.error("Không thể bỏ theo dõi. Vui lòng thử lại.");
+		} finally {
+			setUnfollowingId(null);
+		}
+	};
+
+	const title = type === "followers" ? "Người theo dõi" : "Đang theo dõi";
+
+	return (
+		<div
+			className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
+			onClick={(e) => e.target === e.currentTarget && onClose()}>
+			<div className='flex w-full max-w-md flex-col rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111]'>
+				{/* Header */}
+				<div className='flex items-center justify-between border-b-2 border-black px-5 py-4'>
+					<h2 className='font-heading text-lg font-extrabold text-black'>{title}</h2>
+					<button
+						onClick={onClose}
+						className='rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-black'>
+						<X className='h-5 w-5' />
+					</button>
+				</div>
+
+				{/* Search */}
+				<div className='px-4 py-3'>
+					<div className='flex items-center gap-2 rounded-xl border-2 border-black bg-gray-50 px-3 py-2'>
+						<Search className='h-4 w-4 shrink-0 text-gray-400' />
+						<input
+							type='text'
+							placeholder='Tìm kiếm'
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							className='flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400'
+						/>
+					</div>
+				</div>
+
+				{/* List */}
+				<div className='max-h-80 overflow-y-auto px-4 pb-4'>
+					{loading ? (
+						<div className='flex justify-center py-8'>
+							<Loader2 className='h-6 w-6 animate-spin text-gray-400' />
+						</div>
+					) : filtered.length === 0 ? (
+						<div className='py-10 text-center text-sm text-gray-400'>
+							{search
+								? "Không có kết quả"
+								: type === "followers"
+									? "Chưa có người theo dõi"
+									: "Chưa theo dõi ai"}
+						</div>
+					) : (
+						<div className='space-y-1'>
+							{filtered.map((u) => {
+								const avatar = buildAvatar(u.full_name, u.avatar);
+								const profileUrl = u.username ? `/@${u.username}` : null;
+								return (
+									<div
+										key={u.id}
+										className='flex items-center gap-3 rounded-xl p-2 hover:bg-gray-50'>
+										<button
+											className='shrink-0'
+											onClick={() => {
+												if (profileUrl) {
+													navigate(profileUrl);
+													onClose();
+												}
+											}}>
+											<img
+												src={avatar}
+												alt={u.full_name}
+												className='h-10 w-10 rounded-full border-2 border-black object-cover'
+											/>
+										</button>
+										<button
+											className='min-w-0 flex-1 text-left'
+											onClick={() => {
+												if (profileUrl) {
+													navigate(profileUrl);
+													onClose();
+												}
+											}}>
+											<p className='truncate text-sm font-bold leading-tight text-black'>
+												{u.full_name}
+											</p>
+											{u.username && (
+												<p className='text-xs text-gray-500'>@{u.username}</p>
+											)}
+										</button>
+										{isOwnProfile && type === "following" && u.username && (
+											<button
+												onClick={() => handleUnfollow(u)}
+												disabled={unfollowingId === u.id}
+												className='inline-flex shrink-0 items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 py-1.5 text-xs font-bold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none disabled:opacity-60'>
+												{unfollowingId === u.id ? (
+													<Loader2 className='h-3.5 w-3.5 animate-spin' />
+												) : (
+													<>
+														<UserCheck className='h-3.5 w-3.5' />
+														Đang theo dõi
+													</>
+												)}
+											</button>
+										)}
+									</div>
+								);
+							})}
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+};
+
+// ─── Profile Header ───────────────────────────────────────────────────────────
+
 interface ProfileHeaderProps {
 	profile: UserProfile;
 	isOwnProfile: boolean;
@@ -383,6 +564,8 @@ interface ProfileHeaderProps {
 	followLoading: boolean;
 	onFollow: () => void;
 	onUpdated?: (p: UserProfile) => void;
+	onFollowersClick: () => void;
+	onFollowingClick: () => void;
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -392,6 +575,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 	followLoading,
 	onFollow,
 	onUpdated,
+	onFollowersClick,
+	onFollowingClick,
 }) => {
 	const handle = getHandle(profile.username, profile.email);
 	const avatar = buildAvatar(profile.full_name, profile.avatar);
@@ -582,11 +767,15 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 					</div>
 
 					<div className='mt-3 flex items-center gap-5 text-sm'>
-						<button className='flex items-center gap-1 font-bold text-black hover:underline'>
+						<button
+							onClick={onFollowersClick}
+							className='flex items-center gap-1 font-bold text-black hover:underline'>
 							<span className='font-extrabold'>{profile.followers_count}</span>
 							<span className='font-medium text-gray-500'>Người theo dõi</span>
 						</button>
-						<button className='flex items-center gap-1 font-bold text-black hover:underline'>
+						<button
+							onClick={onFollowingClick}
+							className='flex items-center gap-1 font-bold text-black hover:underline'>
 							<span className='font-extrabold'>{profile.following_count}</span>
 							<span className='font-medium text-gray-500'>Đang theo dõi</span>
 						</button>
@@ -1524,6 +1713,7 @@ const UserProfilePage: React.FC = () => {
 	const [followed, setFollowed] = useState(false);
 	const [followLoading, setFollowLoading] = useState(false);
 	const [copiedProfileLink, setCopiedProfileLink] = useState(false);
+	const [followModal, setFollowModal] = useState<"followers" | "following" | null>(null);
 	const copyResetTimeoutRef = useRef<number | null>(null);
 
 	// ── Tab state synced with URL ?tab= query param ──────────────────────────
@@ -1773,6 +1963,7 @@ const UserProfilePage: React.FC = () => {
 	};
 
 	return (
+		<>
 		<div className='w-full min-h-screen pt-16'>
 			<div className='neo-container px-0 py-0 sm:px-4 sm:py-8 md:px-6'>
 				<div className='flex gap-6'>
@@ -1785,6 +1976,8 @@ const UserProfilePage: React.FC = () => {
 							followLoading={followLoading}
 							onFollow={handleFollow}
 							onUpdated={(updated) => setProfile(updated)}
+							onFollowersClick={() => setFollowModal("followers")}
+							onFollowingClick={() => setFollowModal("following")}
 						/>
 
 						{/* Tabs — "Đã lưu" and "Lưu trữ" only visible on own profile */}
@@ -1943,6 +2136,16 @@ const UserProfilePage: React.FC = () => {
 				</div>
 			</div>
 		</div>
+
+		{followModal && username && (
+			<FollowListModal
+				username={username}
+				type={followModal}
+				isOwnProfile={isOwnProfile}
+				onClose={() => setFollowModal(null)}
+			/>
+		)}
+	</>
 	);
 };
 
