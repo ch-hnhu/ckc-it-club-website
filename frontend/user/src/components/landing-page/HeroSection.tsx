@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { ArrowRight, Users } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const HeroSection: React.FC = () => {
 	const heroRef = useRef<HTMLDivElement>(null);
@@ -107,12 +108,12 @@ const HeroSection: React.FC = () => {
 									Khám phá ngay
 									<ArrowRight className='w-5 h-5' />
 								</a>
-								<a
-									href='#about'
+								<Link
+									to='/ung-tuyen'
 									className='neo-btn neo-btn-secondary text-base px-6 py-3'>
 									<Users className='w-5 h-5' />
 									Tham gia CLB
-								</a>
+								</Link>
 							</div>
 						</div>
 					</div>

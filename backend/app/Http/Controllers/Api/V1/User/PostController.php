@@ -46,7 +46,10 @@ class PostController extends BaseApiController
             )
             ->when(
                 $username,
-                fn ($q) => $q->whereHas('user', fn ($u) => $u->where('username', $username))
+                fn ($q) => $q->whereHas('user', fn ($u) => $u
+                    ->where('username', $username)
+                    ->orWhere('email', 'like', "{$username}@%")
+                )
             )
             ->when(
                 $username,

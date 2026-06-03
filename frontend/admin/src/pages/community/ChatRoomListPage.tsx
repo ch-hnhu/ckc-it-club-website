@@ -25,6 +25,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -65,6 +66,7 @@ import chatService from "@/services/chat.service";
 export interface ChatRoomRecord {
 	id: number;
 	name: string | null;
+	image: string | null;
 	member_count: number;
 	message_count: number;
 	last_message_at: string | null;
@@ -191,6 +193,8 @@ function ChatRoomListPage() {
 	const [formOpen, setFormOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<ChatRoomRecord | null>(null);
 	const [roomName, setRoomName] = useState("");
+	const [roomImage, setRoomImage] = useState<File | null>(null);
+	const [roomImagePreview, setRoomImagePreview] = useState("");
 	const [isSavingRoom, setIsSavingRoom] = useState(false);
 	const [deleteRoomTarget, setDeleteRoomTarget] = useState<ChatRoomRecord | null>(null);
 	const [isDeletingRoom, setIsDeletingRoom] = useState(false);
@@ -254,15 +258,33 @@ function ChatRoomListPage() {
 
 	const roomDisplayName = (room: ChatRoomRecord) => room.name ?? `Phòng #${room.id}`;
 
+	const handleImageChange = (file: File | null) => {
+		if (!file) {
+			setRoomImage(null);
+			setRoomImagePreview(editTarget?.image ?? "");
+			return;
+		}
+		if (!file.type.startsWith("image/")) {
+			toast.error("Vui lòng chọn file ảnh hợp lệ.");
+			return;
+		}
+		setRoomImage(file);
+		setRoomImagePreview(URL.createObjectURL(file));
+	};
+
 	const openCreateRoom = () => {
 		setEditTarget(null);
 		setRoomName("");
+		setRoomImage(null);
+		setRoomImagePreview("");
 		setFormOpen(true);
 	};
 
 	const openEditRoom = (room: ChatRoomRecord) => {
 		setEditTarget(room);
 		setRoomName(room.name ?? "");
+		setRoomImage(null);
+		setRoomImagePreview(room.image ?? "");
 		setFormOpen(true);
 	};
 
@@ -276,11 +298,11 @@ function ChatRoomListPage() {
 		setIsSavingRoom(true);
 		try {
 			if (editTarget) {
-				const response = await chatService.updateRoom(editTarget.id, { name });
+				const response = await chatService.updateRoom(editTarget.id, { name, image: roomImage });
 				setRooms((prev) => prev.map((room) => room.id === editTarget.id ? { ...room, ...response.data } : room));
 				toast.success("Đã cập nhật phòng chat.");
 			} else {
-				await chatService.createRoom({ name });
+				await chatService.createRoom({ name, image: roomImage });
 				setMeta((prev) => ({ ...prev, current_page: 1 }));
 				toast.success("Đã tạo phòng chat.");
 			}
@@ -288,6 +310,8 @@ function ChatRoomListPage() {
 			setFormOpen(false);
 			setEditTarget(null);
 			setRoomName("");
+			setRoomImage(null);
+			setRoomImagePreview("");
 			setReloadToken((token) => token + 1);
 		} catch {
 			toast.error(editTarget ? "Không thể cập nhật phòng chat." : "Không thể tạo phòng chat.");
@@ -379,14 +403,14 @@ function ChatRoomListPage() {
 									rooms.map((room) => (
 										<TableRow key={room.id}>
 											<TableCell>
-												<div className="flex items-center gap-2.5">
-													<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-violet-100 text-violet-600 dark:bg-violet-900/40">
-														<Users className="h-4 w-4" />
-													</div>
-													<div className="min-w-0">
-														<p className="truncate text-sm font-medium">{roomDisplayName(room)}</p>
-														<p className="text-xs text-muted-foreground">#{room.id}</p>
-													</div>
+												<div className="flex items-center gap-3">
+													<Avatar className="h-8 w-8">
+														<AvatarImage src={room.image ?? undefined} alt={roomDisplayName(room)} />
+														<AvatarFallback className="bg-violet-500/10 text-sm font-semibold text-violet-600 dark:text-violet-400">
+															{roomDisplayName(room).charAt(0).toUpperCase()}
+														</AvatarFallback>
+													</Avatar>
+													<span className="font-medium">{roomDisplayName(room)}</span>
 												</div>
 											</TableCell>
 											<TableCell>
@@ -468,24 +492,44 @@ function ChatRoomListPage() {
 					<DialogHeader>
 						<DialogTitle>{editTarget ? "Cập nhật phòng chat" : "Tạo phòng chat"}</DialogTitle>
 					</DialogHeader>
-					<div className="space-y-2">
-						<Label htmlFor="chat-room-name">Tên phòng</Label>
-						<Input
-							id="chat-room-name"
-							value={roomName}
-							onChange={(event) => setRoomName(event.target.value)}
-							placeholder="Nhập tên phòng chat"
-							maxLength={50}
-							onKeyDown={(event) => {
-								if (event.key === "Enter") {
-									event.preventDefault();
-									void handleSaveRoom();
-								}
-							}}
-						/>
-						<p className="text-xs text-muted-foreground">
-							Tên phòng chat phải rõ ràng và không trùng với phòng đang có.
-						</p>
+					<div className="space-y-4">
+						<div className="space-y-2">
+							<Label htmlFor="chat-room-name">Tên phòng</Label>
+							<Input
+								id="chat-room-name"
+								value={roomName}
+								onChange={(event) => setRoomName(event.target.value)}
+								placeholder="Nhập tên phòng chat"
+								maxLength={50}
+								onKeyDown={(event) => {
+									if (event.key === "Enter") {
+										event.preventDefault();
+										void handleSaveRoom();
+									}
+								}}
+							/>
+							<p className="text-xs text-muted-foreground">
+								Tên phòng chat phải rõ ràng và không trùng với phòng đang có.
+							</p>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="chat-room-image">Ảnh đại diện</Label>
+							<div className="flex items-center gap-3">
+								<Avatar className="h-10 w-10 shrink-0">
+									<AvatarImage src={roomImagePreview || undefined} alt="preview" />
+									<AvatarFallback className="bg-violet-500/10 text-sm font-semibold text-violet-600 dark:text-violet-400">
+										{roomName.charAt(0).toUpperCase() || <Users className="h-4 w-4" />}
+									</AvatarFallback>
+								</Avatar>
+								<Input
+									id="chat-room-image"
+									type="file"
+									accept="image/*"
+									onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+								/>
+							</div>
+							<p className="text-xs text-muted-foreground">Chọn file JPG, PNG, WEBP hoặc GIF. Tối đa 2MB.</p>
+						</div>
 					</div>
 					<DialogFooter>
 						<Button

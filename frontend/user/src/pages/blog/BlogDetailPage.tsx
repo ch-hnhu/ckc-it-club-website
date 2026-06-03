@@ -216,6 +216,22 @@ const BlogSuggestionSection: React.FC<BlogSuggestionSectionProps> = ({
 	);
 };
 
+// ─── Role label map ───────────────────────────────────────────────────────────
+
+const ROLE_LABELS: Record<string, string> = {
+	admin: "Quản trị viên",
+	president: "Chủ nhiệm CLB",
+	"vice-president": "Phó chủ nhiệm CLB",
+	"academic-head": "Trưởng ban Học thuật",
+	"communications-head": "Trưởng ban Truyền thông",
+	"volunteer-head": "Trưởng ban Tình nguyện",
+	"club-member": "Thành viên CKC IT Club",
+	user: "Thành viên",
+};
+
+const getRoleLabel = (role?: string | null) =>
+	role ? (ROLE_LABELS[role] ?? "Thành viên CKC IT Club") : "Thành viên CKC IT Club";
+
 // ─── AuthorBioCard ────────────────────────────────────────────────────────────
 
 interface AuthorBioCardProps {
@@ -257,7 +273,7 @@ const AuthorBioCard: React.FC<AuthorBioCardProps> = ({
 					</Link>
 					<p className='mt-1 flex items-center gap-1.5 text-sm text-gray-500'>
 						<User className='h-3.5 w-3.5 shrink-0' />
-						{handle} · Thành viên CKC IT Club
+						{handle} · {getRoleLabel(author.role)}
 					</p>
 					<div className='mt-5 flex flex-wrap gap-3'>
 						{!isOwnProfile && (
@@ -607,16 +623,22 @@ const BlogDetailPage: React.FC = () => {
 			navigate("/login", { state: { from: window.location.pathname } });
 			return;
 		}
-		const authorUsername = blog?.user?.username;
-		if (!authorUsername || followLoading) return;
+		const authorHandle =
+			blog?.user?.username ?? blog?.user?.email?.split("@")[0];
+		if (!authorHandle || followLoading) return;
 
 		const wasFollowed = followed;
 		setFollowed(!wasFollowed);
 		setFollowLoading(true);
 		try {
-			const res = await userService.toggleFollow(authorUsername);
+			const res = await userService.toggleFollow(authorHandle);
 			setFollowed(res.data.is_following);
-			toast.success(res.data.is_following ? "Đã theo dõi tác giả." : "Đã bỏ theo dõi.");
+			const authorName = blog?.user?.full_name ?? "tác giả";
+			if (res.data.is_following) {
+				toast.success(`Đã theo dõi ${authorName}`);
+			} else {
+				toast.success(`Đã bỏ theo dõi ${authorName}`);
+			}
 		} catch {
 			setFollowed(wasFollowed);
 			toast.error("Không thể thực hiện. Vui lòng thử lại.");

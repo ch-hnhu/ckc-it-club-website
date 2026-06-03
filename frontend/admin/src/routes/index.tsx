@@ -40,6 +40,7 @@ import TagListPage from "@/pages/community/TagListPage";
 import ChatRoomListPage from "@/pages/community/ChatRoomListPage";
 import MediaListPage from "@/pages/community/MediaListPage";
 import SkillListPage from "@/pages/community/SkillListPage";
+import ReportListPage from "@/pages/community/ReportListPage";
 
 const router = createBrowserRouter([
 	{
@@ -336,6 +337,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.skills.manage">
 						<SkillListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/reports",
+				element: (
+					<PermissionRoute permission="community.reports.view">
+						<ReportListPage />
 					</PermissionRoute>
 				),
 			},

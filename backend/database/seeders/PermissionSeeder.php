@@ -47,6 +47,7 @@ class PermissionSeeder extends Seeder
         'community.chat.manage'        => 'Xóa sự kiện hệ thống trong phòng chat',
         'community.media.view'         => 'Xem và quản lý tài nguyên media cộng đồng',
         'community.skills.manage'      => 'Thêm, sửa, xóa, bật/tắt skills của thành viên',
+        'community.reports.view'       => 'Xem và xử lý báo cáo vi phạm từ cộng đồng',
     ];
 
     /**
@@ -76,6 +77,7 @@ class PermissionSeeder extends Seeder
             'community.chat.view', 'community.chat.manage',
             'community.media.view',
             'community.skills.manage',
+            'community.reports.view',
         ],
 
         // Chủ nhiệm — hầu hết, không quản lý roles/permissions hệ thống
@@ -101,6 +103,7 @@ class PermissionSeeder extends Seeder
             'community.chat.view', 'community.chat.manage',
             'community.media.view',
             'community.skills.manage',
+            'community.reports.view',
         ],
 
         // Phó Chủ nhiệm — quản lý vận hành, không quản lý phân quyền
@@ -125,6 +128,7 @@ class PermissionSeeder extends Seeder
             'community.chat.view', 'community.chat.manage',
             'community.media.view',
             'community.skills.manage',
+            'community.reports.view',
         ],
 
         // Trưởng ban Học thuật — quản lý xét tuyển và cơ cấu học thuật
@@ -164,6 +168,7 @@ class PermissionSeeder extends Seeder
             'community.chat.view', 'community.chat.manage',
             'community.media.view',
             'community.skills.manage',
+            'community.reports.view',
         ],
 
         // Trưởng ban Tình nguyện — quản lý đơn xét tuyển

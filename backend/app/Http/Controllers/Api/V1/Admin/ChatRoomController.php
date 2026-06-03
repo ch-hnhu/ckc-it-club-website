@@ -9,6 +9,8 @@ use App\Models\Message;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ChatRoomController extends BaseApiController
 {
@@ -71,7 +73,8 @@ class ChatRoomController extends BaseApiController
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:50'],
+            'name'  => ['required', 'string', 'min:2', 'max:50'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:2048'],
         ]);
 
         $name = trim((string) $request->input('name'));
@@ -82,8 +85,12 @@ class ChatRoomController extends BaseApiController
             ], 'Tên phòng chat đã tồn tại.');
         }
 
-        $room = DB::transaction(function () use ($request, $name) {
-            $room = ChatRoom::create(['name' => $name]);
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('chat-rooms', 'public')
+            : null;
+
+        $room = DB::transaction(function () use ($request, $name, $imagePath) {
+            $room = ChatRoom::create(['name' => $name, 'image' => $imagePath]);
 
             if ($request->user()) {
                 ChatMember::create([
@@ -105,7 +112,8 @@ class ChatRoomController extends BaseApiController
     public function update(Request $request, ChatRoom $room): JsonResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:50'],
+            'name'  => ['required', 'string', 'min:2', 'max:50'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:2048'],
         ]);
 
         $name = trim((string) $request->input('name'));
@@ -116,7 +124,16 @@ class ChatRoomController extends BaseApiController
             ], 'Tên phòng chat đã tồn tại.');
         }
 
-        $room->update(['name' => $name]);
+        $payload = ['name' => $name];
+
+        if ($request->hasFile('image')) {
+            if ($room->image && ! Str::startsWith($room->image, ['http://', 'https://'])) {
+                Storage::disk('public')->delete($room->image);
+            }
+            $payload['image'] = $request->file('image')->store('chat-rooms', 'public');
+        }
+
+        $room->update($payload);
         $room->loadCount(['members', 'messages']);
 
         return $this->successResponse(true, $this->transformRoom($room), 'Cập nhật phòng chat thành công.');
@@ -192,13 +209,21 @@ class ChatRoomController extends BaseApiController
     private function transformRoom(ChatRoom $room): array
     {
         return [
-            'id' => $room->id,
-            'name' => $room->name,
-            'member_count' => $room->members_count ?? 0,
-            'message_count' => $room->messages_count ?? 0,
+            'id'             => $room->id,
+            'name'           => $room->name,
+            'image'          => $this->resolveImageUrl($room->image),
+            'member_count'   => $room->members_count ?? 0,
+            'message_count'  => $room->messages_count ?? 0,
             'last_message_at' => $room->last_message_at?->toISOString(),
-            'created_at' => $room->created_at->toISOString(),
+            'created_at'     => $room->created_at->toISOString(),
         ];
+    }
+
+    private function resolveImageUrl(?string $image): ?string
+    {
+        if (! $image) return null;
+        if (Str::startsWith($image, ['http://', 'https://', '/storage/'])) return $image;
+        return Storage::disk('public')->url($image);
     }
 
     private function transformMessage(Message $message): array
