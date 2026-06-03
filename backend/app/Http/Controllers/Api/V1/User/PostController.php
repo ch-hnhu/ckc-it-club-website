@@ -33,6 +33,8 @@ class PostController extends BaseApiController
         $channel = $request->query('channel');
         $username = $request->query('username');
 
+        $viewer = $request->user('sanctum');
+
         $posts = Post::query()
             ->with([
                 'user:id,full_name,username,email,avatar,student_code',
@@ -41,6 +43,7 @@ class PostController extends BaseApiController
             ->withCount('comments')
             ->selectRaw('posts.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "post" AND target_id = posts.id) as reactions_count')
             ->where('posts.status', 'published')
+            ->visibleTo($viewer)
             ->when(
                 $channel && $channel !== 'all',
                 fn ($q) => $q->whereHas('channel', fn ($c) => $c->where('slug', $channel))
@@ -62,7 +65,7 @@ class PostController extends BaseApiController
             ->paginate($perPage);
 
         // Optionally enrich with current user's reactions and bookmarks (batch queries)
-        $userId = auth('sanctum')->id();
+        $userId = $viewer?->id;
         $myReactions = [];
         $myBookmarks = [];
         $myReports = [];
@@ -114,6 +117,7 @@ class PostController extends BaseApiController
             ->withCount('comments')
             ->selectRaw('posts.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "post" AND target_id = posts.id) as reactions_count')
             ->where('posts.status', 'published')
+            ->visibleTo($request->user())
             ->whereHas('bookmarkedBy', fn ($q) => $q->where('user_id', $userId))
             ->orderBy('posts.created_at', 'desc')
             ->paginate($perPage);
@@ -146,7 +150,10 @@ class PostController extends BaseApiController
 
     public function bookmark(Request $request, int $id): JsonResponse
     {
-        Post::where('status', 'published')->findOrFail($id);
+        Post::query()
+            ->where('status', 'published')
+            ->visibleTo($request->user())
+            ->findOrFail($id);
 
         $userId = $request->user()->id;
         $exists = DB::table('post_bookmarks')
@@ -393,7 +400,10 @@ class PostController extends BaseApiController
 
     public function report(Request $request, int $id): JsonResponse
     {
-        $post = Post::where('status', 'published')->findOrFail($id);
+        $post = Post::query()
+            ->where('status', 'published')
+            ->visibleTo($request->user())
+            ->findOrFail($id);
 
         if ($post->user_id === $request->user()->id) {
             abort(403, 'Bạn không thể báo cáo bài viết của chính mình.');
@@ -424,9 +434,10 @@ class PostController extends BaseApiController
         return $this->successResponse(true, [], 'Báo cáo đã được ghi nhận.');
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        $userId = auth('sanctum')->id();
+        $viewer = $request->user('sanctum');
+        $userId = $viewer?->id;
 
         $post = Post::with([
             'user:id,full_name,username,email,avatar,student_code',
@@ -445,6 +456,7 @@ class PostController extends BaseApiController
                     });
                 }
             })
+            ->visibleTo($viewer)
             ->findOrFail($id);
 
         $data = $this->transformPost($post);
@@ -489,7 +501,11 @@ class PostController extends BaseApiController
             'type' => ['required', Rule::enum(ReactionType::class)],
         ]);
 
-        Post::where('status', 'published')->findOrFail($id);
+        $post = Post::query()
+            ->with('user:id,full_name,avatar,username')
+            ->where('status', 'published')
+            ->visibleTo($request->user())
+            ->findOrFail($id);
 
         $userId = $request->user()->id;
         $type = $request->input('type');
@@ -536,7 +552,6 @@ class PostController extends BaseApiController
 
         // Notify post owner on new reaction via UserNotificationService
         if ($isNewReaction) {
-            $post = Post::with('user:id,full_name,avatar,username')->find($id);
             if ($post?->user) {
                 UserNotificationService::dispatchReaction($post->user, $request->user(), $post, $type);
             }
@@ -560,7 +575,11 @@ class PostController extends BaseApiController
             'parent_id' => ['nullable', 'integer', 'exists:comments,id'],
         ]);
 
-        Post::where('status', 'published')->findOrFail($id);
+        $post = Post::query()
+            ->with('user:id,full_name,avatar,username')
+            ->where('status', 'published')
+            ->visibleTo($request->user())
+            ->findOrFail($id);
 
         $parentId = $request->input('parent_id');
         $depth = 0;
@@ -585,14 +604,12 @@ class PostController extends BaseApiController
             // Reply: notify the parent comment author
             $parent->load('user:id,full_name,avatar,username');
             if ($parent->user) {
-                $post = Post::find($id);
                 UserNotificationService::dispatchCommentReply(
                     $parent->user, $request->user(), $comment->id, $post, $comment->content,
                 );
             }
         } else {
             // Top-level comment: notify the post owner
-            $post = Post::with('user:id,full_name,avatar,username')->find($id);
             if ($post?->user) {
                 UserNotificationService::dispatchComment($post->user, $request->user(), $post, $comment->content, $comment->id);
             }
@@ -603,9 +620,10 @@ class PostController extends BaseApiController
 
     public function comments(Request $request, int $id): JsonResponse
     {
-        $userId = auth('sanctum')->id();
+        $viewer = $request->user('sanctum');
+        $userId = $viewer?->id;
 
-        // Ensure the post is publicly visible, or the current user's own archived post.
+        // Ensure the post is visible to the requester, or is the current user's own archived post.
         Post::query()
             ->whereKey($id)
             ->where(function ($query) use ($userId) {
@@ -619,15 +637,16 @@ class PostController extends BaseApiController
                     });
                 }
             })
+            ->visibleTo($viewer)
             ->firstOrFail();
 
         // Load ALL visible (non-hidden, non-deleted) comments for this post ordered by date
         $myReactionSelect = $userId
             ? ", (SELECT type FROM reactions WHERE target_type = 'comment' AND target_id = comments.id AND user_id = {$userId} LIMIT 1) as my_reaction"
-            : ", NULL as my_reaction";
+            : ', NULL as my_reaction';
 
         $allComments = Comment::with('user:id,full_name,username,email,avatar')
-            ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count' . $myReactionSelect)
+            ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count'.$myReactionSelect)
             ->where('post_id', $id)
             ->whereNull('deleted_at')
             ->orderBy('created_at', 'asc')
@@ -749,7 +768,18 @@ class PostController extends BaseApiController
             'type' => ['required', Rule::enum(ReactionType::class)],
         ]);
 
-        Comment::whereNull('deleted_at')->where('is_hidden', false)->findOrFail($id);
+        $comment = Comment::query()
+            ->whereNull('deleted_at')
+            ->where('is_hidden', false)
+            ->findOrFail($id);
+
+        if ($comment->post_id) {
+            Post::query()
+                ->whereKey($comment->post_id)
+                ->where('status', 'published')
+                ->visibleTo($request->user())
+                ->firstOrFail();
+        }
 
         $userId = $request->user()->id;
         $type = $request->input('type');

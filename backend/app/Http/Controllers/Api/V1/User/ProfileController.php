@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1\User;
 
+use App\Enums\HttpStatus;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\User\UpdateProfileRequest;
 use App\Models\Post;
 use App\Models\Skill;
 use App\Models\User;
-use App\Enums\HttpStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,58 +16,57 @@ use Illuminate\Support\Str;
 
 class ProfileController extends BaseApiController
 {
-    private function formatProfile(User $user): array
+    private function formatProfile(User $user, ?User $viewer): array
     {
         $user->loadMissing(['faculty', 'major', 'class', 'skills']);
-        $postsCount = $this->countPosts($user->id);
+        $postsCount = $this->countPosts($user->id, $viewer);
         $blogsCount = $this->countBlogs($user->id);
-        $authUser = auth('sanctum')->user();
-        $isOwnProfile = $authUser && $authUser->id === $user->id;
+        $isOwnProfile = $viewer && $viewer->id === $user->id;
 
         return [
-            'id'               => $user->id,
-            'full_name'        => $user->full_name,
-            'username'         => $user->username,
-            'email'            => $user->email,
-            'avatar'           => $user->avatar,
-            'cover_image'      => $user->cover_image,
-            'bio'              => $user->bio,
-            'student_code'     => $user->student_code,
-            'faculty_id'       => $user->faculty_id,
-            'faculty'          => $user->faculty?->label,
-            'major_id'         => $user->major_id,
-            'major'            => $user->major?->label,
-            'class_id'         => $user->class_id,
-            'class_name'       => $user->class?->label,
-            'gender'           => $user->gender,
-            'date_of_birth'    => $user->date_of_birth?->format('Y-m-d'),
-            'is_active'        => $user->is_active,
-            'posts_count'     => $postsCount,
-            'blogs_count'     => $blogsCount,
-            'content_count'   => $postsCount + $blogsCount,
-            'likes_count'     => $this->countLikes($user->id),
+            'id' => $user->id,
+            'full_name' => $user->full_name,
+            'username' => $user->username,
+            'email' => $user->email,
+            'avatar' => $user->avatar,
+            'cover_image' => $user->cover_image,
+            'bio' => $user->bio,
+            'student_code' => $user->student_code,
+            'faculty_id' => $user->faculty_id,
+            'faculty' => $user->faculty?->label,
+            'major_id' => $user->major_id,
+            'major' => $user->major?->label,
+            'class_id' => $user->class_id,
+            'class_name' => $user->class?->label,
+            'gender' => $user->gender,
+            'date_of_birth' => $user->date_of_birth?->format('Y-m-d'),
+            'is_active' => $user->is_active,
+            'posts_count' => $postsCount,
+            'blogs_count' => $blogsCount,
+            'content_count' => $postsCount + $blogsCount,
+            'likes_count' => $this->countLikes($user->id),
             'followers_count' => $user->followers()->count(),
             'following_count' => $user->following()->count(),
-            'is_following'      => auth('sanctum')->check() ? auth('sanctum')->user()->following()->where('following_id', $user->id)->exists() : false,
-            'bookmarks_count'   => $isOwnProfile
+            'is_following' => $viewer ? $viewer->following()->where('following_id', $user->id)->exists() : false,
+            'bookmarks_count' => $isOwnProfile
                 ? DB::table('post_bookmarks')->where('user_id', $user->id)->count()
                   + DB::table('blog_bookmarks')->where('user_id', $user->id)->count()
                 : null,
-            'archived_count'    => $isOwnProfile ? Post::where('user_id', $user->id)->where('status', 'archived')->count() : null,
-            'skills'            => $user->skills->pluck('name')->values(),
-            'social_github'    => $user->social_github,
-            'social_linkedin'  => $user->social_linkedin,
+            'archived_count' => $isOwnProfile ? Post::where('user_id', $user->id)->where('status', 'archived')->count() : null,
+            'skills' => $user->skills->pluck('name')->values(),
+            'social_github' => $user->social_github,
+            'social_linkedin' => $user->social_linkedin,
             'social_instagram' => $user->social_instagram,
-            'social_youtube'   => $user->social_youtube,
-            'social_tiktok'    => $user->social_tiktok,
-            'social_twitch'    => $user->social_twitch,
-            'created_at'       => $user->created_at?->toIso8601String(),
+            'social_youtube' => $user->social_youtube,
+            'social_tiktok' => $user->social_tiktok,
+            'social_twitch' => $user->social_twitch,
+            'created_at' => $user->created_at?->toIso8601String(),
         ];
     }
 
     public function show(Request $request): JsonResponse
     {
-        return $this->successResponse(true, $this->formatProfile($request->user()), 'Lấy thông tin hồ sơ thành công.');
+        return $this->successResponse(true, $this->formatProfile($request->user(), $request->user()), 'Lấy thông tin hồ sơ thành công.');
     }
 
     public function update(UpdateProfileRequest $request): JsonResponse
@@ -111,7 +110,7 @@ class ProfileController extends BaseApiController
 
         $user->update(array_intersect_key($data, array_flip($user->getFillable())));
 
-        return $this->successResponse(true, $this->formatProfile($user->refresh()), 'Cập nhật hồ sơ thành công.');
+        return $this->successResponse(true, $this->formatProfile($user->refresh(), $request->user()), 'Cập nhật hồ sơ thành công.');
     }
 
     public function checkUsername(Request $request): JsonResponse
@@ -130,14 +129,14 @@ class ProfileController extends BaseApiController
      * Public profile — no auth required.
      * Returns 404 with a clear message if username is not found (active).
      */
-    public function showPublic(string $username): JsonResponse
+    public function showPublic(Request $request, string $username): JsonResponse
     {
         // Tìm theo username trước; nếu không có thì fallback theo email prefix
         // (vì buildProfileUrl() dùng email.split("@")[0] khi user chưa đặt username)
         $user = User::where('is_active', true)
             ->where(function ($q) use ($username) {
                 $q->where('username', $username)
-                  ->orWhere('email', 'like', "{$username}@%");
+                    ->orWhere('email', 'like', "{$username}@%");
             })
             ->first();
 
@@ -149,7 +148,7 @@ class ProfileController extends BaseApiController
             );
         }
 
-        return $this->successResponse(true, $this->formatProfile($user), 'Lấy thông tin hồ sơ thành công.');
+        return $this->successResponse(true, $this->formatProfile($user, $request->user('sanctum')), 'Lấy thông tin hồ sơ thành công.');
     }
 
     public function skills(): JsonResponse
@@ -163,9 +162,13 @@ class ProfileController extends BaseApiController
     }
 
     /** Tổng posts đã published của user */
-    private function countPosts(int $userId): int
+    private function countPosts(int $userId, ?User $viewer): int
     {
-        return Post::where('user_id', $userId)->where('status', 'published')->count();
+        return Post::query()
+            ->where('user_id', $userId)
+            ->where('status', 'published')
+            ->visibleTo($viewer)
+            ->count();
     }
 
     /** Tổng blogs đã published của user */
