@@ -54,6 +54,7 @@ class ProfileController extends BaseApiController
                 : null,
             'archived_count' => $isOwnProfile ? Post::where('user_id', $user->id)->where('status', 'archived')->count() : null,
             'skills' => $user->skills->pluck('name')->values(),
+            'is_school_student' => $user->isSchoolStudent(),
             'social_github' => $user->social_github,
             'social_linkedin' => $user->social_linkedin,
             'social_instagram' => $user->social_instagram,
@@ -101,6 +102,13 @@ class ProfileController extends BaseApiController
         }
         unset($data['skills'], $data['skills_sync']);
 
+        // Chỉ sinh viên trường (mail @caothang.edu.vn) mới được cập nhật thông tin học vụ
+        if (! $user->isSchoolStudent()) {
+            foreach (['student_code', 'faculty_id', 'major_id', 'class_id'] as $field) {
+                unset($data[$field]);
+            }
+        }
+
         // Nullify empty academic fields so users can clear them
         foreach (['faculty_id', 'major_id', 'class_id'] as $field) {
             if (array_key_exists($field, $data) && empty($data[$field])) {
@@ -111,6 +119,20 @@ class ProfileController extends BaseApiController
         $user->update(array_intersect_key($data, array_flip($user->getFillable())));
 
         return $this->successResponse(true, $this->formatProfile($user->refresh(), $request->user()), 'Cập nhật hồ sơ thành công.');
+    }
+
+    /**
+     * Trả về trạng thái sinh viên của user hiện tại.
+     * Dùng để kiểm tra quyền truy cập tính năng và phân quyền.
+     */
+    public function checkSchoolStudent(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return $this->successResponse(true, [
+            'is_school_student' => $user->isSchoolStudent(),
+            'email_domain' => substr(strrchr($user->email, '@'), 1),
+        ], 'Kiểm tra thành công.');
     }
 
     public function checkUsername(Request $request): JsonResponse
