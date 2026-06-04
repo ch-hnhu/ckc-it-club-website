@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\User;
 use App\Enums\HttpStatus;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\User\UpdateProfileRequest;
+use App\Models\Blog;
 use App\Models\Post;
 use App\Models\Skill;
 use App\Models\User;
@@ -52,7 +53,10 @@ class ProfileController extends BaseApiController
                 ? DB::table('post_bookmarks')->where('user_id', $user->id)->count()
                   + DB::table('blog_bookmarks')->where('user_id', $user->id)->count()
                 : null,
-            'archived_count' => $isOwnProfile ? Post::where('user_id', $user->id)->where('status', 'archived')->count() : null,
+            'archived_count' => $isOwnProfile
+                ? Post::where('user_id', $user->id)->where('status', 'archived')->count()
+                  + Blog::where('author_id', $user->id)->where('status', 'archived')->count()
+                : null,
             'skills' => $user->skills->pluck('name')->values(),
             'is_school_student' => $user->isSchoolStudent(),
             'social_github' => $user->social_github,

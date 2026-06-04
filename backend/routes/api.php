@@ -110,11 +110,15 @@ Route::prefix('v1')->group(function () {
             Route::post('/blogs/{id}/bookmark', [UserBlogController::class, 'bookmark']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
             Route::post('/blogs/{id}/pin', [UserBlogController::class, 'pin']);
+            Route::post('/blogs/{id}/archive', [UserBlogController::class, 'archive']);
+            Route::post('/blogs/{id}/visibility', [UserBlogController::class, 'updateVisibility']);
+            Route::delete('/blogs/{id}', [UserBlogController::class, 'destroy']);
         });
 
         // Wildcard routes registered last to avoid masking specific paths above
         Route::get('/posts/{id}', [UserPostController::class, 'show']);
         Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
+        Route::post('/blogs/{slug}/view', [UserBlogController::class, 'recordView']);
     });
 
     // Forgot password (throttled: 5 attempts per minute per IP)

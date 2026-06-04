@@ -2,19 +2,26 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	ArrowLeft,
+	Archive,
 	Bookmark,
 	Check,
 	Clock,
 	Eye,
 	Heart,
 	Loader2,
+	LockKeyhole,
 	MessageCircle,
+	MoreHorizontal,
+	Pencil,
+	Pin,
 	Send,
 	Share2,
+	Trash2,
 	User,
 	UserCheck,
 	UserPlus,
 } from "lucide-react";
+import PrivacyBlogModal from "@/components/community/PrivacyBlogModal";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
 	Breadcrumb,
@@ -331,8 +338,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
 	highlightedCommentId,
 }) => {
 	const navigate = useNavigate();
-	const [liked, setLiked] = useState(false);
+	const [liked, setLiked] = useState(comment.my_reaction === "heart");
 	const [likeCount, setLikeCount] = useState(comment.reactions_count);
+	const [reactionLoading, setReactionLoading] = useState(false);
 	const [showReplies, setShowReplies] = useState(true);
 	const [showReplyForm, setShowReplyForm] = useState(false);
 	const [replyText, setReplyText] = useState("");
@@ -401,14 +409,30 @@ const CommentItem: React.FC<CommentItemProps> = ({
 					</div>
 					<div className='mt-1.5 flex items-center gap-3 px-1'>
 						<button
-							onClick={() => {
-								setLiked((p) => {
-									setLikeCount((c) => (p ? c - 1 : c + 1));
-									return !p;
-								});
+							onClick={async () => {
+								if (!user) {
+									navigate("/login");
+									return;
+								}
+								if (reactionLoading) return;
+								const wasLiked = liked;
+								setLiked(!wasLiked);
+								setLikeCount((c) => (wasLiked ? Math.max(0, c - 1) : c + 1));
+								setReactionLoading(true);
+								try {
+									const res = await blogService.toggleCommentReaction(comment.id, "heart");
+									setLiked(res.data.my_reaction === "heart");
+									setLikeCount(res.data.reactions_count);
+								} catch {
+									setLiked(wasLiked);
+									setLikeCount((c) => (wasLiked ? c + 1 : Math.max(0, c - 1)));
+								} finally {
+									setReactionLoading(false);
+								}
 							}}
-							className={`flex items-center gap-1 text-xs font-bold transition ${liked ? "text-red-500" : "text-gray-500 hover:text-red-500"}`}>
-							<span className='text-sm leading-none'>{liked ? "❤️" : "🤍"}</span>
+							disabled={reactionLoading}
+							className={`flex items-center gap-1 text-xs font-bold transition disabled:opacity-60 ${liked ? "text-red-500" : "text-gray-500 hover:text-red-500"}`}>
+							<Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
 							{likeCount > 0 && <span>{likeCount}</span>}
 						</button>
 						{depth === 0 && (
@@ -524,12 +548,21 @@ const BlogDetailPage: React.FC = () => {
 	const [copiedLink, setCopiedLink] = useState(false);
 	const copyResetRef = useRef<number | null>(null);
 
+	const [showBlogMenu, setShowBlogMenu] = useState(false);
+	const [pinLoading, setPinLoading] = useState(false);
+	const [archiveLoading, setArchiveLoading] = useState(false);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+	const menuBtnRef = useRef<HTMLButtonElement>(null);
+	const menuDropdownRef = useRef<HTMLDivElement>(null);
+
 	const [highlightedCommentId, setHighlightedCommentId] = useState<number | null>(null);
 	const [commentText, setCommentText] = useState("");
 	const [submittingComment, setSubmittingComment] = useState(false);
 	const commentInputRef = useRef<HTMLTextAreaElement>(null);
 	const [suggestedBlogs, setSuggestedBlogs] = useState<Blog[]>([]);
 	const [suggestedBlogsLoading, setSuggestedBlogsLoading] = useState(false);
+	const viewRecordedRef = useRef(false);
 
 	const userDisplayName = user?.name || user?.email || "CKC member";
 	const userAvatar =
@@ -540,6 +573,7 @@ const BlogDetailPage: React.FC = () => {
 		if (!slug) return;
 		setBlogLoading(true);
 		setBlogError(null);
+		viewRecordedRef.current = false;
 		blogService
 			.getBlog(slug)
 			.then((res) => {
@@ -552,6 +586,14 @@ const BlogDetailPage: React.FC = () => {
 			.catch(() => setBlogError("Không tìm thấy bài viết."))
 			.finally(() => setBlogLoading(false));
 	}, [slug]);
+
+	useEffect(() => {
+		if (!slug || !blog?.slug || viewRecordedRef.current) return;
+		viewRecordedRef.current = true;
+		blogService.recordView(slug).then((res) => {
+			setBlog((prev) => prev ? { ...prev, view_count: res.data.view_count } : prev);
+		}).catch(() => {});
+	}, [slug, blog?.slug]);
 
 	useEffect(() => {
 		if (!blog?.id) return;
@@ -674,6 +716,72 @@ const BlogDetailPage: React.FC = () => {
 	};
 
 	const isOwnProfile = Boolean(user?.id && blog?.user?.id && Number(user.id) === blog.user.id);
+	const isArchived = blog?.status === "archived";
+	const currentVisibility = (blog?.visibility ?? "public") as "public" | "members" | "private";
+
+	const handlePrivacySaved = (visibility: "public" | "members" | "private") => {
+		setBlog((prev) => (prev ? { ...prev, visibility } : prev));
+	};
+
+	useEffect(() => {
+		if (!showBlogMenu) return;
+		const handleClickOutside = (e: MouseEvent) => {
+			if (menuBtnRef.current?.contains(e.target as Node)) return;
+			if (menuDropdownRef.current?.contains(e.target as Node)) return;
+			setShowBlogMenu(false);
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, [showBlogMenu]);
+
+	const closeBlogMenu = () => setShowBlogMenu(false);
+
+	const handleTogglePin = async () => {
+		if (!blog || pinLoading) return;
+		closeBlogMenu();
+		const nextPinned = !blog.is_pinned;
+		setBlog((prev) => (prev ? { ...prev, is_pinned: nextPinned } : prev));
+		setPinLoading(true);
+		try {
+			const res = await blogService.pinBlog(blog.id, nextPinned);
+			setBlog((prev) => (prev ? { ...prev, is_pinned: res.data.is_pinned } : prev));
+			toast.success(res.data.is_pinned ? "Đã ghim bài viết lên trang cá nhân." : "Đã bỏ ghim bài viết.");
+		} catch {
+			setBlog((prev) => (prev ? { ...prev, is_pinned: !nextPinned } : prev));
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setPinLoading(false);
+		}
+	};
+
+	const handleToggleArchive = async () => {
+		if (!blog || archiveLoading) return;
+		closeBlogMenu();
+		const nextStatus = isArchived ? "published" : "archived";
+		const previousStatus = blog.status;
+		setBlog((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+		setArchiveLoading(true);
+		try {
+			await blogService.archiveBlog(blog.id, nextStatus);
+			toast.success(nextStatus === "archived" ? "Đã lưu trữ bài viết." : "Đã khôi phục bài viết.");
+		} catch {
+			setBlog((prev) => (prev ? { ...prev, status: previousStatus } : prev));
+			toast.error("Không thể thực hiện. Vui lòng thử lại.");
+		} finally {
+			setArchiveLoading(false);
+		}
+	};
+
+	const handleDeleteBlog = async () => {
+		if (!blog) return;
+		try {
+			await blogService.deleteBlog(blog.id);
+			toast.success("Đã xóa bài viết.");
+			navigate("/blog");
+		} catch {
+			toast.error("Không thể xóa. Vui lòng thử lại.");
+		}
+	};
 
 	const handleToggleSaved = async () => {
 		if (!user) {
@@ -851,12 +959,89 @@ const BlogDetailPage: React.FC = () => {
 												</div>
 											</div>
 										</div>
+
+										{/* Three-dot menu */}
+										{user && (
+											<div className='relative shrink-0'>
+												<button
+													ref={menuBtnRef}
+													onClick={() => setShowBlogMenu((p) => !p)}
+													className={`shrink-0 rounded-lg border-2 p-1.5 transition ${showBlogMenu ? "border-black bg-gray-100" : "border-transparent hover:border-black hover:bg-gray-100"}`}
+													aria-label='Tùy chọn'>
+													<MoreHorizontal className='h-5 w-5 text-gray-500' />
+												</button>
+												{showBlogMenu && (
+													<div
+														ref={menuDropdownRef}
+														className='absolute right-0 top-full z-20 mt-1 min-w-[12rem] rounded-xl border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
+														{isOwnProfile ? (
+															<>
+																<button
+																	onClick={handleTogglePin}
+																	disabled={pinLoading}
+																	className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
+																	<Pin className='h-4 w-4' />
+																	{blog.is_pinned ? "Bỏ ghim" : "Ghim"}
+																</button>
+																<button
+																	onClick={() => {
+																		closeBlogMenu();
+																		navigate(`/blog/${blog.slug}/chinh-sua`);
+																	}}
+																	className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+																	<Pencil className='h-4 w-4' />
+																	Chỉnh sửa
+																</button>
+																<button
+																	onClick={() => {
+																		closeBlogMenu();
+																		setShowPrivacyModal(true);
+																	}}
+																	className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100'>
+																	<LockKeyhole className='h-4 w-4' />
+																	Quyền riêng tư
+																</button>
+																<button
+																	onClick={handleToggleArchive}
+																	disabled={archiveLoading}
+																	className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
+																	<Archive className='h-4 w-4' />
+																	{archiveLoading
+																		? isArchived ? "Đang khôi phục..." : "Đang lưu trữ..."
+																		: isArchived ? "Bỏ lưu trữ" : "Lưu trữ"}
+																</button>
+																<button
+																	onClick={() => {
+																		closeBlogMenu();
+																		setShowDeleteConfirm(true);
+																	}}
+																	className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
+																	<Trash2 className='h-4 w-4' />
+																	Xóa
+																</button>
+															</>
+														) : (
+															<button
+																onClick={() => {
+																	closeBlogMenu();
+																	void handleToggleSaved();
+																}}
+																disabled={saveLoading}
+																className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
+																<Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
+																{saved ? "Bỏ lưu" : "Lưu"}
+															</button>
+														)}
+													</div>
+												)}
+											</div>
+										)}
 									</div>
 
 									{/* Content */}
 									{blog.content && (
 										<div
-											className='prose prose-sm mt-7 max-w-none leading-7 text-gray-800 [&_a]:text-lime-700 [&_a:hover]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--color-primary)] [&_blockquote]:pl-4 [&_blockquote]:text-gray-600 [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:font-mono [&_code]:text-sm [&_h2]:mt-8 [&_h2]:font-heading [&_h2]:text-2xl [&_h2]:font-extrabold [&_h3]:mt-6 [&_h3]:font-heading [&_h3]:text-xl [&_h3]:font-extrabold [&_img]:rounded-xl [&_img]:border-2 [&_img]:border-black [&_pre]:rounded-xl [&_pre]:border-2 [&_pre]:border-black [&_pre]:bg-gray-900 [&_pre]:p-4 [&_pre]:text-white [&_strong]:font-extrabold'
+											className='prose prose-sm mt-7 max-w-none overflow-x-auto leading-7 text-gray-800 [&_a]:text-lime-700 [&_a:hover]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--color-primary)] [&_blockquote]:pl-4 [&_blockquote]:text-gray-600 [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:font-mono [&_code]:text-sm [&_h2]:mt-8 [&_h2]:font-heading [&_h2]:text-2xl [&_h2]:font-extrabold [&_h3]:mt-6 [&_h3]:font-heading [&_h3]:text-xl [&_h3]:font-extrabold [&_img]:rounded-xl [&_img]:border-2 [&_img]:border-black [&_pre]:rounded-xl [&_pre]:border-2 [&_pre]:border-black dark:[&_pre]:border-neutral-700 [&_pre]:overflow-hidden [&_pre_code]:block [&_pre_code]:p-4 [&_pre_code]:overflow-x-auto [&_strong]:font-extrabold [&_table]:my-6 [&_table]:w-full [&_table]:border-collapse [&_table]:border-2 [&_table]:border-black [&_table]:text-sm [&_th]:border-2 [&_th]:border-black [&_th]:bg-black [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:font-bold [&_th]:text-white [&_td]:border [&_td]:border-black/20 [&_td]:px-4 [&_td]:py-2.5 [&_tbody_tr:nth-child(even)]:bg-gray-50 [&_tbody_tr:hover]:bg-[var(--color-primary)]/10'
 											dangerouslySetInnerHTML={{
 												__html: renderMarkdownContent(blog.content),
 											}}
@@ -1064,6 +1249,47 @@ const BlogDetailPage: React.FC = () => {
 					</>
 				)}
 			</main>
+
+			{/* Privacy modal */}
+			{blog && showPrivacyModal && (
+				<PrivacyBlogModal
+					blogId={blog.id}
+					currentVisibility={currentVisibility}
+					onClose={() => setShowPrivacyModal(false)}
+					onSaved={handlePrivacySaved}
+				/>
+			)}
+
+			{/* Delete confirm modal */}
+			{showDeleteConfirm && (
+				<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4'>
+					<div
+						className='w-full max-w-sm rounded-2xl border-2 border-black bg-white p-7'
+						style={{ boxShadow: "6px 6px 0 #111" }}>
+						<Trash2 className='mx-auto mb-4 h-10 w-10 text-red-500' />
+						<h2
+							className='mb-2 text-center font-heading text-xl font-extrabold text-black'
+							style={{ fontFamily: "var(--font-heading)" }}>
+							Xóa bài viết?
+						</h2>
+						<p className='mb-7 text-center text-sm text-gray-600'>
+							Bài viết sẽ bị xóa vĩnh viễn và không thể khôi phục.
+						</p>
+						<div className='flex gap-3'>
+							<button
+								onClick={() => setShowDeleteConfirm(false)}
+								className='flex-1 rounded-xl border-2 border-black py-2.5 text-sm font-bold text-black transition hover:bg-gray-100'>
+								Hủy
+							</button>
+							<button
+								onClick={() => void handleDeleteBlog()}
+								className='flex-1 rounded-xl border-2 border-red-600 bg-red-600 py-2.5 text-sm font-bold text-white transition hover:bg-red-700'>
+								Xóa
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };

@@ -24,6 +24,7 @@ export interface Blog {
 	excerpt: string | null;
 	featured_image: string | null;
 	status: string;
+	visibility: "public" | "members" | "private";
 	is_pinned?: boolean;
 	is_highlight?: boolean;
 	published_at: string | null;
@@ -54,6 +55,7 @@ export interface BlogComment {
 	} | null;
 	content: string;
 	reactions_count: number;
+	my_reaction: ReactionType | null;
 	created_at: string;
 	replies: BlogComment[];
 }
