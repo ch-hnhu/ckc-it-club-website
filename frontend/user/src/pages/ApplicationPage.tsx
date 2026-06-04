@@ -9,6 +9,7 @@ import type {
 	ApplicationStatus,
 	ClubApplicationResponse,
 } from "@/types/application.types";
+import NeoSelect from "@/components/ui/NeoSelect";
 
 type OutletContext = {
 	user: AuthUser | null;
@@ -93,18 +94,12 @@ function QuestionField({
 
 	if (question.type === "select") {
 		return (
-			<select
-				required={question.is_required}
+			<NeoSelect
 				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				className={inputClass}>
-				<option value="">-- Chọn một đáp án --</option>
-				{question.options.map((option) => (
-					<option key={option.id} value={option.value}>
-						{option.label}
-					</option>
-				))}
-			</select>
+				onChange={onChange}
+				placeholder="-- Chọn một đáp án --"
+				options={question.options.map((opt) => ({ value: opt.value, label: opt.label }))}
+			/>
 		);
 	}
 
