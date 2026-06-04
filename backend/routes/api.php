@@ -156,6 +156,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('users')->group(function () {
             Route::get('/skills', [ProfileController::class, 'skills']);
             Route::get('/check-username', [ProfileController::class, 'checkUsername']);
+            Route::get('/check-school-student', [ProfileController::class, 'checkSchoolStudent']);
             Route::get('/profile', [ProfileController::class, 'show']);
             Route::post('/profile', [ProfileController::class, 'update']);
             Route::post('/{username}/follow', [FollowController::class, 'toggle']);

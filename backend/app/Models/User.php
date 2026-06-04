@@ -125,6 +125,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Kiểm tra user có phải sinh viên trường Cao Thắng hay không.
+     * Email hợp lệ: 10 chữ số + @caothang.edu.vn (ví dụ: 0306231234@caothang.edu.vn)
+     */
+    public function isSchoolStudent(): bool
+    {
+        return (bool) preg_match('/^\d{10}@caothang\.edu\.vn$/', $this->email);
+    }
+
+    /**
      * Generate a unique username from an email address.
      * Extracts the prefix, sanitizes it, and appends a suffix if already taken.
      */
