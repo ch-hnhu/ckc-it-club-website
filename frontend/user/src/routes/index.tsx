@@ -17,6 +17,7 @@ import UserProfilePage from "@/pages/user/UserProfilePage";
 import AccountPage from "@/pages/user/AccountPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
+import RegisterVerifyOtpPage from "@/pages/auth/RegisterVerifyOtpPage";
 import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
 import VerifyOtpPage from "@/pages/auth/VerifyOtpPage";
 import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
@@ -110,6 +111,10 @@ const router = createBrowserRouter([
 	{
 		path: "/register",
 		element: <RegisterPage />,
+	},
+	{
+		path: "/register/verify-otp",
+		element: <RegisterVerifyOtpPage />,
 	},
 	{
 		path: "/forgot-password",
