@@ -69,7 +69,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const location = useLocation();
 
 	const isClubMember = user?.roles?.includes("club-member") ?? false;
-	const shouldShowApplyButton = Boolean(user && !isClubMember);
+	const shouldShowApplyButton = Boolean(user && !isClubMember && user.is_school_student);
 	const desktopNavItems = BASE_NAV_ITEMS;
 	const mobileNavItems = shouldShowApplyButton
 		? [...BASE_NAV_ITEMS, APPLY_NAV_ITEM]

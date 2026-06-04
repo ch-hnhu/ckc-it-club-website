@@ -603,6 +603,7 @@ abstract class AuthBaseController extends Controller
                         'label' => $r->label,
                     ])->values(),
                     'permissions' => $user->getAllPermissions()->pluck('name')->values(),
+                    'is_school_student' => $user->isSchoolStudent(),
                 ],
             ], HttpStatus::OK->value);
 

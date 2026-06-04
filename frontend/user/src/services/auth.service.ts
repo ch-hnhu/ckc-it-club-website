@@ -6,6 +6,7 @@ export interface AuthUser {
 	username?: string | null;
 	permissions?: string[];
 	roles?: string[];
+	is_school_student?: boolean;
 }
 
 export type OAuthAuthSuccessPayload = {
@@ -156,6 +157,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 		roles: Array.isArray(user.roles)
 			? user.roles.map((r: { name: string }) => r.name)
 			: [],
+		is_school_student: user.is_school_student === true,
 	} as AuthUser;
 }
 
