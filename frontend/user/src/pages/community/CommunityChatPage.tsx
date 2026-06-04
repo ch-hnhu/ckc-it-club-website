@@ -689,7 +689,7 @@ const CommunityChatPage: React.FC = () => {
 
 	// ── Render ─────────────────────────────────────────────────────────────────
 	return (
-		<div className='flex h-[calc(100vh-4rem)] w-full overflow-hidden'>
+		<div className='flex h-[calc(100dvh-4rem)] w-full overflow-hidden'>
 			{/* ── Create room modal ──────────────────────────────────────── */}
 			{showCreate && (
 				<CreateRoomModal

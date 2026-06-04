@@ -1935,6 +1935,7 @@ const UserProfilePage: React.FC = () => {
 							gender: null,
 							date_of_birth: null,
 							is_active: true,
+							is_school_student: true,
 							posts_count: 12,
 							blogs_count: 0,
 							content_count: 12,

@@ -16,6 +16,7 @@ export interface UserProfile {
 	gender: string | null;
 	date_of_birth: string | null;
 	is_active: boolean;
+	is_school_student: boolean;
 	posts_count: number;
 	blogs_count: number;
 	content_count: number;

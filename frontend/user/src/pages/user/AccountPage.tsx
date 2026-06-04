@@ -71,6 +71,7 @@ interface InputFieldProps {
 	prefix?: string;
 	type?: string;
 	required?: boolean;
+	disabled?: boolean;
 	hint?: React.ReactNode;
 	rightElement?: React.ReactNode;
 }
@@ -83,6 +84,7 @@ const InputField: React.FC<InputFieldProps> = ({
 	prefix,
 	type = "text",
 	required,
+	disabled,
 	hint,
 	rightElement,
 }) => (
@@ -100,9 +102,12 @@ const InputField: React.FC<InputFieldProps> = ({
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
-				className={`h-[3.25rem] w-full rounded-xl border-2 border-black bg-white px-4 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635] ${
-					prefix ? "pl-[calc(0.75rem+var(--prefix-width,3.5rem))]" : ""
-				}`}
+				disabled={disabled}
+				className={`h-[3.25rem] w-full rounded-xl border-2 px-4 text-sm font-medium outline-none transition ${
+					disabled
+						? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400 select-all"
+						: "border-black bg-white text-black placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]"
+				} ${prefix ? "pl-[calc(0.75rem+var(--prefix-width,3.5rem))]" : ""}`}
 				style={prefix ? { paddingLeft: `${prefix.length * 7.5 + 16}px` } : undefined}
 			/>
 			{rightElement && <div className='absolute right-3'>{rightElement}</div>}
@@ -290,11 +295,18 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 		}, 600);
 	};
 
+	const isSchoolStudent = profile?.is_school_student ?? false;
+
 	const handleSave = async () => {
 		setSaving(true);
 		try {
 			const formData = new FormData();
-			Object.entries(form).forEach(([k, v]) => formData.append(k, v));
+			const academicFields = new Set(["student_code", "faculty_id", "major_id", "class_id"]);
+			Object.entries(form).forEach(([k, v]) => {
+				// Chỉ gửi academic fields nếu là sinh viên trường
+				if (!isSchoolStudent && academicFields.has(k)) return;
+				formData.append(k, v);
+			});
 			// Always sync skills (marker lets backend know to overwrite)
 			formData.append("skills_sync", "1");
 			selectedSkills.forEach((s) => formData.append("skills[]", s));
@@ -466,51 +478,67 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 
 					{/* Remaining fields */}
 					<div className='space-y-4'>
-						<InputField
-							label='MSSV'
-							value={form.student_code}
-							onChange={setField("student_code")}
-							placeholder='0306231234'
-						/>
+						{/* Thông tin học vụ — chỉ hiện với sinh viên trường */}
+						{isSchoolStudent ? (
+							<>
+								<InputField
+									label='MSSV'
+									value={form.student_code}
+									onChange={setField("student_code")}
+									placeholder='0306231234'
+									disabled
+								/>
 
-						<div>
-							<label className='mb-1.5 block text-sm font-bold text-black'>Khoa</label>
-							<NeoSelect
-								options={facultyOptions}
-								value={form.faculty_id}
-								onChange={handleFacultyChange}
-								placeholder={loadingAcademic ? "Đang tải..." : "Chọn khoa.."}
-								emptyMessage='Không tìm thấy khoa nào'
-							/>
-						</div>
+								<div>
+									<label className='mb-1.5 block text-sm font-bold text-black'>Khoa</label>
+									<NeoSelect
+										options={facultyOptions}
+										value={form.faculty_id}
+										onChange={handleFacultyChange}
+										placeholder={loadingAcademic ? "Đang tải..." : "Chọn khoa.."}
+										emptyMessage='Không tìm thấy khoa nào'
+									/>
+								</div>
 
-						<div>
-							<label className='mb-1.5 block text-sm font-bold text-black'>Ngành</label>
-							<NeoSelect
-								options={majorOptions}
-								value={form.major_id}
-								onChange={handleMajorChange}
-								placeholder='Chọn ngành..'
-								emptyMessage={
-									form.faculty_id
-										? "Khoa này chưa có ngành"
-										: "Vui lòng chọn khoa trước."
-								}
-							/>
-						</div>
+								<div>
+									<label className='mb-1.5 block text-sm font-bold text-black'>Ngành</label>
+									<NeoSelect
+										options={majorOptions}
+										value={form.major_id}
+										onChange={handleMajorChange}
+										placeholder='Chọn ngành..'
+										emptyMessage={
+											form.faculty_id
+												? "Khoa này chưa có ngành"
+												: "Vui lòng chọn khoa trước."
+										}
+									/>
+								</div>
 
-						<div>
-							<label className='mb-1.5 block text-sm font-bold text-black'>Lớp</label>
-							<NeoSelect
-								options={classOptions}
-								value={form.class_id}
-								onChange={setField("class_id")}
-								placeholder='Chọn lớp..'
-								emptyMessage={
-									form.major_id ? "Ngành này chưa có lớp" : "Vui lòng chọn ngành trước."
-								}
-							/>
-						</div>
+								<div>
+									<label className='mb-1.5 block text-sm font-bold text-black'>Lớp</label>
+									<NeoSelect
+										options={classOptions}
+										value={form.class_id}
+										onChange={setField("class_id")}
+										placeholder='Chọn lớp..'
+										emptyMessage={
+											form.major_id ? "Ngành này chưa có lớp" : "Vui lòng chọn ngành trước."
+										}
+									/>
+								</div>
+							</>
+						) : (
+							<div className='rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-3'>
+								<p className='text-sm font-bold text-gray-500'>
+									Thông tin học vụ (MSSV, Khoa, Ngành, Lớp)
+								</p>
+								<p className='mt-0.5 text-xs text-gray-400'>
+									Chỉ dành cho sinh viên đăng nhập bằng email trường{" "}
+									<span className='font-semibold text-gray-500'>@caothang.edu.vn</span>.
+								</p>
+							</div>
+						)}
 
 						<div>
 							<label className='mb-1.5 block text-sm font-bold text-black'>
