@@ -54,7 +54,7 @@ const TAG_BG = [
 	"bg-[var(--color-pastel-yellow)]",
 ];
 
-const FeaturedArticle: React.FC<{ blog: Blog }> = ({ blog }) => {
+const FeaturedArticle: React.FC<{ blog: Blog; isHighlight?: boolean }> = ({ blog, isHighlight }) => {
 	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = blog.user?.avatar?.trim();
 	const authorInitial = authorName.trim().charAt(0).toUpperCase() || "C";
@@ -94,7 +94,14 @@ const FeaturedArticle: React.FC<{ blog: Blog }> = ({ blog }) => {
 
 				{/* Text — 42% width on desktop */}
 				<div className='flex flex-col justify-center p-7 md:flex-1 md:p-10 lg:p-12'>
-					{/* Date · Author */}
+					{/* Highlight badge + Date · Author */}
+					{isHighlight && (
+						<div className='mb-3'>
+							<span className='inline-flex items-center gap-1 rounded-full border-2 border-black bg-[var(--color-primary)] px-3 py-1 font-heading text-[11px] font-extrabold uppercase tracking-wide text-black shadow-[2px_2px_0_#111]'>
+								✦ Nổi bật
+							</span>
+						</div>
+					)}
 					<div className='mb-4 flex items-center gap-2'>
 						<span className='text-xs font-medium text-gray-400'>{formattedDate}</span>
 						{blog.user && (
@@ -250,8 +257,13 @@ const BlogFeedPage: React.FC = () => {
 	}, [allTags, updateScrollState]);
 
 	const isFiltered = Boolean(search || activeTag);
-	const featuredBlog = !isFiltered && blogs.length > 0 ? blogs[0] : null;
-	const gridBlogs = featuredBlog ? blogs.slice(1) : blogs;
+	// Khi không filter: ưu tiên bài is_highlight, nếu không có thì lấy bài đầu tiên
+	const featuredBlog = !isFiltered && blogs.length > 0
+		? (blogs.find((b) => b.is_highlight) ?? blogs[0])
+		: null;
+	const gridBlogs = featuredBlog
+		? blogs.filter((b) => b.id !== featuredBlog.id)
+		: blogs;
 	const tagButtonClass =
 		"inline-flex h-10 shrink-0 items-center justify-center rounded-full border-2 border-black px-5 text-sm font-bold leading-none shadow-[3px_3px_0_#111] transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none";
 	const tagArrowButtonClass =
@@ -420,7 +432,9 @@ const BlogFeedPage: React.FC = () => {
 				) : (
 					<div className='space-y-10'>
 						{/* Featured article */}
-						{featuredBlog && <FeaturedArticle blog={featuredBlog} />}
+						{featuredBlog && (
+							<FeaturedArticle blog={featuredBlog} isHighlight={featuredBlog.is_highlight} />
+						)}
 
 						{/* Latest posts */}
 						{gridBlogs.length > 0 && (
@@ -428,6 +442,7 @@ const BlogFeedPage: React.FC = () => {
 								<h2 className='font-heading text-xl font-extrabold text-black'>
 									{isFiltered ? "Kết quả tìm kiếm" : "Bài viết mới nhất"}
 								</h2>
+
 								<div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
 									{gridBlogs.map((blog) => (
 										<BlogCard key={blog.id} blog={blog} />

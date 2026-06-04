@@ -12,6 +12,7 @@ import {
 	Filter,
 	MoreHorizontal,
 	Plus,
+	Star,
 	Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -84,6 +85,7 @@ export interface BlogRecord {
 	excerpt: string | null;
 	featured_image: string | null;
 	status: BlogStatus;
+	is_highlight: boolean;
 	published_at: string | null;
 	view_count: number;
 	comments_count: number;
@@ -154,7 +156,7 @@ function getStatusBadge(status: BlogStatus) {
 	);
 }
 
-type SortKey = "id" | "title" | "status" | "view_count" | "published_at" | "created_at" | "user_name" | "tags_count";
+type SortKey = "id" | "title" | "status" | "is_highlight" | "view_count" | "published_at" | "created_at" | "user_name" | "tags_count";
 
 const statusOptions: Array<{ value: BlogStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -244,6 +246,23 @@ function BlogListPage() {
 		sortConfig.order === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> :
 		sortConfig.order === "desc" ? <ArrowDown className="ml-2 h-4 w-4" /> :
 		<ArrowUpDown className="ml-2 h-4 w-4" />;
+
+	const handleToggleHighlight = async (blog: BlogRecord) => {
+		try {
+			const res = await blogService.toggleHighlight(blog.id);
+			const newValue = res.data.is_highlight;
+			setBlogs((prev) =>
+				prev.map((b) =>
+					b.id === blog.id
+						? { ...b, is_highlight: newValue }
+						: newValue ? { ...b, is_highlight: false } : b,
+				),
+			);
+			toast.success(newValue ? "Đã đặt bài viết làm highlight." : "Đã bỏ highlight bài viết.");
+		} catch {
+			toast.error("Không thể cập nhật highlight.");
+		}
+	};
 
 	const handleChangeStatus = async (blog: BlogRecord, next: BlogStatus) => {
 		try {
@@ -387,6 +406,11 @@ function BlogListPage() {
 											Tags {getSortIcon("tags_count")}
 										</Button>
 									</TableHead>
+									<TableHead className="w-[90px]">
+										<Button variant="ghost" onClick={() => handleSort("is_highlight")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Highlight {getSortIcon("is_highlight")}
+										</Button>
+									</TableHead>
 									<TableHead className="w-[140px]">
 										<Button variant="ghost" onClick={() => handleSort("status")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Trạng thái {getSortIcon("status")}
@@ -450,6 +474,11 @@ function BlogListPage() {
 													emptyLabel="--"
 												/>
 											</TableCell>
+											<TableCell>
+												{blog.is_highlight && (
+													<Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+												)}
+											</TableCell>
 											<TableCell>{getStatusBadge(blog.status)}</TableCell>
 											<TableCell className="text-sm text-muted-foreground">{blog.view_count.toLocaleString("vi-VN")}</TableCell>
 											<TableCell className="text-sm text-muted-foreground">{formatDate(blog.published_at)}</TableCell>
@@ -460,11 +489,17 @@ function BlogListPage() {
 															<MoreHorizontal className="h-4 w-4" />
 														</Button>
 													</DropdownMenuTrigger>
-													<DropdownMenuContent align="end" className="w-[190px]">
+													<DropdownMenuContent align="end" className="w-[200px]">
 														<DropdownMenuItem onClick={() => navigate(`/community/blogs/${blog.id}`)}>
 															<Eye className="h-4 w-4" />
 															Xem chi tiết
 														</DropdownMenuItem>
+														{blog.status === "published" && (
+															<DropdownMenuItem onClick={() => void handleToggleHighlight(blog)}>
+																<Star className={cn("h-4 w-4", blog.is_highlight && "fill-amber-400 text-amber-400")} />
+																{blog.is_highlight ? "Bỏ highlight" : "Đặt làm highlight"}
+															</DropdownMenuItem>
+														)}
 														{getNextActions(blog.status).map(({ next, label }) => (
 															<DropdownMenuItem key={next} onClick={() => void handleChangeStatus(blog, next)}>
 																<BookOpen className="h-4 w-4" />
@@ -485,7 +520,7 @@ function BlogListPage() {
 									))
 								) : (
 									<TableRow>
-										<TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+										<TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
 											Không tìm thấy bài viết nào phù hợp.
 										</TableCell>
 									</TableRow>
@@ -494,7 +529,7 @@ function BlogListPage() {
 
 							<TableFooter className="bg-transparent">
 								<TableRow>
-									<TableCell colSpan={9}>
+									<TableCell colSpan={10}>
 										<div className="flex items-center justify-between px-2">
 											<p className="flex-1 text-sm text-muted-foreground">
 												Đang hiển thị {blogs.length} trên tổng {meta.total} bài viết.
