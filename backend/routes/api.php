@@ -135,6 +135,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/logout-all', [AuthController::class, 'logoutAll']);
+        Route::post('/change-password', [AuthController::class, 'changePassword']);
     });
 
     // user logged-in routes
@@ -165,6 +166,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/check-school-student', [ProfileController::class, 'checkSchoolStudent']);
             Route::get('/profile', [ProfileController::class, 'show']);
             Route::post('/profile', [ProfileController::class, 'update']);
+            Route::delete('/account', [ProfileController::class, 'deleteAccount']);
             Route::post('/{username}/follow', [FollowController::class, 'toggle']);
         });
     });

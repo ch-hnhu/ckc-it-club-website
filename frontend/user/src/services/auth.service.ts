@@ -4,6 +4,7 @@ export interface AuthUser {
 	name?: string;
 	picture?: string;
 	username?: string | null;
+	provider?: string | null;
 	permissions?: string[];
 	roles?: string[];
 }
@@ -164,6 +165,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 		name: user.full_name,
 		picture: user.avatar,
 		username: user.username ?? null,
+		provider: user.provider ?? null,
 		permissions: Array.isArray(user.permissions) ? user.permissions : [],
 		roles: Array.isArray(user.roles)
 			? user.roles.map((r: { name: string }) => r.name)

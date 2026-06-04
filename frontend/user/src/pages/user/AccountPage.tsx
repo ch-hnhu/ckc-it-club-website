@@ -1,20 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import {
-	Bell,
 	Camera,
 	Check,
-	CreditCard,
+	Copy,
+	Eye,
+	EyeOff,
 	Github,
 	Globe,
+	Info,
 	Instagram,
+	KeyRound,
 	Loader2,
 	Settings,
+	Trash2,
 	User,
+	X,
 	Youtube,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { AuthUser } from "@/services/auth.service";
+import { clearAccessToken } from "@/services/auth.service";
 import { api } from "@/services/api.service";
 import { buildAvatar } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api.types";
@@ -46,12 +52,10 @@ interface SkillItem {
 
 // ─── Tab IDs ─────────────────────────────────────────────────────────────────
 
-type TabId = "profile" | "billing" | "notifications" | "settings";
+type TabId = "profile" | "settings";
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
 	{ id: "profile", label: "Hồ sơ", icon: User },
-	{ id: "billing", label: "Thanh toán", icon: CreditCard },
-	{ id: "notifications", label: "Thông báo email", icon: Bell },
 	{ id: "settings", label: "Cài đặt", icon: Settings },
 ];
 
@@ -248,7 +252,9 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 
 	const avatarSrc =
 		avatarPreview ??
-		(profile ? buildAvatar(profile.full_name, profile.avatar) : buildAvatar(user.name ?? "", null));
+		(profile
+			? buildAvatar(profile.full_name, profile.avatar)
+			: buildAvatar(user.name ?? "", null));
 
 	const coverSrc = coverPreview ?? profile?.cover_image ?? null;
 
@@ -333,10 +339,15 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 			setCoverFile(null);
 			onSaved();
 		} catch (err: unknown) {
-			const data = (err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })
-				?.response?.data;
+			const data = (
+				err as {
+					response?: { data?: { message?: string; errors?: Record<string, string[]> } };
+				}
+			)?.response?.data;
 			const firstFieldError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
-			toast.error(firstFieldError ?? data?.message ?? "Không thể lưu hồ sơ. Vui lòng thử lại.");
+			toast.error(
+				firstFieldError ?? data?.message ?? "Không thể lưu hồ sơ. Vui lòng thử lại.",
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -379,11 +390,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 					className='group relative h-36 cursor-pointer bg-gray-100 sm:h-44'
 					onClick={() => coverInputRef.current?.click()}>
 					{coverSrc ? (
-						<img
-							src={coverSrc}
-							alt='Cover'
-							className='h-full w-full object-cover'
-						/>
+						<img src={coverSrc} alt='Cover' className='h-full w-full object-cover' />
 					) : (
 						<div className='flex h-full items-center justify-center'>
 							<span className='text-sm font-medium text-gray-400'>
@@ -406,7 +413,9 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 
 				<div className='p-6'>
 					<h1 className='font-heading text-xl font-extrabold text-black'>Hồ sơ</h1>
-					<p className='mb-6 mt-1 text-sm text-gray-500'>Quản lý thông tin hồ sơ của bạn.</p>
+					<p className='mb-6 mt-1 text-sm text-gray-500'>
+						Quản lý thông tin hồ sơ của bạn.
+					</p>
 
 					{/* Top row — avatar LEFT, Name + Username + Email RIGHT */}
 					<div className='flex flex-col gap-6 sm:flex-row sm:items-start'>
@@ -511,18 +520,24 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 								/>
 
 								<div>
-									<label className='mb-1.5 block text-sm font-bold text-black'>Khoa</label>
+									<label className='mb-1.5 block text-sm font-bold text-black'>
+										Khoa
+									</label>
 									<NeoSelect
 										options={facultyOptions}
 										value={form.faculty_id}
 										onChange={handleFacultyChange}
-										placeholder={loadingAcademic ? "Đang tải..." : "Chọn khoa.."}
+										placeholder={
+											loadingAcademic ? "Đang tải..." : "Chọn khoa.."
+										}
 										emptyMessage='Không tìm thấy khoa nào'
 									/>
 								</div>
 
 								<div>
-									<label className='mb-1.5 block text-sm font-bold text-black'>Ngành</label>
+									<label className='mb-1.5 block text-sm font-bold text-black'>
+										Ngành
+									</label>
 									<NeoSelect
 										options={majorOptions}
 										value={form.major_id}
@@ -537,14 +552,18 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 								</div>
 
 								<div>
-									<label className='mb-1.5 block text-sm font-bold text-black'>Lớp</label>
+									<label className='mb-1.5 block text-sm font-bold text-black'>
+										Lớp
+									</label>
 									<NeoSelect
 										options={classOptions}
 										value={form.class_id}
 										onChange={setField("class_id")}
 										placeholder='Chọn lớp..'
 										emptyMessage={
-											form.major_id ? "Ngành này chưa có lớp" : "Vui lòng chọn ngành trước."
+											form.major_id
+												? "Ngành này chưa có lớp"
+												: "Vui lòng chọn ngành trước."
 										}
 									/>
 								</div>
@@ -556,7 +575,10 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 								</p>
 								<p className='mt-0.5 text-xs text-gray-400'>
 									Chỉ dành cho sinh viên đăng nhập bằng email trường{" "}
-									<span className='font-semibold text-gray-500'>@caothang.edu.vn</span>.
+									<span className='font-semibold text-gray-500'>
+										@caothang.edu.vn
+									</span>
+									.
 								</p>
 							</div>
 						)}
@@ -586,7 +608,9 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 					</div>
 
 					<div className='mt-4'>
-						<label className='mb-1.5 block text-sm font-bold text-black'>Giới thiệu</label>
+						<label className='mb-1.5 block text-sm font-bold text-black'>
+							Giới thiệu
+						</label>
 						<textarea
 							value={form.bio}
 							onChange={(e) => setField("bio")(e.target.value)}
@@ -618,13 +642,17 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 										<label
 											key={skill.id}
 											className={`flex cursor-pointer select-none items-center gap-2.5 rounded-xl border-2 border-black px-3 py-2.5 text-sm font-bold transition ${
-												checked ? "bg-[var(--color-primary)]" : "bg-white hover:bg-gray-50"
+												checked
+													? "bg-[var(--color-primary)]"
+													: "bg-white hover:bg-gray-50"
 											}`}>
 											<div
 												className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 border-black transition ${
 													checked ? "bg-black" : "bg-white"
 												}`}>
-												{checked && <Check className='h-3 w-3 text-white' />}
+												{checked && (
+													<Check className='h-3 w-3 text-white' />
+												)}
 											</div>
 											<input
 												type='checkbox'
@@ -751,7 +779,10 @@ const ProfileTabSkeleton: React.FC = () => (
 					<Bone className='mb-4 h-5 w-14' />
 					<div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4'>
 						{Array.from({ length: 16 }).map((_, i) => (
-							<Bone key={i} className='h-10 rounded-xl border-2 border-gray-300 bg-gray-100' />
+							<Bone
+								key={i}
+								className='h-10 rounded-xl border-2 border-gray-300 bg-gray-100'
+							/>
 						))}
 					</div>
 				</div>
@@ -775,30 +806,284 @@ const ProfileTabSkeleton: React.FC = () => (
 	</div>
 );
 
-// ─── Placeholder tabs ─────────────────────────────────────────────────────────
+// ─── Password Input ───────────────────────────────────────────────────────────
 
-const TAB_DESCRIPTIONS: Record<string, string> = {
-	"Thanh toán": "Quản lý gói thành viên và thanh toán.",
-	"Thông báo email": "Tùy chỉnh thông báo qua email.",
-	"Cài đặt": "Cài đặt tài khoản và bảo mật.",
+const PasswordInput: React.FC<{
+	label: string;
+	value: string;
+	onChange: (v: string) => void;
+	placeholder?: string;
+}> = ({ label, value, onChange, placeholder }) => {
+	const [show, setShow] = useState(false);
+	return (
+		<div>
+			<label className='mb-1.5 block text-sm font-bold text-black'>{label}</label>
+			<div className='relative'>
+				<input
+					type={show ? "text" : "password"}
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					placeholder={placeholder}
+					style={{ fontFamily: "var(--font-body)" }}
+					className='w-full rounded-xl border-2 border-black bg-white h-[3.25rem] pl-4 pr-12 text-sm font-medium outline-none transition placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
+				/>
+				<button
+					type='button'
+					onClick={() => setShow((s) => !s)}
+					tabIndex={-1}
+					className='absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-black transition-colors hover:bg-black/5'>
+					{show ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+				</button>
+			</div>
+		</div>
+	);
 };
 
-const ComingSoonTab: React.FC<{ title: string }> = ({ title }) => (
-	<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
-		<h1 className='font-heading text-xl font-extrabold text-black'>{title}</h1>
-		{TAB_DESCRIPTIONS[title] && (
-			<p className='mb-6 mt-1 text-sm text-gray-500'>{TAB_DESCRIPTIONS[title]}</p>
-		)}
-		<div className='rounded-xl border-2 border-dashed border-gray-200 px-6 py-16 text-center'>
-			<div className='mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border-4 border-black bg-[var(--color-pastel-yellow)] text-2xl shadow-[4px_4px_0_#111]'>
-				🚧
+// ─── Delete Account Modal ─────────────────────────────────────────────────────
+
+const DeleteAccountModal: React.FC<{
+	username: string;
+	onClose: () => void;
+	onConfirm: () => Promise<void>;
+}> = ({ username, onClose, onConfirm }) => {
+	const [inputVal, setInputVal] = useState("");
+	const [loading, setLoading] = useState(false);
+	const [copied, setCopied] = useState(false);
+
+	const matches = inputVal === username;
+
+	const handleCopy = async () => {
+		await navigator.clipboard.writeText(username);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 1500);
+	};
+
+	const handleConfirm = async () => {
+		if (!matches) return;
+		setLoading(true);
+		try {
+			await onConfirm();
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	return (
+		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4'>
+			<div className='w-full max-w-md rounded-2xl border-2 border-black bg-white p-6 shadow-[6px_6px_0_#111]'>
+				<div className='mb-4 flex items-center justify-between'>
+					<div className='flex items-center gap-2'>
+						<Trash2 className='h-5 w-5 text-red-600' />
+						<h2 className='font-heading text-lg font-extrabold text-black'>
+							Xoá tài khoản
+						</h2>
+					</div>
+					<button onClick={onClose} className='text-gray-400 hover:text-black'>
+						<X className='h-5 w-5' />
+					</button>
+				</div>
+
+				<div className='mb-4 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3'>
+					<p className='text-sm font-bold text-red-700'>
+						Hành động này không thể hoàn tác. Tất cả dữ liệu của bạn sẽ bị xoá vĩnh
+						viễn.
+					</p>
+				</div>
+
+				<p className='mb-2 text-sm text-gray-600'>
+					Xác nhận bằng cách nhập username của bạn bên dưới:
+				</p>
+				<div className='mb-4 flex items-center overflow-hidden rounded-xl border-2 border-black bg-gray-50'>
+					<span className='flex-1 select-all px-4 py-3 font-mono text-sm font-bold text-black'>
+						{username}
+					</span>
+					<button
+						type='button'
+						onClick={handleCopy}
+						className='flex items-center gap-1.5 border-l-2 border-gray-300 px-3 py-3 text-gray-600 transition hover:bg-gray-100 hover:text-black'>
+						{copied ? (
+							<Check className='h-4 w-4 text-green-600' />
+						) : (
+							<Copy className='h-4 w-4' />
+						)}
+					</button>
+				</div>
+
+				<input
+					type='text'
+					value={inputVal}
+					onChange={(e) => setInputVal(e.target.value)}
+					placeholder='Nhập username'
+					className='mb-5 h-[3.25rem] w-full rounded-xl border-2 border-black bg-white px-4 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:shadow-[0_0_0_3px_#fca5a5]'
+				/>
+
+				<div className='flex gap-3'>
+					<button
+						onClick={onClose}
+						className='flex-1 rounded-xl border-2 border-black bg-white px-4 py-2.5 text-sm font-bold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						Huỷ
+					</button>
+					<button
+						onClick={handleConfirm}
+						disabled={!matches || loading}
+						className='flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-black bg-red-500 px-4 py-2.5 text-sm font-bold text-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:translate-x-0 disabled:translate-y-0 disabled:opacity-50 disabled:shadow-[3px_3px_0_#111]'>
+						{loading && <Loader2 className='h-4 w-4 animate-spin' />}
+						Xoá tài khoản
+					</button>
+				</div>
 			</div>
-			<p className='font-heading text-base font-extrabold text-black'>
-				Tính năng này đang được phát triển.
-			</p>
 		</div>
-	</div>
-);
+	);
+};
+
+// ─── Settings Tab ─────────────────────────────────────────────────────────────
+
+const SettingsTab: React.FC<{
+	profile: UserProfile | null;
+	user: AuthUser;
+	onDeleted: () => Promise<void>;
+}> = ({ profile, user, onDeleted }) => {
+	const [oldPass, setOldPass] = useState("");
+	const [newPass, setNewPass] = useState("");
+	const [rePass, setRePass] = useState("");
+	const [savingPass, setSavingPass] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+	const username = profile?.username ?? user.username ?? "";
+
+	const handleChangePassword = async () => {
+		if (!oldPass || !newPass || !rePass) {
+			toast.error("Vui lòng điền đầy đủ các trường.");
+			return;
+		}
+		if (newPass !== rePass) {
+			toast.error("Mật khẩu mới không khớp.");
+			return;
+		}
+		if (newPass.length < 8) {
+			toast.error("Mật khẩu mới phải có ít nhất 8 ký tự.");
+			return;
+		}
+		setSavingPass(true);
+		try {
+			await api.post("/auth/change-password", {
+				current_password: oldPass,
+				new_password: newPass,
+				new_password_confirmation: rePass,
+			});
+			toast.success("Đổi mật khẩu thành công!");
+			setOldPass("");
+			setNewPass("");
+			setRePass("");
+		} catch (err: unknown) {
+			const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+			toast.error(data?.message ?? "Không thể đổi mật khẩu. Vui lòng thử lại.");
+		} finally {
+			setSavingPass(false);
+		}
+	};
+
+	const handleDeleteAccount = async () => {
+		try {
+			await api.delete("/users/account");
+			toast.success("Tài khoản đã được xoá.");
+			await onDeleted();
+		} catch (err: unknown) {
+			const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+			toast.error(data?.message ?? "Không thể xoá tài khoản. Vui lòng thử lại.");
+			throw err;
+		}
+	};
+
+	const isOAuth = !!user.provider;
+	const providerLabel =
+		user.provider === "google" ? "Google"
+		: user.provider === "github" ? "GitHub"
+		: user.provider ?? "";
+
+	return (
+		<div className='space-y-6'>
+			{/* Change password */}
+			<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
+				<div className='mb-1 flex items-center gap-2'>
+					<KeyRound className='h-5 w-5 text-black' />
+					<h1 className='font-heading text-xl font-extrabold text-black'>Đổi mật khẩu</h1>
+				</div>
+				<p className='mb-6 mt-1 text-sm text-gray-500'>
+					Cập nhật mật khẩu để bảo vệ tài khoản.
+				</p>
+
+				{isOAuth ? (
+					<div className='flex items-start gap-3 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-4'>
+						<Info className='mt-0.5 h-4 w-4 shrink-0 text-gray-400' />
+						<p className='text-sm text-gray-500'>
+							Tài khoản của bạn đăng nhập qua{" "}
+							<span className='font-bold text-gray-700'>{providerLabel}</span>, không thể
+							đổi mật khẩu tại đây.
+						</p>
+					</div>
+				) : (
+					<>
+						<div className='max-w-md space-y-4'>
+							<PasswordInput
+								label='Mật khẩu hiện tại'
+								value={oldPass}
+								onChange={setOldPass}
+								placeholder='••••••••'
+							/>
+							<PasswordInput
+								label='Mật khẩu mới'
+								value={newPass}
+								onChange={setNewPass}
+								placeholder='••••••••'
+							/>
+							<PasswordInput
+								label='Xác nhận mật khẩu mới'
+								value={rePass}
+								onChange={setRePass}
+								placeholder='••••••••'
+							/>
+						</div>
+
+						<div className='mt-6 flex max-w-md justify-end'>
+							<button
+								onClick={handleChangePassword}
+								disabled={savingPass}
+								className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:translate-x-0 disabled:translate-y-0 disabled:opacity-60 disabled:shadow-[3px_3px_0_#111]'>
+								{savingPass && <Loader2 className='h-4 w-4 animate-spin' />}
+								Đổi mật khẩu
+							</button>
+						</div>
+					</>
+				)}
+			</div>
+
+			{/* Danger zone */}
+			<div className='rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111]'>
+				<h2 className='mb-1 font-heading text-lg font-extrabold text-black'>
+					Vùng nguy hiểm
+				</h2>
+				<p className='mb-5 text-sm text-gray-500'>
+					Sau khi xoá, tài khoản và toàn bộ dữ liệu của bạn sẽ không thể khôi phục.
+				</p>
+				<button
+					onClick={() => setShowDeleteModal(true)}
+					className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-red-500 px-5 py-2.5 text-sm font-bold text-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+					<Trash2 className='h-4 w-4' />
+					Xoá tài khoản
+				</button>
+			</div>
+
+			{showDeleteModal && (
+				<DeleteAccountModal
+					username={username}
+					onClose={() => setShowDeleteModal(false)}
+					onConfirm={handleDeleteAccount}
+				/>
+			)}
+		</div>
+	);
+};
 
 // ─── AccountPage ──────────────────────────────────────────────────────────────
 
@@ -813,8 +1098,7 @@ const AccountPage: React.FC = () => {
 
 	const tabParam = searchParams.get("tabIndex");
 	const activeTabId: TabId =
-		(["profile", "billing", "notifications", "settings"] as TabId[])[Number(tabParam ?? 0)] ??
-		"profile";
+		(["profile", "settings"] as TabId[])[Number(tabParam ?? 0)] ?? "profile";
 
 	const [profile, setProfile] = useState<UserProfile | null>(null);
 	const [loadingProfile, setLoadingProfile] = useState(true);
@@ -886,12 +1170,16 @@ const AccountPage: React.FC = () => {
 									}}
 								/>
 							)
-						) : activeTabId === "billing" ? (
-							<ComingSoonTab title='Thanh toán' />
-						) : activeTabId === "notifications" ? (
-							<ComingSoonTab title='Thông báo email' />
 						) : (
-							<ComingSoonTab title='Cài đặt' />
+							<SettingsTab
+								profile={profile}
+								user={user}
+								onDeleted={async () => {
+									clearAccessToken();
+									await refreshUser();
+									navigate("/");
+								}}
+							/>
 						)}
 					</main>
 				</div>
