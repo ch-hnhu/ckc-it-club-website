@@ -164,6 +164,41 @@ class UserNotificationService
     }
 
     /**
+     * Notify a comment author when another user reacts to their blog comment.
+     * Does nothing if the actor is the comment author.
+     */
+    public static function dispatchBlogCommentReaction(
+        User $recipient,
+        User $actor,
+        Blog $blog,
+        int $commentId,
+        string $reactionType,
+    ): void {
+        if ($recipient->id === $actor->id) {
+            return;
+        }
+
+        $reactionLabel = match ($reactionType) {
+            'heart' => 'tim',
+            'like'  => 'thích',
+            'haha'  => 'haha',
+            'wow'   => 'wow',
+            'sad'   => 'buồn',
+            default => 'thích',
+        };
+
+        self::send($recipient, $actor, [
+            'title'         => 'Bình luận được yêu thích',
+            'message'       => "{$actor->full_name} đã thả {$reactionLabel} bình luận của bạn",
+            'type'          => 'blog_comment_reaction',
+            'reaction_type' => $reactionType,
+            'target_type'   => 'blog',
+            'target_id'     => $blog->id,
+            'link'          => "/blog/{$blog->slug}#comment-{$commentId}",
+        ]);
+    }
+
+    /**
      * Notify a user when someone follows them.
      */
     public static function dispatchFollow(

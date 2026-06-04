@@ -1,9 +1,42 @@
 import MarkdownIt from "markdown-it";
+import hljs from "highlight.js/lib/core";
+import langBash from "highlight.js/lib/languages/bash";
+import langCss from "highlight.js/lib/languages/css";
+import langHtml from "highlight.js/lib/languages/xml";
+import langJs from "highlight.js/lib/languages/javascript";
+import langJson from "highlight.js/lib/languages/json";
+import langPhp from "highlight.js/lib/languages/php";
+import langPython from "highlight.js/lib/languages/python";
+import langSql from "highlight.js/lib/languages/sql";
+import langTs from "highlight.js/lib/languages/typescript";
+
+hljs.registerLanguage("bash", langBash);
+hljs.registerLanguage("sh", langBash);
+hljs.registerLanguage("shell", langBash);
+hljs.registerLanguage("css", langCss);
+hljs.registerLanguage("html", langHtml);
+hljs.registerLanguage("xml", langHtml);
+hljs.registerLanguage("javascript", langJs);
+hljs.registerLanguage("js", langJs);
+hljs.registerLanguage("json", langJson);
+hljs.registerLanguage("php", langPhp);
+hljs.registerLanguage("python", langPython);
+hljs.registerLanguage("py", langPython);
+hljs.registerLanguage("sql", langSql);
+hljs.registerLanguage("typescript", langTs);
+hljs.registerLanguage("ts", langTs);
 
 const markdown = new MarkdownIt({
 	html: true,
 	linkify: true,
 	breaks: false,
+	highlight: (str, lang) => {
+		const highlighted =
+			lang && hljs.getLanguage(lang)
+				? hljs.highlight(str, { language: lang, ignoreIllegals: true }).value
+				: hljs.highlightAuto(str).value;
+		return `<pre class="hljs"><code>${highlighted}</code></pre>`;
+	},
 });
 
 const defaultLinkOpen =
@@ -79,6 +112,12 @@ const sanitizeElement = (element: Element) => {
 	if (!allowedTags.has(element.tagName)) {
 		element.replaceWith(...Array.from(element.childNodes));
 		return;
+	}
+	// markdown-it renders table column alignment as style="text-align:..." — convert to align="..."
+	// before the attr-filter runs, since style is not in the allowlist but align is.
+	if ((element.tagName === "TD" || element.tagName === "TH") && element.hasAttribute("style")) {
+		const match = (element.getAttribute("style") ?? "").match(/text-align:\s*(left|center|right)/);
+		if (match) element.setAttribute("align", match[1]);
 	}
 
 	const allowedAttributes = tagAllowedAttributes.get(element.tagName) ?? new Set<string>();

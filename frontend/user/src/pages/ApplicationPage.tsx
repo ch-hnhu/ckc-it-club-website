@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
-import { ArrowRight, CheckCircle, ClipboardList, LogIn, Loader2, AlertCircle } from "lucide-react";
+import { ArrowRight, CheckCircle, ClipboardList, Loader2, AlertCircle, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import type { AuthUser } from "@/services/auth.service";
 import { applicationService } from "@/services/application.service";
@@ -144,7 +144,15 @@ const ApplicationPage: React.FC = () => {
 
 	useEffect(() => {
 		if (loadingUser) return;
-		if (!user || user.roles?.includes("club-member")) {
+		if (!user) {
+			navigate("/", { replace: true });
+			return;
+		}
+	}, [user, loadingUser, navigate]);
+
+	useEffect(() => {
+		if (loadingUser || !user) return;
+		if (user.roles?.includes("club-member") || !user.is_school_student) {
 			setLoadingQuestions(false);
 			return;
 		}
@@ -196,7 +204,8 @@ const ApplicationPage: React.FC = () => {
 	};
 
 	const isClubMember = user?.roles?.includes("club-member") ?? false;
-	const isLoading = loadingUser || (!!user && !isClubMember && (loadingQuestions || checkingApp));
+	const isSchoolStudent = user?.is_school_student ?? false;
+	const isLoading = loadingUser || (!!user && !isClubMember && isSchoolStudent && (loadingQuestions || checkingApp));
 
 	return (
 		<section
@@ -259,8 +268,33 @@ const ApplicationPage: React.FC = () => {
 					</div>
 				)}
 
+				{/* Not a school student */}
+				{!isLoading && !submitted && !isClubMember && user && !isSchoolStudent && (
+					<div className="max-w-lg mx-auto">
+						<div
+							className="rounded-2xl border-2 border-black p-8 text-center"
+							style={{ boxShadow: "var(--neo-shadow)" }}>
+							<ShieldAlert className="w-12 h-12 mx-auto mb-4 text-amber-500" />
+							<h2
+								className="text-2xl font-extrabold text-black mb-2"
+								style={{ fontFamily: "var(--font-heading)" }}>
+								Chỉ dành cho sinh viên CKC
+							</h2>
+							<p className="text-gray-600 mb-6 leading-relaxed text-sm">
+								Chức năng ứng tuyển chỉ dành cho sinh viên trường Cao Thắng với email
+								có định dạng <span className="font-semibold">MSSV@caothang.edu.vn</span>.
+								Tài khoản của bạn không thuộc trường.
+							</p>
+							<Link to="/" className="neo-btn neo-btn-secondary text-sm px-6 py-3">
+								Về trang chủ
+								<ArrowRight className="w-4 h-4" />
+							</Link>
+						</div>
+					</div>
+				)}
+
 			{/* Already applied */}
-				{!isLoading && !submitted && !isClubMember && existingApp && (
+				{!isLoading && !submitted && !isClubMember && isSchoolStudent && existingApp && (
 					<div className="max-w-lg mx-auto">
 						<div
 							className="rounded-2xl border-2 border-black p-8 text-center"
@@ -297,64 +331,8 @@ const ApplicationPage: React.FC = () => {
 					</div>
 				)}
 
-				{/* Not logged in */}
-				{!isLoading && !submitted && !isClubMember && !existingApp && !user && (
-					<div className="max-w-md mx-auto">
-						<div
-							className="rounded-2xl border-2 border-black p-8 text-center"
-							style={{ boxShadow: "var(--neo-shadow)" }}>
-							<div
-								className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 border-2 border-black"
-								style={{ background: "var(--color-primary)" }}>
-								<LogIn className="w-6 h-6 text-black" />
-							</div>
-							<h2
-								className="text-2xl font-extrabold text-black mb-3"
-								style={{ fontFamily: "var(--font-heading)" }}>
-								Đăng nhập để ứng tuyển
-							</h2>
-							<p className="text-gray-600 mb-7 leading-relaxed text-sm">
-								Bạn cần đăng nhập bằng tài khoản sinh viên CKC để nộp đơn ứng tuyển. Đơn
-								sẽ được gắn với hồ sơ của bạn.
-							</p>
-							<Link
-								to="/login"
-								state={{ from: "/ung-tuyen" }}
-								className="neo-btn neo-btn-primary text-sm px-6 py-3 w-full justify-center">
-								<LogIn className="w-4 h-4" />
-								Đăng nhập ngay
-							</Link>
-						</div>
-
-						{!loadingQuestions && questions.length > 0 && (
-							<div className="mt-10">
-								<p
-									className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4"
-									style={{ fontFamily: "var(--font-heading)" }}>
-									Xem trước nội dung form ({questions.length} câu hỏi)
-								</p>
-								<div className="space-y-4 opacity-60 pointer-events-none select-none">
-									{questions.map((q, i) => (
-										<div
-											key={q.id}
-											className="rounded-xl border-2 border-dashed border-gray-300 p-5 bg-gray-50">
-											<p className="text-sm font-bold text-gray-700 mb-1">
-												{i + 1}. {q.label}
-												{q.is_required && (
-													<span className="text-red-500 ml-1">*</span>
-												)}
-											</p>
-											<div className="h-9 rounded-lg bg-gray-200 mt-2" />
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-					</div>
-				)}
-
 				{/* Fetch error */}
-				{!isLoading && !submitted && !isClubMember && !existingApp && user && fetchError && (
+				{!isLoading && !submitted && !isClubMember && isSchoolStudent && !existingApp && user && fetchError && (
 					<div
 						className="max-w-md mx-auto rounded-2xl border-2 border-red-300 bg-red-50 p-8 text-center"
 						style={{ boxShadow: "4px 4px 0 #f87171" }}>
@@ -365,7 +343,7 @@ const ApplicationPage: React.FC = () => {
 				)}
 
 				{/* Form */}
-				{!isLoading && !submitted && !isClubMember && !existingApp && user && !fetchError && (
+				{!isLoading && !submitted && !isClubMember && isSchoolStudent && !existingApp && user && !fetchError && (
 					<div className="max-w-2xl mx-auto">
 						<div
 							className="rounded-2xl border-2 border-black overflow-hidden"

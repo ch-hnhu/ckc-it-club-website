@@ -51,10 +51,13 @@ class BlogController extends BaseApiController
         $tag     = $request->query('tag');
         $username = $request->query('username');
 
+        $viewer = auth('sanctum')->user();
+
         $blogs = Blog::query()
             ->with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
             ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count')
             ->where('blogs.status', 'published')
+            ->visibleTo($viewer)
             ->when($search, fn ($q) => $q->where('blogs.title', 'like', "%{$search}%"))
             ->when($tag, fn ($q) => $q->whereHas('tags', fn ($t) => $t->where('name', $tag)))
             ->when($username, fn ($q) => $q->whereHas('author', fn ($author) => $author
@@ -93,6 +96,7 @@ class BlogController extends BaseApiController
     public function show(string $slug): JsonResponse
     {
         $authUserId = auth('sanctum')->id();
+        $viewer     = auth('sanctum')->user();
 
         $blog = Blog::with([
                 'author' => fn ($q) => $q->select('id', 'full_name', 'email', 'avatar', 'username')->with('roles:id,name'),
@@ -109,15 +113,16 @@ class BlogController extends BaseApiController
                 ->where('status', 'published')
                 ->orWhere(fn ($inner) => $inner
                     ->where('author_id', $authUserId ?? 0)
-                    ->whereIn('status', ['draft', 'pending_review'])
+                    ->whereIn('status', ['draft', 'pending_review', 'archived'])
                 )
             )
             ->firstOrFail();
 
-        // Chỉ tăng view_count cho blog published (không đếm lượt xem nháp của tác giả)
-        if ($blog->status === 'published') {
-            $blog->increment('view_count');
+        // Kiểm tra quyền xem theo visibility (chỉ áp dụng cho blog published)
+        if ($blog->status === 'published' && ! $blog->isVisibleTo($viewer)) {
+            abort(403, 'Bạn không có quyền xem bài viết này.');
         }
+
 
         $data = $this->transformBlog($blog);
         if ($data['user'] && $blog->author) {
@@ -470,6 +475,8 @@ class BlogController extends BaseApiController
     {
         Blog::where('status', 'published')->findOrFail($id);
 
+        $userId = auth('sanctum')->id();
+
         $allComments = Comment::with('user:id,full_name,username,email,avatar')
             ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count')
             ->where('blog_id', $id)
@@ -478,6 +485,16 @@ class BlogController extends BaseApiController
             ->orderBy('created_at', 'asc')
             ->get();
 
+        $myReactions = [];
+        if ($userId) {
+            $commentIds  = $allComments->pluck('id')->toArray();
+            $myReactions = Reaction::where('user_id', $userId)
+                ->where('target_type', 'comment')
+                ->whereIn('target_id', $commentIds)
+                ->pluck('type', 'target_id')
+                ->toArray();
+        }
+
         $repliesByParent = $allComments
             ->filter(fn ($c) => $c->parent_id !== null)
             ->groupBy('parent_id');
@@ -485,10 +502,10 @@ class BlogController extends BaseApiController
         $topLevel = $allComments
             ->filter(fn ($c) => $c->parent_id === null)
             ->map(fn (Comment $comment) => array_merge(
-                $this->transformComment($comment),
+                $this->transformComment($comment, $myReactions),
                 [
                     'replies' => ($repliesByParent->get($comment->id) ?? collect())
-                        ->map(fn (Comment $r) => $this->transformComment($r))
+                        ->map(fn (Comment $r) => $this->transformComment($r, $myReactions))
                         ->values()
                         ->toArray(),
                 ]
@@ -548,6 +565,66 @@ class BlogController extends BaseApiController
         return $this->createdResponse($this->transformComment($comment));
     }
 
+    public function updateVisibility(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'visibility' => ['required', 'in:public,members,private'],
+        ]);
+
+        $blog = Blog::where('author_id', $request->user()->id)->findOrFail($id);
+        $blog->update(['visibility' => $request->input('visibility')]);
+
+        return $this->successResponse(
+            true,
+            ['visibility' => $blog->visibility],
+            'Đã cập nhật quyền riêng tư.'
+        );
+    }
+
+    public function archive(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'status' => ['required', 'in:published,archived'],
+        ]);
+
+        $blog = Blog::where('author_id', $request->user()->id)->findOrFail($id);
+
+        $blog->update(['status' => $request->input('status')]);
+
+        return $this->successResponse(
+            true,
+            ['status' => $blog->status],
+            $blog->status === 'archived' ? 'Đã lưu trữ blog.' : 'Đã khôi phục blog.'
+        );
+    }
+
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $blog = Blog::where('author_id', $request->user()->id)->findOrFail($id);
+        $blog->delete();
+
+        return $this->successResponse(true, null, 'Đã xóa blog.');
+    }
+
+    public function recordView(string $slug): JsonResponse
+    {
+        $authUserId = auth('sanctum')->id();
+
+        $blog = Blog::where('status', 'published')
+            ->where(fn ($q) => $q
+                ->where('slug', $slug)
+                ->orWhere('id', is_numeric($slug) ? (int) $slug : 0)
+            )
+            ->firstOrFail();
+
+        // Tác giả không tự tăng lượt xem bài của mình
+        if ((int) $blog->author_id !== (int) $authUserId) {
+            $blog->increment('view_count');
+        }
+
+        return $this->successResponse(true, ['view_count' => $blog->view_count], ApiMessage::UPDATED);
+    }
+
     private function transformBlog(Blog $blog): array
     {
         $author = $blog->author;
@@ -568,6 +645,7 @@ class BlogController extends BaseApiController
                 ? Storage::disk('public')->url($blog->cover_image)
                 : null,
             'status'          => $blog->status,
+            'visibility'      => $blog->visibility ?? 'public',
             'published_at'    => $blog->published_at?->toIso8601String(),
             'view_count'      => (int) $blog->view_count,
             'comments_count'  => 0,
@@ -585,7 +663,7 @@ class BlogController extends BaseApiController
         ];
     }
 
-    private function transformComment(Comment $comment): array
+    private function transformComment(Comment $comment, array $myReactions = []): array
     {
         $user = $comment->user;
         return [
@@ -600,6 +678,7 @@ class BlogController extends BaseApiController
             ] : null,
             'content'         => $comment->content,
             'reactions_count' => (int) ($comment->reactions_count ?? 0),
+            'my_reaction'     => $myReactions[$comment->id] ?? null,
             'created_at'      => $comment->created_at?->toIso8601String(),
         ];
     }
