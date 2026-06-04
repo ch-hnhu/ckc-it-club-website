@@ -6,7 +6,6 @@ const backendUrl = (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "
 
 const echo = reverbAppKey
 	? (() => {
-			// Required: expose Pusher on window so Laravel Echo can find it.
 			(window as unknown as Record<string, unknown>).Pusher = Pusher;
 
 			return new Echo({
@@ -19,31 +18,37 @@ const echo = reverbAppKey
 				enabledTransports: ["ws", "wss"],
 				activityTimeout: 120_000,
 				pongTimeout: 30_000,
-				// Custom broadcasting auth route using auth:sanctum (Bearer token).
-				// Cannot use /broadcasting/auth because BroadcastServiceProvider registers
-				// that path first with web/session middleware (ignores Bearer tokens).
-				authEndpoint: `${backendUrl}/api/v1/broadcasting/auth`,
-				auth: {
-					headers: {
-						Authorization: `Bearer ${localStorage.getItem("access_token") ?? ""}`,
-						Accept: "application/json",
+				// Use a custom authorizer so every auth request reads the latest
+				// Bearer token from localStorage, even after token refresh or expiry.
+				authorizer: (channel: { name: string }) => ({
+					authorize: (socketId: string, callback: (error: Error | null, data: unknown) => void) => {
+						fetch(`${backendUrl}/api/v1/broadcasting/auth`, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								Accept: "application/json",
+								Authorization: `Bearer ${localStorage.getItem("access_token") ?? ""}`,
+							},
+							body: JSON.stringify({
+								socket_id: socketId,
+								channel_name: channel.name,
+							}),
+						})
+							.then((res) => {
+								if (!res.ok) throw new Error(`Broadcasting auth failed: ${res.status}`);
+								return res.json();
+							})
+							.then((data) => callback(null, data))
+							.catch((err: Error) => callback(err, null));
 					},
-				},
+				}),
 			});
 		})()
 	: null;
 
-/**
- * Call after login/token-refresh so Echo picks up the new Bearer token
- * before subscribing to private channels.
- */
-export function updateEchoAuthToken(token: string): void {
-	if (!echo) return;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const pusher = (echo.connector as any).pusher;
-	if (pusher?.config?.auth?.headers) {
-		pusher.config.auth.headers.Authorization = `Bearer ${token}`;
-	}
+/** @deprecated Token is now read from localStorage on every auth request; this is a no-op. */
+export function updateEchoAuthToken(_token: string): void {
+	// No-op: the custom authorizer always reads the latest token from localStorage.
 }
 
 export default echo;
