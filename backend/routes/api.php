@@ -334,10 +334,13 @@ Route::prefix('v1')->group(function () {
         // posts
         Route::middleware('permission:community.posts.view')->group(function () {
             Route::get('posts/stats', [PostController::class, 'stats']);
+            Route::get('posts/trash', [PostController::class, 'trash']);
             Route::get('posts', [PostController::class, 'index']);
         });
         Route::middleware('permission:community.posts.manage')->group(function () {
+            Route::post('posts/bulk-delete', [PostController::class, 'bulkDestroy']);
             Route::patch('posts/{post}/status', [PostController::class, 'updateStatus']);
+            Route::patch('posts/{post}/restore', [PostController::class, 'restore']);
             Route::delete('posts/{post}', [PostController::class, 'destroy']);
         });
 

@@ -105,6 +105,7 @@
 - `PATCH /api/v1/departments/{department}/restore`
 - `DELETE /api/v1/departments/{department}/force`
 - `POST /api/v1/departments/{department}/users`
+- Admin community post management includes `GET /api/v1/posts/trash` for soft-deleted posts and `PATCH /api/v1/posts/{post}/restore` to restore them; admin post stats no longer return pin counts.
 - `GET /api/v1/club-informations`
 - `POST /api/v1/club-informations`
 - `PUT/PATCH /api/v1/club-informations/{clubInformation}`
@@ -442,6 +443,7 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-06-05`: Admin post management removed pin-specific admin sorting/stats, added soft-deleted post listing through `GET /posts/trash`, and added restore through `PATCH /posts/{post}/restore`.
 - `2026-06-03`: User community post listing `GET /api/v1/community/posts?username=` now matches authors by username or email prefix, keeping profile post lists consistent with public profile lookup and blog listing.
 - `2026-06-01`: Admin channel create/update now accepts an uploaded image file in `image`, stores it on the public disk under `channels/`, and returns a public image URL while preserving existing external image URLs.
 - `2026-06-01`: `chat_rooms` no longer has a `type` column; chat room APIs, model fillable fields, and `ChatRoomSeeder` now treat every room as a named chat room without direct/group filtering.
