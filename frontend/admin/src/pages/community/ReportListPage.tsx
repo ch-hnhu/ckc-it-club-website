@@ -99,7 +99,7 @@ export default function ReportListPage() {
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0, per_page: 20 });
-	const [sortKey, setSortKey] = useState<"created_at" | "status">("created_at");
+	const [sortKey, setSortKey] = useState<"id" | "post_title" | "reporter_name" | "reason" | "description" | "status" | "created_at">("created_at");
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
 	// Debounce
@@ -110,7 +110,7 @@ export default function ReportListPage() {
 
 	useEffect(() => {
 		setMeta((p) => ({ ...p, current_page: 1 }));
-	}, [debouncedSearch, statusFilter]);
+	}, [debouncedSearch, statusFilter, sortKey, sortOrder]);
 
 	// Load stats
 	useEffect(() => {
@@ -127,6 +127,8 @@ export default function ReportListPage() {
 				per_page: meta.per_page,
 				search: debouncedSearch || undefined,
 				status: statusFilter !== "all" ? statusFilter : undefined,
+				sort: sortKey,
+				order: sortOrder,
 			})
 			.then((res) => {
 				if (cancelled) return;
@@ -136,7 +138,7 @@ export default function ReportListPage() {
 			.catch(() => toast.error("Không thể tải danh sách báo cáo."))
 			.finally(() => { if (!cancelled) setLoading(false); });
 		return () => { cancelled = true; };
-	}, [meta.current_page, meta.per_page, debouncedSearch, statusFilter]);
+	}, [meta.current_page, meta.per_page, debouncedSearch, statusFilter, sortKey, sortOrder]);
 
 	// ── Handlers ────────────────────────────────────────────────────────────
 
@@ -145,12 +147,10 @@ export default function ReportListPage() {
 		else { setSortKey(key); setSortOrder("desc"); }
 	};
 
-	const getSortIcon = (key: typeof sortKey) => {
-		if (sortKey !== key) return <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-40" />;
-		return sortOrder === "asc"
-			? <ArrowUp className="ml-1 h-3.5 w-3.5" />
-			: <ArrowDown className="ml-1 h-3.5 w-3.5" />;
-	};
+	const getSortIcon = (key: typeof sortKey) =>
+		sortKey !== key ? <ArrowUpDown className="ml-2 h-4 w-4" /> :
+		sortOrder === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> :
+		<ArrowDown className="ml-2 h-4 w-4" />;
 
 	const handleUpdateStatus = async (report: PostReportRecord, status: PostReportRecord["status"]) => {
 		try {
@@ -171,13 +171,6 @@ export default function ReportListPage() {
 			toast.error("Không thể ẩn bài viết.");
 		}
 	};
-
-	// Sort client-side
-	const sorted = [...reports].sort((a, b) => {
-		const mul = sortOrder === "asc" ? 1 : -1;
-		if (sortKey === "status") return mul * a.status.localeCompare(b.status);
-		return mul * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-	});
 
 	// ── Render ──────────────────────────────────────────────────────────────
 
@@ -200,8 +193,8 @@ export default function ReportListPage() {
 					{ label: "Đã xử lý / Bỏ qua", value: (stats?.resolved ?? 0) + (stats?.dismissed ?? 0), color: "text-green-600" },
 				].map((s) => (
 					<div key={s.label} className="rounded-lg border bg-card p-4 shadow-sm">
-						<p className="text-sm font-medium text-muted-foreground">{s.label}</p>
-						<div className={`mt-1 text-3xl font-bold ${s.color}`}>
+						<p className="min-h-[2.5rem] text-sm font-medium text-muted-foreground">{s.label}</p>
+						<div className={`text-3xl font-bold ${s.color}`}>
 							{s.value ?? <Skeleton className="mt-2 h-8 w-12" />}
 						</div>
 					</div>
@@ -235,11 +228,31 @@ export default function ReportListPage() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead className="w-[80px]">ID</TableHead>
-								<TableHead className="min-w-[200px]">Bài viết</TableHead>
-								<TableHead className="min-w-[160px]">Người báo cáo</TableHead>
-								<TableHead className="w-[180px]">Lý do</TableHead>
-								<TableHead className="w-[240px] max-w-[240px]">Mô tả</TableHead>
+								<TableHead className="w-[80px]">
+									<Button variant="ghost" onClick={() => handleSort("id")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										ID {getSortIcon("id")}
+									</Button>
+								</TableHead>
+								<TableHead className="min-w-[200px]">
+									<Button variant="ghost" onClick={() => handleSort("post_title")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Bài viết {getSortIcon("post_title")}
+									</Button>
+								</TableHead>
+								<TableHead className="min-w-[160px]">
+									<Button variant="ghost" onClick={() => handleSort("reporter_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Người báo cáo {getSortIcon("reporter_name")}
+									</Button>
+								</TableHead>
+								<TableHead className="w-[180px]">
+									<Button variant="ghost" onClick={() => handleSort("reason")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Lý do {getSortIcon("reason")}
+									</Button>
+								</TableHead>
+								<TableHead className="w-[240px] max-w-[240px]">
+									<Button variant="ghost" onClick={() => handleSort("description")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Mô tả {getSortIcon("description")}
+									</Button>
+								</TableHead>
 								<TableHead className="w-[140px]">
 									<Button variant="ghost" onClick={() => handleSort("status")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 										Trạng thái {getSortIcon("status")}
@@ -261,8 +274,8 @@ export default function ReportListPage() {
 										<TableCell colSpan={8}><Skeleton className="h-4 w-full" /></TableCell>
 									</TableRow>
 								))
-							) : sorted.length > 0 ? (
-								sorted.map((report) => (
+							) : reports.length > 0 ? (
+								reports.map((report) => (
 									<TableRow key={report.id} className={report.post?.status === "hidden" ? "opacity-60" : ""}>
 										<TableCell className="font-medium text-muted-foreground">
 											#{report.id}
@@ -390,37 +403,49 @@ export default function ReportListPage() {
 							)}
 						</TableBody>
 
-						<TableFooter>
+						<TableFooter className="bg-transparent">
 							<TableRow>
 								<TableCell colSpan={8}>
-									<div className="flex items-center justify-between py-1">
-										<span className="text-sm text-muted-foreground">
-											Đang hiển thị {sorted.length} trên tổng {meta.total} báo cáo.
-										</span>
-										<div className="flex items-center gap-1">
-											<Button variant="outline" size="icon" className="h-7 w-7"
-												onClick={() => setMeta((p) => ({ ...p, current_page: 1 }))}
-												disabled={meta.current_page === 1}>
-												<ChevronsLeft className="h-4 w-4" />
-											</Button>
-											<Button variant="outline" size="icon" className="h-7 w-7"
-												onClick={() => setMeta((p) => ({ ...p, current_page: p.current_page - 1 }))}
-												disabled={meta.current_page === 1}>
-												<ChevronLeft className="h-4 w-4" />
-											</Button>
-											<span className="px-2 text-sm">
-												{meta.current_page} / {meta.last_page}
-											</span>
-											<Button variant="outline" size="icon" className="h-7 w-7"
-												onClick={() => setMeta((p) => ({ ...p, current_page: p.current_page + 1 }))}
-												disabled={meta.current_page === meta.last_page}>
-												<ChevronRight className="h-4 w-4" />
-											</Button>
-											<Button variant="outline" size="icon" className="h-7 w-7"
-												onClick={() => setMeta((p) => ({ ...p, current_page: p.last_page }))}
-												disabled={meta.current_page === meta.last_page}>
-												<ChevronsRight className="h-4 w-4" />
-											</Button>
+									<div className="flex items-center justify-between px-2">
+										<p className="flex-1 text-sm text-muted-foreground">
+											Đang hiển thị {reports.length} trên tổng {meta.total} báo cáo.
+										</p>
+										<div className="flex items-center space-x-6 lg:space-x-8">
+											<div className="flex items-center space-x-2">
+												<p className="text-sm font-medium">Rows per page</p>
+												<Select value={`${meta.per_page}`}
+													onValueChange={(v) => setMeta((p) => ({ ...p, per_page: Number(v), current_page: 1 }))}>
+													<SelectTrigger className="h-8 w-[70px]"><SelectValue /></SelectTrigger>
+													<SelectContent side="top">
+														{[10, 20, 25, 50].map((s) => <SelectItem key={s} value={`${s}`}>{s}</SelectItem>)}
+													</SelectContent>
+												</Select>
+											</div>
+											<div className="flex w-[110px] items-center justify-center text-sm font-medium">
+												Trang {meta.current_page} / {meta.last_page}
+											</div>
+											<div className="flex items-center space-x-2">
+												<Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex"
+													onClick={() => setMeta((p) => ({ ...p, current_page: 1 }))}
+													disabled={meta.current_page === 1}>
+													<ChevronsLeft className="h-4 w-4" />
+												</Button>
+												<Button variant="outline" className="h-8 w-8 p-0"
+													onClick={() => setMeta((p) => ({ ...p, current_page: Math.max(1, p.current_page - 1) }))}
+													disabled={meta.current_page === 1}>
+													<ChevronLeft className="h-4 w-4" />
+												</Button>
+												<Button variant="outline" className="h-8 w-8 p-0"
+													onClick={() => setMeta((p) => ({ ...p, current_page: Math.min(p.last_page, p.current_page + 1) }))}
+													disabled={meta.current_page === meta.last_page}>
+													<ChevronRight className="h-4 w-4" />
+												</Button>
+												<Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex"
+													onClick={() => setMeta((p) => ({ ...p, current_page: p.last_page }))}
+													disabled={meta.current_page === meta.last_page}>
+													<ChevronsRight className="h-4 w-4" />
+												</Button>
+											</div>
 										</div>
 									</div>
 								</TableCell>
