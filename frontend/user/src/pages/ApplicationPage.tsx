@@ -306,7 +306,8 @@ const ApplicationPage: React.FC = () => {
 								Bạn đã nộp đơn ứng tuyển
 							</h2>
 							<p className="text-gray-600 mb-6">
-								Đơn ứng tuyển của bạn đang được xử lý. Trạng thái hiện tại:
+								Đơn ứng tuyển của bạn đang được xử lý.
+								<br />Trạng thái hiện tại:
 							</p>
 							{(() => {
 								const s = STATUS_MAP[existingApp.status];

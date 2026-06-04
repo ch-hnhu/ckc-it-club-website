@@ -265,7 +265,7 @@ class BlogController extends BaseApiController
 
         $blog = Blog::where(fn ($q) => $q->where('slug', $slug)->orWhere('id', is_numeric($slug) ? (int)$slug : 0))
             ->where('author_id', $userId)
-            ->whereIn('status', ['draft', 'pending_review'])
+            ->whereIn('status', ['draft', 'pending_review', 'published', 'archived'])
             ->firstOrFail();
 
         $request->validate([
@@ -292,7 +292,16 @@ class BlogController extends BaseApiController
 
         if ($request->has('content'))  $blog->content  = $request->input('content');
         if ($request->has('excerpt'))  $blog->excerpt  = $request->input('excerpt');
-        if ($request->has('status'))   $blog->status   = $request->input('status');
+
+        // Xác định status sau khi cập nhật:
+        // - Admin → giữ published (hoặc theo request nếu đang là draft/pending_review)
+        // - User thường → pending_review khi đăng lại (kể cả blog đã published/archived)
+        $isAdmin = $request->user()->hasRole(RolesEnum::adminRoles());
+        if ($request->has('status')) {
+            $blog->status = $isAdmin ? 'published' : $request->input('status');
+        } elseif (!$isAdmin && in_array($blog->status, ['published', 'archived'])) {
+            $blog->status = 'pending_review';
+        }
 
         if ($request->hasFile('featured_image')) {
             // Xóa ảnh cũ nếu có
@@ -311,6 +320,7 @@ class BlogController extends BaseApiController
         $blog->load(['author:id,full_name,email,avatar,username', 'tags:id,name']);
 
         $messages = [
+            'published'      => 'Blog đã được cập nhật và xuất bản.',
             'pending_review' => 'Blog đã được gửi và đang chờ duyệt.',
             'draft'          => 'Đã lưu nháp.',
         ];
