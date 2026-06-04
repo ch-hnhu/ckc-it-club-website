@@ -1040,12 +1040,14 @@ const BlogDetailPage: React.FC = () => {
 
 									{/* Content */}
 									{blog.content && (
-										<div
-											className='prose prose-sm mt-7 max-w-none overflow-x-auto leading-7 text-gray-800 [&_a]:text-lime-700 [&_a:hover]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--color-primary)] [&_blockquote]:pl-4 [&_blockquote]:text-gray-600 [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:font-mono [&_code]:text-sm [&_h2]:mt-8 [&_h2]:font-heading [&_h2]:text-2xl [&_h2]:font-extrabold [&_h3]:mt-6 [&_h3]:font-heading [&_h3]:text-xl [&_h3]:font-extrabold [&_img]:rounded-xl [&_img]:border-2 [&_img]:border-black [&_pre]:rounded-xl [&_pre]:border-2 [&_pre]:border-black dark:[&_pre]:border-neutral-700 [&_pre]:overflow-hidden [&_pre_code]:block [&_pre_code]:p-4 [&_pre_code]:overflow-x-auto [&_strong]:font-extrabold [&_table]:my-6 [&_table]:w-full [&_table]:border-collapse [&_table]:border-2 [&_table]:border-black [&_table]:text-sm [&_th]:border-2 [&_th]:border-black [&_th]:bg-black [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:font-bold [&_th]:text-white [&_td]:border [&_td]:border-black/20 [&_td]:px-4 [&_td]:py-2.5 [&_tbody_tr:nth-child(even)]:bg-gray-50 [&_tbody_tr:hover]:bg-[var(--color-primary)]/10'
-											dangerouslySetInnerHTML={{
-												__html: renderMarkdownContent(blog.content),
-											}}
-										/>
+										<div className='so-editor-outer community-markdown mt-7'>
+											<div
+												className='s-prose'
+												dangerouslySetInnerHTML={{
+													__html: renderMarkdownContent(blog.content),
+												}}
+											/>
+										</div>
 									)}
 
 									{/* Reactions + actions */}

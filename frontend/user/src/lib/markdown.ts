@@ -26,18 +26,33 @@ hljs.registerLanguage("sql", langSql);
 hljs.registerLanguage("typescript", langTs);
 hljs.registerLanguage("ts", langTs);
 
+const buildCodeBlock = (str: string, lang: string): string => {
+	let highlighted: string;
+	let detectedLang = lang;
+
+	if (lang && hljs.getLanguage(lang)) {
+		highlighted = hljs.highlight(str, { language: lang, ignoreIllegals: true }).value;
+	} else {
+		const result = hljs.highlightAuto(str);
+		highlighted = result.value;
+		detectedLang = result.language ?? "";
+	}
+
+	const langClass = detectedLang ? ` language-${detectedLang}` : "";
+	return `<pre class="s-code-block${langClass}"><code class="hljs${langClass}">${highlighted}</code></pre>\n`;
+};
+
 const markdown = new MarkdownIt({
 	html: true,
 	linkify: true,
 	breaks: false,
-	highlight: (str, lang) => {
-		const highlighted =
-			lang && hljs.getLanguage(lang)
-				? hljs.highlight(str, { language: lang, ignoreIllegals: true }).value
-				: hljs.highlightAuto(str).value;
-		return `<pre class="hljs"><code>${highlighted}</code></pre>`;
-	},
+	highlight: buildCodeBlock,
 });
+
+// Indented code blocks (4 spaces) bypass the highlight callback — handle them explicitly.
+markdown.renderer.rules.code_block = (tokens, idx) => {
+	return buildCodeBlock(tokens[idx].content, "");
+};
 
 const defaultLinkOpen =
 	markdown.renderer.rules.link_open ??
@@ -79,7 +94,10 @@ const allowedTags = new Set([
 	"P",
 	"PRE",
 	"S",
+	"SPAN",
 	"STRONG",
+	"SUB",
+	"SUP",
 	"TABLE",
 	"TBODY",
 	"TD",
