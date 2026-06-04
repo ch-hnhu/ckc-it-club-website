@@ -220,7 +220,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 	}, []);
 
 	const [usernameStatus, setUsernameStatus] = useState<
-		"idle" | "checking" | "available" | "taken"
+		"idle" | "checking" | "available" | "taken" | "invalid"
 	>("idle");
 	const usernameTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -282,6 +282,11 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 		if (usernameTimeout.current) clearTimeout(usernameTimeout.current);
 		if (!val || val === profile?.username) return;
 
+		if (!/^[a-z0-9_]+$/.test(val)) {
+			setUsernameStatus("invalid");
+			return;
+		}
+
 		setUsernameStatus("checking");
 		usernameTimeout.current = setTimeout(async () => {
 			try {
@@ -298,6 +303,15 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 	const isSchoolStudent = profile?.is_school_student ?? false;
 
 	const handleSave = async () => {
+		if (usernameStatus === "invalid" || usernameStatus === "taken") {
+			toast.error("Vui lòng kiểm tra lại username trước khi lưu.");
+			return;
+		}
+		if (usernameStatus === "checking") {
+			toast.error("Đang kiểm tra username, vui lòng chờ.");
+			return;
+		}
+
 		setSaving(true);
 		try {
 			const formData = new FormData();
@@ -318,8 +332,11 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 			setAvatarFile(null);
 			setCoverFile(null);
 			onSaved();
-		} catch {
-			toast.error("Không thể lưu hồ sơ. Vui lòng thử lại.");
+		} catch (err: unknown) {
+			const data = (err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })
+				?.response?.data;
+			const firstFieldError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
+			toast.error(firstFieldError ?? data?.message ?? "Không thể lưu hồ sơ. Vui lòng thử lại.");
 		} finally {
 			setSaving(false);
 		}
@@ -448,6 +465,10 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 									) : usernameStatus === "taken" ? (
 										<p className='text-xs font-bold text-red-500'>
 											Username đã được sử dụng
+										</p>
+									) : usernameStatus === "invalid" ? (
+										<p className='text-xs font-bold text-red-500'>
+											Username chỉ được chứa chữ thường, số và dấu gạch dưới
 										</p>
 									) : usernameStatus === "checking" ? (
 										<p className='flex items-center gap-1 text-xs text-gray-400'>
@@ -782,9 +803,10 @@ const ComingSoonTab: React.FC<{ title: string }> = ({ title }) => (
 // ─── AccountPage ──────────────────────────────────────────────────────────────
 
 const AccountPage: React.FC = () => {
-	const { user, loadingUser } = useOutletContext<{
+	const { user, loadingUser, refreshUser } = useOutletContext<{
 		user: AuthUser | null;
 		loadingUser: boolean;
+		refreshUser: () => Promise<void>;
 	}>();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -860,7 +882,7 @@ const AccountPage: React.FC = () => {
 									user={user}
 									profile={profile}
 									onSaved={async () => {
-										await fetchProfile().catch(() => {});
+										await Promise.allSettled([fetchProfile(), refreshUser()]);
 									}}
 								/>
 							)

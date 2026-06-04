@@ -29,6 +29,7 @@ import NotificationBell from "@/components/partials/NotificationBell";
 type NavbarProps = {
 	user: AuthUser | null;
 	onAuthSuccess: () => Promise<void>;
+	avatarTs?: number;
 };
 
 type NavItem = {
@@ -58,7 +59,7 @@ const COMMUNITY_DROPDOWN = [
 	{ id: "blog", label: "Blog", to: "/blog", icon: BookOpen },
 ];
 
-const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
+const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 	const [isMobileOpen, setIsMobileOpen] = useState(false);
 	const [mobileMenuView, setMobileMenuView] = useState<"nav" | "account" | "community">("nav");
 	const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -79,11 +80,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess }) => {
 	const navbarContainerClass = isCommunityPage ? "mx-0 max-w-none" : "";
 	const navbarPaddingX = isCommunityPage ? "px-4 md:px-5 lg:px-6" : "px-6";
 	const userDisplayName = user?.name || user?.email || "CKC member";
-	const userAvatar =
-		user?.picture ||
-		`https://ui-avatars.com/api/?name=${encodeURIComponent(
-			userDisplayName,
-		)}&background=A3E635&color=111111&bold=true`;
+	const userAvatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+		userDisplayName,
+	)}&background=A3E635&color=111111&bold=true`;
+	const userAvatar = user?.picture
+		? avatarTs
+			? `${user.picture}${user.picture.includes("?") ? "&" : "?"}_t=${avatarTs}`
+			: user.picture
+		: userAvatarFallback;
 
 	useEffect(() => {
 		if (!isProfileOpen) return;
