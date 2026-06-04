@@ -151,7 +151,7 @@ const ApplicationPage: React.FC = () => {
 	}, [user, loadingUser, navigate]);
 
 	useEffect(() => {
-		if (loadingUser) return;
+		if (loadingUser || !user) return;
 		if (user.roles?.includes("club-member") || !user.is_school_student) {
 			setLoadingQuestions(false);
 			return;
