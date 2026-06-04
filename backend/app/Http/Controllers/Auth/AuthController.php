@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Auth\AuthBaseController;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends AuthBaseController
@@ -81,5 +82,50 @@ class AuthController extends AuthBaseController
 	public function logoutAll(Request $request): JsonResponse
 	{
 		return parent::logoutAll($request);
+	}
+
+	/**
+	 * Change password for the authenticated user.
+	 * OAuth-only accounts (no password set) are rejected.
+	 */
+	public function changePassword(Request $request): JsonResponse
+	{
+		$user = $request->user();
+
+		if (! $user->password) {
+			return response()->json([
+				'success' => false,
+				'message' => 'Tài khoản của bạn đăng nhập qua mạng xã hội, không thể đổi mật khẩu tại đây.',
+			], 422);
+		}
+
+		$request->validate([
+			'current_password'          => ['required', 'string'],
+			'new_password'              => ['required', 'string', 'min:8', 'confirmed'],
+			'new_password_confirmation' => ['required', 'string'],
+		], [
+			'current_password.required'          => 'Vui lòng nhập mật khẩu hiện tại.',
+			'new_password.required'              => 'Vui lòng nhập mật khẩu mới.',
+			'new_password.min'                   => 'Mật khẩu mới phải có ít nhất 8 ký tự.',
+			'new_password.confirmed'             => 'Xác nhận mật khẩu mới không khớp.',
+			'new_password_confirmation.required' => 'Vui lòng xác nhận mật khẩu mới.',
+		]);
+
+		if (! Hash::check($request->current_password, $user->password)) {
+			return response()->json([
+				'success' => false,
+				'message' => 'Mật khẩu hiện tại không đúng.',
+			], 422);
+		}
+
+		$user->update(['password' => Hash::make($request->new_password)]);
+
+		// Revoke all other tokens so other sessions are invalidated
+		$user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
+
+		return response()->json([
+			'success' => true,
+			'message' => 'Đổi mật khẩu thành công.',
+		]);
 	}
 }

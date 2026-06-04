@@ -116,8 +116,11 @@
                 <p class="greeting">Xin chào,</p>
             @endif
 
-            <p class="note">Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Vui lòng sử dụng mã OTP
-                dưới đây:</p>
+            @if(isset($purpose) && $purpose === 'registration')
+                <p class="note">Cảm ơn bạn đã đăng ký tài khoản tại CKC IT CLUB. Vui lòng sử dụng mã OTP dưới đây để xác nhận địa chỉ email của bạn:</p>
+            @else
+                <p class="note">Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Vui lòng sử dụng mã OTP dưới đây:</p>
+            @endif
 
             <div class="otp-box">
                 <div class="otp-label">Mã xác nhận</div>
@@ -126,7 +129,11 @@
 
             <p class="note">
                 Mã có hiệu lực trong <strong>10 phút</strong>.<br>
-                Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này — tài khoản của bạn vẫn an toàn.
+                @if(isset($purpose) && $purpose === 'registration')
+                    Nếu bạn không thực hiện đăng ký này, hãy bỏ qua email này.
+                @else
+                    Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này — tài khoản của bạn vẫn an toàn.
+                @endif
             </p>
 
             <div class="warning">

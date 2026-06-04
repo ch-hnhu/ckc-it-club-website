@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\V1\User\UserNotificationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\RegisterVerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -57,7 +58,6 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/auth/verify-token', [AuthController::class, 'verifyToken']);
-    Route::post('/auth/register', [CredentialAuthController::class, 'registerUser']);
     Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
@@ -121,6 +121,12 @@ Route::prefix('v1')->group(function () {
         Route::post('/blogs/{slug}/view', [UserBlogController::class, 'recordView']);
     });
 
+    // Registration with OTP verification (throttled: 5 attempts per minute per IP)
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/auth/register', [RegisterVerificationController::class, 'sendOtp']);
+        Route::post('/auth/register/verify-otp', [RegisterVerificationController::class, 'verifyOtp']);
+    });
+
     // Forgot password (throttled: 5 attempts per minute per IP)
     Route::middleware('throttle:5,1')->group(function () {
         Route::post('/auth/forgot-password', [ForgotPasswordController::class, 'sendOtp']);
@@ -133,6 +139,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/logout-all', [AuthController::class, 'logoutAll']);
+        Route::post('/change-password', [AuthController::class, 'changePassword']);
     });
 
     // user logged-in routes
@@ -163,6 +170,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/check-school-student', [ProfileController::class, 'checkSchoolStudent']);
             Route::get('/profile', [ProfileController::class, 'show']);
             Route::post('/profile', [ProfileController::class, 'update']);
+            Route::delete('/account', [ProfileController::class, 'deleteAccount']);
             Route::post('/{username}/follow', [FollowController::class, 'toggle']);
         });
     });

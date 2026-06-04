@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 class ProfileController extends BaseApiController
 {
@@ -218,5 +219,43 @@ class ProfileController extends BaseApiController
                 });
             })
             ->count();
+    }
+
+    /**
+     * Permanently delete the authenticated user's own account.
+     * Revokes all tokens first, then deletes the user record.
+     */
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        try {
+            DB::transaction(function () use ($user) {
+                // Revoke all Sanctum tokens
+                $user->tokens()->delete();
+
+                // Delete avatar / cover from storage (local files only)
+                foreach (['avatar', 'cover_image'] as $field) {
+                    $raw = $user->getRawOriginal($field);
+                    if ($raw && ! Str::startsWith($raw, ['http://', 'https://'])) {
+                        Storage::disk('public')->delete($raw);
+                    }
+                }
+
+                $user->delete();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tài khoản đã được xoá thành công.',
+            ]);
+        } catch (Throwable $e) {
+            \Log::error('Delete account error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xoá tài khoản. Vui lòng thử lại.',
+            ], 500);
+        }
     }
 }
