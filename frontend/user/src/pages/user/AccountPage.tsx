@@ -71,6 +71,7 @@ interface InputFieldProps {
 	prefix?: string;
 	type?: string;
 	required?: boolean;
+	disabled?: boolean;
 	hint?: React.ReactNode;
 	rightElement?: React.ReactNode;
 }
@@ -83,6 +84,7 @@ const InputField: React.FC<InputFieldProps> = ({
 	prefix,
 	type = "text",
 	required,
+	disabled,
 	hint,
 	rightElement,
 }) => (
@@ -100,9 +102,12 @@ const InputField: React.FC<InputFieldProps> = ({
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
-				className={`h-[3.25rem] w-full rounded-xl border-2 border-black bg-white px-4 text-sm font-medium text-black outline-none transition placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635] ${
-					prefix ? "pl-[calc(0.75rem+var(--prefix-width,3.5rem))]" : ""
-				}`}
+				disabled={disabled}
+				className={`h-[3.25rem] w-full rounded-xl border-2 px-4 text-sm font-medium outline-none transition ${
+					disabled
+						? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400 select-all"
+						: "border-black bg-white text-black placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]"
+				} ${prefix ? "pl-[calc(0.75rem+var(--prefix-width,3.5rem))]" : ""}`}
 				style={prefix ? { paddingLeft: `${prefix.length * 7.5 + 16}px` } : undefined}
 			/>
 			{rightElement && <div className='absolute right-3'>{rightElement}</div>}
@@ -481,6 +486,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 									value={form.student_code}
 									onChange={setField("student_code")}
 									placeholder='0306231234'
+									disabled
 								/>
 
 								<div>
