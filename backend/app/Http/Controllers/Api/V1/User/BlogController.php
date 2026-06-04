@@ -62,6 +62,7 @@ class BlogController extends BaseApiController
                 ->orWhere('email', 'like', "{$username}@%")
             ))
             ->when($username, fn ($q) => $q->orderByDesc('blogs.is_pinned')->orderByDesc('blogs.pinned_at'))
+            ->when(!$search && !$tag && !$username, fn ($q) => $q->orderByDesc('blogs.is_highlight'))
             ->when(
                 $sort === 'reactions_count',
                 fn ($q) => $q->orderBy('reactions_count', $order),
@@ -578,6 +579,7 @@ class BlogController extends BaseApiController
                 'color' => null,
             ])->values()->toArray(),
             'is_pinned'       => (bool) $blog->is_pinned,
+            'is_highlight'    => (bool) $blog->is_highlight,
             'created_at'      => $blog->created_at?->toIso8601String(),
             'updated_at'      => $blog->updated_at?->toIso8601String(),
         ];

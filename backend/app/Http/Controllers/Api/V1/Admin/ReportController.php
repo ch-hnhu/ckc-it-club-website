@@ -15,11 +15,25 @@ class ReportController extends BaseApiController
         $status  = $request->query('status');
         $search  = $request->query('search');
 
+        $allowedSorts = ['id', 'post_title', 'reporter_name', 'reason', 'description', 'status', 'created_at'];
+        $sort  = in_array($request->query('sort', 'created_at'), $allowedSorts)
+            ? $request->query('sort', 'created_at')
+            : 'created_at';
+        $order = in_array($request->query('order', 'desc'), ['asc', 'desc'])
+            ? $request->query('order', 'desc')
+            : 'desc';
+
         $query = PostReport::with([
             'post:id,title,status',
             'reporter:id,full_name,email,username',
             'resolver:id,full_name',
-        ])->latest();
+        ]);
+
+        match ($sort) {
+            'post_title'    => $query->orderByRaw("(SELECT title FROM posts WHERE posts.id = post_reports.post_id) {$order}"),
+            'reporter_name' => $query->orderByRaw("(SELECT full_name FROM users WHERE users.id = post_reports.reporter_id) {$order}"),
+            default         => $query->orderBy("post_reports.{$sort}", $order),
+        };
 
         if ($status && $status !== 'all') {
             $query->where('status', $status);

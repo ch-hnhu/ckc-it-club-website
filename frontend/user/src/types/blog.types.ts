@@ -25,6 +25,7 @@ export interface Blog {
 	featured_image: string | null;
 	status: string;
 	is_pinned?: boolean;
+	is_highlight?: boolean;
 	published_at: string | null;
 	view_count: number;
 	comments_count: number;

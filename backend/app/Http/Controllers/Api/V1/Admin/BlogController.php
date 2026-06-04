@@ -16,7 +16,7 @@ class BlogController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $allowedSorts = ['id', 'title', 'status', 'view_count', 'published_at', 'created_at', 'user_name', 'tags_count'];
+        $allowedSorts = ['id', 'title', 'status', 'is_highlight', 'view_count', 'published_at', 'created_at', 'user_name', 'tags_count'];
         $sort = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
         $order = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
         $perPage = (int) $request->query('per_page', 10);
@@ -35,7 +35,7 @@ class BlogController extends BaseApiController
                 ->orWhereHas('author', fn ($u) => $u->where('full_name', 'like', "%{$search}%"))
             ))
             ->when($status && $status !== 'all', fn ($q) => $q->where('blogs.status', $status))
-            ->when(in_array($sort, ['id', 'title', 'status', 'view_count', 'published_at', 'created_at']), fn ($q) => $q->orderBy("blogs.{$sort}", $order))
+            ->when(in_array($sort, ['id', 'title', 'status', 'is_highlight', 'view_count', 'published_at', 'created_at']), fn ($q) => $q->orderBy("blogs.{$sort}", $order))
             ->when($sort === 'tags_count', fn ($q) => $q->orderBy('tags_count', $order))
             ->when($sort === 'user_name', fn ($q) => $q->orderByRaw("(SELECT COALESCE(full_name, email) FROM users WHERE users.id = blogs.author_id) {$order}"))
             ->paginate($perPage);
@@ -157,6 +157,22 @@ class BlogController extends BaseApiController
         return $this->successResponse(true, ['status' => $blog->status], 'Cập nhật trạng thái blog thành công.');
     }
 
+    public function toggleHighlight(Blog $blog): JsonResponse
+    {
+        DB::transaction(function () use ($blog) {
+            // Nếu bài này chưa là highlight thì bật lên (và tắt tất cả bài còn lại)
+            // Nếu bài này đang là highlight thì tắt đi
+            if (! $blog->is_highlight) {
+                Blog::query()->update(['is_highlight' => false]);
+                $blog->update(['is_highlight' => true]);
+            } else {
+                $blog->update(['is_highlight' => false]);
+            }
+        });
+
+        return $this->successResponse(true, ['is_highlight' => $blog->fresh()->is_highlight], 'Cập nhật highlight thành công.');
+    }
+
     public function destroy(Blog $blog): JsonResponse
     {
         $blog->delete();
@@ -184,6 +200,7 @@ class BlogController extends BaseApiController
                 : null,
             'status' => $blog->status,
             'published_at' => $blog->published_at?->toIso8601String(),
+            'is_highlight' => (bool) $blog->is_highlight,
             'view_count' => (int) $blog->view_count,
             'comments_count' => 0,
             'reactions_count' => (int) ($blog->reactions_count ?? 0),

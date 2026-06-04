@@ -338,6 +338,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:community.blogs.manage')->group(function () {
             Route::post('blogs', [BlogController::class, 'store']);
             Route::patch('blogs/{blog}/status', [BlogController::class, 'updateStatus']);
+            Route::patch('blogs/{blog}/highlight', [BlogController::class, 'toggleHighlight']);
             Route::delete('blogs/{blog}', [BlogController::class, 'destroy']);
         });
 

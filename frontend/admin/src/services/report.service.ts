@@ -44,6 +44,8 @@ const reportService = {
 		per_page?: number;
 		search?: string;
 		status?: string;
+		sort?: string;
+		order?: "asc" | "desc";
 	}): Promise<PaginatedResponse<PostReportRecord>> {
 		return api.get("/reports", params as Record<string, unknown>);
 	},
