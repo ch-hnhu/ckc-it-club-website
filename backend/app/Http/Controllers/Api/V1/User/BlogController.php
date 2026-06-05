@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class BlogController extends BaseApiController
 {
@@ -614,6 +615,41 @@ class BlogController extends BaseApiController
         $blog->delete();
 
         return $this->successResponse(true, null, 'Đã xóa blog.');
+    }
+
+    public function report(Request $request, int $id): JsonResponse
+    {
+        $blog = Blog::query()
+            ->where('status', 'published')
+            ->findOrFail($id);
+
+        if ($blog->author_id === $request->user()->id) {
+            abort(403, 'Bạn không thể báo cáo blog của chính mình.');
+        }
+
+        $validated = $request->validate([
+            'reason'      => ['required', Rule::in(['spam', 'offensive', 'misinformation', 'inappropriate', 'other'])],
+            'description' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $alreadyReported = DB::table('blog_reports')
+            ->where('blog_id', $id)
+            ->where('reporter_id', $request->user()->id)
+            ->exists();
+
+        if (! $alreadyReported) {
+            DB::table('blog_reports')->insert([
+                'blog_id'     => $id,
+                'reporter_id' => $request->user()->id,
+                'reason'      => $validated['reason'],
+                'description' => $validated['description'] ?? null,
+                'status'      => 'pending',
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
+
+        return $this->successResponse(true, [], 'Báo cáo đã được ghi nhận.');
     }
 
     public function recordView(string $slug): JsonResponse

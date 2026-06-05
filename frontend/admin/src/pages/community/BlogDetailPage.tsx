@@ -1,7 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { marked } from "marked";
 import {
-	Archive,
 	ArrowLeft,
 	BookOpen,
 	Calendar,
@@ -12,7 +11,6 @@ import {
 	Hash,
 	Loader2,
 	MessageSquare,
-	RotateCcw,
 	Send,
 	Tag,
 	Trash2,

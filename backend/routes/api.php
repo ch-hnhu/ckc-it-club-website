@@ -17,7 +17,9 @@ use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
+use App\Http\Controllers\Api\V1\Admin\BlogReportController;
 use App\Http\Controllers\Api\V1\Admin\ReportController;
+use App\Http\Controllers\Api\V1\Admin\UnifiedReportController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\SkillController;
@@ -112,6 +114,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/blogs/{id}/pin', [UserBlogController::class, 'pin']);
             Route::post('/blogs/{id}/archive', [UserBlogController::class, 'archive']);
             Route::post('/blogs/{id}/visibility', [UserBlogController::class, 'updateVisibility']);
+            Route::post('/blogs/{id}/report', [UserBlogController::class, 'report']);
             Route::delete('/blogs/{id}', [UserBlogController::class, 'destroy']);
         });
 
@@ -408,12 +411,28 @@ Route::prefix('v1')->group(function () {
             Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
         });
 
-        // reports
+        // post reports
         Route::middleware('permission:community.reports.view')->group(function () {
             Route::get('reports/stats', [ReportController::class, 'stats']);
             Route::get('reports', [ReportController::class, 'index']);
             Route::patch('reports/{report}/status', [ReportController::class, 'updateStatus']);
             Route::post('reports/{report}/hide-post', [ReportController::class, 'hidePost']);
+        });
+
+        // blog reports
+        Route::middleware('permission:community.reports.view')->group(function () {
+            Route::get('blog-reports/stats', [BlogReportController::class, 'stats']);
+            Route::get('blog-reports', [BlogReportController::class, 'index']);
+            Route::patch('blog-reports/{report}/status', [BlogReportController::class, 'updateStatus']);
+            Route::post('blog-reports/{report}/hide-blog', [BlogReportController::class, 'hideBlog']);
+        });
+
+        // unified reports (post + blog)
+        Route::middleware('permission:community.reports.view')->group(function () {
+            Route::get('unified-reports/stats', [UnifiedReportController::class, 'stats']);
+            Route::get('unified-reports', [UnifiedReportController::class, 'index']);
+            Route::patch('unified-reports/{type}/{id}/status', [UnifiedReportController::class, 'updateStatus']);
+            Route::post('unified-reports/{type}/{id}/hide', [UnifiedReportController::class, 'hideContent']);
         });
     });
 });
