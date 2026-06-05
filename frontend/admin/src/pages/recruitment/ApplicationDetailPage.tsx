@@ -256,7 +256,7 @@ function ApplicationDetailPage() {
 												Trả lời
 											</p>
 											<p className='mt-2 break-words text-base leading-8 text-foreground'>
-												{answer.answer_value ||
+												{answer.answer_label || answer.answer_value ||
 													"Ứng viên chưa trả lời câu hỏi này."}
 											</p>
 										</div>

@@ -363,7 +363,15 @@ const EditPostPage: React.FC = () => {
 						</div>
 					</div>
 
-					<div className='flex items-center justify-end'>
+					<div className='flex items-center justify-end gap-3'>
+						<button
+							type='button'
+							onClick={() => navigate(-1)}
+							disabled={isSubmitting}
+							className='neo-btn neo-btn-secondary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
+							<X className='h-4 w-4' />
+							Huỷ
+						</button>
 						<button
 							type='submit'
 							disabled={isSubmitting || channelOptions.length === 0}

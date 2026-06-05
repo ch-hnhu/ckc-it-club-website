@@ -41,7 +41,10 @@ export interface BlogDetail extends Blog {
 	content: string;
 	reaction_summary: Record<string, number>;
 	my_bookmark: boolean;
+	my_report?: boolean;
 }
+
+export type BlogReportReason = "spam" | "offensive" | "misinformation" | "inappropriate" | "other";
 
 export interface BlogComment {
 	id: number;

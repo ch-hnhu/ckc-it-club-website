@@ -251,6 +251,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/community\/media$/, permission: "community.media.view" },
 	{ pattern: /^\/community\/skills$/, permission: "community.skills.manage" },
 	{ pattern: /^\/community\/reports$/, permission: "community.reports.view" },
+	{ pattern: /^\/community\/blog-reports$/, permission: "community.reports.view" },
 ];
 
 export function getRequiredPermissionForPath(pathname: string): string | null {

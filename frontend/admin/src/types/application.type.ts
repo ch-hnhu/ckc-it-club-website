@@ -21,6 +21,7 @@ export interface ApplicationAnswerItem {
 	question_label: string;
 	question_type: string;
 	answer_value: string | null;
+	answer_label: string | null;
 }
 
 export interface ApplicationQuestionOption {

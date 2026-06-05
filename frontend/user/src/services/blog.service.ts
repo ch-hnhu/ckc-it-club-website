@@ -5,6 +5,7 @@ import type {
 	BlogDetail,
 	BlogComment,
 	BlogListParams,
+	BlogReportReason,
 	CreateBlogPayload,
 	BlogReactionResponse,
 	ReactionType,
@@ -94,6 +95,9 @@ export const blogService = {
 
 	deleteBlog: (blogId: number) =>
 		api.delete<ApiResponse<null>>(`/community/blogs/${blogId}`),
+
+	reportBlog: (blogId: number, reason: BlogReportReason, description?: string) =>
+		api.post<ApiResponse<null>>(`/community/blogs/${blogId}/report`, { reason, description }),
 
 	toggleCommentReaction: (commentId: number, type: ReactionType) =>
 		api.post<ApiResponse<{ reacted: boolean; my_reaction: ReactionType | null; reactions_count: number }>>(

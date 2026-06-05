@@ -12,8 +12,7 @@ import {
 	Filter,
 	Image,
 	MoreHorizontal,
-	Pin,
-	PinOff,
+	RotateCcw,
 	SquarePen,
 	Trash2,
 } from "lucide-react";
@@ -59,6 +58,7 @@ import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import { CompactBadgeList } from "@/components/ui/compact-badge-list";
 import { cn } from "@/lib/utils";
+import { renderMarkdownContent } from "@/lib/markdown";
 import postService from "@/services/post.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -86,12 +86,6 @@ export interface PostAuthor {
 	student_code: string | null;
 }
 
-export interface PostMedia {
-	id: number;
-	file_type: "image" | "video";
-	file_path: string;
-}
-
 export interface PostRecord {
 	id: number;
 	user: PostAuthor;
@@ -99,20 +93,20 @@ export interface PostRecord {
 	content: string;
 	status: PostStatus;
 	visibility: PostVisibility;
-	is_pinned: boolean;
 	comments_count: number;
 	reactions_count: number;
 	tags: PostTag[];
-	media: PostMedia[];
+	media_urls: string[];
 	created_at: string;
 	updated_at: string;
+	deleted_at?: string | null;
 }
 
 export interface PostStats {
 	total: number;
 	published: number;
 	hidden: number;
-	pinned: number;
+	archived: number;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -153,11 +147,23 @@ function getStatusBadge(status: PostStatus) {
 	);
 }
 
-function getVisibilityLabel(v: PostVisibility) {
-	return v === "public" ? "Công khai" : "Thành viên";
+function getVisibilityBadge(v: PostVisibility) {
+	return v === "public" ? (
+		<Badge
+			variant="outline"
+			className="rounded-full px-3 py-1 border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10">
+			Công khai
+		</Badge>
+	) : (
+		<Badge
+			variant="outline"
+			className="rounded-full px-3 py-1 border-violet-500/20 bg-violet-500/10 text-violet-700 hover:bg-violet-500/10">
+			Thành viên
+		</Badge>
+	);
 }
 
-type SortKey = "id" | "status" | "created_at" | "reactions_count" | "user_name" | "channel_name" | "content" | "is_pinned";
+type SortKey = "id" | "status" | "created_at" | "reactions_count" | "user_name" | "channel_name" | "content";
 
 const statusFilterOptions: Array<{ value: PostStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
@@ -167,7 +173,7 @@ const statusFilterOptions: Array<{ value: PostStatus | "all"; label: string }> =
 
 // ─── Mock stats (replace with API call) ──────────────────────────────────────
 
-const emptyStats: PostStats = { total: 0, published: 0, hidden: 0, pinned: 0 };
+const emptyStats: PostStats = { total: 0, published: 0, hidden: 0, archived: 0 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -183,6 +189,9 @@ function PostListPage() {
 	const [selectedPost, setSelectedPost] = useState<PostRecord | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<PostRecord | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+	const [showTrash, setShowTrash] = useState(false);
+	const [restoringPostId, setRestoringPostId] = useState<number | null>(null);
 	const [reloadToken, setReloadToken] = useState(0);
 	const [meta, setMeta] = useState({
 		current_page: 1,
@@ -195,7 +204,7 @@ function PostListPage() {
 		order: "asc" | "desc" | null;
 	}>({ key: "created_at", order: "desc" });
 
-	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+	const { allSelected, isSelected, selectedIds, toggleAll, toggleOne } = useTableSelection(
 		posts.map((p) => p.id),
 	);
 
@@ -208,14 +217,15 @@ function PostListPage() {
 	// Reset to page 1 on filter/sort change
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
-	}, [debouncedSearch, statusFilter, sortConfig]);
+	}, [debouncedSearch, showTrash, statusFilter, sortConfig]);
 
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
+		const listRequest = showTrash ? postService.getTrashedPosts : postService.getPosts;
 
 		Promise.all([
-			postService.getPosts({
+			listRequest({
 				page: meta.current_page,
 				per_page: meta.per_page,
 				search: debouncedSearch || undefined,
@@ -240,7 +250,7 @@ function PostListPage() {
 		});
 
 		return () => { cancelled = true; };
-	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken, sortConfig, statusFilter]);
+	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken, showTrash, sortConfig, statusFilter]);
 
 	// ── Sorting ──
 
@@ -260,13 +270,6 @@ function PostListPage() {
 
 	// ── Actions ──
 
-	const handleTogglePin = (post: PostRecord) => {
-		setPosts((prev) =>
-			prev.map((p) => (p.id === post.id ? { ...p, is_pinned: !p.is_pinned } : p)),
-		);
-		toast.success(post.is_pinned ? "Đã bỏ ghim bài đăng." : "Đã ghim bài đăng lên đầu.");
-	};
-
 	const handleToggleStatus = async (post: PostRecord) => {
 		const next: PostStatus = post.status === "published" ? "hidden" : "published";
 		try {
@@ -275,6 +278,20 @@ function PostListPage() {
 			toast.success(next === "hidden" ? "Đã ẩn bài đăng." : "Đã hiện bài đăng.");
 		} catch {
 			toast.error("Không thể cập nhật trạng thái bài đăng.");
+		}
+	};
+
+	const handleRestore = async (post: PostRecord) => {
+		setRestoringPostId(post.id);
+		try {
+			await postService.restorePost(post.id);
+			setPosts((prev) => prev.filter((p) => p.id !== post.id));
+			setReloadToken((prev) => prev + 1);
+			toast.success("Đã khôi phục bài đăng.");
+		} catch {
+			toast.error("Không thể khôi phục bài đăng. Vui lòng thử lại.");
+		} finally {
+			setRestoringPostId(null);
 		}
 	};
 
@@ -294,6 +311,23 @@ function PostListPage() {
 		}
 	};
 
+	const handleBulkDelete = async () => {
+		if (selectedIds.length === 0) return;
+		if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.length} bài đăng đã chọn?`)) return;
+		setIsBulkDeleting(true);
+		try {
+			const res = await postService.bulkDeletePosts(selectedIds);
+			setPosts((prev) => prev.filter((p) => !selectedIds.includes(p.id)));
+			toggleAll(false);
+			setReloadToken((prev) => prev + 1);
+			toast.success(`Đã xóa ${res.data.deleted} bài đăng.`);
+		} catch {
+			toast.error("Không thể xóa bài đăng. Vui lòng thử lại.");
+		} finally {
+			setIsBulkDeleting(false);
+		}
+	};
+
 	return (
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
@@ -304,7 +338,7 @@ function PostListPage() {
 						Kiểm duyệt và quản lý bài đăng
 					</h2>
 					<p className="text-muted-foreground">
-						Xem toàn bộ bài đăng từ thành viên, kiểm duyệt nội dung, ghim bài nổi bật và xóa bài vi phạm.
+						Xem toàn bộ bài đăng từ thành viên, kiểm duyệt nội dung và xử lý bài vi phạm.
 					</p>
 				</div>
 
@@ -330,10 +364,10 @@ function PostListPage() {
 							color: "rose",
 						},
 						{
-							label: "Đang ghim",
-							value: stats.pinned,
-							desc: "Bài được ghim lên đầu trang cộng đồng.",
-							color: "amber",
+							label: "Lưu trữ",
+							value: stats.archived,
+							desc: "Bài đăng đang ở trạng thái lưu trữ.",
+							color: "slate",
 						},
 					].map(({ label, value, desc, color }) => (
 						<div
@@ -343,7 +377,7 @@ function PostListPage() {
 								color === "violet" && "border-violet-500/15 bg-violet-500/5",
 								color === "emerald" && "border-emerald-500/15 bg-emerald-500/5",
 								color === "rose" && "border-rose-500/15 bg-rose-500/5",
-								color === "amber" && "border-amber-500/15 bg-amber-500/5",
+								color === "slate" && "border-slate-500/15 bg-slate-500/5",
 							)}>
 							<p className="text-sm font-semibold text-foreground">{label}</p>
 							<p className={cn(
@@ -351,7 +385,7 @@ function PostListPage() {
 								color === "violet" && "text-violet-700 dark:text-violet-300",
 								color === "emerald" && "text-emerald-700 dark:text-emerald-300",
 								color === "rose" && "text-rose-700 dark:text-rose-300",
-								color === "amber" && "text-amber-700 dark:text-amber-300",
+								color === "slate" && "text-slate-700 dark:text-slate-300",
 							)}>
 								{value}
 							</p>
@@ -369,28 +403,40 @@ function PostListPage() {
 							onChange={(e) => setSearch(e.target.value)}
 							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" size="sm" className="h-8 shrink-0">
-									<Filter className="h-4 w-4" />
-									{statusFilter === "all"
-										? "Tất cả trạng thái"
-										: statusFilterOptions.find((o) => o.value === statusFilter)?.label}
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end" className="w-[210px]">
-								<DropdownMenuLabel>Trạng thái bài đăng</DropdownMenuLabel>
-								<DropdownMenuSeparator />
-								{statusFilterOptions.map((opt) => (
-									<DropdownMenuItem
-										key={opt.value}
-										onClick={() => setStatusFilter(opt.value)}
-										className={statusFilter === opt.value ? "bg-muted font-medium" : ""}>
-										{opt.label}
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<div className="flex items-center gap-2 shrink-0">
+							<Button
+								type="button"
+								variant={showTrash ? "secondary" : "outline"}
+								size="sm"
+								className="h-8"
+								onClick={() => setShowTrash((current) => !current)}
+								aria-label={showTrash ? "Quay lại danh sách bài đăng" : "Xem bài đăng đã xóa"}>
+								<Trash2 className="h-4 w-4" />
+								Thùng rác
+							</Button>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" size="sm" className="h-8">
+										<Filter className="h-4 w-4" />
+										{statusFilter === "all"
+											? "Tất cả trạng thái"
+											: statusFilterOptions.find((o) => o.value === statusFilter)?.label}
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end" className="w-[210px]">
+									<DropdownMenuLabel>Trạng thái bài đăng</DropdownMenuLabel>
+									<DropdownMenuSeparator />
+									{statusFilterOptions.map((opt) => (
+										<DropdownMenuItem
+											key={opt.value}
+											onClick={() => setStatusFilter(opt.value)}
+											className={statusFilter === opt.value ? "bg-muted font-medium" : ""}>
+											{opt.label}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</div>
 					</div>
 
 					<div className="overflow-hidden rounded-md border">
@@ -436,7 +482,7 @@ function PostListPage() {
 									</TableHead>
 									<TableHead className="w-[150px]">
 										<Button variant="ghost" onClick={() => handleSort("created_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Ngày đăng {getSortIcon("created_at")}
+											{showTrash ? "Ngày xóa" : "Ngày đăng"} {getSortIcon("created_at")}
 										</Button>
 									</TableHead>
 									<TableHead className="w-[52px]" />
@@ -490,10 +536,10 @@ function PostListPage() {
 											<TableCell className="max-w-[300px]">
 												<div className="space-y-1">
 													<p className="truncate text-sm">{truncate(post.content)}</p>
-													{post.media.length > 0 && (
+													{post.media_urls.length > 0 && (
 														<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
 															<Image className="h-3 w-3" />
-															{post.media.length} tệp đính kèm
+															{post.media_urls.length} tệp đính kèm
 														</span>
 													)}
 												</div>
@@ -521,7 +567,7 @@ function PostListPage() {
 
 											{/* Date */}
 											<TableCell className="text-sm text-muted-foreground">
-												{formatDate(post.created_at)}
+												{formatDate(showTrash ? post.deleted_at ?? null : post.created_at)}
 											</TableCell>
 
 											{/* Actions */}
@@ -540,27 +586,31 @@ function PostListPage() {
 															<SquarePen className="h-4 w-4" />
 															Xem chi tiết
 														</DropdownMenuItem>
-														<DropdownMenuItem onClick={() => void handleTogglePin(post)}>
-															{post.is_pinned ? (
-																<><PinOff className="h-4 w-4" />Bỏ ghim</>
-															) : (
-																<><Pin className="h-4 w-4" />Ghim bài</>
-															)}
-														</DropdownMenuItem>
-														<DropdownMenuItem onClick={() => void handleToggleStatus(post)}>
-															{post.status === "published" ? (
-																<><EyeOff className="h-4 w-4" />Ẩn bài</>
-															) : (
-																<><Eye className="h-4 w-4" />Hiện bài</>
-															)}
-														</DropdownMenuItem>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem
-															className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-															onClick={() => setDeleteTarget(post)}>
-															<Trash2 className="h-4 w-4 text-destructive" />
-															Xóa bài đăng
-														</DropdownMenuItem>
+														{showTrash ? (
+															<DropdownMenuItem
+																onClick={() => void handleRestore(post)}
+																disabled={restoringPostId === post.id}>
+																<RotateCcw className="h-4 w-4" />
+																{restoringPostId === post.id ? "Đang khôi phục..." : "Khôi phục"}
+															</DropdownMenuItem>
+														) : (
+															<>
+																<DropdownMenuItem onClick={() => void handleToggleStatus(post)}>
+																	{post.status === "published" ? (
+																		<><EyeOff className="h-4 w-4" />Ẩn bài</>
+																	) : (
+																		<><Eye className="h-4 w-4" />Hiện bài</>
+																	)}
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+																	onClick={() => setDeleteTarget(post)}>
+																	<Trash2 className="h-4 w-4 text-destructive" />
+																	Xóa bài đăng
+																</DropdownMenuItem>
+															</>
+														)}
 													</DropdownMenuContent>
 												</DropdownMenu>
 											</TableCell>
@@ -569,7 +619,9 @@ function PostListPage() {
 								) : (
 									<TableRow>
 										<TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
-											Không tìm thấy bài đăng nào phù hợp.
+											{showTrash
+												? "Không có bài đăng đã xóa nào phù hợp."
+												: "Không tìm thấy bài đăng nào phù hợp."}
 										</TableCell>
 									</TableRow>
 								)}
@@ -579,9 +631,26 @@ function PostListPage() {
 								<TableRow>
 									<TableCell colSpan={10}>
 										<div className="flex items-center justify-between px-2">
-											<p className="flex-1 text-sm text-muted-foreground">
-												Đang hiển thị {posts.length} trên tổng {meta.total} bài đăng.
-											</p>
+											<div className="flex flex-1 items-center gap-3 text-sm text-muted-foreground">
+												Đang hiển thị {posts.length} trên tổng {meta.total} {showTrash ? "bài đã xóa" : "bài đăng"}.
+												{selectedIds.length > 0 && (
+													<>
+														<span className="text-border">|</span>
+														<span className="font-medium text-foreground">
+															{selectedIds.length} bài được chọn
+														</span>
+														<Button
+															size="sm"
+															variant="destructive"
+															disabled={isBulkDeleting}
+															onClick={() => void handleBulkDelete()}
+															className="h-7">
+															<Trash2 className="h-3.5 w-3.5" />
+															{isBulkDeleting ? "Đang xóa..." : "Xóa đã chọn"}
+														</Button>
+													</>
+												)}
+											</div>
 											<div className="flex items-center space-x-6 lg:space-x-8">
 												<div className="flex items-center space-x-2">
 													<p className="text-sm font-medium">Rows per page</p>
@@ -662,19 +731,46 @@ function PostListPage() {
 									</div>
 									<div className="ml-auto flex items-center gap-2">
 										{getStatusBadge(selectedPost.status)}
-										<Badge variant="outline" className="rounded-full px-2 py-0 text-xs">
-											{getVisibilityLabel(selectedPost.visibility)}
-										</Badge>
+										{getVisibilityBadge(selectedPost.visibility)}
 									</div>
 								</div>
 
 								{/* Content */}
 								<div className="space-y-1.5">
 									<p className="text-sm font-medium">Nội dung</p>
-									<div className="max-h-[240px] overflow-y-auto rounded-md border bg-muted/30 p-4 text-sm leading-7 whitespace-pre-wrap">
-										{selectedPost.content}
-									</div>
+									<div
+										className="blog-content-viewer max-h-[240px] overflow-y-auto rounded-md border bg-muted/30 p-4"
+										dangerouslySetInnerHTML={{ __html: renderMarkdownContent(selectedPost.content) }}
+									/>
 								</div>
+
+								{/* Media */}
+								{selectedPost.media_urls.length > 0 && (
+									<div className="space-y-1.5">
+										<p className="text-sm font-medium">Tệp đính kèm ({selectedPost.media_urls.length})</p>
+										<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+											{selectedPost.media_urls.map((url, i) =>
+												/\.(mp4|webm|ogg)(\?|$)/i.test(url) ? (
+													<video
+														key={i}
+														src={url}
+														controls
+														className="w-full rounded-md border object-cover"
+													/>
+												) : (
+													<a key={i} href={url} target="_blank" rel="noopener noreferrer">
+														<img
+															src={url}
+															alt={`Ảnh ${i + 1}`}
+															className="w-full rounded-md border object-cover aspect-square"
+															onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+														/>
+													</a>
+												)
+											)}
+										</div>
+									</div>
+								)}
 
 								{/* Stats */}
 								<div className="space-y-1.5">
@@ -682,7 +778,6 @@ function PostListPage() {
 									<div className="space-y-1 text-sm text-muted-foreground">
 										<p>{selectedPost.reactions_count} lượt cảm xúc</p>
 										<p>{selectedPost.comments_count} bình luận</p>
-										<p>{selectedPost.media.length} tệp đính kèm</p>
 									</div>
 								</div>
 
@@ -696,6 +791,12 @@ function PostListPage() {
 										<p className="font-medium">Cập nhật lần cuối</p>
 										<p className="text-muted-foreground">{formatDate(selectedPost.updated_at)}</p>
 									</div>
+									{showTrash && (
+										<div className="space-y-0.5">
+											<p className="font-medium">Ngày xóa</p>
+											<p className="text-muted-foreground">{formatDate(selectedPost.deleted_at ?? null)}</p>
+										</div>
+									)}
 								</div>
 							</div>
 
@@ -703,21 +804,35 @@ function PostListPage() {
 								<Button variant="outline" onClick={() => setSelectedPost(null)}>
 									Đóng
 								</Button>
-								<Button
-									variant={selectedPost.status === "published" ? "secondary" : "default"}
-									onClick={() => { void handleToggleStatus(selectedPost); setSelectedPost(null); }}>
-									{selectedPost.status === "published" ? (
-										<><EyeOff className="h-4 w-4" />Ẩn bài</>
-									) : (
-										<><Eye className="h-4 w-4" />Hiện bài</>
-									)}
-								</Button>
-								<Button
-									variant="destructive"
-									onClick={() => { setSelectedPost(null); setDeleteTarget(selectedPost); }}>
-									<Trash2 className="h-4 w-4" />
-									Xóa bài
-								</Button>
+								{showTrash ? (
+									<Button
+										onClick={() => {
+											void handleRestore(selectedPost);
+											setSelectedPost(null);
+										}}
+										disabled={restoringPostId === selectedPost.id}>
+										<RotateCcw className="h-4 w-4" />
+										{restoringPostId === selectedPost.id ? "Đang khôi phục..." : "Khôi phục"}
+									</Button>
+								) : (
+									<>
+										<Button
+											variant={selectedPost.status === "published" ? "secondary" : "default"}
+											onClick={() => { void handleToggleStatus(selectedPost); setSelectedPost(null); }}>
+											{selectedPost.status === "published" ? (
+												<><EyeOff className="h-4 w-4" />Ẩn bài</>
+											) : (
+												<><Eye className="h-4 w-4" />Hiện bài</>
+											)}
+										</Button>
+										<Button
+											variant="destructive"
+											onClick={() => { setSelectedPost(null); setDeleteTarget(selectedPost); }}>
+											<Trash2 className="h-4 w-4" />
+											Xóa bài
+										</Button>
+									</>
+								)}
 							</DialogFooter>
 						</>
 					)}
@@ -755,6 +870,7 @@ function PostListPage() {
 					)}
 				</DialogContent>
 			</Dialog>
+
 		</div>
 	);
 }
