@@ -293,8 +293,8 @@ function BlogListPage() {
 
 	const getNextActions = (status: BlogStatus): Array<{ next: BlogStatus; label: string }> => {
 		if (status === "draft") return [{ next: "published", label: "Xuất bản" }];
-		if (status === "pending_review") return [{ next: "published", label: "Duyệt & Xuất bản" }, { next: "draft", label: "Trả về nháp" }];
-		if (status === "published") return [{ next: "archived", label: "Lưu trữ" }, { next: "draft", label: "Thu hồi về nháp" }];
+		if (status === "pending_review") return [{ next: "published", label: "Duyệt" }];
+		if (status === "published") return [];
 		if (status === "archived") return [{ next: "published", label: "Khôi phục" }];
 		return [];
 	};

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -61,6 +62,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 import chatService from "@/services/chat.service";
 
 export interface ChatRoomRecord {
@@ -198,6 +200,8 @@ function ChatRoomListPage() {
 	const [isSavingRoom, setIsSavingRoom] = useState(false);
 	const [deleteRoomTarget, setDeleteRoomTarget] = useState<ChatRoomRecord | null>(null);
 	const [isDeletingRoom, setIsDeletingRoom] = useState(false);
+
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(rooms.map((r) => r.id));
 
 	useEffect(() => {
 		const timer = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -365,8 +369,15 @@ function ChatRoomListPage() {
 					<div className="overflow-hidden rounded-md border">
 						<Table>
 							<TableHeader>
-								<TableRow>
-									<TableHead className="min-w-[200px]">
+							<TableRow>
+								<TableHead className="w-[44px]">
+									<Checkbox
+										aria-label="Chọn tất cả"
+										checked={allSelected}
+										onCheckedChange={(c) => toggleAll(c === true)}
+									/>
+								</TableHead>
+								<TableHead className="min-w-[200px]">
 										<Button variant="ghost" onClick={() => handleSort("name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 											Tên phòng {getSortIcon("name")}
 										</Button>
@@ -394,7 +405,7 @@ function ChatRoomListPage() {
 								{loadingRooms ? (
 									Array.from({ length: 6 }).map((_, index) => (
 										<TableRow key={index}>
-											<TableCell colSpan={5}>
+											<TableCell colSpan={6}>
 												<Skeleton className="h-4 w-full" />
 											</TableCell>
 										</TableRow>
@@ -402,6 +413,12 @@ function ChatRoomListPage() {
 								) : rooms.length > 0 ? (
 									rooms.map((room) => (
 										<TableRow key={room.id}>
+											<TableCell>
+												<Checkbox
+													checked={isSelected(room.id)}
+													onCheckedChange={(c) => toggleOne(room.id, c === true)}
+												/>
+											</TableCell>
 											<TableCell>
 												<div className="flex items-center gap-3">
 													<Avatar className="h-8 w-8">
@@ -457,7 +474,7 @@ function ChatRoomListPage() {
 									))
 								) : (
 									<TableRow>
-										<TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+										<TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
 											Không có phòng chat nào.
 										</TableCell>
 									</TableRow>
@@ -466,7 +483,7 @@ function ChatRoomListPage() {
 
 							<TableFooter className="bg-transparent">
 								<TableRow>
-									<TableCell colSpan={5}>
+									<TableCell colSpan={6}>
 										<PaginationFooter
 											meta={meta}
 											onPageChange={(page) => setMeta((prev) => ({ ...prev, current_page: page }))}
@@ -557,12 +574,10 @@ function ChatRoomListPage() {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={isDeletingRoom}>Hủy</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleDeleteRoom}
-							disabled={isDeletingRoom}
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-						>
-							{isDeletingRoom ? "Đang xóa..." : "Xóa phòng"}
+						<AlertDialogAction asChild>
+							<Button variant="destructive" onClick={handleDeleteRoom} disabled={isDeletingRoom}>
+								{isDeletingRoom ? "Đang xóa..." : "Xóa phòng"}
+							</Button>
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

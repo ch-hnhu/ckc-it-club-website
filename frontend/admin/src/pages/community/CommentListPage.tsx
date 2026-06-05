@@ -405,7 +405,7 @@ function CommentListPage() {
 													{comment.parent_id && (
 														<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
 															<MessageSquare className="h-3 w-3" />
-															Reply #{comment.parent_id}
+															Reply
 														</span>
 													)}
 												</div>
@@ -557,11 +557,18 @@ function CommentListPage() {
 										</a>
 									)}
 								</div>
-								{selectedComment.parent_id && (
-									<div className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-										<span className="font-medium">Reply cho:</span> Bình luận #{selectedComment.parent_id}
-									</div>
-								)}
+								{selectedComment.parent_id && (() => {
+									const parent = comments.find(c => c.id === selectedComment.parent_id);
+									return (
+										<div className="rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+											<span className="font-medium">Reply cho:</span>{" "}
+											{parent
+												? <span className="italic">"{parent.content.length > 80 ? parent.content.slice(0, 80) + "…" : parent.content}"</span>
+												: `Bình luận #${selectedComment.parent_id}`
+											}
+										</div>
+									);
+								})()}
 								<div className="space-y-1.5">
 									<p className="text-sm font-medium">Nội dung</p>
 									<div className="max-h-[200px] overflow-y-auto rounded-md border bg-muted/30 p-4 text-sm leading-7 whitespace-pre-wrap">

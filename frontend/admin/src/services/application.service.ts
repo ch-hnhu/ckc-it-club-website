@@ -1,5 +1,6 @@
 import { api } from "@/services/api.service";
 import type {
+	ApplicationAnswerItem,
 	ApplicationQuestionPayload,
 	ApplicationQuestionRecord,
 	ClubApplicationRecord,
@@ -7,7 +8,15 @@ import type {
 } from "@/types/application.type";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 
-const mockApplications: ClubApplicationRecord[] = [
+type MockApplicationAnswerItem = Omit<ApplicationAnswerItem, "answer_label"> & {
+	answer_label?: string | null;
+};
+
+type MockClubApplicationRecord = Omit<ClubApplicationRecord, "answers"> & {
+	answers: MockApplicationAnswerItem[];
+};
+
+const mockApplicationSeeds: MockClubApplicationRecord[] = [
 	{
 		id: 1,
 		status: "pending",
@@ -134,6 +143,14 @@ const mockApplications: ClubApplicationRecord[] = [
 		],
 	},
 ];
+
+const mockApplications: ClubApplicationRecord[] = mockApplicationSeeds.map((application) => ({
+	...application,
+	answers: application.answers.map((answer) => ({
+		...answer,
+		answer_label: answer.answer_label ?? answer.answer_value,
+	})),
+}));
 
 function normalizeApplications(
 	payload:

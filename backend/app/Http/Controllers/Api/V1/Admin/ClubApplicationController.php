@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\ClubApplication\UpdateClubApplicationStatusRequest;
 use App\Models\ClubApplication;
 use App\Services\NotificationService;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 
 class ClubApplicationController extends BaseApiController
@@ -27,7 +28,7 @@ class ClubApplicationController extends BaseApiController
                 'applicant.faculty',
                 'applicant.major',
                 'applicant.class',
-                'answers.question',
+                'answers.question.options',
             ])
             ->orderByDesc('updated_at')
             ->get()
@@ -97,6 +98,15 @@ class ClubApplicationController extends BaseApiController
             '/requests/' . $clubApplication->id,
         );
 
+        if ($admin && $clubApplication->applicant) {
+            UserNotificationService::dispatchApplicationStatusUpdate(
+                $clubApplication->applicant,
+                $admin,
+                $nextStatus,
+                $clubApplication->id,
+            );
+        }
+
         return $this->successResponse(
             true,
             $this->transformApplication($clubApplication),
@@ -125,12 +135,20 @@ class ClubApplicationController extends BaseApiController
                 'class_name' => $application->applicant->class?->label,
             ] : null,
             'answers' => $application->answers->map(function ($answer) {
+                $type  = $answer->question?->type ?? '';
+                $value = $answer->answer_value;
+
+                $label = in_array($type, ['radio', 'select']) && $value && $answer->question
+                    ? ($answer->question->options->firstWhere('value', $value)?->label ?? $value)
+                    : $value;
+
                 return [
-                    'id' => $answer->id,
-                    'question_id' => $answer->question_id,
+                    'id'             => $answer->id,
+                    'question_id'    => $answer->question_id,
                     'question_label' => $answer->question?->label ?? '',
-                    'question_type' => $answer->question?->type ?? '',
-                    'answer_value' => $answer->answer_value,
+                    'question_type'  => $type,
+                    'answer_value'   => $value,
+                    'answer_label'   => $label,
                 ];
             })->values()->all(),
         ];

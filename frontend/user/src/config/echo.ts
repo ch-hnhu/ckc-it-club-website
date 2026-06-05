@@ -1,5 +1,6 @@
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
+import type { ChannelAuthorizationCallback } from "pusher-js";
 
 const reverbAppKey = import.meta.env.VITE_REVERB_APP_KEY as string | undefined;
 const backendUrl = (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "http://localhost:8000";
@@ -21,7 +22,7 @@ const echo = reverbAppKey
 				// Use a custom authorizer so every auth request reads the latest
 				// Bearer token from localStorage, even after token refresh or expiry.
 				authorizer: (channel: { name: string }) => ({
-					authorize: (socketId: string, callback: (error: Error | null, data: unknown) => void) => {
+					authorize: (socketId: string, callback: ChannelAuthorizationCallback) => {
 						fetch(`${backendUrl}/api/v1/broadcasting/auth`, {
 							method: "POST",
 							headers: {

@@ -7,6 +7,7 @@ import {
 	Check,
 	Clock,
 	Eye,
+	Flag,
 	Heart,
 	Loader2,
 	LockKeyhole,
@@ -22,6 +23,7 @@ import {
 	UserPlus,
 } from "lucide-react";
 import PrivacyBlogModal from "@/components/community/PrivacyBlogModal";
+import ReportBlogModal from "@/components/community/ReportBlogModal";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
 	Breadcrumb,
@@ -553,6 +555,8 @@ const BlogDetailPage: React.FC = () => {
 	const [archiveLoading, setArchiveLoading] = useState(false);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+	const [showReportModal, setShowReportModal] = useState(false);
+	const [isAlreadyReported, setIsAlreadyReported] = useState(false);
 	const menuBtnRef = useRef<HTMLButtonElement>(null);
 	const menuDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -582,6 +586,7 @@ const BlogDetailPage: React.FC = () => {
 				setHeartCount(res.data.reactions_count);
 				setSaved(res.data.my_bookmark ?? false);
 				setFollowed(res.data.user?.is_following ?? false);
+				setIsAlreadyReported(res.data.my_report ?? false);
 			})
 			.catch(() => setBlogError("Không tìm thấy bài viết."))
 			.finally(() => setBlogLoading(false));
@@ -1021,16 +1026,27 @@ const BlogDetailPage: React.FC = () => {
 																</button>
 															</>
 														) : (
-															<button
-																onClick={() => {
-																	closeBlogMenu();
-																	void handleToggleSaved();
-																}}
-																disabled={saveLoading}
-																className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
-																<Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
-																{saved ? "Bỏ lưu" : "Lưu"}
-															</button>
+															<>
+																<button
+																	onClick={() => {
+																		closeBlogMenu();
+																		void handleToggleSaved();
+																	}}
+																	disabled={saveLoading}
+																	className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-black transition hover:bg-gray-100 disabled:opacity-60'>
+																	<Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
+																	{saved ? "Bỏ lưu" : "Lưu"}
+																</button>
+																<button
+																	onClick={() => {
+																		closeBlogMenu();
+																		setShowReportModal(true);
+																	}}
+																	className='flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'>
+																	<Flag className='h-4 w-4' />
+																	Báo cáo
+																</button>
+															</>
 														)}
 													</div>
 												)}
@@ -1259,6 +1275,16 @@ const BlogDetailPage: React.FC = () => {
 					currentVisibility={currentVisibility}
 					onClose={() => setShowPrivacyModal(false)}
 					onSaved={handlePrivacySaved}
+				/>
+			)}
+
+			{/* Report modal */}
+			{blog && showReportModal && (
+				<ReportBlogModal
+					blogId={blog.id}
+					isAlreadyReported={isAlreadyReported}
+					onClose={() => setShowReportModal(false)}
+					onSuccess={() => setIsAlreadyReported(true)}
 				/>
 			)}
 

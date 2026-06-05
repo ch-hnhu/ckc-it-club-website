@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class BlogController extends BaseApiController
 {
@@ -265,7 +266,7 @@ class BlogController extends BaseApiController
 
         $blog = Blog::where(fn ($q) => $q->where('slug', $slug)->orWhere('id', is_numeric($slug) ? (int)$slug : 0))
             ->where('author_id', $userId)
-            ->whereIn('status', ['draft', 'pending_review'])
+            ->whereIn('status', ['draft', 'pending_review', 'published', 'archived'])
             ->firstOrFail();
 
         $request->validate([
@@ -292,7 +293,16 @@ class BlogController extends BaseApiController
 
         if ($request->has('content'))  $blog->content  = $request->input('content');
         if ($request->has('excerpt'))  $blog->excerpt  = $request->input('excerpt');
-        if ($request->has('status'))   $blog->status   = $request->input('status');
+
+        // Xác định status sau khi cập nhật:
+        // - Admin → giữ published (hoặc theo request nếu đang là draft/pending_review)
+        // - User thường → pending_review khi đăng lại (kể cả blog đã published/archived)
+        $isAdmin = $request->user()->hasRole(RolesEnum::adminRoles());
+        if ($request->has('status')) {
+            $blog->status = $isAdmin ? 'published' : $request->input('status');
+        } elseif (!$isAdmin && in_array($blog->status, ['published', 'archived'])) {
+            $blog->status = 'pending_review';
+        }
 
         if ($request->hasFile('featured_image')) {
             // Xóa ảnh cũ nếu có
@@ -311,6 +321,7 @@ class BlogController extends BaseApiController
         $blog->load(['author:id,full_name,email,avatar,username', 'tags:id,name']);
 
         $messages = [
+            'published'      => 'Blog đã được cập nhật và xuất bản.',
             'pending_review' => 'Blog đã được gửi và đang chờ duyệt.',
             'draft'          => 'Đã lưu nháp.',
         ];
@@ -604,6 +615,41 @@ class BlogController extends BaseApiController
         $blog->delete();
 
         return $this->successResponse(true, null, 'Đã xóa blog.');
+    }
+
+    public function report(Request $request, int $id): JsonResponse
+    {
+        $blog = Blog::query()
+            ->where('status', 'published')
+            ->findOrFail($id);
+
+        if ($blog->author_id === $request->user()->id) {
+            abort(403, 'Bạn không thể báo cáo blog của chính mình.');
+        }
+
+        $validated = $request->validate([
+            'reason'      => ['required', Rule::in(['spam', 'offensive', 'misinformation', 'inappropriate', 'other'])],
+            'description' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $alreadyReported = DB::table('blog_reports')
+            ->where('blog_id', $id)
+            ->where('reporter_id', $request->user()->id)
+            ->exists();
+
+        if (! $alreadyReported) {
+            DB::table('blog_reports')->insert([
+                'blog_id'     => $id,
+                'reporter_id' => $request->user()->id,
+                'reason'      => $validated['reason'],
+                'description' => $validated['description'] ?? null,
+                'status'      => 'pending',
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
+
+        return $this->successResponse(true, [], 'Báo cáo đã được ghi nhận.');
     }
 
     public function recordView(string $slug): JsonResponse
