@@ -777,6 +777,7 @@ body {
   word-break: break-word;
   overflow-wrap: break-word;
 }
+.blog-content-viewer > :first-child { margin-top: 0 !important; }
 .blog-content-viewer h1,.blog-content-viewer h2,.blog-content-viewer h3,
 .blog-content-viewer h4,.blog-content-viewer h5,.blog-content-viewer h6 {
   font-weight: 700; line-height: 1.3; margin-top: 1.75em; margin-bottom: 0.6em; color: var(--foreground);
