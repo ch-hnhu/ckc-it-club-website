@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -36,6 +37,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 import reportService, {
 	type PostReportRecord,
 	type ReportStats,
@@ -95,6 +97,7 @@ export default function ReportListPage() {
 	const [reports, setReports] = useState<PostReportRecord[]>([]);
 	const [stats, setStats] = useState<ReportStats | null>(null);
 	const [loading, setLoading] = useState(true);
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(reports.map((r) => r.id));
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
@@ -228,6 +231,13 @@ export default function ReportListPage() {
 					<Table>
 						<TableHeader>
 							<TableRow>
+								<TableHead className="w-[44px]">
+									<Checkbox
+										aria-label="Chọn tất cả"
+										checked={allSelected}
+										onCheckedChange={(c) => toggleAll(c === true)}
+									/>
+								</TableHead>
 								<TableHead className="w-[80px]">
 									<Button variant="ghost" onClick={() => handleSort("id")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 										ID {getSortIcon("id")}
@@ -271,12 +281,18 @@ export default function ReportListPage() {
 							{loading ? (
 								Array.from({ length: meta.per_page }).map((_, i) => (
 									<TableRow key={i}>
-										<TableCell colSpan={8}><Skeleton className="h-4 w-full" /></TableCell>
+										<TableCell colSpan={9}><Skeleton className="h-4 w-full" /></TableCell>
 									</TableRow>
 								))
 							) : reports.length > 0 ? (
 								reports.map((report) => (
 									<TableRow key={report.id} className={report.post?.status === "hidden" ? "opacity-60" : ""}>
+										<TableCell className="w-[44px]">
+											<Checkbox
+												checked={isSelected(report.id)}
+												onCheckedChange={(c) => toggleOne(report.id, c === true)}
+											/>
+										</TableCell>
 										<TableCell className="font-medium text-muted-foreground">
 											#{report.id}
 										</TableCell>
@@ -395,7 +411,7 @@ export default function ReportListPage() {
 								))
 							) : (
 								<TableRow>
-									<TableCell colSpan={8} className="py-12 text-center">
+									<TableCell colSpan={9} className="py-12 text-center">
 										<AlertTriangle className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
 										<p className="text-sm text-muted-foreground">Không có báo cáo nào.</p>
 									</TableCell>
@@ -405,7 +421,7 @@ export default function ReportListPage() {
 
 						<TableFooter className="bg-transparent">
 							<TableRow>
-								<TableCell colSpan={8}>
+								<TableCell colSpan={9}>
 									<div className="flex items-center justify-between px-2">
 										<p className="flex-1 text-sm text-muted-foreground">
 											Đang hiển thị {reports.length} trên tổng {meta.total} báo cáo.
