@@ -281,6 +281,51 @@ class UserNotificationService
         ]);
     }
 
+    /**
+     * Notify the reporter when an admin hides content they reported.
+     * Sends a real-time WebSocket push + DB notification.
+     */
+    public static function dispatchReportResolved(
+        User $reporter,
+        User $admin,
+        string $contentType,   // 'post' | 'blog'
+        string $contentTitle,
+    ): void {
+        $label = $contentType === 'post' ? 'bài viết' : 'blog';
+
+        self::send($reporter, $admin, [
+            'title'       => 'Báo cáo vi phạm đã được xử lý',
+            'message'     => "Báo cáo của bạn về {$label} \"{$contentTitle}\" đã được xem xét. Nội dung vi phạm đã bị ẩn.",
+            'type'        => 'report_resolved',
+            'target_type' => "{$contentType}_report",
+            'target_id'   => 0,
+            'link'        => '',
+        ]);
+    }
+
+    /**
+     * Notify the reporter when an admin dismisses their report (no violation found).
+     * Sends a real-time WebSocket push + DB notification.
+     */
+    public static function dispatchReportDismissed(
+        User $reporter,
+        User $admin,
+        string $contentType,
+        string $contentTitle,
+        string $contentLink,
+    ): void {
+        $label = $contentType === 'post' ? 'bài viết' : 'blog';
+
+        self::send($reporter, $admin, [
+            'title'       => 'Báo cáo vi phạm đã được xem xét',
+            'message'     => "Báo cáo của bạn về {$label} \"{$contentTitle}\" đã được xem xét. Chúng tôi không tìm thấy vi phạm trong nội dung này.",
+            'type'        => 'report_dismissed',
+            'target_type' => "{$contentType}_report",
+            'target_id'   => 0,
+            'link'        => $contentLink,
+        ]);
+    }
+
     // ─── Internal ────────────────────────────────────────────────────────────
 
     /**

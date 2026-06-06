@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Post;
+use App\Models\PostReport;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -89,7 +91,35 @@ class PostController extends BaseApiController
     {
         $request->validate(['status' => 'required|in:published,hidden,draft,archived']);
 
-        $post->update(['status' => $request->string('status')->value()]);
+        $previousStatus = $post->status;
+        $newStatus      = $request->string('status')->value();
+
+        $post->update(['status' => $newStatus]);
+
+        // Khi un-hide: reset tất cả report resolved → pending để admin xem xét lại
+        if ($previousStatus === 'hidden' && $newStatus !== 'hidden') {
+            $resetCount = PostReport::where('post_id', $post->id)
+                ->where('status', 'resolved')
+                ->update([
+                    'status'      => 'pending',
+                    'resolved_by' => null,
+                    'resolved_at' => null,
+                ]);
+
+            if ($resetCount > 0) {
+                $admin = $request->user();
+                NotificationService::dispatch(
+                    title: 'Báo cáo cần xem xét lại',
+                    message: "{$admin->full_name} đã bật lại bài viết \"{$post->title}\". {$resetCount} báo cáo đã được chuyển về chờ xử lý.",
+                    action: 'status_changed',
+                    entityType: 'post_report',
+                    entityId: $post->id,
+                    performedBy: $admin->full_name,
+                    link: '/community/reports',
+                    excludeUserId: $request->user()->id,
+                );
+            }
+        }
 
         return $this->successResponse(true, ['status' => $post->status], 'Cập nhật trạng thái bài đăng thành công.');
     }

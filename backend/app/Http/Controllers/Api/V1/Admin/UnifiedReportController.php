@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\BlogReport;
 use App\Models\PostReport;
+use App\Models\User;
+use App\Services\NotificationService;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,7 +21,7 @@ class UnifiedReportController extends BaseApiController
         $search  = $request->query('search');
         $type    = $request->query('type'); // 'post' | 'blog' | null = all
 
-        $allowedSorts = ['id', 'content_title', 'reporter_name', 'reason', 'description', 'status', 'created_at'];
+        $allowedSorts = ['id', 'type', 'content_title', 'reporter_name', 'reason', 'description', 'status', 'created_at'];
         $sort  = in_array($request->query('sort', 'created_at'), $allowedSorts)
             ? $request->query('sort', 'created_at') : 'created_at';
         $order = in_array($request->query('order', 'desc'), ['asc', 'desc'])
@@ -72,6 +75,7 @@ class UnifiedReportController extends BaseApiController
         $keyFn = match ($sort) {
             'content_title' => fn ($r) => mb_strtolower($r['content']['title'] ?? ''),
             'reporter_name' => fn ($r) => mb_strtolower($r['reporter']['full_name'] ?? ''),
+            'type'          => fn ($r) => $r['type'],
             default         => fn ($r) => $r[$sort] ?? '',
         };
 
@@ -117,55 +121,230 @@ class UnifiedReportController extends BaseApiController
         ]);
 
         $status  = $request->input('status');
+        $userId  = $request->user()->id;
+        $admin   = $request->user();
         $payload = ['status' => $status];
 
         if (in_array($status, ['resolved', 'dismissed'])) {
-            $payload['resolved_by'] = $request->user()->id;
+            $payload['resolved_by'] = $userId;
             $payload['resolved_at'] = now();
         }
+
+        $statusLabel = match ($status) {
+            'pending'   => 'chờ xử lý',
+            'reviewing' => 'đang xem xét',
+            'resolved'  => 'đã xử lý',
+            'dismissed' => 'đã bỏ qua',
+            default     => $status,
+        };
 
         if ($type === 'post') {
             $report = PostReport::findOrFail($id);
             $report->update($payload);
             $report->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+
+            $contentTitle = $report->post?->title ?? 'Bài viết đã xóa';
+            NotificationService::dispatch(
+                title: 'Trạng thái báo cáo được cập nhật',
+                message: "{$admin->full_name} đã cập nhật báo cáo bài viết \"{$contentTitle}\" thành {$statusLabel}.",
+                action: 'status_changed',
+                entityType: 'post_report',
+                entityId: $report->id,
+                performedBy: $admin->full_name,
+                link: '/community/reports',
+                excludeUserId: $userId,
+            );
+
             return $this->successResponse(true, $this->transformPost($report), 'Cập nhật trạng thái thành công.');
         }
 
         $report = BlogReport::findOrFail($id);
         $report->update($payload);
         $report->load(['blog:id,slug,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+
+        $contentTitle = $report->blog?->title ?? 'Blog đã xóa';
+        NotificationService::dispatch(
+            title: 'Trạng thái báo cáo được cập nhật',
+            message: "{$admin->full_name} đã cập nhật báo cáo blog \"{$contentTitle}\" thành {$statusLabel}.",
+            action: 'status_changed',
+            entityType: 'blog_report',
+            entityId: $report->id,
+            performedBy: $admin->full_name,
+            link: '/community/reports',
+            excludeUserId: $userId,
+        );
+
         return $this->successResponse(true, $this->transformBlog($report), 'Cập nhật trạng thái thành công.');
     }
 
     public function hideContent(Request $request, string $type, int $id): JsonResponse
     {
+        $now    = now();
+        $userId = $request->user()->id;
+
         if ($type === 'post') {
             $report = PostReport::with('post')->findOrFail($id);
             if (! $report->post) {
                 return $this->errorResponse(false, 'Bài viết không tồn tại.', 404);
             }
+
+            // Collect all unique reporters BEFORE bulk update
+            $reporterIds = PostReport::where('post_id', $report->post_id)
+                ->pluck('reporter_id')->unique();
+            $reporters = User::whereIn('id', $reporterIds)->get();
+
             $report->post->update(['status' => 'hidden']);
-            $report->update([
-                'status'      => 'resolved',
-                'resolved_by' => $request->user()->id,
-                'resolved_at' => now(),
-            ]);
-            $report->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
-            return $this->successResponse(true, $this->transformPost($report), 'Đã ẩn bài viết và đánh dấu đã xử lý.');
+
+            // Bulk-resolve every report for this post
+            PostReport::where('post_id', $report->post_id)
+                ->update(['status' => 'resolved', 'resolved_by' => $userId, 'resolved_at' => $now]);
+
+            $report->refresh()->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+
+            $contentTitle = $report->post?->title ?? 'Bài viết đã xóa';
+            $admin        = $request->user();
+
+            // Notify all reporters (user-facing, real-time WebSocket)
+            foreach ($reporters as $reporter) {
+                UserNotificationService::dispatchReportResolved($reporter, $admin, 'post', $contentTitle);
+            }
+
+            // Notify other admins
+            NotificationService::dispatch(
+                title: 'Nội dung vi phạm đã bị ẩn',
+                message: "{$admin->full_name} đã ẩn bài viết \"{$contentTitle}\" và đánh dấu tất cả báo cáo liên quan là Đã xử lý.",
+                action: 'status_changed',
+                entityType: 'post_report',
+                entityId: $report->id,
+                performedBy: $admin->full_name,
+                link: '/community/reports',
+                excludeUserId: $userId,
+            );
+
+            return $this->successResponse(true, $this->transformPost($report), 'Đã ẩn bài viết và đánh dấu tất cả báo cáo là đã xử lý.');
         }
 
         $report = BlogReport::with('blog')->findOrFail($id);
         if (! $report->blog) {
             return $this->errorResponse(false, 'Blog không tồn tại.', 404);
         }
+
+        // Collect all unique reporters BEFORE bulk update
+        $reporterIds = BlogReport::where('blog_id', $report->blog_id)
+            ->pluck('reporter_id')->unique();
+        $reporters = User::whereIn('id', $reporterIds)->get();
+
         $report->blog->update(['status' => 'hidden']);
-        $report->update([
-            'status'      => 'resolved',
-            'resolved_by' => $request->user()->id,
-            'resolved_at' => now(),
-        ]);
+
+        // Bulk-resolve every report for this blog
+        BlogReport::where('blog_id', $report->blog_id)
+            ->update(['status' => 'resolved', 'resolved_by' => $userId, 'resolved_at' => $now]);
+
+        $report->refresh()->load(['blog:id,slug,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+
+        $contentTitle = $report->blog?->title ?? 'Blog đã xóa';
+        $admin        = $request->user();
+
+        // Notify all reporters (user-facing, real-time WebSocket)
+        foreach ($reporters as $reporter) {
+            UserNotificationService::dispatchReportResolved($reporter, $admin, 'blog', $contentTitle);
+        }
+
+        // Notify other admins
+        NotificationService::dispatch(
+            title: 'Nội dung vi phạm đã bị ẩn',
+            message: "{$admin->full_name} đã ẩn blog \"{$contentTitle}\" và đánh dấu tất cả báo cáo liên quan là Đã xử lý.",
+            action: 'status_changed',
+            entityType: 'blog_report',
+            entityId: $report->id,
+            performedBy: $admin->full_name,
+            link: '/community/reports',
+            excludeUserId: $userId,
+        );
+
+        return $this->successResponse(true, $this->transformBlog($report), 'Đã ẩn blog và đánh dấu tất cả báo cáo là đã xử lý.');
+    }
+
+    public function dismiss(Request $request, string $type, int $id): JsonResponse
+    {
+        $now    = now();
+        $userId = $request->user()->id;
+
+        if ($type === 'post') {
+            $report = PostReport::findOrFail($id);
+
+            // Other pending/reviewing reports for same post → superseded
+            PostReport::where('post_id', $report->post_id)
+                ->where('id', '!=', $id)
+                ->whereIn('status', ['pending', 'reviewing'])
+                ->update(['status' => 'superseded', 'resolved_by' => $userId, 'resolved_at' => $now]);
+
+            // This report → dismissed
+            $report->update(['status' => 'dismissed', 'resolved_by' => $userId, 'resolved_at' => $now]);
+            $report->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+
+            $contentTitle = $report->post?->title ?? 'Bài viết đã xóa';
+            $contentLink  = $report->post ? "/cong-dong/bai-viet/{$report->post->id}" : '';
+            $admin        = $request->user();
+
+            // Notify the reporter (user-facing, real-time WebSocket)
+            if ($report->reporter) {
+                UserNotificationService::dispatchReportDismissed(
+                    $report->reporter, $admin, 'post', $contentTitle, $contentLink
+                );
+            }
+
+            // Notify other admins
+            NotificationService::dispatch(
+                title: 'Báo cáo vi phạm đã được bỏ qua',
+                message: "{$admin->full_name} đã bỏ qua báo cáo về bài viết \"{$contentTitle}\".",
+                action: 'status_changed',
+                entityType: 'post_report',
+                entityId: $report->id,
+                performedBy: $admin->full_name,
+                link: '/community/reports',
+                excludeUserId: $userId,
+            );
+
+            return $this->successResponse(true, $this->transformPost($report), 'Đã bỏ qua báo cáo.');
+        }
+
+        $report = BlogReport::findOrFail($id);
+
+        // Other pending/reviewing reports for same blog → superseded
+        BlogReport::where('blog_id', $report->blog_id)
+            ->where('id', '!=', $id)
+            ->whereIn('status', ['pending', 'reviewing'])
+            ->update(['status' => 'superseded', 'resolved_by' => $userId, 'resolved_at' => $now]);
+
+        // This report → dismissed
+        $report->update(['status' => 'dismissed', 'resolved_by' => $userId, 'resolved_at' => $now]);
         $report->load(['blog:id,slug,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
-        return $this->successResponse(true, $this->transformBlog($report), 'Đã ẩn blog và đánh dấu đã xử lý.');
+
+        $contentTitle = $report->blog?->title ?? 'Blog đã xóa';
+        $contentLink  = $report->blog?->slug ? "/blog/{$report->blog->slug}" : '';
+        $admin        = $request->user();
+
+        // Notify the reporter (user-facing, real-time WebSocket)
+        if ($report->reporter) {
+            UserNotificationService::dispatchReportDismissed(
+                $report->reporter, $admin, 'blog', $contentTitle, $contentLink
+            );
+        }
+
+        // Notify other admins
+        NotificationService::dispatch(
+            title: 'Báo cáo vi phạm đã được bỏ qua',
+            message: "{$admin->full_name} đã bỏ qua báo cáo về blog \"{$contentTitle}\".",
+            action: 'status_changed',
+            entityType: 'blog_report',
+            entityId: $report->id,
+            performedBy: $admin->full_name,
+            link: '/community/reports',
+            excludeUserId: $userId,
+        );
+
+        return $this->successResponse(true, $this->transformBlog($report), 'Đã bỏ qua báo cáo.');
     }
 
     // ─── Private ──────────────────────────────────────────────────────────────

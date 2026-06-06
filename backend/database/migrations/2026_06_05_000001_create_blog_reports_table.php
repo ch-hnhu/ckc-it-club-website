@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('reporter_id')->constrained('users')->cascadeOnDelete();
             $table->enum('reason', ['spam', 'offensive', 'misinformation', 'inappropriate', 'other']);
             $table->text('description')->nullable();
-            $table->enum('status', ['pending', 'reviewing', 'resolved', 'dismissed'])->default('pending');
+            $table->enum('status', ['pending', 'reviewing', 'resolved', 'dismissed', 'superseded'])->default('pending');
             $table->foreignId('resolved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('resolved_at')->nullable();
             $table->timestamps();
