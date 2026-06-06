@@ -38,48 +38,43 @@ import {
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
-import unifiedReportService, {
-	type UnifiedReportRecord,
-} from "@/services/unified-report.service";
+import blogReportService, {
+	type BlogReportRecord,
+	type BlogReportStats,
+} from "@/services/blog-report.service";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const REASON_LABELS: Record<string, string> = {
-	spam:           "Spam",
-	offensive:      "Nội dung xúc phạm",
+	spam: "Spam",
+	offensive: "Nội dung xúc phạm",
 	misinformation: "Thông tin sai lệch",
-	inappropriate:  "Không phù hợp",
-	other:          "Khác",
+	inappropriate: "Không phù hợp",
+	other: "Khác",
 };
 
 const STATUS_OPTIONS = [
-	{ value: "all",       label: "Tất cả trạng thái" },
-	{ value: "pending",   label: "Chờ xử lý" },
+	{ value: "all", label: "Tất cả" },
+	{ value: "pending", label: "Chờ xử lý" },
 	{ value: "reviewing", label: "Đang xem xét" },
-	{ value: "resolved",  label: "Đã xử lý" },
+	{ value: "resolved", label: "Đã xử lý" },
 	{ value: "dismissed", label: "Bỏ qua" },
 ];
 
-const TYPE_OPTIONS = [
-	{ value: "all",  label: "Tất cả loại" },
-	{ value: "post", label: "Post" },
-	{ value: "blog", label: "Blog" },
-];
-
-const NEXT_STATUS: Record<UnifiedReportRecord["status"], { value: UnifiedReportRecord["status"]; label: string }[]> = {
-	pending:   [
+const NEXT_STATUS: Record<BlogReportRecord["status"], { value: BlogReportRecord["status"]; label: string }[]> = {
+	pending: [
 		{ value: "reviewing", label: "Chuyển sang Đang xem xét" },
 		{ value: "dismissed", label: "Bỏ qua báo cáo" },
 	],
 	reviewing: [
-		{ value: "resolved",  label: "Đánh dấu Đã xử lý" },
+		{ value: "resolved", label: "Đánh dấu Đã xử lý" },
 		{ value: "dismissed", label: "Bỏ qua báo cáo" },
 	],
-	resolved:  [{ value: "reviewing", label: "Mở lại xem xét" }],
+	resolved: [{ value: "reviewing", label: "Mở lại xem xét" }],
 	dismissed: [{ value: "reviewing", label: "Mở lại xem xét" }],
 };
 
-function StatusBadge({ status }: { status: UnifiedReportRecord["status"] }) {
+function StatusBadge({ status }: { status: BlogReportRecord["status"] }) {
 	const map: Record<string, { label: string; className: string }> = {
 		pending:   { label: "Chờ xử lý",    className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
 		reviewing: { label: "Đang xem xét", className: "bg-blue-100 text-blue-800 border-blue-200" },
@@ -94,39 +89,19 @@ function StatusBadge({ status }: { status: UnifiedReportRecord["status"] }) {
 	);
 }
 
-function TypeBadge({ type }: { type: "post" | "blog" }) {
-	return type === "post" ? (
-		<Badge variant="outline" className="text-xs font-semibold bg-violet-100 text-violet-700 border-violet-200">
-			Post
-		</Badge>
-	) : (
-		<Badge variant="outline" className="text-xs font-semibold bg-sky-100 text-sky-700 border-sky-200">
-			Blog
-		</Badge>
-	);
-}
-
-function contentUrl(report: UnifiedReportRecord): string {
-	if (!report.content) return "#";
-	if (report.type === "post") {
-		return `http://localhost:5174/cong-dong/bai-viet/${report.content.id}`;
-	}
-	return `http://localhost:5174/blog/${report.content.slug ?? report.content.id}`;
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function ReportListPage() {
-	useBreadcrumb([{ title: "Báo cáo vi phạm", link: "/community/reports" }]);
+export default function BlogReportListPage() {
+	useBreadcrumb([{ title: "Báo cáo vi phạm blog", link: "/community/blog-reports" }]);
 
-	const [reports, setReports] = useState<UnifiedReportRecord[]>([]);
+	const [reports, setReports] = useState<BlogReportRecord[]>([]);
+	const [stats, setStats] = useState<BlogReportStats | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
-	const [typeFilter, setTypeFilter] = useState("all");
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0, per_page: 20 });
-	const [sortKey, setSortKey] = useState<"id" | "content_title" | "reporter_name" | "reason" | "description" | "status" | "created_at">("created_at");
+	const [sortKey, setSortKey] = useState<"id" | "blog_title" | "reporter_name" | "reason" | "description" | "status" | "created_at">("created_at");
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(reports.map((r) => r.id));
@@ -139,31 +114,35 @@ export default function ReportListPage() {
 
 	useEffect(() => {
 		setMeta((p) => ({ ...p, current_page: 1 }));
-	}, [debouncedSearch, statusFilter, typeFilter, sortKey, sortOrder]);
+	}, [debouncedSearch, statusFilter, sortKey, sortOrder]);
+
+	// Load stats
+	useEffect(() => {
+		blogReportService.getStats().then((r) => setStats(r.data)).catch(() => {});
+	}, [reports]);
 
 	// Load list
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
-		unifiedReportService
+		blogReportService
 			.getReports({
-				page:     meta.current_page,
+				page: meta.current_page,
 				per_page: meta.per_page,
-				search:   debouncedSearch || undefined,
-				status:   statusFilter !== "all" ? statusFilter : undefined,
-				type:     typeFilter   !== "all" ? typeFilter   : undefined,
-				sort:     sortKey,
-				order:    sortOrder,
+				search: debouncedSearch || undefined,
+				status: statusFilter !== "all" ? statusFilter : undefined,
+				sort: sortKey,
+				order: sortOrder,
 			})
 			.then((res) => {
 				if (cancelled) return;
-				setReports(res.data as unknown as UnifiedReportRecord[]);
+				setReports(res.data as unknown as BlogReportRecord[]);
 				setMeta((p) => ({ ...p, ...res.meta }));
 			})
 			.catch(() => toast.error("Không thể tải danh sách báo cáo."))
 			.finally(() => { if (!cancelled) setLoading(false); });
 		return () => { cancelled = true; };
-	}, [meta.current_page, meta.per_page, debouncedSearch, statusFilter, typeFilter, sortKey, sortOrder]);
+	}, [meta.current_page, meta.per_page, debouncedSearch, statusFilter, sortKey, sortOrder]);
 
 	// ── Handlers ────────────────────────────────────────────────────────────
 
@@ -177,24 +156,23 @@ export default function ReportListPage() {
 		sortOrder === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> :
 		<ArrowDown className="ml-2 h-4 w-4" />;
 
-	const handleUpdateStatus = async (report: UnifiedReportRecord, status: UnifiedReportRecord["status"]) => {
+	const handleUpdateStatus = async (report: BlogReportRecord, status: BlogReportRecord["status"]) => {
 		try {
-			const res = await unifiedReportService.updateStatus(report.type, report.id, status);
-			setReports((prev) => prev.map((r) => (r.id === report.id && r.type === report.type) ? res.data : r));
+			const res = await blogReportService.updateStatus(report.id, status);
+			setReports((prev) => prev.map((r) => r.id === report.id ? res.data : r));
 			toast.success("Đã cập nhật trạng thái.");
 		} catch {
 			toast.error("Không thể cập nhật trạng thái.");
 		}
 	};
 
-	const handleHideContent = async (report: UnifiedReportRecord) => {
+	const handleHideBlog = async (report: BlogReportRecord) => {
 		try {
-			const res = await unifiedReportService.hideContent(report.type, report.id);
-			setReports((prev) => prev.map((r) => (r.id === report.id && r.type === report.type) ? res.data : r));
-			const label = report.type === "post" ? "bài viết" : "blog";
-			toast.success(`Đã ẩn ${label} và đánh dấu đã xử lý.`);
+			const res = await blogReportService.hideBlog(report.id);
+			setReports((prev) => prev.map((r) => r.id === report.id ? res.data : r));
+			toast.success("Đã ẩn blog và đánh dấu đã xử lý.");
 		} catch {
-			toast.error("Không thể ẩn nội dung.");
+			toast.error("Không thể ẩn blog.");
 		}
 	};
 
@@ -204,11 +182,28 @@ export default function ReportListPage() {
 		<div className="space-y-6 p-6">
 			{/* Header */}
 			<div className="space-y-1">
-				<h2 className="text-2xl font-semibold tracking-tight">Quản lý báo cáo vi phạm</h2>
+				<h2 className="text-2xl font-semibold tracking-tight">Quản lý báo cáo vi phạm blog</h2>
 				<p className="text-sm text-muted-foreground">
-					Xem xét và xử lý các báo cáo vi phạm từ cộng đồng.
+					Xem xét và xử lý các báo cáo vi phạm blog từ cộng đồng.
 				</p>
 			</div>
+
+			{/* Stats */}
+			<section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+				{[
+					{ label: "Tổng báo cáo",           value: stats?.total,                                              color: "text-foreground" },
+					{ label: "Chờ xử lý",               value: stats?.pending,                                            color: "text-yellow-600" },
+					{ label: "Đang xem xét",            value: stats?.reviewing,                                          color: "text-blue-600" },
+					{ label: "Đã xử lý / Bỏ qua",       value: (stats?.resolved ?? 0) + (stats?.dismissed ?? 0),         color: "text-green-600" },
+				].map((s) => (
+					<div key={s.label} className="rounded-lg border bg-card p-4 shadow-sm">
+						<p className="min-h-[2.5rem] text-sm font-medium text-muted-foreground">{s.label}</p>
+						<div className={`text-3xl font-bold ${s.color}`}>
+							{s.value ?? <Skeleton className="mt-2 h-8 w-12" />}
+						</div>
+					</div>
+				))}
+			</section>
 
 			{/* Filter + Table */}
 			<div className="flex flex-col gap-4">
@@ -220,18 +215,8 @@ export default function ReportListPage() {
 						className="h-8 min-w-0 flex-1 max-w-80"
 					/>
 					<div className="ml-auto flex shrink-0 items-center gap-2">
-						<Select value={typeFilter} onValueChange={setTypeFilter}>
-							<SelectTrigger className="h-8 w-36">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{TYPE_OPTIONS.map((o) => (
-									<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
 						<Select value={statusFilter} onValueChange={setStatusFilter}>
-							<SelectTrigger className="h-8 w-44">
+							<SelectTrigger className="h-8 w-40">
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
@@ -260,12 +245,9 @@ export default function ReportListPage() {
 									</Button>
 								</TableHead>
 								<TableHead className="min-w-[200px]">
-									<Button variant="ghost" onClick={() => handleSort("content_title")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-										Bài viết {getSortIcon("content_title")}
+									<Button variant="ghost" onClick={() => handleSort("blog_title")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Blog {getSortIcon("blog_title")}
 									</Button>
-								</TableHead>
-								<TableHead className="w-[80px] text-sm font-medium">
-									Loại
 								</TableHead>
 								<TableHead className="min-w-[160px]">
 									<Button variant="ghost" onClick={() => handleSort("reporter_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
@@ -300,15 +282,12 @@ export default function ReportListPage() {
 							{loading ? (
 								Array.from({ length: meta.per_page }).map((_, i) => (
 									<TableRow key={i}>
-										<TableCell colSpan={10}><Skeleton className="h-4 w-full" /></TableCell>
+										<TableCell colSpan={9}><Skeleton className="h-4 w-full" /></TableCell>
 									</TableRow>
 								))
 							) : reports.length > 0 ? (
 								reports.map((report) => (
-									<TableRow
-										key={`${report.type}-${report.id}`}
-										className={report.content?.status === "hidden" ? "opacity-60" : ""}
-									>
+									<TableRow key={report.id} className={report.blog?.status === "hidden" ? "opacity-60" : ""}>
 										<TableCell className="w-[44px]">
 											<Checkbox
 												checked={isSelected(report.id)}
@@ -320,36 +299,29 @@ export default function ReportListPage() {
 											#{report.id}
 										</TableCell>
 
-										{/* Bài viết */}
+										{/* Blog */}
 										<TableCell>
-											{report.content ? (
+											{report.blog ? (
 												<div className="flex items-start gap-1.5">
 													<a
-														href={contentUrl(report)}
+														href={`http://localhost:5174/blog/${report.blog.slug}`}
 														target="_blank"
 														rel="noopener noreferrer"
 														className="block max-w-[180px] truncate text-sm font-medium hover:underline"
-														title={report.content.title}
+														title={report.blog.title}
 													>
-														{report.content.title}
+														{report.blog.title}
 													</a>
 													<ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
 												</div>
 											) : (
-												<span className="text-xs italic text-muted-foreground/50">
-													{report.type === "post" ? "Bài viết đã xóa" : "Blog đã xóa"}
-												</span>
+												<span className="text-xs italic text-muted-foreground/50">Blog đã xóa</span>
 											)}
-											{report.content?.status === "hidden" && (
+											{report.blog?.status === "hidden" && (
 												<span className="mt-0.5 flex items-center gap-1 text-xs text-orange-500">
 													<EyeOff className="h-3 w-3" /> Đã ẩn
 												</span>
 											)}
-										</TableCell>
-
-										{/* Loại */}
-										<TableCell>
-											<TypeBadge type={report.type} />
 										</TableCell>
 
 										{/* Người báo cáo */}
@@ -403,26 +375,26 @@ export default function ReportListPage() {
 												<DropdownMenuContent align="end" className="w-52">
 													<DropdownMenuLabel>Hành động</DropdownMenuLabel>
 													<DropdownMenuSeparator />
-													{report.content && (
+													{report.blog && (
 														<DropdownMenuItem asChild>
 															<a
-																href={contentUrl(report)}
+																href={`http://localhost:5174/blog/${report.blog.slug}`}
 																target="_blank"
 																rel="noopener noreferrer"
 																className="flex items-center gap-2"
 															>
 																<ExternalLink className="h-4 w-4" />
-																Xem {report.type === "post" ? "bài viết" : "blog"}
+																Xem blog
 															</a>
 														</DropdownMenuItem>
 													)}
-													{report.content && report.content.status !== "hidden" && (
+													{report.blog && report.blog.status !== "hidden" && (
 														<DropdownMenuItem
 															className="text-orange-600 focus:text-orange-600"
-															onClick={() => handleHideContent(report)}
+															onClick={() => handleHideBlog(report)}
 														>
 															<EyeOff className="h-4 w-4" />
-															Ẩn {report.type === "post" ? "bài viết" : "blog"}
+															Ẩn blog
 														</DropdownMenuItem>
 													)}
 													{(NEXT_STATUS[report.status] ?? []).length > 0 && <DropdownMenuSeparator />}
@@ -441,7 +413,7 @@ export default function ReportListPage() {
 								))
 							) : (
 								<TableRow>
-									<TableCell colSpan={10} className="py-12 text-center">
+									<TableCell colSpan={9} className="py-12 text-center">
 										<AlertTriangle className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
 										<p className="text-sm text-muted-foreground">Không có báo cáo nào.</p>
 									</TableCell>
@@ -451,7 +423,7 @@ export default function ReportListPage() {
 
 						<TableFooter className="bg-transparent">
 							<TableRow>
-								<TableCell colSpan={10}>
+								<TableCell colSpan={9}>
 									<div className="flex items-center justify-between px-2">
 										<p className="flex-1 text-sm text-muted-foreground">
 											Đang hiển thị {reports.length} trên tổng {meta.total} báo cáo.

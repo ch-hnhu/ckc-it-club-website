@@ -17,10 +17,12 @@ return new class extends Migration
             $table->text('excerpt')->nullable();
             $table->text('cover_image')->nullable();
             $table->enum('status', ['draft', 'pending_review', 'published', 'archived'])->default('draft');
+            $table->enum('visibility', ['public', 'members', 'private'])->default('public');
             $table->timestamp('published_at')->nullable();
             $table->unsignedBigInteger('view_count')->default(0);
             $table->boolean('is_pinned')->default(false);
             $table->timestamp('pinned_at')->nullable();
+            $table->boolean('is_highlight')->default(false);
             $table->timestamps();
 
             $table->index(['author_id', 'status', 'published_at']);

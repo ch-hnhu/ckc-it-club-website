@@ -36,10 +36,14 @@ class CredentialAuthController extends AuthBaseController
             'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
         ]);
 
+        $email = $validated['email'];
+        $isSchoolStudent = (bool) preg_match('/^\d{10}@caothang\.edu\.vn$/', $email);
+
         $user = User::create([
             'full_name' => $validated['full_name'],
             'username' => $validated['username'],
-            'email' => $validated['email'],
+            'email' => $email,
+            'student_code' => $isSchoolStudent ? \Illuminate\Support\Str::before($email, '@') : null,
             'password' => Hash::make($validated['password']),
             'is_active' => true,
         ]);

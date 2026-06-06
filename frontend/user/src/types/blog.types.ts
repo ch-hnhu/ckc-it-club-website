@@ -24,7 +24,9 @@ export interface Blog {
 	excerpt: string | null;
 	featured_image: string | null;
 	status: string;
+	visibility: "public" | "members" | "private";
 	is_pinned?: boolean;
+	is_highlight?: boolean;
 	published_at: string | null;
 	view_count: number;
 	comments_count: number;
@@ -39,7 +41,10 @@ export interface BlogDetail extends Blog {
 	content: string;
 	reaction_summary: Record<string, number>;
 	my_bookmark: boolean;
+	my_report?: boolean;
 }
+
+export type BlogReportReason = "spam" | "offensive" | "misinformation" | "inappropriate" | "other";
 
 export interface BlogComment {
 	id: number;
@@ -53,6 +58,7 @@ export interface BlogComment {
 	} | null;
 	content: string;
 	reactions_count: number;
+	my_reaction: ReactionType | null;
 	created_at: string;
 	replies: BlogComment[];
 }

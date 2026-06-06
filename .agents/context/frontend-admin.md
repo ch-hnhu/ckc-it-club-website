@@ -290,6 +290,9 @@
 - route `/organization/upload`
 - imports faculty/major/class data through `POST /academic-structure/import`
 - wrong file formats are shown as failed history rows after backend stores them as `file_type = Other`
+- Community post management:
+- route `/community/posts`
+- admin post management no longer exposes pin/unpin actions, pin sort, or pinned stats. The content detail dialog renders saved Markdown through `src/lib/markdown.ts`, and the trash icon beside the status filter toggles the soft-deleted post list with row-level restore actions.
 
 ## Environment Variables
 
@@ -352,6 +355,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-05`: Admin post management removed pin controls, renders post content Markdown in detail, and added a same-page trash/restore flow backed by `/posts/trash` and `/posts/{post}/restore`.
 - `2026-06-01`: Admin channel create/edit dialog uses a file input for channel avatar images and submits channel forms as `multipart/form-data`.
 - `2026-06-01`: Admin chat room management no longer depends on room `type`; the list removed direct/group filtering and type stats because `chat_rooms.type` was dropped.
 - `2026-06-01`: Admin `/community/chat-rooms` page has create, update, and delete controls for chat rooms, and the row action UI uses an ellipsis menu without exposing the system-message log.

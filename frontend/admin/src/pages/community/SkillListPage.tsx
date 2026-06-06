@@ -36,6 +36,7 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -70,6 +71,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 import skillService from "@/services/skill.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -114,6 +116,8 @@ interface SortableRowProps {
 	onToggleStatus: () => void;
 	onDelete: () => void;
 	isTogglingStatus: boolean;
+	isSelected: boolean;
+	onCheckedChange: (checked: boolean) => void;
 }
 
 function SortableSkillRow({
@@ -122,6 +126,8 @@ function SortableSkillRow({
 	onToggleStatus,
 	onDelete,
 	isTogglingStatus,
+	isSelected,
+	onCheckedChange,
 }: SortableRowProps) {
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
 		id: skill.id,
@@ -132,6 +138,9 @@ function SortableSkillRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Transform.toString(transform), transition }}
 			className={isDragging ? "opacity-50 bg-muted/30 shadow-md z-10 relative" : undefined}>
+			<TableCell className='w-[44px]'>
+				<Checkbox checked={isSelected} onCheckedChange={(c) => onCheckedChange(c === true)} />
+			</TableCell>
 			<TableCell className='w-[36px] px-2'>
 				<button
 					{...attributes}
@@ -209,6 +218,7 @@ function SkillListPage() {
 
 	const [skills, setSkills] = useState<SkillRecord[]>([]);
 	const [loading, setLoading] = useState(true);
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(skills.map((s) => s.id));
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -476,6 +486,13 @@ function SkillListPage() {
 							<Table>
 								<TableHeader>
 									<TableRow>
+										<TableHead className='w-[44px]'>
+											<Checkbox
+												aria-label='Chọn tất cả'
+												checked={allSelected}
+												onCheckedChange={(c) => toggleAll(c === true)}
+											/>
+										</TableHead>
 										<TableHead className='w-[36px]' />
 										<TableHead className='w-[80px]'>
 											<Button
@@ -546,9 +563,11 @@ function SkillListPage() {
 														skill={skill}
 														onEdit={() => openEdit(skill)}
 														onToggleStatus={() => handleToggleStatus(skill)}
-													onDelete={() => setDeleteTarget(skill)}
-													isTogglingStatus={togglingId === skill.id}
-												/>
+														onDelete={() => setDeleteTarget(skill)}
+														isTogglingStatus={togglingId === skill.id}
+														isSelected={isSelected(skill.id)}
+														onCheckedChange={(c) => toggleOne(skill.id, c)}
+													/>
 											))}
 										</SortableContext>
 									) : (

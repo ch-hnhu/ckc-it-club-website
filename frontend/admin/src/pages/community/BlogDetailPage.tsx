@@ -1,7 +1,6 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { marked } from "marked";
 import {
-	Archive,
 	ArrowLeft,
 	BookOpen,
 	Calendar,
@@ -12,7 +11,6 @@ import {
 	Hash,
 	Loader2,
 	MessageSquare,
-	RotateCcw,
 	Send,
 	Tag,
 	Trash2,
@@ -101,14 +99,10 @@ function getNextActions(status: BlogStatus): StatusAction[] {
 		];
 	if (status === "pending_review")
 		return [
-			{ next: "published", label: "Duyệt & Xuất bản", icon: <Send className="h-4 w-4" />, variant: "default" },
-			{ next: "draft", label: "Trả về nháp", icon: <RotateCcw className="h-4 w-4" />, variant: "outline" },
+			{ next: "published", label: "Duyệt", icon: <Send className="h-4 w-4" />, variant: "default" },
 		];
 	if (status === "published")
-		return [
-			{ next: "archived", label: "Lưu trữ", icon: <Archive className="h-4 w-4" />, variant: "outline" },
-			{ next: "draft", label: "Thu hồi về nháp", icon: <RotateCcw className="h-4 w-4" />, variant: "outline" },
-		];
+		return [];
 	if (status === "archived")
 		return [
 			{ next: "published", label: "Khôi phục xuất bản", icon: <Send className="h-4 w-4" />, variant: "default" },
@@ -189,6 +183,17 @@ function BlogDetailPage() {
 		() => (blog?.content ? renderMarkdown(blog.content) : ""),
 		[blog?.content],
 	);
+
+	const contentRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		const el = contentRef.current;
+		if (!el) return;
+		el.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
+			const hide = () => { img.style.display = "none"; };
+			if (img.complete && img.naturalWidth === 0) hide();
+			else img.addEventListener("error", hide, { once: true });
+		});
+	}, [renderedContent]);
 
 	const handleChangeStatus = async (next: BlogStatus) => {
 		if (!blog) return;
@@ -282,26 +287,12 @@ function BlogDetailPage() {
 									BLG-{blog.id}
 								</Badge>
 								{getStatusBadge(blog.status)}
-								{blog.tags.map((tag) => (
-									<Badge
-										key={tag.id}
-										variant="outline"
-										className="rounded-full text-xs"
-										style={tag.color ? { borderColor: `${tag.color}40`, color: tag.color } : undefined}>
-										{tag.name}
-									</Badge>
-								))}
 							</div>
 
 							{/* Title */}
-							<div>
-								<h1 className="text-2xl font-bold leading-tight text-foreground md:text-3xl">
-									{blog.title}
-								</h1>
-								<p className="mt-1.5 font-mono text-sm text-muted-foreground">
-									/{blog.slug}
-								</p>
-							</div>
+							<h1 className="text-2xl font-bold leading-tight text-foreground md:text-3xl">
+								{blog.title}
+							</h1>
 
 							{/* Excerpt */}
 							{blog.excerpt && (
@@ -345,6 +336,7 @@ function BlogDetailPage() {
 						<CardContent className="pt-6">
 							{blog.content ? (
 								<div
+									ref={contentRef}
 									className="blog-content-viewer"
 									// eslint-disable-next-line react/no-danger
 									dangerouslySetInnerHTML={{ __html: renderedContent }}
@@ -362,9 +354,9 @@ function BlogDetailPage() {
 				<div className="flex flex-col gap-4">
 
 					{/* Stats */}
-					<Card className="shadow-sm">
+					<Card className="shadow-sm gap-0">
 						<CardHeader className="pb-2">
-							<CardTitle className="text-sm font-semibold">Thống kê</CardTitle>
+							<CardTitle className="text-base font-semibold">Thống kê</CardTitle>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3">
 							{([
@@ -373,7 +365,7 @@ function BlogDetailPage() {
 								{ icon: <MessageSquare className="h-4 w-4 text-violet-500" />, label: "Bình luận", value: blog.comments_count.toLocaleString("vi-VN") },
 							] as const).map(({ icon, label, value }) => (
 								<div key={label} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
-									<div className="flex items-center gap-2 text-sm text-muted-foreground">
+									<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
 										{icon}
 										{label}
 									</div>
@@ -385,7 +377,7 @@ function BlogDetailPage() {
 
 					{/* Tags */}
 					{blog.tags.length > 0 && (
-						<Card className="shadow-sm">
+						<Card className="shadow-sm gap-0">
 							<CardHeader className="pb-2">
 								<CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
 									<Tag className="h-3.5 w-3.5 text-muted-foreground" />
@@ -409,9 +401,9 @@ function BlogDetailPage() {
 					)}
 
 					{/* Dates */}
-					<Card className="shadow-sm">
+					<Card className="shadow-sm gap-0">
 						<CardHeader className="pb-2">
-							<CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
+							<CardTitle className="flex items-center gap-1.5 text-base font-semibold">
 								<Calendar className="h-3.5 w-3.5 text-muted-foreground" />
 								Thời gian
 							</CardTitle>
@@ -446,9 +438,9 @@ function BlogDetailPage() {
 					</Card>
 
 					{/* Author */}
-					<Card className="shadow-sm">
+					<Card className="shadow-sm gap-0">
 						<CardHeader className="pb-2">
-							<CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
+							<CardTitle className="flex items-center gap-1.5 text-base font-semibold">
 								<User className="h-3.5 w-3.5 text-muted-foreground" />
 								Tác giả
 							</CardTitle>
@@ -473,62 +465,68 @@ function BlogDetailPage() {
 						</CardContent>
 					</Card>
 
-					{/* Status actions */}
-					{actions.length > 0 && (
-						<Card className="shadow-sm">
-							<CardHeader className="pb-2">
-								<CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
-									Thay đổi trạng thái
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="flex flex-col gap-2">
-								<p className="mb-1 text-xs text-muted-foreground">
-									Trạng thái hiện tại:{" "}
-									<span className="font-medium text-foreground">
-										{STATUS_MAP[blog.status]?.label}
-									</span>
-								</p>
-								{actions.map(({ next, label, icon, variant }) => (
-									<Button
-										key={next}
-										size="sm"
-										variant={variant ?? "outline"}
-										className="w-full justify-start"
-										disabled={statusLoading}
-										onClick={() => void handleChangeStatus(next)}>
-										{statusLoading ? (
-											<Loader2 className="h-4 w-4 animate-spin" />
-										) : (
-											icon
-										)}
-										{label}
-									</Button>
-								))}
-							</CardContent>
-						</Card>
-					)}
+					{/* Status actions + Danger zone */}
+					{actions.length > 0 ? (
+						<div className="grid grid-cols-2 gap-4">
+							<Card className="shadow-sm gap-0">
+								<CardHeader className="pb-2">
+									<CardTitle className="flex items-center gap-1.5 text-base font-semibold">
+										Thay đổi trạng thái
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="flex flex-col gap-0">
+									{actions.map(({ next, label, icon, variant }) => (
+										<Button
+											key={next}
+											size="sm"
+											variant={variant ?? "outline"}
+											className="w-full justify-start"
+											disabled={statusLoading}
+											onClick={() => void handleChangeStatus(next)}>
+											{statusLoading ? (
+												<Loader2 className="h-4 w-4 animate-spin" />
+											) : (
+												icon
+											)}
+											{label}
+										</Button>
+									))}
+								</CardContent>
+							</Card>
 
-					{/* Danger zone */}
-					<Card className="shadow-sm border-destructive/20">
-						<CardHeader className="pb-2">
-							<CardTitle className="text-sm font-semibold text-destructive">
-								Vùng nguy hiểm
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
+							<Card className="shadow-sm gap-0 border-destructive/20">
+								<CardHeader className="pb-2">
+									<CardTitle className="text-base font-semibold text-destructive">
+										Vùng nguy hiểm
+									</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<Button
+										variant="destructive"
+										size="sm"
+										className="w-full"
+										onClick={() => setDeleteOpen(true)}>
+										<Trash2 className="h-4 w-4" />
+										Xóa bài viết này
+									</Button>
+								</CardContent>
+							</Card>
+						</div>
+					) : (
+						<div className="flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3">
+							<div>
+								<p className="text-sm font-semibold text-destructive">Vùng nguy hiểm</p>
+								<p className="text-xs text-muted-foreground">Hành động không thể hoàn tác</p>
+							</div>
 							<Button
 								variant="destructive"
 								size="sm"
-								className="w-full"
 								onClick={() => setDeleteOpen(true)}>
 								<Trash2 className="h-4 w-4" />
-								Xóa bài viết này
+								Xóa bài viết
 							</Button>
-							<p className="mt-2 text-xs text-muted-foreground">
-								Hành động này không thể hoàn tác.
-							</p>
-						</CardContent>
-					</Card>
+						</div>
+					)}
 				</div>
 			</div>
 

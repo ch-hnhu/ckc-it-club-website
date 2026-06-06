@@ -142,8 +142,7 @@ const sanitizeElement = (element: Element) => {
 	Array.from(element.attributes).forEach((attribute) => {
 		const name = attribute.name.toLowerCase();
 		const value = attribute.value.trim();
-		const isAllowed =
-			globalAllowedAttributes.has(name) || allowedAttributes.has(name);
+		const isAllowed = globalAllowedAttributes.has(name) || allowedAttributes.has(name);
 		const isUrlAttribute = name === "href" || name === "src";
 
 		if (!isAllowed || name.startsWith("on") || (isUrlAttribute && !isSafeUrl(value))) {
@@ -166,64 +165,6 @@ const sanitizeHtml = (html: string) => {
 	return template.innerHTML;
 };
 
-const truncateText = (text: string, maxLength: number) => {
-	const sliced = text.slice(0, maxLength).trimEnd();
-	const lastSpaceIndex = sliced.lastIndexOf(" ");
-	const shouldUseWordBoundary = lastSpaceIndex > Math.floor(maxLength * 0.6);
-	const truncated = shouldUseWordBoundary ? sliced.slice(0, lastSpaceIndex) : sliced;
-
-	return `${truncated}...`;
-};
-
-const truncateHtmlByText = (html: string, maxLength: number) => {
-	const template = document.createElement("template");
-	template.innerHTML = html;
-
-	let remaining = maxLength;
-	let didTruncate = false;
-
-	const truncateNode = (node: Node): boolean => {
-		if (node.nodeType === Node.TEXT_NODE) {
-			const text = node.textContent ?? "";
-
-			if (text.length <= remaining) {
-				remaining -= text.length;
-				return false;
-			}
-
-			node.textContent = truncateText(text, Math.max(0, remaining));
-			didTruncate = true;
-			remaining = 0;
-
-			return true;
-		}
-
-		const children = Array.from(node.childNodes);
-		for (let index = 0; index < children.length; index += 1) {
-			const child = children[index];
-			const shouldStop = truncateNode(child);
-
-			if (shouldStop) {
-				children.slice(index + 1).forEach((sibling) => sibling.remove());
-				return true;
-			}
-		}
-
-		return false;
-	};
-
-	truncateNode(template.content);
-
-	return {
-		html: template.innerHTML,
-		didTruncate,
-	};
-};
-
 export const renderMarkdownContent = (content: string) => {
 	return sanitizeHtml(markdown.render(content));
-};
-
-export const renderMarkdownPreview = (content: string, maxLength: number) => {
-	return truncateHtmlByText(renderMarkdownContent(content), maxLength);
 };

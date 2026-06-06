@@ -5,8 +5,10 @@ import type {
 	BlogDetail,
 	BlogComment,
 	BlogListParams,
+	BlogReportReason,
 	CreateBlogPayload,
 	BlogReactionResponse,
+	ReactionType,
 } from "@/types/blog.types";
 
 export const blogService = {
@@ -81,4 +83,25 @@ export const blogService = {
 
 	pinBlog: (blogId: number, isPinned: boolean) =>
 		api.post<ApiResponse<{ is_pinned: boolean }>>(`/community/blogs/${blogId}/pin`, { is_pinned: isPinned }),
+
+	updateBlogVisibility: (blogId: number, visibility: "public" | "members" | "private") =>
+		api.post<ApiResponse<{ visibility: string }>>(`/community/blogs/${blogId}/visibility`, { visibility }),
+
+	archiveBlog: (blogId: number, status: "archived" | "published") =>
+		api.post<ApiResponse<{ status: string }>>(`/community/blogs/${blogId}/archive`, { status }),
+
+	recordView: (slug: string) =>
+		api.post<ApiResponse<{ view_count: number }>>(`/community/blogs/${slug}/view`),
+
+	deleteBlog: (blogId: number) =>
+		api.delete<ApiResponse<null>>(`/community/blogs/${blogId}`),
+
+	reportBlog: (blogId: number, reason: BlogReportReason, description?: string) =>
+		api.post<ApiResponse<null>>(`/community/blogs/${blogId}/report`, { reason, description }),
+
+	toggleCommentReaction: (commentId: number, type: ReactionType) =>
+		api.post<ApiResponse<{ reacted: boolean; my_reaction: ReactionType | null; reactions_count: number }>>(
+			`/community/comments/${commentId}/reactions`,
+			{ type },
+		),
 };

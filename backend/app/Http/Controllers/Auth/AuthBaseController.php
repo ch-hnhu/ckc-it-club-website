@@ -177,6 +177,9 @@ abstract class AuthBaseController extends Controller
             throw new \RuntimeException('Tài khoản '.ucfirst($provider).' của bạn chưa cung cấp email công khai. Vui lòng bật email công khai trong cài đặt tài khoản '.ucfirst($provider).' và thử lại.');
         }
 
+        $isSchoolStudent = (bool) preg_match('/^\d{10}@caothang\.edu\.vn$/', $email);
+        $emailPrefix = Str::before($email, '@');
+
         $user = User::where('email', $email)->first();
 
         if (! $user) {
@@ -184,6 +187,7 @@ abstract class AuthBaseController extends Controller
                 'full_name' => $oauthUser->getName() ?: $oauthUser->getNickname(),
                 'email' => $email,
                 'username' => User::generateUniqueUsername($email),
+                'student_code' => $isSchoolStudent ? $emailPrefix : null,
                 'email_verified_at' => now(),
                 'password' => bcrypt(Str::random(16)),
                 'provider' => $provider,
@@ -200,6 +204,9 @@ abstract class AuthBaseController extends Controller
             'avatar' => $oauthUser->getAvatar() ?: $user->avatar,
             'provider' => $provider,
             'provider_id' => $oauthUser->getId(),
+            'student_code' => $isSchoolStudent
+                ? $emailPrefix
+                : $user->student_code,
         ]);
 
         return $user;
@@ -596,6 +603,7 @@ abstract class AuthBaseController extends Controller
                         'label' => $r->label,
                     ])->values(),
                     'permissions' => $user->getAllPermissions()->pluck('name')->values(),
+                    'is_school_student' => $user->isSchoolStudent(),
                 ],
             ], HttpStatus::OK->value);
 

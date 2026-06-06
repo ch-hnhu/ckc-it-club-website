@@ -9,12 +9,14 @@ import { Toaster } from "sonner";
 const MainLayout: React.FC = () => {
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const [loadingUser, setLoadingUser] = useState(true);
+	const [avatarTs, setAvatarTs] = useState(0);
 	const { pathname } = useLocation();
 	const isCommunityPage = pathname.startsWith("/cong-dong") || pathname.startsWith("/community");
 
 	const refreshUser = useCallback(async () => {
 		const currentUser = await getCurrentUser();
 		setUser(currentUser);
+		setAvatarTs(Date.now());
 	}, []);
 
 	useEffect(() => {
@@ -39,11 +41,11 @@ const MainLayout: React.FC = () => {
 	return (
 		<div className='min-h-screen bg-white text-black flex flex-col'>
 			{/* Fixed Navbar */}
-			<Navbar user={user} onAuthSuccess={refreshUser} />
+			<Navbar user={user} onAuthSuccess={refreshUser} avatarTs={avatarTs} />
 
 			{/* Main content */}
 			<main className='flex-grow flex flex-col'>
-				<Outlet context={{ user, loadingUser }} />
+				<Outlet context={{ user, loadingUser, refreshUser }} />
 			</main>
 
 			{!isCommunityPage && <Footer />}

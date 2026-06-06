@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\User;
 use App\Enums\HttpStatus;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\User\UpdateProfileRequest;
+use App\Models\Blog;
 use App\Models\Post;
 use App\Models\Skill;
 use App\Models\User;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 class ProfileController extends BaseApiController
 {
@@ -52,8 +54,12 @@ class ProfileController extends BaseApiController
                 ? DB::table('post_bookmarks')->where('user_id', $user->id)->count()
                   + DB::table('blog_bookmarks')->where('user_id', $user->id)->count()
                 : null,
-            'archived_count' => $isOwnProfile ? Post::where('user_id', $user->id)->where('status', 'archived')->count() : null,
+            'archived_count' => $isOwnProfile
+                ? Post::where('user_id', $user->id)->where('status', 'archived')->count()
+                  + Blog::where('author_id', $user->id)->where('status', 'archived')->count()
+                : null,
             'skills' => $user->skills->pluck('name')->values(),
+            'is_school_student' => $user->isSchoolStudent(),
             'social_github' => $user->social_github,
             'social_linkedin' => $user->social_linkedin,
             'social_instagram' => $user->social_instagram,
@@ -101,6 +107,13 @@ class ProfileController extends BaseApiController
         }
         unset($data['skills'], $data['skills_sync']);
 
+        // Chỉ sinh viên trường (mail @caothang.edu.vn) mới được cập nhật thông tin học vụ
+        if (! $user->isSchoolStudent()) {
+            foreach (['student_code', 'faculty_id', 'major_id', 'class_id'] as $field) {
+                unset($data[$field]);
+            }
+        }
+
         // Nullify empty academic fields so users can clear them
         foreach (['faculty_id', 'major_id', 'class_id'] as $field) {
             if (array_key_exists($field, $data) && empty($data[$field])) {
@@ -111,6 +124,20 @@ class ProfileController extends BaseApiController
         $user->update(array_intersect_key($data, array_flip($user->getFillable())));
 
         return $this->successResponse(true, $this->formatProfile($user->refresh(), $request->user()), 'Cập nhật hồ sơ thành công.');
+    }
+
+    /**
+     * Trả về trạng thái sinh viên của user hiện tại.
+     * Dùng để kiểm tra quyền truy cập tính năng và phân quyền.
+     */
+    public function checkSchoolStudent(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return $this->successResponse(true, [
+            'is_school_student' => $user->isSchoolStudent(),
+            'email_domain' => substr(strrchr($user->email, '@'), 1),
+        ], 'Kiểm tra thành công.');
     }
 
     public function checkUsername(Request $request): JsonResponse
@@ -192,5 +219,43 @@ class ProfileController extends BaseApiController
                 });
             })
             ->count();
+    }
+
+    /**
+     * Permanently delete the authenticated user's own account.
+     * Revokes all tokens first, then deletes the user record.
+     */
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        try {
+            DB::transaction(function () use ($user) {
+                // Revoke all Sanctum tokens
+                $user->tokens()->delete();
+
+                // Delete avatar / cover from storage (local files only)
+                foreach (['avatar', 'cover_image'] as $field) {
+                    $raw = $user->getRawOriginal($field);
+                    if ($raw && ! Str::startsWith($raw, ['http://', 'https://'])) {
+                        Storage::disk('public')->delete($raw);
+                    }
+                }
+
+                $user->delete();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tài khoản đã được xoá thành công.',
+            ]);
+        } catch (Throwable $e) {
+            \Log::error('Delete account error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xoá tài khoản. Vui lòng thử lại.',
+            ], 500);
+        }
     }
 }

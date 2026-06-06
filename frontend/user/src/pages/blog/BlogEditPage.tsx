@@ -2,11 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	AlertCircle,
-	BookMarked,
 	ChevronLeft,
 	ImagePlus,
 	Loader2,
-	Send,
+	Save,
 	X,
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
@@ -44,7 +43,6 @@ const BlogEditPage: React.FC = () => {
 	const [coverImage, setCoverImage] = useState<File | null>(null);
 	const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [isSavingDraft, setIsSavingDraft] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
 
 	const coverPreviewUrl = useMemo(() => {
@@ -114,13 +112,13 @@ const BlogEditPage: React.FC = () => {
 		);
 	};
 
-	const validateForm = (requireContent = true) => {
+	const validateForm = () => {
 		if (title.trim().length < 5) {
 			setFormError("Tiêu đề blog cần tối thiểu 5 ký tự.");
 			return null;
 		}
 		const content = editorRef.current?.getContent() ?? "";
-		if (requireContent && !content.replace(/<[^>]*>/g, "").trim().length) {
+		if (!content.replace(/<[^>]*>/g, "").trim().length) {
 			setFormError("Vui lòng nhập nội dung blog.");
 			editorRef.current?.focus();
 			return null;
@@ -129,59 +127,28 @@ const BlogEditPage: React.FC = () => {
 		return content;
 	};
 
-	const handleSaveDraft = async () => {
-		if (isSavingDraft || isSubmitting || !slug) return;
-		if (!user) {
-			navigate("/login", { state: { from: location.pathname } });
-			return;
-		}
-		const content = validateForm(false);
-		if (content === null) return;
-
-		setIsSavingDraft(true);
-		try {
-			await blogService.updateBlog(slug, {
-				title: title.trim(),
-				excerpt: excerpt.trim() || undefined,
-				content,
-				tagIds: selectedTagIds,
-				featuredImage: coverImage ?? undefined,
-				status: "draft",
-			});
-			toast.success("Đã lưu nháp!");
-		} catch (error) {
-			setFormError(getErrorMessage(error));
-		} finally {
-			setIsSavingDraft(false);
-		}
-	};
-
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		if (isSubmitting || isSavingDraft || !slug) return;
+		if (isSubmitting || !slug) return;
 		if (!user) {
 			navigate("/login", { state: { from: location.pathname } });
 			return;
 		}
 
-		const content = validateForm(true);
+		const content = validateForm();
 		if (content === null) return;
 
 		setIsSubmitting(true);
 		try {
-			await blogService.updateBlog(slug, {
+			const response = await blogService.updateBlog(slug, {
 				title: title.trim(),
 				excerpt: excerpt.trim() || undefined,
 				content,
 				tagIds: selectedTagIds,
 				featuredImage: coverImage ?? undefined,
-				status: "pending_review",
 			});
-			toast.success("Blog đã được gửi và đang chờ duyệt.", {
-				description: "Ban quản trị sẽ xem xét và duyệt bài viết của bạn sớm nhất.",
-				duration: 5000,
-			});
-			navigate("/blog");
+			toast.success("Đã lưu bài viết!");
+			navigate(`/blog/${response.data.slug ?? slug}`);
 		} catch (error) {
 			setFormError(getErrorMessage(error));
 		} finally {
@@ -387,26 +354,22 @@ const BlogEditPage: React.FC = () => {
 					<div className='flex items-center justify-end gap-3'>
 						<button
 							type='button'
-							onClick={() => void handleSaveDraft()}
-							disabled={isSavingDraft || isSubmitting}
+							onClick={() => navigate(-1)}
+							disabled={isSubmitting}
 							className='neo-btn neo-btn-secondary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
-							{isSavingDraft ? (
-								<Loader2 className='h-4 w-4 animate-spin' />
-							) : (
-								<BookMarked className='h-4 w-4' />
-							)}
-							{isSavingDraft ? "Đang lưu..." : "Lưu nháp"}
+							<X className='h-4 w-4' />
+							Hủy
 						</button>
 						<button
 							type='submit'
-							disabled={isSubmitting || isSavingDraft}
+							disabled={isSubmitting}
 							className='neo-btn neo-btn-primary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
 							{isSubmitting ? (
 								<Loader2 className='h-4 w-4 animate-spin' />
 							) : (
-								<Send className='h-4 w-4' />
+								<Save className='h-4 w-4' />
 							)}
-							{isSubmitting ? "Đang gửi..." : "Đăng"}
+							{isSubmitting ? "Đang lưu..." : "Lưu"}
 						</button>
 					</div>
 				</form>

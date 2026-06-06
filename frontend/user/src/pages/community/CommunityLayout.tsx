@@ -226,7 +226,7 @@ const CommunityLayout: React.FC = () => {
 		<div className='min-h-screen bg-[var(--color-surface)] pt-16 text-black'>
 			<div className='community-shell'>
 				<aside className='hidden border-r-2 border-black bg-white lg:block'>
-					<div className='no-scrollbar sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto'>
+					<div className='no-scrollbar sticky top-16 h-[calc(100dvh-4rem)] overflow-y-auto'>
 						{renderSidebarContent()}
 					</div>
 				</aside>

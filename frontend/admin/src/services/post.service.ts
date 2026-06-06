@@ -14,6 +14,17 @@ const postService = {
 		return api.get("/posts", params as Record<string, unknown>);
 	},
 
+	async getTrashedPosts(params?: {
+		page?: number;
+		per_page?: number;
+		search?: string;
+		sort?: string;
+		order?: "asc" | "desc";
+		status?: PostStatus | "all";
+	}): Promise<PaginatedResponse<PostRecord>> {
+		return api.get("/posts/trash", params as Record<string, unknown>);
+	},
+
 	async getStats(): Promise<ApiResponse<PostStats>> {
 		return api.get("/posts/stats");
 	},
@@ -36,6 +47,14 @@ const postService = {
 
 	async deletePost(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/posts/${id}`);
+	},
+
+	async bulkDeletePosts(ids: number[]): Promise<ApiResponse<{ deleted: number }>> {
+		return api.post<ApiResponse<{ deleted: number }>, { ids: number[] }>("/posts/bulk-delete", { ids });
+	},
+
+	async restorePost(id: number | string): Promise<ApiResponse<PostRecord>> {
+		return api.patch<ApiResponse<PostRecord>, undefined>(`/posts/${id}/restore`);
 	},
 };
 

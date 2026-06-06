@@ -164,6 +164,83 @@ class UserNotificationService
     }
 
     /**
+     * Notify an applicant when an admin updates their club application status.
+     */
+    public static function dispatchApplicationStatusUpdate(
+        User $recipient,
+        User $actor,
+        string $newStatus,
+        int $applicationId,
+    ): void {
+        [$title, $message] = match ($newStatus) {
+            'processing' => [
+                'Đơn ứng tuyển đang được xét duyệt',
+                'Đơn ứng tuyển của bạn đang được Ban Nhân sự CKC IT CLUB xem xét.',
+            ],
+            'interview' => [
+                'Bạn được mời phỏng vấn!',
+                'Chúc mừng! Đơn ứng tuyển của bạn đã vượt qua vòng hồ sơ. Ban Nhân sự sẽ liên hệ để sắp xếp lịch phỏng vấn.',
+            ],
+            'passed' => [
+                'Chào mừng bạn đến với CKC IT CLUB!',
+                'Chúc mừng! Bạn đã chính thức trở thành thành viên của CKC IT CLUB.',
+            ],
+            'failed' => [
+                'Kết quả xét tuyển',
+                'Rất tiếc, đơn ứng tuyển của bạn chưa đáp ứng yêu cầu trong đợt xét tuyển này. Chúc bạn may mắn lần sau!',
+            ],
+            default => [
+                'Cập nhật trạng thái đơn ứng tuyển',
+                'Trạng thái đơn ứng tuyển của bạn vừa được cập nhật.',
+            ],
+        };
+
+        self::send($recipient, $actor, [
+            'title'       => $title,
+            'message'     => $message,
+            'type'        => 'application_status',
+            'target_type' => 'club_application',
+            'target_id'   => $applicationId,
+            'link'        => '/ung-tuyen',
+        ]);
+    }
+
+    /**
+     * Notify a comment author when another user reacts to their blog comment.
+     * Does nothing if the actor is the comment author.
+     */
+    public static function dispatchBlogCommentReaction(
+        User $recipient,
+        User $actor,
+        Blog $blog,
+        int $commentId,
+        string $reactionType,
+    ): void {
+        if ($recipient->id === $actor->id) {
+            return;
+        }
+
+        $reactionLabel = match ($reactionType) {
+            'heart' => 'tim',
+            'like'  => 'thích',
+            'haha'  => 'haha',
+            'wow'   => 'wow',
+            'sad'   => 'buồn',
+            default => 'thích',
+        };
+
+        self::send($recipient, $actor, [
+            'title'         => 'Bình luận được yêu thích',
+            'message'       => "{$actor->full_name} đã thả {$reactionLabel} bình luận của bạn",
+            'type'          => 'blog_comment_reaction',
+            'reaction_type' => $reactionType,
+            'target_type'   => 'blog',
+            'target_id'     => $blog->id,
+            'link'          => "/blog/{$blog->slug}#comment-{$commentId}",
+        ]);
+    }
+
+    /**
      * Notify a user when someone follows them.
      */
     public static function dispatchFollow(

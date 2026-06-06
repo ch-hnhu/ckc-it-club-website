@@ -1804,7 +1804,10 @@ const UserProfilePage: React.FC = () => {
 	const { username: rawParam } = useParams<{ username: string }>();
 	// Strip leading "@" so both "/@ch-hnhu" and "/ch-hnhu" resolve to the same profile
 	const username = rawParam?.replace(/^@/, "");
-	const { user } = useOutletContext<{ user: AuthUser | null }>();
+	const { user, refreshUser } = useOutletContext<{
+		user: AuthUser | null;
+		refreshUser: () => Promise<void>;
+	}>();
 
 	const [profile, setProfile] = useState<UserProfile | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -1935,6 +1938,7 @@ const UserProfilePage: React.FC = () => {
 							gender: null,
 							date_of_birth: null,
 							is_active: true,
+							is_school_student: true,
 							posts_count: 12,
 							blogs_count: 0,
 							content_count: 12,
@@ -2095,7 +2099,10 @@ const UserProfilePage: React.FC = () => {
 								followed={followed}
 								followLoading={followLoading}
 								onFollow={handleFollow}
-								onUpdated={(updated) => setProfile(updated)}
+								onUpdated={(updated) => {
+									setProfile(updated);
+									refreshUser().catch(() => {});
+								}}
 								onFollowersClick={() => setFollowModal("followers")}
 								onFollowingClick={() => setFollowModal("following")}
 							/>

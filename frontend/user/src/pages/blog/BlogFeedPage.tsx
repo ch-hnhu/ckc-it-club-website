@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, PenSquare, Search, X } from "lucide-react";
+import { ArrowRight, Loader2, PenSquare, Search, X } from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
@@ -54,7 +54,7 @@ const TAG_BG = [
 	"bg-[var(--color-pastel-yellow)]",
 ];
 
-const FeaturedArticle: React.FC<{ blog: Blog }> = ({ blog }) => {
+const FeaturedArticle: React.FC<{ blog: Blog; isHighlight?: boolean }> = ({ blog, isHighlight }) => {
 	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = blog.user?.avatar?.trim();
 	const authorInitial = authorName.trim().charAt(0).toUpperCase() || "C";
@@ -94,7 +94,14 @@ const FeaturedArticle: React.FC<{ blog: Blog }> = ({ blog }) => {
 
 				{/* Text — 42% width on desktop */}
 				<div className='flex flex-col justify-center p-7 md:flex-1 md:p-10 lg:p-12'>
-					{/* Date · Author */}
+					{/* Highlight badge + Date · Author */}
+					{isHighlight && (
+						<div className='mb-3'>
+							<span className='inline-flex items-center gap-1 rounded-full border-2 border-black bg-[var(--color-primary)] px-3 py-1 font-heading text-[11px] font-extrabold uppercase tracking-wide text-black shadow-[2px_2px_0_#111]'>
+								✦ Nổi bật
+							</span>
+						</div>
+					)}
 					<div className='mb-4 flex items-center gap-2'>
 						<span className='text-xs font-medium text-gray-400'>{formattedDate}</span>
 						{blog.user && (
@@ -156,18 +163,24 @@ const FeaturedArticle: React.FC<{ blog: Blog }> = ({ blog }) => {
 
 // ─── BlogFeedPage ─────────────────────────────────────────────────────────────
 
+const PREVIEW_PER_PAGE = 7;  // 1 featured + 6 grid
+const EXPANDED_PER_PAGE = 9; // 3 × 3 grid
+
 const BlogFeedPage: React.FC = () => {
 	const { user } = useOutletContext<{ user: AuthUser | null }>();
 
 	const [blogs, setBlogs] = useState<Blog[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [loadingMore, setLoadingMore] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [hasMore, setHasMore] = useState(false);
+	const [page, setPage] = useState(1);
+	const [showAll, setShowAll] = useState(false);
 
 	const [searchInput, setSearchInput] = useState("");
 	const [search, setSearch] = useState("");
 	const [activeTag, setActiveTag] = useState<string | null>(null);
 
-	// Load tags một lần riêng — không derive từ blogs để tránh mất tags khi filter
 	const [allTags, setAllTags] = useState<BlogTag[]>([]);
 
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -210,48 +223,92 @@ const BlogFeedPage: React.FC = () => {
 		}, 400);
 	};
 
+	// Khi filter thay đổi → về lại chế độ mặc định
+	useEffect(() => {
+		setShowAll(false);
+	}, [search, activeTag]);
+
+	// Fetch trang đầu mỗi khi search / tag / showAll thay đổi
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
 		setError(null);
+		setPage(1);
+
+		const isExpanded = showAll || Boolean(search || activeTag);
+		const perPage = isExpanded ? EXPANDED_PER_PAGE : PREVIEW_PER_PAGE;
 
 		blogService
 			.getBlogs({
 				sort: "published_at",
 				order: "desc",
-				per_page: 13,
+				per_page: perPage,
+				page: 1,
 				...(search ? { search } : {}),
 				...(activeTag ? { tag: activeTag } : {}),
 			})
 			.then((res) => {
-				if (!cancelled) setBlogs(res.data);
+				if (cancelled) return;
+				setBlogs(res.data);
+				setHasMore(res.meta.current_page < res.meta.last_page);
 			})
 			.catch(() => {
-				if (!cancelled) setError("Không thể tải bài viết. Vui lòng thử lại.");
+				if (cancelled) return;
+				setError("Không thể tải bài viết. Vui lòng thử lại.");
 			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
 			});
 
-		return () => {
-			cancelled = true;
-		};
-	}, [search, activeTag]);
+		return () => { cancelled = true; };
+	}, [search, activeTag, showAll]);
 
 	// Load tất cả tags một lần khi mount
 	useEffect(() => {
 		blogService.getTags().then((res) => setAllTags(res.data)).catch(() => {});
 	}, []);
 
-	// Re-check scroll when tags list changes
 	useEffect(() => {
 		const id = requestAnimationFrame(updateScrollState);
 		return () => cancelAnimationFrame(id);
 	}, [allTags, updateScrollState]);
 
+	// Load more — gắn thêm vào danh sách hiện tại
+	const handleLoadMore = useCallback(() => {
+		const nextPage = page + 1;
+		setLoadingMore(true);
+
+		blogService
+			.getBlogs({
+				sort: "published_at",
+				order: "desc",
+				per_page: EXPANDED_PER_PAGE,
+				page: nextPage,
+				...(search ? { search } : {}),
+				...(activeTag ? { tag: activeTag } : {}),
+			})
+			.then((res) => {
+				setBlogs((prev) => [...prev, ...res.data]);
+				setPage(nextPage);
+				setHasMore(res.meta.current_page < res.meta.last_page);
+			})
+			.catch(() => {})
+			.finally(() => setLoadingMore(false));
+	}, [page, search, activeTag]);
+
 	const isFiltered = Boolean(search || activeTag);
-	const featuredBlog = !isFiltered && blogs.length > 0 ? blogs[0] : null;
-	const gridBlogs = featuredBlog ? blogs.slice(1) : blogs;
+	const isExpandedMode = showAll || isFiltered;
+
+	// Bài featured: luôn ghim trên cùng trừ khi đang filter (search/tag)
+	const featuredBlog = !isFiltered && blogs.length > 0
+		? (blogs.find((b) => b.is_highlight) ?? blogs[0])
+		: null;
+
+	// Grid không bao gồm bài featured
+	const gridBlogs = featuredBlog
+		? blogs.filter((b) => b.id !== featuredBlog.id)
+		: blogs;
+
 	const tagButtonClass =
 		"inline-flex h-10 shrink-0 items-center justify-center rounded-full border-2 border-black px-5 text-sm font-bold leading-none shadow-[3px_3px_0_#111] transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none";
 	const tagArrowButtonClass =
@@ -298,7 +355,7 @@ const BlogFeedPage: React.FC = () => {
 						<PenSquare className='h-4 w-4' strokeWidth={3} />
 						Thêm
 					</Link>
-					{/* Search with focus glow */}
+					{/* Search */}
 					<div className='group/search relative order-1 shrink-0 md:order-2 md:w-72'>
 						<Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-focus-within/search:text-[var(--color-primary)]' />
 						<input
@@ -323,13 +380,11 @@ const BlogFeedPage: React.FC = () => {
 					{/* Divider */}
 					<div className='hidden h-6 w-px bg-gray-200 md:order-3 md:block' />
 
-					{/* Tag chips + scroll buttons */}
+					{/* Tag chips */}
 					<div className='relative order-2 flex min-w-0 flex-1 md:order-4'>
 						{canScrollLeft && (
 							<div className='pointer-events-none absolute -inset-y-1 left-0 z-10 flex items-center bg-gradient-to-r from-white via-white/90 to-transparent pr-8 pl-0'>
-								<button
-									onClick={scrollTagsLeft}
-									className={tagArrowButtonClass}>
+								<button onClick={scrollTagsLeft} className={tagArrowButtonClass}>
 									<ArrowRight className='h-4 w-4 rotate-180' />
 								</button>
 							</div>
@@ -349,9 +404,7 @@ const BlogFeedPage: React.FC = () => {
 							{allTags.map((tag) => (
 								<button
 									key={tag.id}
-									onClick={() =>
-										setActiveTag(activeTag === tag.name ? null : tag.name)
-									}
+									onClick={() => setActiveTag(activeTag === tag.name ? null : tag.name)}
 									className={`${tagButtonClass} ${
 										activeTag === tag.name
 											? "bg-[var(--color-primary)] text-black"
@@ -363,9 +416,7 @@ const BlogFeedPage: React.FC = () => {
 						</div>
 						{canScrollRight && (
 							<div className='pointer-events-none absolute -inset-y-1 right-0 z-10 flex items-center bg-gradient-to-l from-white via-white/90 to-transparent pl-8 pr-0'>
-								<button
-									onClick={scrollTagsRight}
-									className={tagArrowButtonClass}>
+								<button onClick={scrollTagsRight} className={tagArrowButtonClass}>
 									<ArrowRight className='h-4 w-4' />
 								</button>
 							</div>
@@ -378,7 +429,7 @@ const BlogFeedPage: React.FC = () => {
 			<div className='neo-container px-6 pt-8'>
 				{loading ? (
 					<div className='space-y-8'>
-						<FeaturedSkeleton />
+						{!isFiltered && <FeaturedSkeleton />}
 						<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
 							{Array.from({ length: 6 }).map((_, i) => (
 								<CardSkeleton key={i} />
@@ -387,9 +438,7 @@ const BlogFeedPage: React.FC = () => {
 					</div>
 				) : error ? (
 					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
-						<p className='font-heading text-xl font-extrabold text-black'>
-							Có lỗi xảy ra
-						</p>
+						<p className='font-heading text-xl font-extrabold text-black'>Có lỗi xảy ra</p>
 						<p className='mt-2 text-sm text-gray-600'>{error}</p>
 						<button
 							onClick={() => setSearch((s) => s)}
@@ -419,21 +468,72 @@ const BlogFeedPage: React.FC = () => {
 					</div>
 				) : (
 					<div className='space-y-10'>
-						{/* Featured article */}
-						{featuredBlog && <FeaturedArticle blog={featuredBlog} />}
+						{/* Featured article — chỉ hiện ở chế độ preview */}
+						{featuredBlog && (
+							<FeaturedArticle blog={featuredBlog} isHighlight={featuredBlog.is_highlight} />
+						)}
 
-						{/* Latest posts */}
+						{/* Grid section */}
 						{gridBlogs.length > 0 && (
-							<>
+							<div className='space-y-6'>
 								<h2 className='font-heading text-xl font-extrabold text-black'>
-									{isFiltered ? "Kết quả tìm kiếm" : "Bài viết mới nhất"}
+									{isFiltered
+										? "Kết quả tìm kiếm"
+										: showAll
+											? "Tất cả bài viết"
+											: "Bài viết mới nhất"}
 								</h2>
+
 								<div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
 									{gridBlogs.map((blog) => (
 										<BlogCard key={blog.id} blog={blog} />
 									))}
+
+									{/* Skeleton khi đang load more */}
+									{loadingMore &&
+										Array.from({ length: 3 }).map((_, i) => (
+											<CardSkeleton key={`more-${i}`} />
+										))}
 								</div>
-							</>
+
+								{/* ── Nút Xem tất cả (chế độ preview) ── */}
+								{!isExpandedMode && hasMore && (
+									<div className='flex justify-center pt-2'>
+										<button
+											onClick={() => setShowAll(true)}
+											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-7 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											Xem tất cả bài viết
+											<ArrowRight className='h-4 w-4' />
+										</button>
+									</div>
+								)}
+
+								{/* ── Nút Tải thêm (chế độ expanded) ── */}
+								{isExpandedMode && hasMore && !loadingMore && (
+									<div className='flex justify-center pt-2'>
+										<button
+											onClick={handleLoadMore}
+											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-7 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											Tải thêm bài viết
+											<ArrowRight className='h-4 w-4' />
+										</button>
+									</div>
+								)}
+
+								{/* Spinner load more */}
+								{isExpandedMode && loadingMore && (
+									<div className='flex justify-center py-4'>
+										<Loader2 className='h-6 w-6 animate-spin text-black' />
+									</div>
+								)}
+
+								{/* Hết bài */}
+								{isExpandedMode && !hasMore && blogs.length > 0 && (
+									<p className='text-center text-sm font-medium text-gray-400'>
+										✦ Bạn đã xem hết tất cả bài viết
+									</p>
+								)}
+							</div>
 						)}
 					</div>
 				)}

@@ -17,7 +17,9 @@ use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
+use App\Http\Controllers\Api\V1\Admin\BlogReportController;
 use App\Http\Controllers\Api\V1\Admin\ReportController;
+use App\Http\Controllers\Api\V1\Admin\UnifiedReportController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\SkillController;
@@ -36,6 +38,7 @@ use App\Http\Controllers\Api\V1\User\UserNotificationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\CredentialAuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\RegisterVerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -57,7 +60,6 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/auth/verify-token', [AuthController::class, 'verifyToken']);
-    Route::post('/auth/register', [CredentialAuthController::class, 'registerUser']);
     Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
@@ -110,11 +112,22 @@ Route::prefix('v1')->group(function () {
             Route::post('/blogs/{id}/bookmark', [UserBlogController::class, 'bookmark']);
             Route::post('/blogs/{id}/comments', [UserBlogController::class, 'comment']);
             Route::post('/blogs/{id}/pin', [UserBlogController::class, 'pin']);
+            Route::post('/blogs/{id}/archive', [UserBlogController::class, 'archive']);
+            Route::post('/blogs/{id}/visibility', [UserBlogController::class, 'updateVisibility']);
+            Route::post('/blogs/{id}/report', [UserBlogController::class, 'report']);
+            Route::delete('/blogs/{id}', [UserBlogController::class, 'destroy']);
         });
 
         // Wildcard routes registered last to avoid masking specific paths above
         Route::get('/posts/{id}', [UserPostController::class, 'show']);
         Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
+        Route::post('/blogs/{slug}/view', [UserBlogController::class, 'recordView']);
+    });
+
+    // Registration with OTP verification (throttled: 5 attempts per minute per IP)
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/auth/register', [RegisterVerificationController::class, 'sendOtp']);
+        Route::post('/auth/register/verify-otp', [RegisterVerificationController::class, 'verifyOtp']);
     });
 
     // Forgot password (throttled: 5 attempts per minute per IP)
@@ -129,6 +142,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/logout-all', [AuthController::class, 'logoutAll']);
+        Route::post('/change-password', [AuthController::class, 'changePassword']);
     });
 
     // user logged-in routes
@@ -156,8 +170,10 @@ Route::prefix('v1')->group(function () {
         Route::prefix('users')->group(function () {
             Route::get('/skills', [ProfileController::class, 'skills']);
             Route::get('/check-username', [ProfileController::class, 'checkUsername']);
+            Route::get('/check-school-student', [ProfileController::class, 'checkSchoolStudent']);
             Route::get('/profile', [ProfileController::class, 'show']);
             Route::post('/profile', [ProfileController::class, 'update']);
+            Route::delete('/account', [ProfileController::class, 'deleteAccount']);
             Route::post('/{username}/follow', [FollowController::class, 'toggle']);
         });
     });
@@ -321,10 +337,13 @@ Route::prefix('v1')->group(function () {
         // posts
         Route::middleware('permission:community.posts.view')->group(function () {
             Route::get('posts/stats', [PostController::class, 'stats']);
+            Route::get('posts/trash', [PostController::class, 'trash']);
             Route::get('posts', [PostController::class, 'index']);
         });
         Route::middleware('permission:community.posts.manage')->group(function () {
+            Route::post('posts/bulk-delete', [PostController::class, 'bulkDestroy']);
             Route::patch('posts/{post}/status', [PostController::class, 'updateStatus']);
+            Route::patch('posts/{post}/restore', [PostController::class, 'restore']);
             Route::delete('posts/{post}', [PostController::class, 'destroy']);
         });
 
@@ -337,6 +356,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:community.blogs.manage')->group(function () {
             Route::post('blogs', [BlogController::class, 'store']);
             Route::patch('blogs/{blog}/status', [BlogController::class, 'updateStatus']);
+            Route::patch('blogs/{blog}/highlight', [BlogController::class, 'toggleHighlight']);
             Route::delete('blogs/{blog}', [BlogController::class, 'destroy']);
         });
 
@@ -391,12 +411,28 @@ Route::prefix('v1')->group(function () {
             Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
         });
 
-        // reports
+        // post reports
         Route::middleware('permission:community.reports.view')->group(function () {
             Route::get('reports/stats', [ReportController::class, 'stats']);
             Route::get('reports', [ReportController::class, 'index']);
             Route::patch('reports/{report}/status', [ReportController::class, 'updateStatus']);
             Route::post('reports/{report}/hide-post', [ReportController::class, 'hidePost']);
+        });
+
+        // blog reports
+        Route::middleware('permission:community.reports.view')->group(function () {
+            Route::get('blog-reports/stats', [BlogReportController::class, 'stats']);
+            Route::get('blog-reports', [BlogReportController::class, 'index']);
+            Route::patch('blog-reports/{report}/status', [BlogReportController::class, 'updateStatus']);
+            Route::post('blog-reports/{report}/hide-blog', [BlogReportController::class, 'hideBlog']);
+        });
+
+        // unified reports (post + blog)
+        Route::middleware('permission:community.reports.view')->group(function () {
+            Route::get('unified-reports/stats', [UnifiedReportController::class, 'stats']);
+            Route::get('unified-reports', [UnifiedReportController::class, 'index']);
+            Route::patch('unified-reports/{type}/{id}/status', [UnifiedReportController::class, 'updateStatus']);
+            Route::post('unified-reports/{type}/{id}/hide', [UnifiedReportController::class, 'hideContent']);
         });
     });
 });

@@ -826,6 +826,16 @@ class PostController extends BaseApiController
             ->where('target_id', $id)
             ->count();
 
+        if ($reacted && $comment->blog_id) {
+            $comment->loadMissing('user:id,full_name,avatar,username');
+            $blog = \App\Models\Blog::select('id', 'slug')->find($comment->blog_id);
+            if ($blog && $comment->user) {
+                \App\Services\UserNotificationService::dispatchBlogCommentReaction(
+                    $comment->user, $request->user(), $blog, $comment->id, $type,
+                );
+            }
+        }
+
         return $this->successResponse(true, [
             'reacted' => $reacted,
             'my_reaction' => $myReaction,

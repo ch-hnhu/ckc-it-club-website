@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "highlight.js/styles/github.css";
 
 @theme {
 	--color-primary: #a3e635;
@@ -67,6 +68,85 @@
 		--neo-border: 2px solid #444444;
 		--neo-shadow: 4px 4px 0px #444444;
 		--neo-shadow-hover: 6px 6px 0px #444444;
+
+		/* highlight.js — github-dark theme */
+		.hljs {
+			background: #0d1117;
+			color: #c9d1d9;
+		}
+		.hljs-doctag,
+		.hljs-keyword,
+		.hljs-meta .hljs-keyword,
+		.hljs-template-tag,
+		.hljs-template-variable,
+		.hljs-type,
+		.hljs-variable.language_ {
+			color: #ff7b72;
+		}
+		.hljs-title,
+		.hljs-title.class_,
+		.hljs-title.class_.inherited__,
+		.hljs-title.function_ {
+			color: #d2a8ff;
+		}
+		.hljs-attr,
+		.hljs-attribute,
+		.hljs-literal,
+		.hljs-meta,
+		.hljs-number,
+		.hljs-operator,
+		.hljs-selector-attr,
+		.hljs-selector-class,
+		.hljs-selector-id,
+		.hljs-variable {
+			color: #79c0ff;
+		}
+		.hljs-meta .hljs-string,
+		.hljs-regexp,
+		.hljs-string {
+			color: #a5d6ff;
+		}
+		.hljs-built_in,
+		.hljs-symbol {
+			color: #ffa657;
+		}
+		.hljs-code,
+		.hljs-comment,
+		.hljs-formula {
+			color: #8b949e;
+		}
+		.hljs-name,
+		.hljs-quote,
+		.hljs-selector-pseudo,
+		.hljs-selector-tag {
+			color: #7ee787;
+		}
+		.hljs-subst {
+			color: #c9d1d9;
+		}
+		.hljs-section {
+			color: #1f6feb;
+			font-weight: bold;
+		}
+		.hljs-bullet {
+			color: #f2cc60;
+		}
+		.hljs-emphasis {
+			color: #c9d1d9;
+			font-style: italic;
+		}
+		.hljs-strong {
+			color: #c9d1d9;
+			font-weight: bold;
+		}
+		.hljs-addition {
+			color: #aff5b4;
+			background-color: #033a16;
+		}
+		.hljs-deletion {
+			color: #ffdcd7;
+			background-color: #67060c;
+		}
 	}
 
 	* {
@@ -1156,6 +1236,43 @@
 	font-family: var(--font-heading);
 	margin: 0.5rem 0 0.25rem;
 }
+.so-editor-outer .s-prose h4,
+.so-editor-outer .ProseMirror h4 {
+	font-size: 1rem;
+	font-weight: 700;
+	font-family: var(--font-heading);
+	margin: 0.5rem 0 0.25rem;
+}
+.so-editor-outer .s-prose h5,
+.so-editor-outer .ProseMirror h5,
+.so-editor-outer .s-prose h6,
+.so-editor-outer .ProseMirror h6 {
+	font-size: 0.875rem;
+	font-weight: 700;
+	font-family: var(--font-heading);
+	margin: 0.5rem 0 0.25rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.so-editor-outer .s-prose del,
+.so-editor-outer .s-prose s,
+.so-editor-outer .ProseMirror del,
+.so-editor-outer .ProseMirror s {
+	text-decoration: line-through;
+	color: #6b7280;
+}
+.so-editor-outer .s-prose sup,
+.so-editor-outer .ProseMirror sup {
+	font-size: 0.75em;
+	vertical-align: super;
+	line-height: 0;
+}
+.so-editor-outer .s-prose sub,
+.so-editor-outer .ProseMirror sub {
+	font-size: 0.75em;
+	vertical-align: sub;
+	line-height: 0;
+}
 .so-editor-outer .s-prose p,
 .so-editor-outer .ProseMirror p {
 	margin: 0 0 0.5rem;
@@ -1258,6 +1375,13 @@
 .so-editor-outer .s-prose blockquote.spoiler *,
 .so-editor-outer .ProseMirror blockquote.spoiler * {
 	color: #f3f4f6;
+}
+.so-editor-outer .s-prose hr,
+.so-editor-outer .ProseMirror hr {
+	border: none;
+	border-top: 2px solid #d1d5db;
+	margin: 1rem 0;
+	height: 0;
 }
 .so-editor-outer .s-prose ul,
 .so-editor-outer .ProseMirror ul {

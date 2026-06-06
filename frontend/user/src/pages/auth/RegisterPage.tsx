@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-	registerWithCredentials,
-	setAccessToken,
-	type AuthCredentialResponse,
+	sendRegistrationOtp,
+	type RegisterOtpResponse,
+	type RegisterCredentials,
 } from "@/services/auth.service";
 import { Eye, EyeOff } from "lucide-react";
 
-function getFirstValidationError(response: AuthCredentialResponse) {
+function getFirstValidationError(response: RegisterOtpResponse) {
 	const errors = response.errors;
 	if (!errors) return null;
 
@@ -41,18 +41,20 @@ export default function RegisterPage() {
 		}
 
 		setLoading(true);
+		const credentials: RegisterCredentials = {
+			full_name: fullName,
+			username,
+			email,
+			password,
+			password_confirmation: passwordConfirmation,
+		};
 		try {
-			const res = await registerWithCredentials({
-				full_name: fullName,
-				username,
-				email,
-				password,
-				password_confirmation: passwordConfirmation,
-			});
+			const res = await sendRegistrationOtp(credentials);
 
-			if (res.success && res.token) {
-				setAccessToken(res.token);
-				navigate("/", { replace: true });
+			if (res.success) {
+				navigate("/register/verify-otp", {
+					state: { email, credentials },
+				});
 				return;
 			}
 
@@ -263,7 +265,7 @@ export default function RegisterPage() {
 								type='submit'
 								disabled={loading}
 								className='neo-btn neo-btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-60'>
-								{loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
+								{loading ? "Đang gửi mã xác nhận..." : "Tạo tài khoản"}
 							</button>
 						</form>
 					</div>

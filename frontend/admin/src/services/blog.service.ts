@@ -38,6 +38,13 @@ const blogService = {
 		);
 	},
 
+	async toggleHighlight(id: number | string): Promise<ApiResponse<{ is_highlight: boolean }>> {
+		return api.patch<ApiResponse<{ is_highlight: boolean }>, Record<string, never>>(
+			`/blogs/${id}/highlight`,
+			{},
+		);
+	},
+
 	async deleteBlog(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/blogs/${id}`);
 	},

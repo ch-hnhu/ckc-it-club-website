@@ -4,8 +4,10 @@ export interface AuthUser {
 	name?: string;
 	picture?: string;
 	username?: string | null;
+	provider?: string | null;
 	permissions?: string[];
 	roles?: string[];
+	is_school_student?: boolean;
 }
 
 export type OAuthAuthSuccessPayload = {
@@ -79,13 +81,25 @@ export async function loginWithCredentials(
 	return response.json();
 }
 
-export async function registerWithCredentials(
+export async function sendRegistrationOtp(
 	credentials: RegisterCredentials,
-): Promise<AuthCredentialResponse> {
+): Promise<RegisterOtpResponse> {
 	const response = await fetch(`${API_URL}/auth/register`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json", Accept: "application/json" },
 		body: JSON.stringify(credentials),
+	});
+	return response.json();
+}
+
+export async function verifyRegistrationOtp(
+	email: string,
+	otp: string,
+): Promise<VerifyRegisterOtpResponse> {
+	const response = await fetch(`${API_URL}/auth/register/verify-otp`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		body: JSON.stringify({ email, otp }),
 	});
 	return response.json();
 }
@@ -152,12 +166,17 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 		name: user.full_name,
 		picture: user.avatar,
 		username: user.username ?? null,
+		provider: user.provider ?? null,
 		permissions: Array.isArray(user.permissions) ? user.permissions : [],
 		roles: Array.isArray(user.roles)
 			? user.roles.map((r: { name: string }) => r.name)
 			: [],
+		is_school_student: user.is_school_student === true,
 	} as AuthUser;
 }
+
+export type RegisterOtpResponse = { success: boolean; message?: string; errors?: Record<string, string[]> };
+export type VerifyRegisterOtpResponse = AuthCredentialResponse;
 
 export type ForgotPasswordResponse = { success: boolean; message?: string };
 export type VerifyOtpResponse = { success: boolean; message?: string; reset_token?: string };

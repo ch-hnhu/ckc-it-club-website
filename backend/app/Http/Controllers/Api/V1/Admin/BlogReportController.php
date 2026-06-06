@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Models\PostReport;
+use App\Models\BlogReport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class ReportController extends BaseApiController
+class BlogReportController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
@@ -15,7 +15,7 @@ class ReportController extends BaseApiController
         $status  = $request->query('status');
         $search  = $request->query('search');
 
-        $allowedSorts = ['id', 'post_title', 'reporter_name', 'reason', 'description', 'status', 'created_at'];
+        $allowedSorts = ['id', 'blog_title', 'reporter_name', 'reason', 'description', 'status', 'created_at'];
         $sort  = in_array($request->query('sort', 'created_at'), $allowedSorts)
             ? $request->query('sort', 'created_at')
             : 'created_at';
@@ -23,16 +23,16 @@ class ReportController extends BaseApiController
             ? $request->query('order', 'desc')
             : 'desc';
 
-        $query = PostReport::with([
-            'post:id,title,status',
+        $query = BlogReport::with([
+            'blog:id,slug,title,status',
             'reporter:id,full_name,email,username',
             'resolver:id,full_name',
         ]);
 
         match ($sort) {
-            'post_title'    => $query->orderByRaw("(SELECT title FROM posts WHERE posts.id = post_reports.post_id) {$order}"),
-            'reporter_name' => $query->orderByRaw("(SELECT full_name FROM users WHERE users.id = post_reports.reporter_id) {$order}"),
-            default         => $query->orderBy("post_reports.{$sort}", $order),
+            'blog_title'    => $query->orderByRaw("(SELECT title FROM blogs WHERE blogs.id = blog_reports.blog_id) {$order}"),
+            'reporter_name' => $query->orderByRaw("(SELECT full_name FROM users WHERE users.id = blog_reports.reporter_id) {$order}"),
+            default         => $query->orderBy("blog_reports.{$sort}", $order),
         };
 
         if ($status && $status !== 'all') {
@@ -47,11 +47,11 @@ class ReportController extends BaseApiController
         }
 
         $paginated = $query->paginate($perPage);
-        $items     = collect($paginated->items())->map(fn (PostReport $r) => $this->transform($r));
+        $items     = collect($paginated->items())->map(fn (BlogReport $r) => $this->transform($r));
 
         return response()->json([
             'success' => true,
-            'message' => 'Lấy danh sách báo cáo thành công.',
+            'message' => 'Lấy danh sách báo cáo blog thành công.',
             'data'    => $items,
             'meta'    => [
                 'current_page' => $paginated->currentPage(),
@@ -67,15 +67,15 @@ class ReportController extends BaseApiController
     public function stats(): JsonResponse
     {
         return $this->successResponse(true, [
-            'total'     => PostReport::count(),
-            'pending'   => PostReport::where('status', 'pending')->count(),
-            'reviewing' => PostReport::where('status', 'reviewing')->count(),
-            'resolved'  => PostReport::where('status', 'resolved')->count(),
-            'dismissed' => PostReport::where('status', 'dismissed')->count(),
+            'total'     => BlogReport::count(),
+            'pending'   => BlogReport::where('status', 'pending')->count(),
+            'reviewing' => BlogReport::where('status', 'reviewing')->count(),
+            'resolved'  => BlogReport::where('status', 'resolved')->count(),
+            'dismissed' => BlogReport::where('status', 'dismissed')->count(),
         ], 'Lấy thống kê thành công.');
     }
 
-    public function updateStatus(Request $request, PostReport $report): JsonResponse
+    public function updateStatus(Request $request, BlogReport $report): JsonResponse
     {
         $request->validate([
             'status' => ['required', 'in:pending,reviewing,resolved,dismissed'],
@@ -90,41 +90,42 @@ class ReportController extends BaseApiController
         }
 
         $report->update($payload);
-        $report->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+        $report->load(['blog:id,slug,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
 
         return $this->successResponse(true, $this->transform($report), 'Cập nhật trạng thái thành công.');
     }
 
-    public function hidePost(Request $request, PostReport $report): JsonResponse
+    public function hideBlog(Request $request, BlogReport $report): JsonResponse
     {
-        $post = $report->post;
+        $blog = $report->blog;
 
-        if (! $post) {
-            return $this->errorResponse(false, 'Bài viết không tồn tại.', 404);
+        if (! $blog) {
+            return $this->errorResponse(false, 'Blog không tồn tại.', 404);
         }
 
-        $post->update(['status' => 'hidden']);
+        $blog->update(['status' => 'hidden']);
         $report->update([
             'status'      => 'resolved',
             'resolved_by' => $request->user()->id,
             'resolved_at' => now(),
         ]);
 
-        $report->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+        $report->load(['blog:id,slug,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
 
-        return $this->successResponse(true, $this->transform($report), 'Đã ẩn bài viết và đánh dấu đã xử lý.');
+        return $this->successResponse(true, $this->transform($report), 'Đã ẩn blog và đánh dấu đã xử lý.');
     }
 
     // ─── Private ──────────────────────────────────────────────────────────────
 
-    private function transform(PostReport $report): array
+    private function transform(BlogReport $report): array
     {
         return [
             'id'          => $report->id,
-            'post'        => $report->post ? [
-                'id'     => $report->post->id,
-                'title'  => $report->post->title,
-                'status' => $report->post->status,
+            'blog'        => $report->blog ? [
+                'id'     => $report->blog->id,
+                'slug'   => $report->blog->slug,
+                'title'  => $report->blog->title,
+                'status' => $report->blog->status,
             ] : null,
             'reporter'    => $report->reporter ? [
                 'id'        => $report->reporter->id,

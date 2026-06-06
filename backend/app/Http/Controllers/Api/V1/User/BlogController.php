@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class BlogController extends BaseApiController
 {
@@ -51,10 +52,13 @@ class BlogController extends BaseApiController
         $tag     = $request->query('tag');
         $username = $request->query('username');
 
+        $viewer = auth('sanctum')->user();
+
         $blogs = Blog::query()
             ->with(['author:id,full_name,email,avatar,username', 'tags:id,name'])
             ->selectRaw('blogs.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "blog" AND target_id = blogs.id) as reactions_count')
             ->where('blogs.status', 'published')
+            ->visibleTo($viewer)
             ->when($search, fn ($q) => $q->where('blogs.title', 'like', "%{$search}%"))
             ->when($tag, fn ($q) => $q->whereHas('tags', fn ($t) => $t->where('name', $tag)))
             ->when($username, fn ($q) => $q->whereHas('author', fn ($author) => $author
@@ -62,6 +66,7 @@ class BlogController extends BaseApiController
                 ->orWhere('email', 'like', "{$username}@%")
             ))
             ->when($username, fn ($q) => $q->orderByDesc('blogs.is_pinned')->orderByDesc('blogs.pinned_at'))
+            ->when(!$search && !$tag && !$username, fn ($q) => $q->orderByDesc('blogs.is_highlight'))
             ->when(
                 $sort === 'reactions_count',
                 fn ($q) => $q->orderBy('reactions_count', $order),
@@ -92,6 +97,7 @@ class BlogController extends BaseApiController
     public function show(string $slug): JsonResponse
     {
         $authUserId = auth('sanctum')->id();
+        $viewer     = auth('sanctum')->user();
 
         $blog = Blog::with([
                 'author' => fn ($q) => $q->select('id', 'full_name', 'email', 'avatar', 'username')->with('roles:id,name'),
@@ -108,15 +114,16 @@ class BlogController extends BaseApiController
                 ->where('status', 'published')
                 ->orWhere(fn ($inner) => $inner
                     ->where('author_id', $authUserId ?? 0)
-                    ->whereIn('status', ['draft', 'pending_review'])
+                    ->whereIn('status', ['draft', 'pending_review', 'archived'])
                 )
             )
             ->firstOrFail();
 
-        // Chỉ tăng view_count cho blog published (không đếm lượt xem nháp của tác giả)
-        if ($blog->status === 'published') {
-            $blog->increment('view_count');
+        // Kiểm tra quyền xem theo visibility (chỉ áp dụng cho blog published)
+        if ($blog->status === 'published' && ! $blog->isVisibleTo($viewer)) {
+            abort(403, 'Bạn không có quyền xem bài viết này.');
         }
+
 
         $data = $this->transformBlog($blog);
         if ($data['user'] && $blog->author) {
@@ -259,7 +266,7 @@ class BlogController extends BaseApiController
 
         $blog = Blog::where(fn ($q) => $q->where('slug', $slug)->orWhere('id', is_numeric($slug) ? (int)$slug : 0))
             ->where('author_id', $userId)
-            ->whereIn('status', ['draft', 'pending_review'])
+            ->whereIn('status', ['draft', 'pending_review', 'published', 'archived'])
             ->firstOrFail();
 
         $request->validate([
@@ -286,7 +293,16 @@ class BlogController extends BaseApiController
 
         if ($request->has('content'))  $blog->content  = $request->input('content');
         if ($request->has('excerpt'))  $blog->excerpt  = $request->input('excerpt');
-        if ($request->has('status'))   $blog->status   = $request->input('status');
+
+        // Xác định status sau khi cập nhật:
+        // - Admin → giữ published (hoặc theo request nếu đang là draft/pending_review)
+        // - User thường → pending_review khi đăng lại (kể cả blog đã published/archived)
+        $isAdmin = $request->user()->hasRole(RolesEnum::adminRoles());
+        if ($request->has('status')) {
+            $blog->status = $isAdmin ? 'published' : $request->input('status');
+        } elseif (!$isAdmin && in_array($blog->status, ['published', 'archived'])) {
+            $blog->status = 'pending_review';
+        }
 
         if ($request->hasFile('featured_image')) {
             // Xóa ảnh cũ nếu có
@@ -305,6 +321,7 @@ class BlogController extends BaseApiController
         $blog->load(['author:id,full_name,email,avatar,username', 'tags:id,name']);
 
         $messages = [
+            'published'      => 'Blog đã được cập nhật và xuất bản.',
             'pending_review' => 'Blog đã được gửi và đang chờ duyệt.',
             'draft'          => 'Đã lưu nháp.',
         ];
@@ -469,6 +486,8 @@ class BlogController extends BaseApiController
     {
         Blog::where('status', 'published')->findOrFail($id);
 
+        $userId = auth('sanctum')->id();
+
         $allComments = Comment::with('user:id,full_name,username,email,avatar')
             ->selectRaw('comments.*, (SELECT COUNT(*) FROM reactions WHERE target_type = "comment" AND target_id = comments.id) as reactions_count')
             ->where('blog_id', $id)
@@ -477,6 +496,16 @@ class BlogController extends BaseApiController
             ->orderBy('created_at', 'asc')
             ->get();
 
+        $myReactions = [];
+        if ($userId) {
+            $commentIds  = $allComments->pluck('id')->toArray();
+            $myReactions = Reaction::where('user_id', $userId)
+                ->where('target_type', 'comment')
+                ->whereIn('target_id', $commentIds)
+                ->pluck('type', 'target_id')
+                ->toArray();
+        }
+
         $repliesByParent = $allComments
             ->filter(fn ($c) => $c->parent_id !== null)
             ->groupBy('parent_id');
@@ -484,10 +513,10 @@ class BlogController extends BaseApiController
         $topLevel = $allComments
             ->filter(fn ($c) => $c->parent_id === null)
             ->map(fn (Comment $comment) => array_merge(
-                $this->transformComment($comment),
+                $this->transformComment($comment, $myReactions),
                 [
                     'replies' => ($repliesByParent->get($comment->id) ?? collect())
-                        ->map(fn (Comment $r) => $this->transformComment($r))
+                        ->map(fn (Comment $r) => $this->transformComment($r, $myReactions))
                         ->values()
                         ->toArray(),
                 ]
@@ -547,6 +576,101 @@ class BlogController extends BaseApiController
         return $this->createdResponse($this->transformComment($comment));
     }
 
+    public function updateVisibility(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'visibility' => ['required', 'in:public,members,private'],
+        ]);
+
+        $blog = Blog::where('author_id', $request->user()->id)->findOrFail($id);
+        $blog->update(['visibility' => $request->input('visibility')]);
+
+        return $this->successResponse(
+            true,
+            ['visibility' => $blog->visibility],
+            'Đã cập nhật quyền riêng tư.'
+        );
+    }
+
+    public function archive(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'status' => ['required', 'in:published,archived'],
+        ]);
+
+        $blog = Blog::where('author_id', $request->user()->id)->findOrFail($id);
+
+        $blog->update(['status' => $request->input('status')]);
+
+        return $this->successResponse(
+            true,
+            ['status' => $blog->status],
+            $blog->status === 'archived' ? 'Đã lưu trữ blog.' : 'Đã khôi phục blog.'
+        );
+    }
+
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $blog = Blog::where('author_id', $request->user()->id)->findOrFail($id);
+        $blog->delete();
+
+        return $this->successResponse(true, null, 'Đã xóa blog.');
+    }
+
+    public function report(Request $request, int $id): JsonResponse
+    {
+        $blog = Blog::query()
+            ->where('status', 'published')
+            ->findOrFail($id);
+
+        if ($blog->author_id === $request->user()->id) {
+            abort(403, 'Bạn không thể báo cáo blog của chính mình.');
+        }
+
+        $validated = $request->validate([
+            'reason'      => ['required', Rule::in(['spam', 'offensive', 'misinformation', 'inappropriate', 'other'])],
+            'description' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $alreadyReported = DB::table('blog_reports')
+            ->where('blog_id', $id)
+            ->where('reporter_id', $request->user()->id)
+            ->exists();
+
+        if (! $alreadyReported) {
+            DB::table('blog_reports')->insert([
+                'blog_id'     => $id,
+                'reporter_id' => $request->user()->id,
+                'reason'      => $validated['reason'],
+                'description' => $validated['description'] ?? null,
+                'status'      => 'pending',
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
+
+        return $this->successResponse(true, [], 'Báo cáo đã được ghi nhận.');
+    }
+
+    public function recordView(string $slug): JsonResponse
+    {
+        $authUserId = auth('sanctum')->id();
+
+        $blog = Blog::where('status', 'published')
+            ->where(fn ($q) => $q
+                ->where('slug', $slug)
+                ->orWhere('id', is_numeric($slug) ? (int) $slug : 0)
+            )
+            ->firstOrFail();
+
+        // Tác giả không tự tăng lượt xem bài của mình
+        if ((int) $blog->author_id !== (int) $authUserId) {
+            $blog->increment('view_count');
+        }
+
+        return $this->successResponse(true, ['view_count' => $blog->view_count], ApiMessage::UPDATED);
+    }
+
     private function transformBlog(Blog $blog): array
     {
         $author = $blog->author;
@@ -567,6 +691,7 @@ class BlogController extends BaseApiController
                 ? Storage::disk('public')->url($blog->cover_image)
                 : null,
             'status'          => $blog->status,
+            'visibility'      => $blog->visibility ?? 'public',
             'published_at'    => $blog->published_at?->toIso8601String(),
             'view_count'      => (int) $blog->view_count,
             'comments_count'  => 0,
@@ -578,12 +703,13 @@ class BlogController extends BaseApiController
                 'color' => null,
             ])->values()->toArray(),
             'is_pinned'       => (bool) $blog->is_pinned,
+            'is_highlight'    => (bool) $blog->is_highlight,
             'created_at'      => $blog->created_at?->toIso8601String(),
             'updated_at'      => $blog->updated_at?->toIso8601String(),
         ];
     }
 
-    private function transformComment(Comment $comment): array
+    private function transformComment(Comment $comment, array $myReactions = []): array
     {
         $user = $comment->user;
         return [
@@ -598,6 +724,7 @@ class BlogController extends BaseApiController
             ] : null,
             'content'         => $comment->content,
             'reactions_count' => (int) ($comment->reactions_count ?? 0),
+            'my_reaction'     => $myReactions[$comment->id] ?? null,
             'created_at'      => $comment->created_at?->toIso8601String(),
         ];
     }
