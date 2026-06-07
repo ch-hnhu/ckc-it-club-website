@@ -109,6 +109,7 @@ class UnifiedReportController extends BaseApiController
             'reviewing' => PostReport::where('status', 'reviewing')->count() + BlogReport::where('status', 'reviewing')->count(),
             'resolved'  => PostReport::where('status', 'resolved')->count()  + BlogReport::where('status', 'resolved')->count(),
             'dismissed' => PostReport::where('status', 'dismissed')->count() + BlogReport::where('status', 'dismissed')->count(),
+            'superseded' => PostReport::where('status', 'superseded')->count() + BlogReport::where('status', 'superseded')->count(),
             'post'      => PostReport::count(),
             'blog'      => BlogReport::count(),
         ], 'Lấy thống kê thành công.');

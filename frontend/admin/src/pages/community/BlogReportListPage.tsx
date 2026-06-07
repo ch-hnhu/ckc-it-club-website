@@ -59,6 +59,7 @@ const STATUS_OPTIONS = [
 	{ value: "reviewing", label: "Đang xem xét" },
 	{ value: "resolved", label: "Đã xử lý" },
 	{ value: "dismissed", label: "Bỏ qua" },
+	{ value: "superseded", label: "Đã xử lý trước đó" },
 ];
 
 const NEXT_STATUS: Record<BlogReportRecord["status"], { value: BlogReportRecord["status"]; label: string }[]> = {
@@ -72,6 +73,7 @@ const NEXT_STATUS: Record<BlogReportRecord["status"], { value: BlogReportRecord[
 	],
 	resolved: [{ value: "reviewing", label: "Mở lại xem xét" }],
 	dismissed: [{ value: "reviewing", label: "Mở lại xem xét" }],
+	superseded: [],
 };
 
 function StatusBadge({ status }: { status: BlogReportRecord["status"] }) {
@@ -80,6 +82,7 @@ function StatusBadge({ status }: { status: BlogReportRecord["status"] }) {
 		reviewing: { label: "Đang xem xét", className: "bg-blue-100 text-blue-800 border-blue-200" },
 		resolved:  { label: "Đã xử lý",     className: "bg-green-100 text-green-800 border-green-200" },
 		dismissed: { label: "Bỏ qua",        className: "bg-gray-100 text-gray-600 border-gray-200" },
+		superseded: { label: "Đã xử lý trước đó", className: "bg-gray-100 text-gray-400 border-gray-100 italic" },
 	};
 	const s = map[status] ?? { label: status, className: "" };
 	return (
@@ -195,6 +198,7 @@ export default function BlogReportListPage() {
 					{ label: "Chờ xử lý",               value: stats?.pending,                                            color: "text-yellow-600" },
 					{ label: "Đang xem xét",            value: stats?.reviewing,                                          color: "text-blue-600" },
 					{ label: "Đã xử lý / Bỏ qua",       value: (stats?.resolved ?? 0) + (stats?.dismissed ?? 0),         color: "text-green-600" },
+					{ label: "Đã xử lý trước đó",       value: stats?.superseded,                                        color: "text-muted-foreground" },
 				].map((s) => (
 					<div key={s.label} className="rounded-lg border bg-card p-4 shadow-sm">
 						<p className="min-h-[2.5rem] text-sm font-medium text-muted-foreground">{s.label}</p>

@@ -293,6 +293,7 @@
 - Community post management:
 - route `/community/posts`
 - admin post management no longer exposes pin/unpin actions, pin sort, or pinned stats. The content detail dialog renders saved Markdown through `src/lib/markdown.ts`, and the trash icon beside the status filter toggles the soft-deleted post list with row-level restore actions.
+- Community report management uses backend report statuses `pending`, `reviewing`, `resolved`, `dismissed`, and system-generated `superseded`; filter dropdowns and stats include `superseded`, but manual status actions should not set it directly.
 
 ## Environment Variables
 

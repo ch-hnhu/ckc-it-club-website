@@ -73,6 +73,7 @@ class BlogReportController extends BaseApiController
             'reviewing' => BlogReport::where('status', 'reviewing')->count(),
             'resolved'  => BlogReport::where('status', 'resolved')->count(),
             'dismissed' => BlogReport::where('status', 'dismissed')->count(),
+            'superseded' => BlogReport::where('status', 'superseded')->count(),
         ], 'Lấy thống kê thành công.');
     }
 
