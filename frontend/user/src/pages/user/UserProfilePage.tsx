@@ -1214,10 +1214,12 @@ const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
 						/>
 					</div>
 				) : preview?.html ? (
-					<div
-						className='community-markdown text-xs text-gray-600 line-clamp-3'
-						dangerouslySetInnerHTML={{ __html: preview.html }}
-					/>
+					<div className='so-editor-outer community-markdown community-markdown-excerpt'>
+						<div
+							className='s-prose line-clamp-3'
+							dangerouslySetInnerHTML={{ __html: preview.html }}
+						/>
+					</div>
 				) : null}
 			</Link>
 

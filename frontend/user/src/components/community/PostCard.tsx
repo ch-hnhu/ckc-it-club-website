@@ -48,13 +48,39 @@ const PostCard: React.FC<PostCardProps> = ({
 	const detailUrl = `/cong-dong/bai-viet/${post.id}`;
 	const sourceContent = post.content ?? post.excerpt;
 	const preview = sourceContent ? renderMarkdownPreview(sourceContent, 260) : null;
-	const hasExpandableContent = Boolean(preview?.didTruncate && post.content);
+	// Also expandable when content has elements hidden in excerpt mode (table, code block, image)
+	// even if the text itself wasn't truncated (e.g. post is only a table with no paragraph text).
+	const contentHasHiddenElements = Boolean(
+		post.content && (
+			/^\s*\|/m.test(post.content) ||   // markdown table row
+			post.content.includes("```") ||    // fenced code block
+			/!\[/.test(post.content)           // image
+		),
+	);
+	const hasExpandableContent = Boolean(post.content && (preview?.didTruncate || contentHasHiddenElements));
+	// Auto-expand if ALL content would be invisible in excerpt mode (no plain-text lines at all).
+	const contentIsOnlyHiddenElements = contentHasHiddenElements && Boolean(
+		post.content && (() => {
+			let inCodeBlock = false;
+			for (const line of post.content.split("\n")) {
+				if (line.startsWith("```")) { inCodeBlock = !inCodeBlock; continue; }
+				if (inCodeBlock) continue; // inside code block — hidden
+				const t = line.trim();
+				if (!t) continue; // blank line
+				if (/^\s*\|/.test(line)) continue; // table row — hidden
+				if (line.startsWith("    ")) continue; // indented code — hidden
+				if (/^!\[/.test(t)) continue; // image — hidden
+				return false; // found a visible text line → not only hidden
+			}
+			return true; // all lines are hidden
+		})(),
+	);
 	const isOwnPost = Boolean(user?.id && post.user?.id && Number(user.id) === post.user.id);
 
 	const [liked, setLiked] = useState(post.my_reaction === "heart");
 	const [heartCount, setHeartCount] = useState(post.reactions_count);
 	const [loading, setLoading] = useState(false);
-	const [isExpanded, setIsExpanded] = useState(false);
+	const [isExpanded, setIsExpanded] = useState(contentIsOnlyHiddenElements);
 	const [saved, setSaved] = useState(post.my_bookmark ?? false);
 	const [saveLoading, setSaveLoading] = useState(false);
 	const [showPostMenu, setShowPostMenu] = useState(false);
