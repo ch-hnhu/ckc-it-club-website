@@ -347,6 +347,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('channels/{channel}', [ChannelController::class, 'update']);
             Route::delete('channels/{channel}', [ChannelController::class, 'destroy']);
             Route::patch('channels/{id}/restore', [ChannelController::class, 'restore']);
+            Route::delete('channels/{id}/force-delete', [ChannelController::class, 'forceDestroy']);
         });
 
         // posts

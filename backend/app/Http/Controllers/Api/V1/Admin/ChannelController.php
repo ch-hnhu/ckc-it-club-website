@@ -6,6 +6,7 @@ use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Channel;
 use App\Models\Post;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -120,8 +121,10 @@ class ChannelController extends BaseApiController
 
     public function destroy(Request $request, Channel $channel): JsonResponse
     {
-        $userId = $request->user()->id;
-        $now    = now();
+        $admin   = $request->user();
+        $userId  = $admin->id;
+        $now     = now();
+        $chanName = $channel->name;
 
         DB::transaction(function () use ($channel, $userId, $now) {
             // Soft-delete toàn bộ bài viết trong kênh (cùng timestamp để có thể khôi phục chính xác)
@@ -130,24 +133,33 @@ class ChannelController extends BaseApiController
                 'deleted_by' => $userId,
             ]);
 
-            // Xóa ảnh kênh trên storage (nếu là file local)
-            if ($channel->image && ! Str::startsWith($channel->image, ['http://', 'https://'])) {
-                Storage::disk('public')->delete($channel->image);
-            }
-
+            // Không xóa ảnh ở đây — giữ lại để có thể khôi phục cùng ảnh
             // Soft-delete kênh với cùng timestamp như bài viết
             $channel->deleted_by = $userId;
             $channel->deleted_at = $now;
             $channel->save();
         });
 
+        NotificationService::dispatch(
+            title: 'Kênh thảo luận đã bị xóa',
+            message: "{$admin->full_name} đã xóa kênh \"{$chanName}\".",
+            action: 'deleted',
+            entityType: 'channel',
+            entityId: $channel->id,
+            performedBy: $admin->full_name,
+            link: '/community/channels?view=trash',
+            excludeUserId: $admin->id,
+        );
+
         return $this->successResponse(true, null, 'Xóa kênh thành công.');
     }
 
-    public function restore(int $id): JsonResponse
+    public function restore(Request $request, int $id): JsonResponse
     {
+        $admin   = $request->user();
         $channel = Channel::onlyTrashed()->findOrFail($id);
         $channelDeletedAt = $channel->deleted_at;
+        $chanName = $channel->name;
 
         DB::transaction(function () use ($channel, $channelDeletedAt) {
             // Khôi phục các bài viết bị xóa cùng lúc với kênh
@@ -162,7 +174,45 @@ class ChannelController extends BaseApiController
 
         $channel->loadCount('posts');
 
+        NotificationService::dispatch(
+            title: 'Kênh thảo luận đã được khôi phục',
+            message: "{$admin->full_name} đã khôi phục kênh \"{$chanName}\".",
+            action: 'restored',
+            entityType: 'channel',
+            entityId: $channel->id,
+            performedBy: $admin->full_name,
+            link: '/community/channels',
+            excludeUserId: $admin->id,
+        );
+
         return $this->successResponse(true, $this->transformChannel($channel), 'Khôi phục kênh thành công.');
+    }
+
+    public function forceDestroy(Request $request, int $id): JsonResponse
+    {
+        $admin   = $request->user();
+        $channel = Channel::onlyTrashed()->findOrFail($id);
+        $chanName = $channel->name;
+
+        // Xóa ảnh vật lý khi xóa vĩnh viễn
+        if ($channel->image && ! Str::startsWith($channel->image, ['http://', 'https://'])) {
+            Storage::disk('public')->delete($channel->image);
+        }
+
+        $channel->forceDelete();
+
+        NotificationService::dispatch(
+            title: 'Kênh thảo luận đã bị xóa vĩnh viễn',
+            message: "{$admin->full_name} đã xóa vĩnh viễn kênh \"{$chanName}\".",
+            action: 'force_deleted',
+            entityType: 'channel',
+            entityId: $id,
+            performedBy: $admin->full_name,
+            link: '/community/channels',
+            excludeUserId: $admin->id,
+        );
+
+        return $this->successResponse(true, null, 'Đã xóa vĩnh viễn kênh.');
     }
 
     private function transformChannel(Channel $channel): array

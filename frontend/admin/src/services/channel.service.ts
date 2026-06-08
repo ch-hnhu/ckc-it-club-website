@@ -74,6 +74,10 @@ const channelService = {
 	async restoreChannel(id: number | string): Promise<ApiResponse<ChannelRecord>> {
 		return api.patch(`/channels/${id}/restore`);
 	},
+
+	async forceDeleteChannel(id: number | string): Promise<ApiResponse<null>> {
+		return api.delete(`/channels/${id}/force-delete`);
+	},
 };
 
 export default channelService;
