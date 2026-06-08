@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Channel;
+use App\Models\Post;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -94,15 +96,73 @@ class ChannelController extends BaseApiController
         return $this->successResponse(true, $this->transformChannel($channel), 'Cập nhật kênh thành công.');
     }
 
-    public function destroy(Channel $channel): JsonResponse
+    public function trash(Request $request): JsonResponse
     {
-        if ($channel->image && ! Str::startsWith($channel->image, ['http://', 'https://'])) {
-            Storage::disk('public')->delete($channel->image);
-        }
+        $allowedSorts = ['id', 'name', 'slug', 'description', 'posts_count', 'created_at'];
+        $sort    = in_array($request->query('sort', 'created_at'), $allowedSorts) ? $request->query('sort', 'created_at') : 'created_at';
+        $order   = in_array($request->query('order', 'desc'), ['asc', 'desc']) ? $request->query('order', 'desc') : 'desc';
+        $perPage = (int) $request->query('per_page', 10);
+        $search  = $request->query('search');
 
-        $channel->delete();
+        $channels = Channel::onlyTrashed()
+            ->withCount(['posts' => fn ($q) => $q->onlyTrashed()])
+            ->when($search, fn ($q) => $q->where(fn ($s) => $s
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('slug', 'like', "%{$search}%")
+            ))
+            ->orderBy($sort, $order)
+            ->paginate($perPage);
+
+        $channels->getCollection()->transform(fn (Channel $c) => $this->transformChannel($c));
+
+        return $this->paginatedResponse($channels, ApiMessage::RETRIEVED);
+    }
+
+    public function destroy(Request $request, Channel $channel): JsonResponse
+    {
+        $userId = $request->user()->id;
+        $now    = now();
+
+        DB::transaction(function () use ($channel, $userId, $now) {
+            // Soft-delete toàn bộ bài viết trong kênh (cùng timestamp để có thể khôi phục chính xác)
+            $channel->posts()->whereNull('deleted_at')->update([
+                'deleted_at' => $now,
+                'deleted_by' => $userId,
+            ]);
+
+            // Xóa ảnh kênh trên storage (nếu là file local)
+            if ($channel->image && ! Str::startsWith($channel->image, ['http://', 'https://'])) {
+                Storage::disk('public')->delete($channel->image);
+            }
+
+            // Soft-delete kênh với cùng timestamp như bài viết
+            $channel->deleted_by = $userId;
+            $channel->deleted_at = $now;
+            $channel->save();
+        });
 
         return $this->successResponse(true, null, 'Xóa kênh thành công.');
+    }
+
+    public function restore(int $id): JsonResponse
+    {
+        $channel = Channel::onlyTrashed()->findOrFail($id);
+        $channelDeletedAt = $channel->deleted_at;
+
+        DB::transaction(function () use ($channel, $channelDeletedAt) {
+            // Khôi phục các bài viết bị xóa cùng lúc với kênh
+            Post::onlyTrashed()
+                ->where('channel_id', $channel->id)
+                ->where('deleted_at', $channelDeletedAt)
+                ->restore();
+
+            $channel->restore();
+            $channel->update(['deleted_by' => null]);
+        });
+
+        $channel->loadCount('posts');
+
+        return $this->successResponse(true, $this->transformChannel($channel), 'Khôi phục kênh thành công.');
     }
 
     private function transformChannel(Channel $channel): array
