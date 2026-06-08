@@ -16,11 +16,13 @@ class NotificationService
         ?int $entityId,
         string $performedBy,
         ?string $link = null,
+        ?int $excludeUserId = null,
     ): void {
         $notification = new AdminActionNotification($title, $message, $action, $entityType, $entityId, $performedBy, $link);
 
         User::role(RolesEnum::adminRoles())
+            ->when($excludeUserId, fn ($q) => $q->where('id', '!=', $excludeUserId))
             ->get()
-            ->each(fn(User $user) => $user->notify($notification));
+            ->each(fn (User $user) => $user->notify($notification));
     }
 }

@@ -18,6 +18,18 @@ function normalizeQuestions(
 }
 
 export const applicationService = {
+	/** Returns true if recruitment is open, false if closed. Defaults to true on error. */
+	async getRecruitmentEnabled(): Promise<boolean> {
+		try {
+			const res = await api.get<ApiResponse<{ value: string; type: string }>>(
+				"/club-config/recruitment-enabled",
+			);
+			return (res as ApiResponse<{ value: string; type: string }>).data?.value === "true";
+		} catch {
+			return true;
+		}
+	},
+
 	async getQuestions(): Promise<ApplicationQuestion[]> {
 		const response = await api.get<
 			PaginatedResponse<ApplicationQuestion> | ApiResponse<ApplicationQuestion[]>

@@ -23,7 +23,7 @@ export interface UnifiedReportRecord {
 	resolver: { id: number; full_name: string } | null;
 	reason: "spam" | "offensive" | "misinformation" | "inappropriate" | "other";
 	description: string | null;
-	status: "pending" | "reviewing" | "resolved" | "dismissed";
+	status: "pending" | "reviewing" | "resolved" | "dismissed" | "superseded";
 	resolved_at: string | null;
 	created_at: string;
 }
@@ -54,6 +54,13 @@ const unifiedReportService = {
 		id: number,
 	): Promise<ApiResponse<UnifiedReportRecord>> {
 		return api.post(`/unified-reports/${type}/${id}/hide`);
+	},
+
+	async dismiss(
+		type: "post" | "blog",
+		id: number,
+	): Promise<ApiResponse<UnifiedReportRecord>> {
+		return api.post(`/unified-reports/${type}/${id}/dismiss`);
 	},
 };
 

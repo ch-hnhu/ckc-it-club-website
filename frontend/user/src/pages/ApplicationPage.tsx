@@ -120,6 +120,7 @@ const ApplicationPage: React.FC = () => {
 	const navigate = useNavigate();
 	const sectionRef = useRef<HTMLElement>(null);
 
+	const [recruitmentEnabled, setRecruitmentEnabled] = useState<boolean | null>(null);
 	const [questions, setQuestions] = useState<ApplicationQuestion[]>([]);
 	const [loadingQuestions, setLoadingQuestions] = useState(true);
 	const [existingApp, setExistingApp] = useState<ClubApplicationResponse | null>(null);
@@ -142,6 +143,11 @@ const ApplicationPage: React.FC = () => {
 		return () => observer.disconnect();
 	}, []);
 
+	// Fetch recruitment config (no auth needed)
+	useEffect(() => {
+		applicationService.getRecruitmentEnabled().then(setRecruitmentEnabled);
+	}, []);
+
 	useEffect(() => {
 		if (loadingUser) return;
 		if (!user) {
@@ -152,6 +158,11 @@ const ApplicationPage: React.FC = () => {
 
 	useEffect(() => {
 		if (loadingUser || !user) return;
+		// Don't load questions/existing-app while config is still loading or if form is closed
+		if (recruitmentEnabled === null || recruitmentEnabled === false) {
+			setLoadingQuestions(false);
+			return;
+		}
 		if (user.roles?.includes("club-member") || !user.is_school_student) {
 			setLoadingQuestions(false);
 			return;
@@ -176,7 +187,7 @@ const ApplicationPage: React.FC = () => {
 			})
 			.catch(() => setFetchError("Không thể tải form ứng tuyển. Vui lòng thử lại sau."))
 			.finally(() => setLoadingQuestions(false));
-	}, [user, loadingUser]);
+	}, [user, loadingUser, recruitmentEnabled]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -205,7 +216,10 @@ const ApplicationPage: React.FC = () => {
 
 	const isClubMember = user?.roles?.includes("club-member") ?? false;
 	const isSchoolStudent = user?.is_school_student ?? false;
-	const isLoading = loadingUser || (!!user && !isClubMember && isSchoolStudent && (loadingQuestions || checkingApp));
+	const isLoading =
+		recruitmentEnabled === null ||
+		loadingUser ||
+		(!!user && !isClubMember && isSchoolStudent && recruitmentEnabled && (loadingQuestions || checkingApp));
 
 	return (
 		<section
@@ -293,6 +307,30 @@ const ApplicationPage: React.FC = () => {
 					</div>
 				)}
 
+			{/* Recruitment closed */}
+				{!isLoading && !submitted && !isClubMember && recruitmentEnabled === false && (
+					<div className="max-w-lg mx-auto">
+						<div
+							className="rounded-2xl border-2 border-black p-8 text-center"
+							style={{ boxShadow: "var(--neo-shadow)" }}>
+							<ClipboardList className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+							<h2
+								className="text-2xl font-extrabold text-black mb-2"
+								style={{ fontFamily: "var(--font-heading)" }}>
+								Form ứng tuyển đang đóng
+							</h2>
+							<p className="text-gray-600 mb-6 leading-relaxed text-sm">
+								CLB hiện chưa mở đợt tuyển thành viên mới. Hãy theo dõi fanpage để
+								cập nhật thông tin sớm nhất.
+							</p>
+							<Link to="/" className="neo-btn neo-btn-secondary text-sm px-6 py-3">
+								Về trang chủ
+								<ArrowRight className="w-4 h-4" />
+							</Link>
+						</div>
+					</div>
+				)}
+
 			{/* Already applied */}
 				{!isLoading && !submitted && !isClubMember && isSchoolStudent && existingApp && (
 					<div className="max-w-lg mx-auto">
@@ -333,7 +371,7 @@ const ApplicationPage: React.FC = () => {
 				)}
 
 				{/* Fetch error */}
-				{!isLoading && !submitted && !isClubMember && isSchoolStudent && !existingApp && user && fetchError && (
+				{!isLoading && !submitted && !isClubMember && recruitmentEnabled && isSchoolStudent && !existingApp && user && fetchError && (
 					<div
 						className="max-w-md mx-auto rounded-2xl border-2 border-red-300 bg-red-50 p-8 text-center"
 						style={{ boxShadow: "4px 4px 0 #f87171" }}>
@@ -344,7 +382,7 @@ const ApplicationPage: React.FC = () => {
 				)}
 
 				{/* Form */}
-				{!isLoading && !submitted && !isClubMember && isSchoolStudent && !existingApp && user && !fetchError && (
+				{!isLoading && !submitted && !isClubMember && recruitmentEnabled && isSchoolStudent && !existingApp && user && !fetchError && (
 					<div className="max-w-2xl mx-auto">
 						<div
 							className="rounded-2xl border-2 border-black overflow-hidden"

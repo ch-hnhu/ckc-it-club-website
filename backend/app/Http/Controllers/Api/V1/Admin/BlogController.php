@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
+use App\Models\BlogReport;
 use App\Notifications\AdminActionNotification;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -125,13 +127,14 @@ class BlogController extends BaseApiController
 
     public function updateStatus(Request $request, Blog $blog): JsonResponse
     {
-        $request->validate(['status' => 'required|in:draft,pending_review,published,archived']);
+        $request->validate(['status' => 'required|in:draft,pending_review,published,archived,hidden']);
 
         $previousStatus = $blog->status;
-        $status = $request->string('status')->value();
+        $status         = $request->string('status')->value();
+        $admin          = $request->user() ?? auth()->user();
 
         $blog->update([
-            'status' => $status,
+            'status'       => $status,
             'published_at' => $status === 'published' && ! $blog->published_at ? now() : $blog->published_at,
         ]);
 
@@ -139,7 +142,6 @@ class BlogController extends BaseApiController
         if ($previousStatus !== 'published' && $status === 'published') {
             $blog->load('author:id,full_name,email');
             $author = $blog->author;
-            $admin = auth()->user();
 
             if ($author) {
                 $author->notify(new AdminActionNotification(
@@ -151,6 +153,30 @@ class BlogController extends BaseApiController
                     $admin?->full_name ?? 'Admin',
                     "/blog/{$blog->slug}",
                 ));
+            }
+        }
+
+        // Khi un-hide: reset tất cả report resolved → pending để admin xem xét lại
+        if ($previousStatus === 'hidden' && $status !== 'hidden') {
+            $resetCount = BlogReport::where('blog_id', $blog->id)
+                ->where('status', 'resolved')
+                ->update([
+                    'status'      => 'pending',
+                    'resolved_by' => null,
+                    'resolved_at' => null,
+                ]);
+
+            if ($resetCount > 0) {
+                NotificationService::dispatch(
+                    title: 'Báo cáo cần xem xét lại',
+                    message: "{$admin->full_name} đã bật lại blog \"{$blog->title}\". {$resetCount} báo cáo đã được chuyển về chờ xử lý.",
+                    action: 'status_changed',
+                    entityType: 'blog_report',
+                    entityId: $blog->id,
+                    performedBy: $admin->full_name,
+                    link: '/community/reports',
+                    excludeUserId: $admin->id,
+                );
             }
         }
 

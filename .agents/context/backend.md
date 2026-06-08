@@ -106,6 +106,8 @@
 - `DELETE /api/v1/departments/{department}/force`
 - `POST /api/v1/departments/{department}/users`
 - Admin community post management includes `GET /api/v1/posts/trash` for soft-deleted posts and `PATCH /api/v1/posts/{post}/restore` to restore them; admin post stats no longer return pin counts.
+- Admin post/blog report stats include the report schema statuses `pending`, `reviewing`, `resolved`, `dismissed`, and `superseded`; `superseded` is set when another related report is handled first.
+- User-facing realtime notification broadcasts are best-effort; database notifications remain persisted even if Reverb/Pusher is unavailable during the request.
 - `GET /api/v1/club-informations`
 - `POST /api/v1/club-informations`
 - `PUT/PATCH /api/v1/club-informations/{clubInformation}`
