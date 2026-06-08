@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\ChatMember;
 use App\Models\ChatRoom;
 use App\Models\Message;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -139,11 +140,94 @@ class ChatRoomController extends BaseApiController
         return $this->successResponse(true, $this->transformRoom($room), 'Cập nhật phòng chat thành công.');
     }
 
-    public function destroy(ChatRoom $room): JsonResponse
+    public function trash(Request $request): JsonResponse
     {
+        $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
+        $search  = $request->query('search');
+
+        $allowedSorts = ['id', 'name', 'member_count', 'message_count', 'last_message_at', 'created_at'];
+        $sort  = in_array($request->query('sort', 'created_at'), $allowedSorts, true)
+            ? $request->query('sort', 'created_at') : 'created_at';
+        $order = in_array($request->query('order', 'desc'), ['asc', 'desc'], true)
+            ? $request->query('order', 'desc') : 'desc';
+
+        $sortColumn = match ($sort) {
+            'member_count'  => DB::raw('members_count'),
+            'message_count' => DB::raw('messages_count'),
+            default         => $sort,
+        };
+
+        $paginated = ChatRoom::onlyTrashed()
+            ->withCount(['members', 'messages'])
+            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy($sortColumn, $order)
+            ->paginate($perPage);
+
+        $items = collect($paginated->items())->map(fn (ChatRoom $room) => $this->transformRoom($room));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lấy danh sách thùng rác thành công.',
+            'data'    => $items,
+            'meta'    => [
+                'current_page' => $paginated->currentPage(),
+                'from'         => $paginated->firstItem(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'to'           => $paginated->lastItem(),
+                'total'        => $paginated->total(),
+            ],
+        ]);
+    }
+
+    public function destroy(Request $request, ChatRoom $room): JsonResponse
+    {
+        $admin    = $request->user();
+        $roomName = $room->name ?? "Phòng #{$room->id}";
+
+        // Không xóa ảnh ở đây — giữ lại để có thể khôi phục cùng ảnh
+        $room->deleted_by = $admin->id;
+        $room->save();
         $room->delete();
 
+        NotificationService::dispatch(
+            title: 'Phòng chat đã bị xóa',
+            message: "{$admin->full_name} đã xóa phòng chat \"{$roomName}\".",
+            action: 'deleted',
+            entityType: 'chat_room',
+            entityId: $room->id,
+            performedBy: $admin->full_name,
+            link: '/community/chat?view=trash',
+            excludeUserId: $admin->id,
+        );
+
         return $this->successResponse(true, null, 'Xóa phòng chat thành công.');
+    }
+
+    public function forceDestroy(int $id): JsonResponse
+    {
+        $room = ChatRoom::onlyTrashed()->findOrFail($id);
+
+        // Xóa ảnh vật lý khi xóa vĩnh viễn
+        if ($room->image && ! Str::startsWith($room->image, ['http://', 'https://'])) {
+            Storage::disk('public')->delete($room->image);
+        }
+
+        $room->forceDelete();
+
+        return $this->successResponse(true, null, 'Đã xóa vĩnh viễn phòng chat.');
+    }
+
+    public function restore(int $id): JsonResponse
+    {
+        $room = ChatRoom::onlyTrashed()->findOrFail($id);
+
+        $room->restore();
+        $room->update(['deleted_by' => null]);
+
+        $room->loadCount(['members', 'messages']);
+
+        return $this->successResponse(true, $this->transformRoom($room), 'Khôi phục phòng chat thành công.');
     }
 
     public function systemMessages(Request $request, int $roomId): JsonResponse
@@ -209,13 +293,14 @@ class ChatRoomController extends BaseApiController
     private function transformRoom(ChatRoom $room): array
     {
         return [
-            'id'             => $room->id,
-            'name'           => $room->name,
-            'image'          => $this->resolveImageUrl($room->image),
-            'member_count'   => $room->members_count ?? 0,
-            'message_count'  => $room->messages_count ?? 0,
+            'id'              => $room->id,
+            'name'            => $room->name,
+            'image'           => $this->resolveImageUrl($room->image),
+            'member_count'    => $room->members_count ?? 0,
+            'message_count'   => $room->messages_count ?? 0,
             'last_message_at' => $room->last_message_at?->toISOString(),
-            'created_at'     => $room->created_at->toISOString(),
+            'created_at'      => $room->created_at->toISOString(),
+            'deleted_at'      => $room->deleted_at?->toISOString(),
         ];
     }
 
@@ -244,7 +329,7 @@ class ChatRoomController extends BaseApiController
 
     private function roomNameExists(string $name, ?int $ignoreId = null): bool
     {
-        return ChatRoom::query()
+        return ChatRoom::withTrashed()
             ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
             ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
             ->exists();

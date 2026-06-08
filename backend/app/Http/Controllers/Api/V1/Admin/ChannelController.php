@@ -176,6 +176,7 @@ class ChannelController extends BaseApiController
             'posts_count' => $channel->posts_count ?? 0,
             'created_at' => $channel->created_at?->toIso8601String(),
             'updated_at' => $channel->updated_at?->toIso8601String(),
+            'deleted_at' => $channel->deleted_at?->toIso8601String(),
         ];
     }
 

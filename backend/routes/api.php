@@ -388,6 +388,7 @@ Route::prefix('v1')->group(function () {
         // chat rooms
         Route::middleware('permission:community.chat.view')->group(function () {
             Route::get('chat-rooms/stats', [ChatRoomController::class, 'stats']);
+            Route::get('chat-rooms/trash', [ChatRoomController::class, 'trash']);
             Route::get('chat-rooms', [ChatRoomController::class, 'index']);
             Route::get('chat-rooms/{room}/system-messages', [ChatRoomController::class, 'systemMessages']);
         });
@@ -397,6 +398,8 @@ Route::prefix('v1')->group(function () {
             Route::patch('chat-rooms/{room}', [ChatRoomController::class, 'update']);
             Route::delete('chat-rooms/{room}', [ChatRoomController::class, 'destroy']);
             Route::delete('chat-rooms/{room}/messages/{message}', [ChatRoomController::class, 'destroyMessage']);
+            Route::patch('chat-rooms/{id}/restore', [ChatRoomController::class, 'restore']);
+            Route::delete('chat-rooms/{id}/force-delete', [ChatRoomController::class, 'forceDestroy']);
         });
 
         // tags

@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/Dashboard";
 import FacultyList from "@/pages/faculty/FacultyList";
@@ -324,6 +324,11 @@ const router = createBrowserRouter([
 						<ChatRoomListPage />
 					</PermissionRoute>
 				),
+			},
+			{
+				// Redirect alias — xử lý link cũ trong thông báo
+				path: "community/chat-rooms",
+				element: <Navigate to="/community/chat" replace />,
 			},
 			{
 				path: "community/media",
