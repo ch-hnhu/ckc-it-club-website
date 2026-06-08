@@ -8,20 +8,26 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
-	EyeOff,
 	ExternalLink,
+	EyeOff,
 	MoreHorizontal,
+	ShieldAlert,
+	XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+	Dialog,
+	DialogContent,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -53,11 +59,12 @@ const REASON_LABELS: Record<string, string> = {
 };
 
 const STATUS_OPTIONS = [
-	{ value: "all",       label: "Tất cả trạng thái" },
-	{ value: "pending",   label: "Chờ xử lý" },
-	{ value: "reviewing", label: "Đang xem xét" },
-	{ value: "resolved",  label: "Đã xử lý" },
-	{ value: "dismissed", label: "Bỏ qua" },
+	{ value: "all",        label: "Tất cả trạng thái" },
+	{ value: "pending",    label: "Chờ xử lý" },
+	{ value: "reviewing",  label: "Đang xem xét" },
+	{ value: "resolved",   label: "Đã xử lý" },
+	{ value: "dismissed",  label: "Bỏ qua" },
+	{ value: "superseded", label: "Đã xử lý trước đó" },
 ];
 
 const TYPE_OPTIONS = [
@@ -66,25 +73,18 @@ const TYPE_OPTIONS = [
 	{ value: "blog", label: "Blog" },
 ];
 
-const NEXT_STATUS: Record<UnifiedReportRecord["status"], { value: UnifiedReportRecord["status"]; label: string }[]> = {
-	pending:   [
-		{ value: "reviewing", label: "Chuyển sang Đang xem xét" },
-		{ value: "dismissed", label: "Bỏ qua báo cáo" },
-	],
-	reviewing: [
-		{ value: "resolved",  label: "Đánh dấu Đã xử lý" },
-		{ value: "dismissed", label: "Bỏ qua báo cáo" },
-	],
-	resolved:  [{ value: "reviewing", label: "Mở lại xem xét" }],
-	dismissed: [{ value: "reviewing", label: "Mở lại xem xét" }],
-};
+/** Các trạng thái đã kết thúc — không cho xử lý lại */
+const TERMINAL = new Set<UnifiedReportRecord["status"]>(["resolved", "dismissed", "superseded"]);
+
+// ─── Helper components ────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: UnifiedReportRecord["status"] }) {
 	const map: Record<string, { label: string; className: string }> = {
-		pending:   { label: "Chờ xử lý",    className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-		reviewing: { label: "Đang xem xét", className: "bg-blue-100 text-blue-800 border-blue-200" },
-		resolved:  { label: "Đã xử lý",     className: "bg-green-100 text-green-800 border-green-200" },
-		dismissed: { label: "Bỏ qua",        className: "bg-gray-100 text-gray-600 border-gray-200" },
+		pending:    { label: "Chờ xử lý",         className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+		reviewing:  { label: "Đang xem xét",       className: "bg-blue-100 text-blue-800 border-blue-200" },
+		resolved:   { label: "Đã xử lý",           className: "bg-green-100 text-green-800 border-green-200" },
+		dismissed:  { label: "Bỏ qua",             className: "bg-gray-100 text-gray-600 border-gray-200" },
+		superseded: { label: "Đã xử lý trước đó",  className: "bg-gray-100 text-gray-400 border-gray-100 italic" },
 	};
 	const s = map[status] ?? { label: status, className: "" };
 	return (
@@ -114,7 +114,175 @@ function contentUrl(report: UnifiedReportRecord): string {
 	return `http://localhost:5174/blog/${report.content.slug ?? report.content.id}`;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Resolve Modal ────────────────────────────────────────────────────────────
+
+type ResolveStep = "choose" | "confirm-hide" | "confirm-dismiss";
+
+interface ResolveModalProps {
+	open: boolean;
+	report: UnifiedReportRecord | null;
+	onClose: () => void;
+	onHide: () => Promise<void>;
+	onDismiss: () => Promise<void>;
+}
+
+function ResolveReportModal({ open, report, onClose, onHide, onDismiss }: ResolveModalProps) {
+	const [step, setStep] = useState<ResolveStep>("choose");
+	const [loading, setLoading] = useState(false);
+
+	useEffect(() => {
+		if (open) setStep("choose");
+	}, [open]);
+
+	const run = async (action: () => Promise<void>) => {
+		setLoading(true);
+		try {
+			await action();
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const contentLabel = report?.type === "post" ? "bài viết" : "blog";
+
+	return (
+		<Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+			<DialogContent className="w-[calc(100vw-2rem)] max-w-[460px] gap-0 p-0" showCloseButton={!loading}>
+				<VisuallyHidden>
+					<DialogTitle>Xử lý báo cáo</DialogTitle>
+				</VisuallyHidden>
+
+				{/* ── Bước 1: Chọn hành động ──────────────────────────────────── */}
+				{step === "choose" && (
+					<>
+						{/* Header */}
+						<div className="flex items-center gap-2.5 border-b px-5 py-4">
+							<ShieldAlert className="h-5 w-5 shrink-0 text-orange-500" />
+							<h2 className="text-base font-semibold leading-none">Xử lý báo cáo</h2>
+						</div>
+
+						<div className="px-5 pt-4 pb-5 space-y-3">
+							{/* Preview nội dung bị báo cáo */}
+							{report?.content && (
+								<div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+									<TypeBadge type={report.type} />
+									<a
+										href={contentUrl(report)}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="flex min-w-0 items-center gap-1 font-medium hover:underline"
+										title={report.content.title}
+									>
+										<span className="truncate">{report.content.title}</span>
+										<ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
+									</a>
+								</div>
+							)}
+
+							{/* Hai lựa chọn — layout dọc */}
+							<div className="space-y-2">
+								<button
+									onClick={() => setStep("confirm-hide")}
+									className="flex w-full items-start gap-3 rounded-lg border-2 border-transparent bg-red-50 px-4 py-3 text-left transition-colors hover:border-red-200 hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+								>
+									<EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+									<div>
+										<p className="text-sm font-semibold text-red-700">Ẩn nội dung</p>
+										<p className="mt-0.5 text-xs text-red-500/80">
+											Ẩn {contentLabel} vi phạm. Tất cả báo cáo liên quan → <strong>Đã xử lý</strong>.
+										</p>
+									</div>
+								</button>
+
+								<button
+									onClick={() => setStep("confirm-dismiss")}
+									className="flex w-full items-start gap-3 rounded-lg border-2 border-transparent bg-gray-50 px-4 py-3 text-left transition-colors hover:border-gray-200 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+								>
+									<XCircle className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
+									<div>
+										<p className="text-sm font-semibold text-gray-700">Bỏ qua báo cáo</p>
+										<p className="mt-0.5 text-xs text-gray-400">
+											Báo cáo này không hợp lệ. Báo cáo khác về cùng nội dung → <strong>Đã xử lý trước đó</strong>.
+										</p>
+									</div>
+								</button>
+							</div>
+
+							{/* Footer */}
+							<div className="flex justify-end border-t pt-3">
+								<Button variant="ghost" size="sm" onClick={onClose}>
+									Hủy
+								</Button>
+							</div>
+						</div>
+					</>
+				)}
+
+				{/* ── Bước 2a: Xác nhận ẩn nội dung ──────────────────────────── */}
+				{step === "confirm-hide" && (
+					<>
+						<div className="flex items-center gap-2.5 border-b px-5 py-4">
+							<EyeOff className="h-5 w-5 shrink-0 text-red-500" />
+							<h2 className="text-base font-semibold leading-none">Xác nhận ẩn nội dung</h2>
+						</div>
+						<div className="px-5 pt-4 pb-5 space-y-4">
+							<p className="text-sm text-muted-foreground leading-relaxed">
+								{report?.content ? (
+									<>
+										{contentLabel.charAt(0).toUpperCase() + contentLabel.slice(1)}{" "}
+										<span className="font-medium text-foreground">
+											"{report.content.title}"
+										</span>{" "}
+										sẽ bị ẩn khỏi cộng đồng. Tất cả báo cáo liên quan sẽ được đánh dấu{" "}
+										<strong className="text-foreground">Đã xử lý</strong>.
+									</>
+								) : (
+									"Nội dung sẽ bị ẩn và tất cả báo cáo liên quan được đánh dấu đã xử lý."
+								)}
+							</p>
+							<div className="flex justify-end gap-2 border-t pt-3">
+								<Button variant="ghost" size="sm" onClick={() => setStep("choose")} disabled={loading}>
+									Quay lại
+								</Button>
+								<Button variant="destructive" size="sm" disabled={loading} onClick={() => run(onHide)}>
+									{loading ? "Đang xử lý…" : "Xác nhận ẩn"}
+								</Button>
+							</div>
+						</div>
+					</>
+				)}
+
+				{/* ── Bước 2b: Xác nhận bỏ qua ────────────────────────────────── */}
+				{step === "confirm-dismiss" && (
+					<>
+						<div className="flex items-center gap-2.5 border-b px-5 py-4">
+							<XCircle className="h-5 w-5 shrink-0 text-gray-500" />
+							<h2 className="text-base font-semibold leading-none">Xác nhận bỏ qua báo cáo</h2>
+						</div>
+						<div className="px-5 pt-4 pb-5 space-y-4">
+							<p className="text-sm text-muted-foreground leading-relaxed">
+								Báo cáo này sẽ được đánh dấu <strong className="text-foreground">Bỏ qua</strong>.
+								Các báo cáo khác về cùng nội dung đang chờ xử lý sẽ được đánh dấu{" "}
+								<strong className="text-foreground">Đã xử lý trước đó</strong>.
+							</p>
+							<div className="flex justify-end gap-2 border-t pt-3">
+								<Button variant="ghost" size="sm" onClick={() => setStep("choose")} disabled={loading}>
+									Quay lại
+								</Button>
+								<Button size="sm" disabled={loading} onClick={() => run(onDismiss)}>
+									{loading ? "Đang xử lý…" : "Xác nhận bỏ qua"}
+								</Button>
+							</div>
+						</div>
+					</>
+				)}
+
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ReportListPage() {
 	useBreadcrumb([{ title: "Báo cáo vi phạm", link: "/community/reports" }]);
@@ -126,22 +294,33 @@ export default function ReportListPage() {
 	const [statusFilter, setStatusFilter] = useState("all");
 	const [typeFilter, setTypeFilter] = useState("all");
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0, per_page: 20 });
-	const [sortKey, setSortKey] = useState<"id" | "content_title" | "reporter_name" | "reason" | "description" | "status" | "created_at">("created_at");
+	const [sortKey, setSortKey] = useState<
+		"type" | "content_title" | "reporter_name" | "reason" | "description" | "status" | "created_at"
+	>("created_at");
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+	const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(reports.map((r) => r.id));
+	// Resolve modal
+	const [resolveModal, setResolveModal] = useState<{
+		open: boolean;
+		report: UnifiedReportRecord | null;
+	}>({ open: false, report: null });
 
-	// Debounce
+	const rowKeys = reports.map((r) => `${r.type}-${r.id}` as string);
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(rowKeys);
+
+	// ── Debounce search ──────────────────────────────────────────────────────
 	useEffect(() => {
 		const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
 		return () => clearTimeout(t);
 	}, [search]);
 
+	// Reset page khi thay đổi filter / sort
 	useEffect(() => {
 		setMeta((p) => ({ ...p, current_page: 1 }));
 	}, [debouncedSearch, statusFilter, typeFilter, sortKey, sortOrder]);
 
-	// Load list
+	// ── Load danh sách ───────────────────────────────────────────────────────
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
@@ -163,9 +342,16 @@ export default function ReportListPage() {
 			.catch(() => toast.error("Không thể tải danh sách báo cáo."))
 			.finally(() => { if (!cancelled) setLoading(false); });
 		return () => { cancelled = true; };
-	}, [meta.current_page, meta.per_page, debouncedSearch, statusFilter, typeFilter, sortKey, sortOrder]);
+	}, [
+		meta.current_page, meta.per_page,
+		debouncedSearch, statusFilter, typeFilter,
+		sortKey, sortOrder,
+		refreshTrigger,
+	]);
 
-	// ── Handlers ────────────────────────────────────────────────────────────
+	// ── Helpers ──────────────────────────────────────────────────────────────
+
+	const refresh = () => setRefreshTrigger((t) => t + 1);
 
 	const handleSort = (key: typeof sortKey) => {
 		if (sortKey === key) setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
@@ -174,31 +360,28 @@ export default function ReportListPage() {
 
 	const getSortIcon = (key: typeof sortKey) =>
 		sortKey !== key ? <ArrowUpDown className="ml-2 h-4 w-4" /> :
-		sortOrder === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> :
-		<ArrowDown className="ml-2 h-4 w-4" />;
+		sortOrder === "asc"  ? <ArrowUp   className="ml-2 h-4 w-4" /> :
+		                       <ArrowDown className="ml-2 h-4 w-4" />;
 
-	const handleUpdateStatus = async (report: UnifiedReportRecord, status: UnifiedReportRecord["status"]) => {
-		try {
-			const res = await unifiedReportService.updateStatus(report.type, report.id, status);
-			setReports((prev) => prev.map((r) => (r.id === report.id && r.type === report.type) ? res.data : r));
-			toast.success("Đã cập nhật trạng thái.");
-		} catch {
-			toast.error("Không thể cập nhật trạng thái.");
-		}
+	// ── Action handlers ──────────────────────────────────────────────────────
+
+	const handleHide = async () => {
+		if (!resolveModal.report) return;
+		await unifiedReportService.hideContent(resolveModal.report.type, resolveModal.report.id);
+		toast.success("Đã ẩn nội dung và cập nhật tất cả báo cáo liên quan.");
+		setResolveModal({ open: false, report: null });
+		refresh();
 	};
 
-	const handleHideContent = async (report: UnifiedReportRecord) => {
-		try {
-			const res = await unifiedReportService.hideContent(report.type, report.id);
-			setReports((prev) => prev.map((r) => (r.id === report.id && r.type === report.type) ? res.data : r));
-			const label = report.type === "post" ? "bài viết" : "blog";
-			toast.success(`Đã ẩn ${label} và đánh dấu đã xử lý.`);
-		} catch {
-			toast.error("Không thể ẩn nội dung.");
-		}
+	const handleDismiss = async () => {
+		if (!resolveModal.report) return;
+		await unifiedReportService.dismiss(resolveModal.report.type, resolveModal.report.id);
+		toast.success("Đã bỏ qua báo cáo.");
+		setResolveModal({ open: false, report: null });
+		refresh();
 	};
 
-	// ── Render ──────────────────────────────────────────────────────────────
+	// ── Render ───────────────────────────────────────────────────────────────
 
 	return (
 		<div className="space-y-6 p-6">
@@ -221,9 +404,7 @@ export default function ReportListPage() {
 					/>
 					<div className="ml-auto flex shrink-0 items-center gap-2">
 						<Select value={typeFilter} onValueChange={setTypeFilter}>
-							<SelectTrigger className="h-8 w-36">
-								<SelectValue />
-							</SelectTrigger>
+							<SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
 							<SelectContent>
 								{TYPE_OPTIONS.map((o) => (
 									<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -231,9 +412,7 @@ export default function ReportListPage() {
 							</SelectContent>
 						</Select>
 						<Select value={statusFilter} onValueChange={setStatusFilter}>
-							<SelectTrigger className="h-8 w-44">
-								<SelectValue />
-							</SelectTrigger>
+							<SelectTrigger className="h-8 w-52"><SelectValue /></SelectTrigger>
 							<SelectContent>
 								{STATUS_OPTIONS.map((o) => (
 									<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -254,18 +433,16 @@ export default function ReportListPage() {
 										onCheckedChange={(c) => toggleAll(c === true)}
 									/>
 								</TableHead>
-								<TableHead className="w-[80px]">
-									<Button variant="ghost" onClick={() => handleSort("id")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-										ID {getSortIcon("id")}
-									</Button>
-								</TableHead>
+								<TableHead className="w-[60px] text-sm font-medium">STT</TableHead>
 								<TableHead className="min-w-[200px]">
 									<Button variant="ghost" onClick={() => handleSort("content_title")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 										Bài viết {getSortIcon("content_title")}
 									</Button>
 								</TableHead>
-								<TableHead className="w-[80px] text-sm font-medium">
-									Loại
+								<TableHead className="w-[90px]">
+									<Button variant="ghost" onClick={() => handleSort("type")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Loại {getSortIcon("type")}
+									</Button>
 								</TableHead>
 								<TableHead className="min-w-[160px]">
 									<Button variant="ghost" onClick={() => handleSort("reporter_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
@@ -282,7 +459,7 @@ export default function ReportListPage() {
 										Mô tả {getSortIcon("description")}
 									</Button>
 								</TableHead>
-								<TableHead className="w-[140px]">
+								<TableHead className="w-[160px]">
 									<Button variant="ghost" onClick={() => handleSort("status")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
 										Trạng thái {getSortIcon("status")}
 									</Button>
@@ -304,20 +481,22 @@ export default function ReportListPage() {
 									</TableRow>
 								))
 							) : reports.length > 0 ? (
-								reports.map((report) => (
+								reports.map((report, index) => (
 									<TableRow
 										key={`${report.type}-${report.id}`}
 										className={report.content?.status === "hidden" ? "opacity-60" : ""}
 									>
+										{/* Checkbox */}
 										<TableCell className="w-[44px]">
 											<Checkbox
-												checked={isSelected(report.id)}
-												onCheckedChange={(c) => toggleOne(report.id, c === true)}
+												checked={isSelected(`${report.type}-${report.id}`)}
+												onCheckedChange={(c) => toggleOne(`${report.type}-${report.id}`, c === true)}
 											/>
 										</TableCell>
 
+										{/* STT */}
 										<TableCell className="font-medium text-muted-foreground">
-											#{report.id}
+											{(meta.current_page - 1) * meta.per_page + index + 1}
 										</TableCell>
 
 										{/* Bài viết */}
@@ -374,7 +553,10 @@ export default function ReportListPage() {
 										{/* Mô tả */}
 										<TableCell className="max-w-[240px]">
 											{report.description ? (
-												<span className="block truncate text-sm text-muted-foreground" title={report.description}>
+												<span
+													className="block truncate text-sm text-muted-foreground"
+													title={report.description}
+												>
 													{report.description}
 												</span>
 											) : (
@@ -387,7 +569,7 @@ export default function ReportListPage() {
 											<StatusBadge status={report.status} />
 										</TableCell>
 
-										{/* Ngày */}
+										{/* Ngày báo cáo */}
 										<TableCell className="text-sm text-muted-foreground">
 											{new Date(report.created_at).toLocaleDateString("vi-VN")}
 										</TableCell>
@@ -396,13 +578,14 @@ export default function ReportListPage() {
 										<TableCell>
 											<DropdownMenu>
 												<DropdownMenuTrigger asChild>
-													<Button variant="ghost" className="h-8 w-8 p-0 data-[state=open]:bg-muted">
+													<Button
+														variant="ghost"
+														className="h-8 w-8 p-0 data-[state=open]:bg-muted"
+													>
 														<MoreHorizontal className="h-4 w-4" />
 													</Button>
 												</DropdownMenuTrigger>
-												<DropdownMenuContent align="end" className="w-52">
-													<DropdownMenuLabel>Hành động</DropdownMenuLabel>
-													<DropdownMenuSeparator />
+												<DropdownMenuContent align="end" className="w-44">
 													{report.content && (
 														<DropdownMenuItem asChild>
 															<a
@@ -416,24 +599,15 @@ export default function ReportListPage() {
 															</a>
 														</DropdownMenuItem>
 													)}
-													{report.content && report.content.status !== "hidden" && (
+													{!TERMINAL.has(report.status) && (
 														<DropdownMenuItem
-															className="text-orange-600 focus:text-orange-600"
-															onClick={() => handleHideContent(report)}
+															className="flex items-center gap-2"
+															onClick={() => setResolveModal({ open: true, report })}
 														>
-															<EyeOff className="h-4 w-4" />
-															Ẩn {report.type === "post" ? "bài viết" : "blog"}
+															<ShieldAlert className="h-4 w-4" />
+															Xử lý
 														</DropdownMenuItem>
 													)}
-													{(NEXT_STATUS[report.status] ?? []).length > 0 && <DropdownMenuSeparator />}
-													{(NEXT_STATUS[report.status] ?? []).map((opt) => (
-														<DropdownMenuItem
-															key={opt.value}
-															onClick={() => handleUpdateStatus(report, opt.value)}
-														>
-															{opt.label}
-														</DropdownMenuItem>
-													))}
 												</DropdownMenuContent>
 											</DropdownMenu>
 										</TableCell>
@@ -459,11 +633,17 @@ export default function ReportListPage() {
 										<div className="flex items-center space-x-6 lg:space-x-8">
 											<div className="flex items-center space-x-2">
 												<p className="text-sm font-medium">Rows per page</p>
-												<Select value={`${meta.per_page}`}
-													onValueChange={(v) => setMeta((p) => ({ ...p, per_page: Number(v), current_page: 1 }))}>
+												<Select
+													value={`${meta.per_page}`}
+													onValueChange={(v) =>
+														setMeta((p) => ({ ...p, per_page: Number(v), current_page: 1 }))
+													}
+												>
 													<SelectTrigger className="h-8 w-[70px]"><SelectValue /></SelectTrigger>
 													<SelectContent side="top">
-														{[10, 20, 25, 50].map((s) => <SelectItem key={s} value={`${s}`}>{s}</SelectItem>)}
+														{[10, 20, 25, 50].map((s) => (
+															<SelectItem key={s} value={`${s}`}>{s}</SelectItem>
+														))}
 													</SelectContent>
 												</Select>
 											</div>
@@ -471,24 +651,32 @@ export default function ReportListPage() {
 												Trang {meta.current_page} / {meta.last_page}
 											</div>
 											<div className="flex items-center space-x-2">
-												<Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex"
+												<Button
+													variant="outline" className="hidden h-8 w-8 p-0 lg:flex"
 													onClick={() => setMeta((p) => ({ ...p, current_page: 1 }))}
-													disabled={meta.current_page === 1}>
+													disabled={meta.current_page === 1}
+												>
 													<ChevronsLeft className="h-4 w-4" />
 												</Button>
-												<Button variant="outline" className="h-8 w-8 p-0"
+												<Button
+													variant="outline" className="h-8 w-8 p-0"
 													onClick={() => setMeta((p) => ({ ...p, current_page: Math.max(1, p.current_page - 1) }))}
-													disabled={meta.current_page === 1}>
+													disabled={meta.current_page === 1}
+												>
 													<ChevronLeft className="h-4 w-4" />
 												</Button>
-												<Button variant="outline" className="h-8 w-8 p-0"
+												<Button
+													variant="outline" className="h-8 w-8 p-0"
 													onClick={() => setMeta((p) => ({ ...p, current_page: Math.min(p.last_page, p.current_page + 1) }))}
-													disabled={meta.current_page === meta.last_page}>
+													disabled={meta.current_page === meta.last_page}
+												>
 													<ChevronRight className="h-4 w-4" />
 												</Button>
-												<Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex"
+												<Button
+													variant="outline" className="hidden h-8 w-8 p-0 lg:flex"
 													onClick={() => setMeta((p) => ({ ...p, current_page: p.last_page }))}
-													disabled={meta.current_page === meta.last_page}>
+													disabled={meta.current_page === meta.last_page}
+												>
 													<ChevronsRight className="h-4 w-4" />
 												</Button>
 											</div>
@@ -500,6 +688,15 @@ export default function ReportListPage() {
 					</Table>
 				</div>
 			</div>
+
+			{/* Modal xử lý */}
+			<ResolveReportModal
+				open={resolveModal.open}
+				report={resolveModal.report}
+				onClose={() => setResolveModal({ open: false, report: null })}
+				onHide={handleHide}
+				onDismiss={handleDismiss}
+			/>
 		</div>
 	);
 }

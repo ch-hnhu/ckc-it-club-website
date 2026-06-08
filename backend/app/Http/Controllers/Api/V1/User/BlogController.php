@@ -11,6 +11,7 @@ use App\Models\MediaFile;
 use App\Models\Comment;
 use App\Models\Reaction;
 use App\Models\Tag;
+use App\Services\NotificationService;
 use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -647,6 +648,18 @@ class BlogController extends BaseApiController
                 'created_at'  => now(),
                 'updated_at'  => now(),
             ]);
+
+            // Notify all admins about the new report
+            $reporter = $request->user();
+            NotificationService::dispatch(
+                title: 'Báo cáo vi phạm mới',
+                message: "{$reporter->full_name} đã báo cáo blog \"{$blog->title}\".",
+                action: 'created',
+                entityType: 'blog_report',
+                entityId: $id,
+                performedBy: $reporter->full_name,
+                link: '/community/reports',
+            );
         }
 
         return $this->successResponse(true, [], 'Báo cáo đã được ghi nhận.');

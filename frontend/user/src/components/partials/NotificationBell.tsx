@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import notificationService from "@/services/notification.service";
@@ -17,6 +17,7 @@ export default function NotificationBell({ user }: Props) {
 	const [notifications, setNotifications] = useState<UserNotification[]>([]);
 	const [loading, setLoading] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const [tooltip, setTooltip] = useState<{ item: UserNotification; rect: DOMRect } | null>(null);
 	// Derived — always in sync with loaded list, zero race conditions.
 	const unreadCount = notifications.filter((n) => !n.read_at).length;
 	// Ref-based dedup: tracks IDs already processed by the WS handler.
@@ -101,6 +102,12 @@ export default function NotificationBell({ user }: Props) {
 		}
 	};
 
+	const handleTooltipEnter = useCallback((e: React.MouseEvent<HTMLDivElement>, n: UserNotification) => {
+		setTooltip({ item: n, rect: e.currentTarget.getBoundingClientRect() });
+	}, []);
+
+	const handleTooltipLeave = useCallback(() => setTooltip(null), []);
+
 	const handleMarkAllAsRead = async () => {
 		await notificationService.markAllAsRead();
 		setNotifications((prev) =>
@@ -113,7 +120,7 @@ export default function NotificationBell({ user }: Props) {
 		<div className='relative' ref={containerRef}>
 			<button
 				type='button'
-				onClick={() => setOpen((v) => !v)}
+				onClick={() => { setOpen((v) => !v); setTooltip(null); }}
 				className='relative flex h-11 w-11 items-center justify-center rounded-xl transition hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2'
 				aria-label='Thông báo'>
 				<Bell className='h-6 w-6 text-gray-700' />
@@ -159,6 +166,8 @@ export default function NotificationBell({ user }: Props) {
 								<div
 									key={n.id}
 									onClick={() => handleClickItem(n)}
+									onMouseEnter={(e) => handleTooltipEnter(e, n)}
+									onMouseLeave={handleTooltipLeave}
 									className={`cursor-pointer border-b border-gray-100 p-3 transition-colors last:border-0 ${
 										!n.read_at
 											? "bg-[var(--color-primary-100)] hover:bg-[var(--color-primary-100)]/80"
@@ -198,6 +207,32 @@ export default function NotificationBell({ user }: Props) {
 					</div>
 				</div>
 			)}
+		{/* ── Tooltip nội dung đầy đủ ─────────────────────────────────────── */}
+		{tooltip && open && (() => {
+			const GAP = 10;
+			const TIP_W = 288;
+			// Hiện bên trái dropdown; nếu không đủ chỗ thì hiện bên phải
+			const spaceLeft = tooltip.rect.left - GAP;
+			const left = spaceLeft >= TIP_W
+				? tooltip.rect.left - TIP_W - GAP
+				: tooltip.rect.right + GAP;
+			// Căn top theo item, đảm bảo không vượt đáy màn hình
+			const maxTop = window.innerHeight - 120;
+			const top = Math.min(tooltip.rect.top, maxTop);
+
+			return (
+				<div
+					className='pointer-events-none fixed z-[200] w-72 rounded-xl border-2 border-black bg-white p-3.5 shadow-[4px_4px_0_#111]'
+					style={{ top, left }}>
+					<p className='text-sm font-bold leading-snug text-black'>
+						{tooltip.item.data.title}
+					</p>
+					<p className='mt-1.5 text-xs leading-relaxed text-gray-600'>
+						{tooltip.item.data.message}
+					</p>
+				</div>
+			);
+		})()}
 		</div>
 	);
 }

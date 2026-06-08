@@ -64,6 +64,19 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
     Route::get('/community/channels', [ChannelController::class, 'index']);
+
+    // Public club config — returns the active value for a given slug (no auth required)
+    Route::get('/club-config/{slug}', function (string $slug) {
+        $info = \App\Models\ClubInformation::where('slug', $slug)->first();
+        if (! $info) {
+            return response()->json(['success' => false, 'data' => null, 'message' => 'Config not found.'], 404);
+        }
+        $activeValue = $info->clubInformationValues()->where('is_active', true)->orderBy('position')->first();
+        return response()->json([
+            'success' => true,
+            'data'    => ['value' => $activeValue?->value, 'type' => $info->type],
+        ]);
+    });
     Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
     Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
     Route::get('/users/{username}/following', [FollowController::class, 'following']);
@@ -433,6 +446,7 @@ Route::prefix('v1')->group(function () {
             Route::get('unified-reports', [UnifiedReportController::class, 'index']);
             Route::patch('unified-reports/{type}/{id}/status', [UnifiedReportController::class, 'updateStatus']);
             Route::post('unified-reports/{type}/{id}/hide', [UnifiedReportController::class, 'hideContent']);
+            Route::post('unified-reports/{type}/{id}/dismiss', [UnifiedReportController::class, 'dismiss']);
         });
     });
 });
