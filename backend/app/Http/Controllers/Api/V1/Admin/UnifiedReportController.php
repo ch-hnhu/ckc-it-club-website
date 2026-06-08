@@ -196,10 +196,14 @@ class UnifiedReportController extends BaseApiController
 
             $report->post->update(['status' => 'hidden']);
 
-            // Bulk-resolve every report for this post
+            // Other pending/reviewing reports for the same post → superseded
             PostReport::where('post_id', $report->post_id)
-                ->update(['status' => 'resolved', 'resolved_by' => $userId, 'resolved_at' => $now]);
+                ->where('id', '!=', $id)
+                ->whereIn('status', ['pending', 'reviewing'])
+                ->update(['status' => 'superseded', 'resolved_by' => $userId, 'resolved_at' => $now]);
 
+            // This report → resolved
+            $report->update(['status' => 'resolved', 'resolved_by' => $userId, 'resolved_at' => $now]);
             $report->refresh()->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
 
             $contentTitle = $report->post?->title ?? 'Bài viết đã xóa';
@@ -213,7 +217,7 @@ class UnifiedReportController extends BaseApiController
             // Notify other admins
             NotificationService::dispatch(
                 title: 'Nội dung vi phạm đã bị ẩn',
-                message: "{$admin->full_name} đã ẩn bài viết \"{$contentTitle}\" và đánh dấu tất cả báo cáo liên quan là Đã xử lý.",
+                message: "{$admin->full_name} đã ẩn bài viết \"{$contentTitle}\" và xử lý báo cáo vi phạm liên quan.",
                 action: 'status_changed',
                 entityType: 'post_report',
                 entityId: $report->id,
@@ -222,7 +226,7 @@ class UnifiedReportController extends BaseApiController
                 excludeUserId: $userId,
             );
 
-            return $this->successResponse(true, $this->transformPost($report), 'Đã ẩn bài viết và đánh dấu tất cả báo cáo là đã xử lý.');
+            return $this->successResponse(true, $this->transformPost($report), 'Đã ẩn bài viết và xử lý báo cáo vi phạm liên quan.');
         }
 
         $report = BlogReport::with('blog')->findOrFail($id);
@@ -237,10 +241,14 @@ class UnifiedReportController extends BaseApiController
 
         $report->blog->update(['status' => 'hidden']);
 
-        // Bulk-resolve every report for this blog
+        // Other pending/reviewing reports for the same blog → superseded
         BlogReport::where('blog_id', $report->blog_id)
-            ->update(['status' => 'resolved', 'resolved_by' => $userId, 'resolved_at' => $now]);
+            ->where('id', '!=', $id)
+            ->whereIn('status', ['pending', 'reviewing'])
+            ->update(['status' => 'superseded', 'resolved_by' => $userId, 'resolved_at' => $now]);
 
+        // This report → resolved
+        $report->update(['status' => 'resolved', 'resolved_by' => $userId, 'resolved_at' => $now]);
         $report->refresh()->load(['blog:id,slug,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
 
         $contentTitle = $report->blog?->title ?? 'Blog đã xóa';
@@ -254,7 +262,7 @@ class UnifiedReportController extends BaseApiController
         // Notify other admins
         NotificationService::dispatch(
             title: 'Nội dung vi phạm đã bị ẩn',
-            message: "{$admin->full_name} đã ẩn blog \"{$contentTitle}\" và đánh dấu tất cả báo cáo liên quan là Đã xử lý.",
+            message: "{$admin->full_name} đã ẩn blog \"{$contentTitle}\" và xử lý báo cáo vi phạm liên quan.",
             action: 'status_changed',
             entityType: 'blog_report',
             entityId: $report->id,
@@ -263,7 +271,7 @@ class UnifiedReportController extends BaseApiController
             excludeUserId: $userId,
         );
 
-        return $this->successResponse(true, $this->transformBlog($report), 'Đã ẩn blog và đánh dấu tất cả báo cáo là đã xử lý.');
+        return $this->successResponse(true, $this->transformBlog($report), 'Đã ẩn blog và xử lý báo cáo vi phạm liên quan.');
     }
 
     public function dismiss(Request $request, string $type, int $id): JsonResponse
@@ -274,13 +282,7 @@ class UnifiedReportController extends BaseApiController
         if ($type === 'post') {
             $report = PostReport::findOrFail($id);
 
-            // Other pending/reviewing reports for same post → superseded
-            PostReport::where('post_id', $report->post_id)
-                ->where('id', '!=', $id)
-                ->whereIn('status', ['pending', 'reviewing'])
-                ->update(['status' => 'superseded', 'resolved_by' => $userId, 'resolved_at' => $now]);
-
-            // This report → dismissed
+            // Other reports for the same post are left untouched (stay pending)
             $report->update(['status' => 'dismissed', 'resolved_by' => $userId, 'resolved_at' => $now]);
             $report->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
 
@@ -312,13 +314,7 @@ class UnifiedReportController extends BaseApiController
 
         $report = BlogReport::findOrFail($id);
 
-        // Other pending/reviewing reports for same blog → superseded
-        BlogReport::where('blog_id', $report->blog_id)
-            ->where('id', '!=', $id)
-            ->whereIn('status', ['pending', 'reviewing'])
-            ->update(['status' => 'superseded', 'resolved_by' => $userId, 'resolved_at' => $now]);
-
-        // This report → dismissed
+        // Other reports for the same blog are left untouched (stay pending)
         $report->update(['status' => 'dismissed', 'resolved_by' => $userId, 'resolved_at' => $now]);
         $report->load(['blog:id,slug,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
 

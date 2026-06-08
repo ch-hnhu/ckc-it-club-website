@@ -340,11 +340,13 @@ Route::prefix('v1')->group(function () {
 
         // channels
         Route::middleware('permission:community.channels.manage')->group(function () {
+            Route::get('channels/trash', [ChannelController::class, 'trash']);
             Route::get('channels', [ChannelController::class, 'index']);
             Route::post('channels', [ChannelController::class, 'store']);
             Route::put('channels/{channel}', [ChannelController::class, 'update']);
             Route::patch('channels/{channel}', [ChannelController::class, 'update']);
             Route::delete('channels/{channel}', [ChannelController::class, 'destroy']);
+            Route::patch('channels/{id}/restore', [ChannelController::class, 'restore']);
         });
 
         // posts
