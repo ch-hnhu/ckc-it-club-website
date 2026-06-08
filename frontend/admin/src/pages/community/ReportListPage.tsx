@@ -189,7 +189,7 @@ function ResolveReportModal({ open, report, onClose, onHide, onDismiss }: Resolv
 									<div>
 										<p className="text-sm font-semibold text-red-700">Ẩn nội dung</p>
 										<p className="mt-0.5 text-xs text-red-500/80">
-											Ẩn {contentLabel} vi phạm. Tất cả báo cáo liên quan → <strong>Đã xử lý</strong>.
+											Ẩn {contentLabel} vi phạm. Báo cáo này → <strong>Đã xử lý</strong>, các báo cáo khác đang chờ về cùng nội dung → <strong>Đã xử lý trước đó</strong>.
 										</p>
 									</div>
 								</button>
@@ -202,7 +202,7 @@ function ResolveReportModal({ open, report, onClose, onHide, onDismiss }: Resolv
 									<div>
 										<p className="text-sm font-semibold text-gray-700">Bỏ qua báo cáo</p>
 										<p className="mt-0.5 text-xs text-gray-400">
-											Báo cáo này không hợp lệ. Báo cáo khác về cùng nội dung → <strong>Đã xử lý trước đó</strong>.
+											Báo cáo này không hợp lệ. Báo cáo khác về cùng nội dung vẫn giữ nguyên → <strong>Chờ xử lý</strong>.
 										</p>
 									</div>
 								</button>
@@ -233,11 +233,12 @@ function ResolveReportModal({ open, report, onClose, onHide, onDismiss }: Resolv
 										<span className="font-medium text-foreground">
 											"{report.content.title}"
 										</span>{" "}
-										sẽ bị ẩn khỏi cộng đồng. Tất cả báo cáo liên quan sẽ được đánh dấu{" "}
-										<strong className="text-foreground">Đã xử lý</strong>.
+										sẽ bị ẩn khỏi cộng đồng. Báo cáo này sẽ được đánh dấu{" "}
+										<strong className="text-foreground">Đã xử lý</strong>, các báo cáo khác đang chờ xử lý về cùng nội dung sẽ chuyển thành{" "}
+										<strong className="text-foreground">Đã xử lý trước đó</strong>.
 									</>
 								) : (
-									"Nội dung sẽ bị ẩn và tất cả báo cáo liên quan được đánh dấu đã xử lý."
+									"Nội dung sẽ bị ẩn. Báo cáo này được đánh dấu đã xử lý, các báo cáo khác đang chờ xử lý về cùng nội dung chuyển thành đã xử lý trước đó."
 								)}
 							</p>
 							<div className="flex justify-end gap-2 border-t pt-3">
@@ -262,8 +263,8 @@ function ResolveReportModal({ open, report, onClose, onHide, onDismiss }: Resolv
 						<div className="px-5 pt-4 pb-5 space-y-4">
 							<p className="text-sm text-muted-foreground leading-relaxed">
 								Báo cáo này sẽ được đánh dấu <strong className="text-foreground">Bỏ qua</strong>.
-								Các báo cáo khác về cùng nội dung đang chờ xử lý sẽ được đánh dấu{" "}
-								<strong className="text-foreground">Đã xử lý trước đó</strong>.
+								Các báo cáo khác về cùng nội dung vẫn giữ nguyên trạng thái{" "}
+								<strong className="text-foreground">Chờ xử lý</strong>.
 							</p>
 							<div className="flex justify-end gap-2 border-t pt-3">
 								<Button variant="ghost" size="sm" onClick={() => setStep("choose")} disabled={loading}>
