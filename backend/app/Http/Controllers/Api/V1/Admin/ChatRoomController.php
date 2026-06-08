@@ -204,9 +204,11 @@ class ChatRoomController extends BaseApiController
         return $this->successResponse(true, null, 'Xóa phòng chat thành công.');
     }
 
-    public function forceDestroy(int $id): JsonResponse
+    public function forceDestroy(Request $request, int $id): JsonResponse
     {
-        $room = ChatRoom::onlyTrashed()->findOrFail($id);
+        $admin    = $request->user();
+        $room     = ChatRoom::onlyTrashed()->findOrFail($id);
+        $roomName = $room->name ?? "Phòng #{$room->id}";
 
         // Xóa ảnh vật lý khi xóa vĩnh viễn
         if ($room->image && ! Str::startsWith($room->image, ['http://', 'https://'])) {
@@ -215,17 +217,41 @@ class ChatRoomController extends BaseApiController
 
         $room->forceDelete();
 
+        NotificationService::dispatch(
+            title: 'Phòng chat đã bị xóa vĩnh viễn',
+            message: "{$admin->full_name} đã xóa vĩnh viễn phòng chat \"{$roomName}\".",
+            action: 'force_deleted',
+            entityType: 'chat_room',
+            entityId: $id,
+            performedBy: $admin->full_name,
+            link: '/community/chat',
+            excludeUserId: $admin->id,
+        );
+
         return $this->successResponse(true, null, 'Đã xóa vĩnh viễn phòng chat.');
     }
 
-    public function restore(int $id): JsonResponse
+    public function restore(Request $request, int $id): JsonResponse
     {
-        $room = ChatRoom::onlyTrashed()->findOrFail($id);
+        $admin    = $request->user();
+        $room     = ChatRoom::onlyTrashed()->findOrFail($id);
+        $roomName = $room->name ?? "Phòng #{$room->id}";
 
         $room->restore();
         $room->update(['deleted_by' => null]);
 
         $room->loadCount(['members', 'messages']);
+
+        NotificationService::dispatch(
+            title: 'Phòng chat đã được khôi phục',
+            message: "{$admin->full_name} đã khôi phục phòng chat \"{$roomName}\".",
+            action: 'restored',
+            entityType: 'chat_room',
+            entityId: $room->id,
+            performedBy: $admin->full_name,
+            link: '/community/chat',
+            excludeUserId: $admin->id,
+        );
 
         return $this->successResponse(true, $this->transformRoom($room), 'Khôi phục phòng chat thành công.');
     }
