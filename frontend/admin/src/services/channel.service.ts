@@ -60,6 +60,20 @@ const channelService = {
 	async deleteChannel(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/channels/${id}`);
 	},
+
+	async getTrash(params?: {
+		page?: number;
+		per_page?: number;
+		search?: string;
+		sort?: string;
+		order?: "asc" | "desc";
+	}): Promise<PaginatedResponse<ChannelRecord>> {
+		return api.get("/channels/trash", params as Record<string, unknown>);
+	},
+
+	async restoreChannel(id: number | string): Promise<ApiResponse<ChannelRecord>> {
+		return api.patch(`/channels/${id}/restore`);
+	},
 };
 
 export default channelService;
