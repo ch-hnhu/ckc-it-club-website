@@ -41,6 +41,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import roleService from "@/services/role.service";
@@ -50,6 +51,8 @@ import UpdateRoleModal from "./UpdateRoleModal";
 import { toast } from "sonner";
 
 function RoleList() {
+	const { hasPermission } = useAuth();
+	const canManageRoles = hasPermission("roles.manage");
 	const [roles, setRoles] = useState<Role[]>([]);
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -171,13 +174,15 @@ function RoleList() {
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 w-full sm:max-w-sm flex-1 min-w-0'
 						/>
-						<Button
-							size='sm'
-							onClick={() => setIsCreateModalOpen(true)}
-							className='h-8 bg-foreground text-background hover:bg-foreground/90'>
-							<Plus className='h-4 w-4' />
-							Thêm
-						</Button>
+						{canManageRoles ? (
+							<Button
+								size='sm'
+								onClick={() => setIsCreateModalOpen(true)}
+								className='h-8 bg-foreground text-background hover:bg-foreground/90'>
+								<Plus className='h-4 w-4' />
+								Thêm
+							</Button>
+						) : null}
 					</div>
 				</div>
 				<div className='overflow-hidden rounded-md border'>
@@ -287,63 +292,67 @@ function RoleList() {
 													<Eye className='h-4 w-4' />
 													Chi tiết
 												</DropdownMenuItem>
-												<DropdownMenuItem
-													onClick={() => {
-														if (role.is_system) {
-															toast.error(
-																"Không thể sửa vai trò hệ thống.",
-																{
-																	position: "top-right",
-																},
-															);
-															return;
-														} else if (
-															role.total_users &&
-															role.total_users > 0
-														) {
-															toast.error(
-																"Không thể cập nhật vai trò đang được gán cho người dùng.",
-																{
-																	position: "top-right",
-																},
-															);
-															return;
-														}
-														setSelectedRoleId(role.id);
-														setIsUpdateModalOpen(true);
-													}}>
-													<Pencil className='h-4 w-4' />
-													Sửa
-												</DropdownMenuItem>
-												<DropdownMenuSeparator />
-												<DropdownMenuItem
-													className='text-destructive focus:text-destructive focus:bg-destructive/10'
-													onClick={() => {
-														if (role.is_system) {
-															toast.error(
-																"Không thể xoá vai trò hệ thống.",
-																{
-																	position: "top-right",
-																},
-															);
-															return;
-														} else if (
-															role.total_users &&
-															role.total_users > 0
-														) {
-															toast.error(
-																"Không thể xoá vai trò đang được gán cho người dùng.",
-																{
-																	position: "top-right",
-																},
-															);
-															return;
-														}
-														handleDelete(role.id);
-													}}>
-													<Trash2 className='h-4 w-4 text-destructive' />
-													Xoá
-												</DropdownMenuItem>
+												{canManageRoles ? (
+													<>
+														<DropdownMenuItem
+															onClick={() => {
+																if (role.is_system) {
+																	toast.error(
+																		"Không thể sửa vai trò hệ thống.",
+																		{
+																			position: "top-right",
+																		},
+																	);
+																	return;
+																} else if (
+																	role.total_users &&
+																	role.total_users > 0
+																) {
+																	toast.error(
+																		"Không thể cập nhật vai trò đang được gán cho người dùng.",
+																		{
+																			position: "top-right",
+																		},
+																	);
+																	return;
+																}
+																setSelectedRoleId(role.id);
+																setIsUpdateModalOpen(true);
+															}}>
+															<Pencil className='h-4 w-4' />
+															Sửa
+														</DropdownMenuItem>
+														<DropdownMenuSeparator />
+														<DropdownMenuItem
+															className='text-destructive focus:text-destructive focus:bg-destructive/10'
+															onClick={() => {
+																if (role.is_system) {
+																	toast.error(
+																		"Không thể xoá vai trò hệ thống.",
+																		{
+																			position: "top-right",
+																		},
+																	);
+																	return;
+																} else if (
+																	role.total_users &&
+																	role.total_users > 0
+																) {
+																	toast.error(
+																		"Không thể xoá vai trò đang được gán cho người dùng.",
+																		{
+																			position: "top-right",
+																		},
+																	);
+																	return;
+																}
+																handleDelete(role.id);
+															}}>
+															<Trash2 className='h-4 w-4 text-destructive' />
+															Xoá
+														</DropdownMenuItem>
+													</>
+												) : null}
 											</DropdownMenuContent>
 										</DropdownMenu>
 									</TableCell>

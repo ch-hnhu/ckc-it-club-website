@@ -3,6 +3,7 @@ import axios from "axios";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Hash, Loader2, Plus, ShieldCheck, Users, X } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import permissionService from "@/services/permission.service";
 import roleService from "@/services/role.service";
@@ -58,6 +59,8 @@ function InfoRow({
 
 function RoleDetailPage() {
 	const { id } = useParams<{ id: string }>();
+	const { hasPermission } = useAuth();
+	const canManageRoles = hasPermission("roles.manage");
 	const [role, setRole] = useState<Role | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -372,13 +375,15 @@ function RoleDetailPage() {
 									onChange={(e) => setPermSearch(e.target.value)}
 									className='h-8 w-full sm:w-[220px]'
 								/>
-								<Button
-									size='sm'
-									onClick={() => setAddPermissionOpen(true)}
-									className='h-8 bg-foreground text-background hover:bg-foreground/90'>
-									<Plus className='h-4 w-4' />
-									Thêm
-								</Button>
+								{canManageRoles ? (
+									<Button
+										size='sm'
+										onClick={() => setAddPermissionOpen(true)}
+										className='h-8 bg-foreground text-background hover:bg-foreground/90'>
+										<Plus className='h-4 w-4' />
+										Thêm
+									</Button>
+								) : null}
 							</div>
 						</div>
 					</CardHeader>
@@ -398,25 +403,30 @@ function RoleDetailPage() {
 										key={perm.id}
 										variant='outline'
 										title={perm.description || perm.name}
-										className={cn(permBadgeClass, "gap-1.5 pr-1.5")}>
+										className={cn(
+											permBadgeClass,
+											canManageRoles ? "gap-1.5 pr-1.5" : "",
+										)}>
 										{perm.name}
-										<button
-											type='button'
-											onClick={() => setPermissionToRemove(perm)}
-											disabled={isPermissionBusy || isAdminRole}
-											aria-label={`Xoá quyền ${perm.name}`}
-											title={
-												isAdminRole
-													? "Không thể xoá quyền khỏi vai trò Quản trị viên"
-													: undefined
-											}
-											className='rounded-full p-0.5 hover:bg-primary/10 hover:cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-colors'>
-											{removingPermissionId === perm.id ? (
-												<Loader2 className='h-3 w-3 animate-spin' />
-											) : (
-												<X className='h-3 w-3' />
-											)}
-										</button>
+										{canManageRoles ? (
+											<button
+												type='button'
+												onClick={() => setPermissionToRemove(perm)}
+												disabled={isPermissionBusy || isAdminRole}
+												aria-label={`Xoá quyền ${perm.name}`}
+												title={
+													isAdminRole
+														? "Không thể xoá quyền khỏi vai trò Quản trị viên"
+														: undefined
+												}
+												className='rounded-full p-0.5 hover:bg-primary/10 hover:cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-colors'>
+												{removingPermissionId === perm.id ? (
+													<Loader2 className='h-3 w-3 animate-spin' />
+												) : (
+													<X className='h-3 w-3' />
+												)}
+											</button>
+										) : null}
 									</Badge>
 								))}
 							</div>

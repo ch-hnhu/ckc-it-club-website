@@ -131,8 +131,8 @@ const ReportBlogModal: React.FC<Props> = ({ blogId, onClose, isAlreadyReported, 
 					</>
 				) : (
 					<div className='flex flex-col items-center px-8 py-10 text-center'>
-						<div className='mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)]'>
-							<Flag className='h-7 w-7 text-black' />
+						<div className='mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-300'>
+							<Flag strokeWidth={3} className='h-7 w-7 text-white' />
 						</div>
 						<h2 className='font-heading text-lg font-extrabold text-black'>
 							Cảm ơn bạn đã báo cáo!
