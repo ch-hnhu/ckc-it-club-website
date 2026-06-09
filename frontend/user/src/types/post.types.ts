@@ -58,6 +58,15 @@ export interface Post {
 	created_at: string;
 }
 
+export interface Reactor {
+	id: number;
+	full_name: string;
+	username: string | null;
+	email: string;
+	avatar: string | null;
+	is_following: boolean;
+}
+
 /** Full post with content field (detail page) */
 export interface PostDetail extends Post {
 	content: string;

@@ -86,6 +86,7 @@ Route::prefix('v1')->group(function () {
         // Public (read-only, published posts only)
         Route::get('/posts', [UserPostController::class, 'index']);
         Route::get('/posts/{id}/comments', [UserPostController::class, 'comments']);
+        Route::get('/posts/{id}/reactions/users', [UserPostController::class, 'reactors']);
         Route::get('/channels', [UserChannelController::class, 'index']);
 
         // Public blog routes
