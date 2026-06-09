@@ -56,6 +56,10 @@ const postService = {
 	async restorePost(id: number | string): Promise<ApiResponse<PostRecord>> {
 		return api.patch<ApiResponse<PostRecord>, undefined>(`/posts/${id}/restore`);
 	},
+
+	async forceDeletePost(id: number | string): Promise<ApiResponse<null>> {
+		return api.delete(`/posts/${id}/force-delete`);
+	},
 };
 
 export default postService;

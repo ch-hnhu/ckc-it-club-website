@@ -192,6 +192,8 @@ function PostListPage() {
 	const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 	const [showTrash, setShowTrash] = useState(false);
 	const [restoringPostId, setRestoringPostId] = useState<number | null>(null);
+	const [forceDeleteTarget, setForceDeleteTarget] = useState<PostRecord | null>(null);
+	const [isForceDeleting, setIsForceDeleting] = useState(false);
 	const [reloadToken, setReloadToken] = useState(0);
 	const [meta, setMeta] = useState({
 		current_page: 1,
@@ -308,6 +310,22 @@ function PostListPage() {
 			toast.error("Không thể xóa bài đăng. Vui lòng thử lại.");
 		} finally {
 			setIsDeleting(false);
+		}
+	};
+
+	const handleForceDelete = async () => {
+		if (!forceDeleteTarget) return;
+		setIsForceDeleting(true);
+		try {
+			await postService.forceDeletePost(forceDeleteTarget.id);
+			setPosts((prev) => prev.filter((p) => p.id !== forceDeleteTarget.id));
+			setForceDeleteTarget(null);
+			setReloadToken((prev) => prev + 1);
+			toast.success("Đã xóa vĩnh viễn bài đăng.");
+		} catch {
+			toast.error("Không thể xóa vĩnh viễn bài đăng. Vui lòng thử lại.");
+		} finally {
+			setIsForceDeleting(false);
 		}
 	};
 
@@ -587,12 +605,21 @@ function PostListPage() {
 															Xem chi tiết
 														</DropdownMenuItem>
 														{showTrash ? (
-															<DropdownMenuItem
-																onClick={() => void handleRestore(post)}
-																disabled={restoringPostId === post.id}>
-																<RotateCcw className="h-4 w-4" />
-																{restoringPostId === post.id ? "Đang khôi phục..." : "Khôi phục"}
-															</DropdownMenuItem>
+															<>
+																<DropdownMenuItem
+																	onClick={() => void handleRestore(post)}
+																	disabled={restoringPostId === post.id}>
+																	<RotateCcw className="h-4 w-4" />
+																	{restoringPostId === post.id ? "Đang khôi phục..." : "Khôi phục"}
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+																	onClick={() => setForceDeleteTarget(post)}>
+																	<Trash2 className="h-4 w-4 text-destructive" />
+																	Xóa vĩnh viễn
+																</DropdownMenuItem>
+															</>
 														) : (
 															<>
 																<DropdownMenuItem onClick={() => void handleToggleStatus(post)}>
@@ -805,15 +832,23 @@ function PostListPage() {
 									Đóng
 								</Button>
 								{showTrash ? (
-									<Button
-										onClick={() => {
-											void handleRestore(selectedPost);
-											setSelectedPost(null);
-										}}
-										disabled={restoringPostId === selectedPost.id}>
-										<RotateCcw className="h-4 w-4" />
-										{restoringPostId === selectedPost.id ? "Đang khôi phục..." : "Khôi phục"}
-									</Button>
+									<>
+										<Button
+											onClick={() => {
+												void handleRestore(selectedPost);
+												setSelectedPost(null);
+											}}
+											disabled={restoringPostId === selectedPost.id}>
+											<RotateCcw className="h-4 w-4" />
+											{restoringPostId === selectedPost.id ? "Đang khôi phục..." : "Khôi phục"}
+										</Button>
+										<Button
+											variant="destructive"
+											onClick={() => { setSelectedPost(null); setForceDeleteTarget(selectedPost); }}>
+											<Trash2 className="h-4 w-4" />
+											Xóa vĩnh viễn
+										</Button>
+									</>
 								) : (
 									<>
 										<Button
@@ -864,6 +899,40 @@ function PostListPage() {
 								</Button>
 								<Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
 									{isDeleting ? "Đang xóa..." : "Xóa bài đăng"}
+								</Button>
+							</DialogFooter>
+						</>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			{/* ── Force Delete confirm Dialog ── */}
+			<Dialog open={Boolean(forceDeleteTarget)} onOpenChange={(open) => !open && setForceDeleteTarget(null)}>
+				<DialogContent className="sm:max-w-[440px]">
+					{forceDeleteTarget && (
+						<>
+							<DialogHeader>
+								<DialogTitle>Xác nhận xóa vĩnh viễn</DialogTitle>
+							</DialogHeader>
+							<div className="space-y-2 text-sm text-muted-foreground">
+								<p>
+									Bạn sắp xóa vĩnh viễn bài đăng{" "}
+									<span className="font-semibold text-foreground">POST-{forceDeleteTarget.id}</span>{" "}
+									của{" "}
+									<span className="font-semibold text-foreground">
+										{forceDeleteTarget.user.full_name ?? forceDeleteTarget.user.email}
+									</span>.
+								</p>
+								<p className="font-medium text-destructive">
+									Hành động này không thể hoàn tác. Toàn bộ dữ liệu của bài đăng sẽ bị xóa vĩnh viễn khỏi hệ thống.
+								</p>
+							</div>
+							<DialogFooter>
+								<Button variant="outline" onClick={() => setForceDeleteTarget(null)} disabled={isForceDeleting}>
+									Hủy
+								</Button>
+								<Button variant="destructive" onClick={() => void handleForceDelete()} disabled={isForceDeleting}>
+									{isForceDeleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
 								</Button>
 							</DialogFooter>
 						</>

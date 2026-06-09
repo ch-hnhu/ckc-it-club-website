@@ -9,6 +9,8 @@ use App\Models\PostReport;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class PostController extends BaseApiController
 {
@@ -139,6 +141,36 @@ class PostController extends BaseApiController
         $post->restore();
 
         return $this->successResponse(true, $this->transformPost($post), 'Khôi phục bài đăng thành công.');
+    }
+
+    public function forceDestroy(Request $request, int $id): JsonResponse
+    {
+        $admin = $request->user();
+        $post  = Post::onlyTrashed()->findOrFail($id);
+
+        $mediaUrls = $post->media_urls ?? [];
+        if (is_array($mediaUrls)) {
+            foreach ($mediaUrls as $url) {
+                if ($url && ! Str::startsWith($url, ['http://', 'https://'])) {
+                    Storage::disk('public')->delete($url);
+                }
+            }
+        }
+
+        $post->forceDelete();
+
+        NotificationService::dispatch(
+            title: 'Bài đăng đã bị xóa vĩnh viễn',
+            message: "{$admin->full_name} đã xóa vĩnh viễn bài đăng #{$id}.",
+            action: 'force_deleted',
+            entityType: 'post',
+            entityId: $id,
+            performedBy: $admin->full_name,
+            link: '/community/posts',
+            excludeUserId: $admin->id,
+        );
+
+        return $this->successResponse(true, null, 'Đã xóa vĩnh viễn bài đăng.');
     }
 
     public function bulkDestroy(Request $request): JsonResponse

@@ -360,6 +360,7 @@ Route::prefix('v1')->group(function () {
             Route::post('posts/bulk-delete', [PostController::class, 'bulkDestroy']);
             Route::patch('posts/{post}/status', [PostController::class, 'updateStatus']);
             Route::patch('posts/{post}/restore', [PostController::class, 'restore']);
+            Route::delete('posts/{id}/force-delete', [PostController::class, 'forceDestroy']);
             Route::delete('posts/{post}', [PostController::class, 'destroy']);
         });
 
