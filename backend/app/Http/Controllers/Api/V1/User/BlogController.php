@@ -483,6 +483,45 @@ class BlogController extends BaseApiController
         ], ApiMessage::UPDATED);
     }
 
+    /**
+     * List users who reacted to a blog (public).
+     * Returns each reactor with their follow status for the authenticated viewer.
+     */
+    public function reactors(Request $request, int $id): JsonResponse
+    {
+        $viewer = $request->user('sanctum');
+
+        Blog::query()
+            ->where('status', 'published')
+            ->visibleTo($viewer)
+            ->findOrFail($id);
+
+        $reactorUsers = Reaction::where('target_type', 'blog')
+            ->where('target_id', $id)
+            ->with('user:id,full_name,username,email,avatar')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($reaction) => $reaction->user)
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $followingIds = $viewer
+            ? DB::table('user_follows')->where('follower_id', $viewer->id)->pluck('following_id')->all()
+            : [];
+
+        $data = $reactorUsers->map(fn ($user) => [
+            'id'           => $user->id,
+            'full_name'    => $user->full_name,
+            'username'     => $user->username,
+            'email'        => $user->email,
+            'avatar'       => $user->avatar,
+            'is_following' => in_array($user->id, $followingIds),
+        ]);
+
+        return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+    }
+
     public function comments(int $id): JsonResponse
     {
         Blog::where('status', 'published')->findOrFail($id);

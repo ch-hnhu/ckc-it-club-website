@@ -96,6 +96,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/blogs', [UserBlogController::class, 'index']);
         Route::get('/blog-tags', [UserBlogController::class, 'tags']);
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
+        Route::get('/blogs/{id}/reactions/users', [UserBlogController::class, 'reactors']);
 
         // Public event routes (avoid collision with admin /v1/events resource routes)
         Route::get('/events', [UserEventController::class, 'index']);
