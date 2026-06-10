@@ -48,6 +48,9 @@ class PermissionSeeder extends Seeder
         'community.media.view'         => 'Xem và quản lý tài nguyên media cộng đồng',
         'community.skills.manage'      => 'Thêm, sửa, xóa, bật/tắt skills của thành viên',
         'community.reports.view'       => 'Xem và xử lý báo cáo vi phạm từ cộng đồng',
+        'events.view' => 'Xem danh sách và chi tiết sự kiện',
+        'events.manage' => 'Tạo, sửa, xóa, đổi trạng thái sự kiện',
+        'events.check_in' => 'Thực hiện điểm danh sự kiện',
     ];
 
     /**
@@ -78,6 +81,7 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
         // Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
@@ -104,6 +108,7 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
         // Phó Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
@@ -130,6 +135,7 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
         // Trưởng ban Học thuật — chỉ dashboard (chưa có chức năng được giao)
@@ -153,6 +159,7 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
         // Trưởng ban Tình nguyện — quản lý đơn vị học thuật, ứng tuyển và liên hệ
@@ -164,6 +171,7 @@ class PermissionSeeder extends Seeder
             'application_questions.view', 'application_questions.manage',
             'academic_structure.import',
             'academic_data.view',
+            'events.view', 'events.check_in',
         ],
     ];
 

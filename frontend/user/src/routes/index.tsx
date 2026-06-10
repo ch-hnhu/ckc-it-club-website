@@ -10,6 +10,8 @@ import BlogFeedPage from "@/pages/blog/BlogFeedPage";
 import BlogCreatePage from "@/pages/blog/BlogCreatePage";
 import BlogDetailPage from "@/pages/blog/BlogDetailPage";
 import BlogEditPage from "@/pages/blog/BlogEditPage";
+import EventsFeedPage from "@/pages/event/EventsFeedPage";
+import EventDetailPage from "@/pages/event/EventDetailPage";
 import LandingPage from "@/pages/LandingPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
 import ApplicationPage from "@/pages/ApplicationPage";
@@ -65,6 +67,14 @@ const router = createBrowserRouter([
 			{
 				path: "blog/:slug",
 				element: <BlogDetailPage />,
+			},
+			{
+				path: "su-kien",
+				element: <EventsFeedPage />,
+			},
+			{
+				path: "su-kien/:slug",
+				element: <EventDetailPage />,
 			},
 			{
 				// Dynamic catch-all for /@username profile pages — must be last

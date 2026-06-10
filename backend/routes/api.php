@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
+use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\MajorController;
 use App\Http\Controllers\Api\V1\Admin\MediaFileController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
+use App\Http\Controllers\Api\V1\User\EventController as UserEventController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
@@ -93,6 +95,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/blogs', [UserBlogController::class, 'index']);
         Route::get('/blog-tags', [UserBlogController::class, 'tags']);
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
+
+        // Public event routes (avoid collision with admin /v1/events resource routes)
+        Route::get('/events', [UserEventController::class, 'index']);
+        Route::get('/events/{event:slug}', [UserEventController::class, 'show']);
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/events/{event}/register', [UserEventController::class, 'register']);
+            Route::delete('/events/{event}/register', [UserEventController::class, 'cancelRegistration']);
+            Route::get('/events/{event}/my-ticket', [UserEventController::class, 'myTicket']);
+        });
 
         // Chat rooms (public list, auth for messages, admin-only create)
         Route::get('/chat-rooms', [UserChatController::class, 'index']);
@@ -430,6 +441,20 @@ Route::prefix('v1')->group(function () {
             Route::patch('skills/{skill}', [SkillController::class, 'update']);
             Route::patch('skills/{skill}/toggle-status', [SkillController::class, 'toggleStatus']);
             Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
+        });
+
+        // events (admin)
+        Route::middleware('permission:events.view')->group(function () {
+            Route::get('events/stats', [AdminEventController::class, 'stats']);
+            Route::get('events', [AdminEventController::class, 'index']);
+            Route::get('events/{event}', [AdminEventController::class, 'show']);
+        });
+        Route::middleware('permission:events.manage')->group(function () {
+            Route::post('events', [AdminEventController::class, 'store']);
+            Route::put('events/{event}', [AdminEventController::class, 'update']);
+            Route::patch('events/{event}', [AdminEventController::class, 'update']);
+            Route::patch('events/{event}/status', [AdminEventController::class, 'updateStatus']);
+            Route::delete('events/{event}', [AdminEventController::class, 'destroy']);
         });
 
         // post reports
