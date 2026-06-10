@@ -43,7 +43,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
 	{ label: "Cộng đồng", href: "/cong-dong", dropdown: true },
 	{ label: "Tài nguyên", href: "#resources" },
 	{ label: "Bảng xếp hạng", href: "#leaderboard" },
-	{ label: "Sự kiện", href: "#events" },
+	{ label: "Sự kiện", href: "/su-kien" },
 	{ label: "Khóa học", href: "#courses" },
 	{ label: "Liên hệ", href: "/lien-he" },
 ];

@@ -12,6 +12,7 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        // ── Tài khoản demo cho từng vai trò ──────────────────────────────────────
         User::firstOrCreate(
             ['email' => 'admin@gmail.com'],
             [
@@ -20,23 +21,95 @@ class UserSeeder extends Seeder
                 'password'  => bcrypt('Admin@123'),
                 'is_active' => true,
             ],
-        )->assignRole(RolesEnum::ADMIN->value);
+        )->syncRoles([RolesEnum::ADMIN->value]);
+
+        User::firstOrCreate(
+            ['email' => 'president@gmail.com'],
+            [
+                'username'  => 'president',
+                'full_name' => 'Chủ nhiệm CLB',
+                'password'  => bcrypt('Admin@123'),
+                'is_active' => true,
+            ],
+        )->syncRoles([RolesEnum::PRESIDENT->value]);
+
+        User::firstOrCreate(
+            ['email' => 'vicepresident@gmail.com'],
+            [
+                'username'  => 'vicepresident',
+                'full_name' => 'Phó Chủ nhiệm CLB',
+                'password'  => bcrypt('Admin@123'),
+                'is_active' => true,
+            ],
+        )->syncRoles([RolesEnum::VICE_PRESIDENT->value]);
+
+        User::firstOrCreate(
+            ['email' => 'academichead@gmail.com'],
+            [
+                'username'  => 'academichead',
+                'full_name' => 'Trưởng ban Học thuật',
+                'password'  => bcrypt('Admin@123'),
+                'is_active' => true,
+            ],
+        )->syncRoles([RolesEnum::ACADEMIC_HEAD->value]);
+
+        User::firstOrCreate(
+            ['email' => 'communicationshead@gmail.com'],
+            [
+                'username'  => 'communicationshead',
+                'full_name' => 'Trưởng ban Truyền thông',
+                'password'  => bcrypt('Admin@123'),
+                'is_active' => true,
+            ],
+        )->syncRoles([RolesEnum::COMMUNICATIONS_HEAD->value]);
+
+        User::firstOrCreate(
+            ['email' => 'volunteerhead@gmail.com'],
+            [
+                'username'  => 'volunteerhead',
+                'full_name' => 'Trưởng ban Tình nguyện',
+                'password'  => bcrypt('Admin@123'),
+                'is_active' => true,
+            ],
+        )->syncRoles([RolesEnum::VOLUNTEER_HEAD->value]);
+
+        User::firstOrCreate(
+            ['email' => 'clubmember@gmail.com'],
+            [
+                'username'  => 'clubmember',
+                'full_name' => 'Thành viên CLB',
+                'password'  => bcrypt('Admin@123'),
+                'is_active' => true,
+            ],
+        )->syncRoles([RolesEnum::CLUB_MEMBER->value]);
+
+        User::firstOrCreate(
+            ['email' => 'user@gmail.com'],
+            [
+                'username'  => 'user',
+                'full_name' => 'Người dùng',
+                'password'  => bcrypt('Admin@123'),
+                'is_active' => true,
+            ],
+        )->syncRoles([RolesEnum::USER->value]);
+
+        // ── Tài khoản cá nhân / test cũ ─────────────────────────────────────────
         User::firstOrCreate(
             ['email' => 'hnhu07012004@gmail.com'],
             ['full_name' => 'Thành viên', 'is_active' => true],
-        )->assignRole(RolesEnum::USER->value);
+        )->syncRoles([RolesEnum::USER->value]);
         User::firstOrCreate(
             ['email' => '0306231334@caothang.edu.vn'],
             ['full_name' => 'Thành viên', 'is_active' => true],
-        )->assignRole(RolesEnum::USER->value);
+        )->syncRoles([RolesEnum::USER->value]);
         User::firstOrCreate(
             ['email' => '0306231295@caothang.edu.vn'],
             ['full_name' => 'Thành viên', 'is_active' => true],
-        )->assignRole(RolesEnum::USER->value);
+        )->syncRoles([RolesEnum::USER->value]);
         User::firstOrCreate(
             ['email' => '0306231289@caothang.edu.vn'],
             ['full_name' => 'Thành viên', 'is_active' => true],
-        )->assignRole(RolesEnum::USER->value);
+        )->syncRoles([RolesEnum::USER->value]);
 
         // Test member: tài khoản thành viên có mật khẩu, dùng cho test forgot password & login member
         User::firstOrCreate(
@@ -58,7 +131,7 @@ class UserSeeder extends Seeder
                 'password' => bcrypt('Test@123456'),
                 'is_active' => false,
             ],
-        )->assignRole(RolesEnum::USER->value);
+        )->syncRoles([RolesEnum::USER->value]);
 
         $students = [
             ['full_name' => 'Nguyễn Minh Anh', 'email' => 'student1@gmail.com', 'student_code' => 'CD220001', 'class' => 'CD22PM1'],

@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/Dashboard";
 import FacultyList from "@/pages/faculty/FacultyList";
@@ -92,7 +92,7 @@ const router = createBrowserRouter([
 			{
 				path: "roles",
 				element: (
-					<PermissionRoute permission='roles.manage'>
+					<PermissionRoute permission='roles.view'>
 						<RoleList />
 					</PermissionRoute>
 				),
@@ -100,7 +100,7 @@ const router = createBrowserRouter([
 			{
 				path: "roles/:id",
 				element: (
-					<PermissionRoute permission='roles.manage'>
+					<PermissionRoute permission='roles.view'>
 						<RoleDetailPage />
 					</PermissionRoute>
 				),
@@ -108,7 +108,7 @@ const router = createBrowserRouter([
 			{
 				path: "permissions",
 				element: (
-					<PermissionRoute permission='permissions.manage'>
+					<PermissionRoute permission='permissions.view'>
 						<PermissionList />
 					</PermissionRoute>
 				),
@@ -324,6 +324,11 @@ const router = createBrowserRouter([
 						<ChatRoomListPage />
 					</PermissionRoute>
 				),
+			},
+			{
+				// Redirect alias — xử lý link cũ trong thông báo
+				path: "community/chat-rooms",
+				element: <Navigate to="/community/chat" replace />,
 			},
 			{
 				path: "community/media",

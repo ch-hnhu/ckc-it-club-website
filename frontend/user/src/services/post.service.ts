@@ -7,6 +7,7 @@ import type {
 	PostComment,
 	PostListParams,
 	PostReportReason,
+	Reactor,
 	ReactionType,
 	ReactionToggleResponse,
 	UpdatePostPayload,
@@ -42,6 +43,10 @@ export const postService = {
 	/** Fetch top-level comments (with nested replies) for a post. */
 	getPostComments: (id: number) =>
 		api.get<ApiResponse<PostComment[]>>(`/community/posts/${id}/comments`),
+
+	/** Get the list of users who reacted to a post. */
+	getReactors: (postId: number) =>
+		api.get<ApiResponse<Reactor[]>>(`/community/posts/${postId}/reactions/users`),
 
 	/**
 	 * Toggle a reaction on a post (requires auth).

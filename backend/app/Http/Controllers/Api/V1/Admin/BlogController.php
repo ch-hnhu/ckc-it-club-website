@@ -117,11 +117,12 @@ class BlogController extends BaseApiController
             ->pluck('count', 'status');
 
         return $this->successResponse(true, [
-            'total' => $counts->sum(),
-            'published' => (int) ($counts['published'] ?? 0),
-            'draft' => (int) ($counts['draft'] ?? 0),
-            'archived' => (int) ($counts['archived'] ?? 0),
+            'total'          => $counts->sum(),
+            'published'      => (int) ($counts['published'] ?? 0),
+            'draft'          => (int) ($counts['draft'] ?? 0),
+            'archived'       => (int) ($counts['archived'] ?? 0),
             'pending_review' => (int) ($counts['pending_review'] ?? 0),
+            'hidden'         => (int) ($counts['hidden'] ?? 0),
         ], ApiMessage::RETRIEVED);
     }
 

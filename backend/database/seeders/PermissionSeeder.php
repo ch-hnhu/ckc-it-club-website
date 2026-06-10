@@ -48,6 +48,9 @@ class PermissionSeeder extends Seeder
         'community.media.view'         => 'Xem và quản lý tài nguyên media cộng đồng',
         'community.skills.manage'      => 'Thêm, sửa, xóa, bật/tắt skills của thành viên',
         'community.reports.view'       => 'Xem và xử lý báo cáo vi phạm từ cộng đồng',
+        'events.view' => 'Xem danh sách và chi tiết sự kiện',
+        'events.manage' => 'Tạo, sửa, xóa, đổi trạng thái sự kiện',
+        'events.check_in' => 'Thực hiện điểm danh sự kiện',
     ];
 
     /**
@@ -78,13 +81,14 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
-        // Chủ nhiệm — hầu hết, không quản lý roles/permissions hệ thống
+        // Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
         'president' => [
             'admin_panel.access',
             'dashboard.view',
-            'users.view', 'users.create', 'users.update',
+            'users.view', 'users.update',
             'roles.view',
             'permissions.view',
             'club_info.view', 'club_info.manage',
@@ -104,60 +108,46 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
-        // Phó Chủ nhiệm — quản lý vận hành, không quản lý phân quyền
+        // Phó Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
         'vice-president' => [
             'admin_panel.access',
             'dashboard.view',
-            'users.view', 'users.create', 'users.update',
+            'users.view', 'users.update',
             'roles.view',
+            'permissions.view',
             'club_info.view', 'club_info.manage',
             'contacts.view', 'contacts.manage',
-            'applications.view', 'applications.manage',
-            'application_questions.view',
-            'academic_structure.import',
-            'academic_data.view',
-            'community.view',
-            'community.channels.manage',
-            'community.posts.view', 'community.posts.manage',
-            'community.blogs.view', 'community.blogs.manage',
-            'community.comments.view', 'community.comments.manage',
-            'community.tags.manage',
-            'community.notifications.send',
-            'community.chat.view', 'community.chat.manage',
-            'community.media.view',
-            'community.skills.manage',
-            'community.reports.view',
-        ],
-
-        // Trưởng ban Học thuật — quản lý xét tuyển và cơ cấu học thuật
-        'academic-head' => [
-            'admin_panel.access',
-            'dashboard.view',
-            'users.view',
-            'roles.view',
             'applications.view', 'applications.manage',
             'application_questions.view', 'application_questions.manage',
             'academic_structure.import',
             'academic_data.view',
             'community.view',
-            'community.posts.view',
-            'community.blogs.view',
-            'community.comments.view',
-            'community.chat.view',
+            'community.channels.manage',
+            'community.posts.view', 'community.posts.manage',
+            'community.blogs.view', 'community.blogs.manage',
+            'community.comments.view', 'community.comments.manage',
+            'community.tags.manage',
+            'community.notifications.send',
+            'community.chat.view', 'community.chat.manage',
             'community.media.view',
+            'community.skills.manage',
+            'community.reports.view',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
-        // Trưởng ban Truyền thông — quản lý thông tin CLB, liên hệ và cộng đồng
+        // Trưởng ban Học thuật — chỉ dashboard (chưa có chức năng được giao)
+        'academic-head' => [
+            'admin_panel.access',
+            'dashboard.view',
+        ],
+
+        // Trưởng ban Truyền thông — toàn bộ chức năng quản lý cộng đồng
         'communications-head' => [
             'admin_panel.access',
             'dashboard.view',
-            'users.view',
-            'roles.view',
-            'club_info.view', 'club_info.manage',
-            'contacts.view', 'contacts.manage',
-            'academic_data.view',
             'community.view',
             'community.channels.manage',
             'community.posts.view', 'community.posts.manage',
@@ -169,22 +159,19 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
-        // Trưởng ban Tình nguyện — quản lý đơn xét tuyển
+        // Trưởng ban Tình nguyện — quản lý đơn vị học thuật, ứng tuyển và liên hệ
         'volunteer-head' => [
             'admin_panel.access',
             'dashboard.view',
-            'users.view',
-            'roles.view',
+            'contacts.view', 'contacts.manage',
             'applications.view', 'applications.manage',
+            'application_questions.view', 'application_questions.manage',
+            'academic_structure.import',
             'academic_data.view',
-            'community.view',
-            'community.posts.view',
-            'community.blogs.view',
-            'community.comments.view',
-            'community.chat.view',
-            'community.media.view',
+            'events.view', 'events.check_in',
         ],
     ];
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -11,6 +12,7 @@ import {
 	MoreHorizontal,
 	Pencil,
 	Plus,
+	RotateCcw,
 	Trash2,
 	Users,
 } from "lucide-react";
@@ -73,6 +75,7 @@ export interface ChatRoomRecord {
 	message_count: number;
 	last_message_at: string | null;
 	created_at: string;
+	deleted_at?: string | null;
 }
 
 export interface ChatRoomStats {
@@ -192,6 +195,16 @@ function ChatRoomListPage() {
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, per_page: 20, total: 0 });
 	const [reloadToken, setReloadToken] = useState(0);
 
+	const [searchParams, setSearchParams] = useSearchParams();
+	const [view, setView] = useState<"active" | "trash">(
+		searchParams.get("view") === "trash" ? "trash" : "active"
+	);
+
+	// Đồng bộ view với URL khi điều hướng từ thông báo (component đã mount sẵn)
+	useEffect(() => {
+		setView(searchParams.get("view") === "trash" ? "trash" : "active");
+	}, [searchParams]);
+
 	const [formOpen, setFormOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<ChatRoomRecord | null>(null);
 	const [roomName, setRoomName] = useState("");
@@ -200,6 +213,10 @@ function ChatRoomListPage() {
 	const [isSavingRoom, setIsSavingRoom] = useState(false);
 	const [deleteRoomTarget, setDeleteRoomTarget] = useState<ChatRoomRecord | null>(null);
 	const [isDeletingRoom, setIsDeletingRoom] = useState(false);
+	const [restoreTarget, setRestoreTarget] = useState<ChatRoomRecord | null>(null);
+	const [isRestoring, setIsRestoring] = useState(false);
+	const [forceDeleteTarget, setForceDeleteTarget] = useState<ChatRoomRecord | null>(null);
+	const [isForceDeleting, setIsForceDeleting] = useState(false);
 
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(rooms.map((r) => r.id));
 
@@ -210,19 +227,24 @@ function ChatRoomListPage() {
 
 	useEffect(() => {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
-	}, [debouncedSearch, sortConfig]);
+	}, [debouncedSearch, sortConfig, view]);
 
 	useEffect(() => {
 		let cancelled = false;
 		setLoadingRooms(true);
 
-		chatService.getRooms({
+		const params = {
 			page: meta.current_page,
 			per_page: meta.per_page,
 			search: debouncedSearch || undefined,
 			sort: sortConfig.key ?? undefined,
 			order: sortConfig.order ?? undefined,
-		})
+		};
+		const fetchFn = view === "trash"
+			? chatService.getTrash(params)
+			: chatService.getRooms(params);
+
+		fetchFn
 			.then((response) => {
 				if (cancelled) return;
 				setRooms(response.data ?? []);
@@ -244,7 +266,7 @@ function ChatRoomListPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig, reloadToken]);
+	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig, reloadToken, view]);
 
 	const handleSort = (key: RoomSortKey) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -339,6 +361,38 @@ function ChatRoomListPage() {
 		}
 	};
 
+	const handleForceDelete = async () => {
+		if (!forceDeleteTarget) return;
+		setIsForceDeleting(true);
+		try {
+			await chatService.forceDeleteRoom(forceDeleteTarget.id);
+			setRooms((prev) => prev.filter((r) => r.id !== forceDeleteTarget.id));
+			setForceDeleteTarget(null);
+			setReloadToken((token) => token + 1);
+			toast.success("Đã xóa vĩnh viễn phòng chat.");
+		} catch {
+			toast.error("Không thể xóa vĩnh viễn phòng chat.");
+		} finally {
+			setIsForceDeleting(false);
+		}
+	};
+
+	const handleRestore = async () => {
+		if (!restoreTarget) return;
+		setIsRestoring(true);
+		try {
+			await chatService.restoreRoom(restoreTarget.id);
+			setRooms((prev) => prev.filter((r) => r.id !== restoreTarget.id));
+			setRestoreTarget(null);
+			setReloadToken((token) => token + 1);
+			toast.success("Đã khôi phục phòng chat.");
+		} catch {
+			toast.error("Không thể khôi phục phòng chat.");
+		} finally {
+			setIsRestoring(false);
+		}
+	};
+
 	return (
 		<div className="min-h-full bg-background">
 			<div className="space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8">
@@ -355,15 +409,33 @@ function ChatRoomListPage() {
 <div className="flex flex-col gap-4">
 					<div className="flex flex-row items-center gap-3">
 						<Input
-							placeholder="Tìm kiếm theo tên phòng..."
+							placeholder={view === "trash" ? "Tìm kiếm trong thùng rác..." : "Tìm kiếm theo tên phòng..."}
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
 							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
-						<Button size="sm" className="ml-auto h-8 shrink-0 gap-1.5" onClick={openCreateRoom}>
-							<Plus className="h-4 w-4" />
-							Tạo phòng
-						</Button>
+						<div className="ml-auto flex items-center gap-2">
+							<Button
+								size="sm"
+								variant={view === "trash" ? "secondary" : "outline"}
+								className="h-8 shrink-0"
+								onClick={() => {
+								const next = view === "trash" ? "active" : "trash";
+								setView(next);
+								setSearch("");
+								setSearchParams(next === "trash" ? { view: "trash" } : {}, { replace: true });
+							}}
+							>
+								<Trash2 className="h-4 w-4" />
+								{view === "trash" ? "Đang xem thùng rác" : "Thùng rác"}
+							</Button>
+							{view === "active" && (
+								<Button size="sm" className="h-8 shrink-0 gap-1.5" onClick={openCreateRoom}>
+									<Plus className="h-4 w-4" />
+									Tạo phòng
+								</Button>
+							)}
+						</div>
 					</div>
 
 					<div className="overflow-hidden rounded-md border">
@@ -393,8 +465,8 @@ function ChatRoomListPage() {
 										</Button>
 									</TableHead>
 									<TableHead className="w-[170px]">
-										<Button variant="ghost" onClick={() => handleSort("last_message_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Hoạt động cuối {getSortIcon("last_message_at")}
+										<Button variant="ghost" onClick={() => handleSort(view === "trash" ? "created_at" : "last_message_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											{view === "trash" ? "Ngày xóa" : "Hoạt động cuối"} {getSortIcon(view === "trash" ? "created_at" : "last_message_at")}
 										</Button>
 									</TableHead>
 									<TableHead className="w-[56px]" />
@@ -443,7 +515,9 @@ function ChatRoomListPage() {
 												</div>
 											</TableCell>
 											<TableCell className="text-sm text-muted-foreground">
-												{formatDate(room.last_message_at)}
+												{view === "trash"
+													? formatDate(room.deleted_at)
+													: formatDate(room.last_message_at)}
 											</TableCell>
 											<TableCell className="text-right">
 												<DropdownMenu>
@@ -454,19 +528,39 @@ function ChatRoomListPage() {
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end" className="w-40 p-1">
-														<DropdownMenuItem className="gap-2 px-2 py-2 text-sm" onClick={() => openEditRoom(room)}>
-															<Pencil className="h-4 w-4" />
-															Sửa phòng
-														</DropdownMenuItem>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem
-															variant="destructive"
-															className="gap-2 px-2 py-2 text-sm"
-															onClick={() => setDeleteRoomTarget(room)}
-														>
-															<Trash2 className="h-4 w-4" />
-															Xóa phòng
-														</DropdownMenuItem>
+														{view === "active" ? (
+															<>
+																<DropdownMenuItem className="gap-2 px-2 py-2 text-sm" onClick={() => openEditRoom(room)}>
+																	<Pencil className="h-4 w-4" />
+																	Sửa phòng
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	variant="destructive"
+																	className="gap-2 px-2 py-2 text-sm"
+																	onClick={() => setDeleteRoomTarget(room)}
+																>
+																	<Trash2 className="h-4 w-4" />
+																	Xóa phòng
+																</DropdownMenuItem>
+															</>
+														) : (
+															<>
+																<DropdownMenuItem className="gap-2 px-2 py-2 text-sm" onClick={() => setRestoreTarget(room)}>
+																	<RotateCcw className="h-4 w-4" />
+																	Khôi phục
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	variant="destructive"
+																	className="gap-2 px-2 py-2 text-sm"
+																	onClick={() => setForceDeleteTarget(room)}
+																>
+																	<Trash2 className="h-4 w-4" />
+																	Xóa vĩnh viễn
+																</DropdownMenuItem>
+															</>
+														)}
 													</DropdownMenuContent>
 												</DropdownMenu>
 											</TableCell>
@@ -475,7 +569,7 @@ function ChatRoomListPage() {
 								) : (
 									<TableRow>
 										<TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-											Không có phòng chat nào.
+											{view === "trash" ? "Thùng rác trống." : "Không có phòng chat nào."}
 										</TableCell>
 									</TableRow>
 								)}
@@ -488,7 +582,7 @@ function ChatRoomListPage() {
 											meta={meta}
 											onPageChange={(page) => setMeta((prev) => ({ ...prev, current_page: page }))}
 											onPerPageChange={(perPage) => setMeta((prev) => ({ ...prev, per_page: perPage, current_page: 1 }))}
-											label="phòng chat"
+											label={view === "trash" ? "phòng chat trong thùng rác" : "phòng chat"}
 										/>
 									</TableCell>
 								</TableRow>
@@ -564,12 +658,68 @@ function ChatRoomListPage() {
 				</DialogContent>
 			</Dialog>
 
+			{/* Force delete confirm */}
+			<AlertDialog open={!!forceDeleteTarget} onOpenChange={(open) => !open && setForceDeleteTarget(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa vĩnh viễn phòng chat</AlertDialogTitle>
+						<AlertDialogDescription>
+							Phòng <strong>"{forceDeleteTarget ? roomDisplayName(forceDeleteTarget) : ""}"</strong> sẽ bị xóa vĩnh viễn
+							cùng toàn bộ thành viên, tin nhắn và ảnh đại diện. Hành động này <strong>không thể hoàn tác</strong>.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isForceDeleting}>Hủy</AlertDialogCancel>
+						<AlertDialogAction asChild>
+							<Button variant="destructive" onClick={handleForceDelete} disabled={isForceDeleting}>
+								{isForceDeleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
+							</Button>
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Restore confirm */}
+			<Dialog open={!!restoreTarget} onOpenChange={(open) => !open && setRestoreTarget(null)}>
+				<DialogContent className="sm:max-w-[440px]">
+					{restoreTarget && (
+						<>
+							<DialogHeader>
+								<DialogTitle>Xác nhận khôi phục phòng chat</DialogTitle>
+							</DialogHeader>
+							<div className="space-y-3 text-sm text-muted-foreground">
+								<p>
+									Khôi phục phòng{" "}
+									<span className="font-semibold text-foreground">"{roomDisplayName(restoreTarget)}"</span>?
+								</p>
+								{(restoreTarget.member_count > 0 || restoreTarget.message_count > 0) && (
+									<p className="rounded-md border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-blue-700 dark:text-blue-300">
+										Phòng có{" "}
+										{restoreTarget.member_count > 0 && <><strong>{restoreTarget.member_count}</strong> thành viên</>}
+										{restoreTarget.member_count > 0 && restoreTarget.message_count > 0 && " và "}
+										{restoreTarget.message_count > 0 && <><strong>{restoreTarget.message_count}</strong> tin nhắn</>}
+										{" "}sẽ được khôi phục cùng.
+									</p>
+								)}
+								<p>Phòng sẽ hoạt động trở lại trong hệ thống chat.</p>
+							</div>
+							<DialogFooter>
+								<Button variant="outline" onClick={() => setRestoreTarget(null)} disabled={isRestoring}>Hủy</Button>
+								<Button onClick={handleRestore} disabled={isRestoring}>
+									{isRestoring ? "Đang khôi phục..." : "Khôi phục"}
+								</Button>
+							</DialogFooter>
+						</>
+					)}
+				</DialogContent>
+			</Dialog>
+
 			<AlertDialog open={!!deleteRoomTarget} onOpenChange={(open) => !open && setDeleteRoomTarget(null)}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Xác nhận xóa phòng chat</AlertDialogTitle>
 						<AlertDialogDescription>
-							Phòng "{deleteRoomTarget ? roomDisplayName(deleteRoomTarget) : ""}" sẽ bị xóa cùng toàn bộ thành viên và tin nhắn liên quan. Hành động không thể hoàn tác.
+							Phòng "{deleteRoomTarget ? roomDisplayName(deleteRoomTarget) : ""}" sẽ được chuyển vào thùng rác. Thành viên và tin nhắn vẫn được giữ nguyên và có thể khôi phục lại.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

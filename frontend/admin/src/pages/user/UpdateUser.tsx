@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -17,6 +18,7 @@ import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import facultyService from "@/services/faculty.service";
 import majorService from "@/services/major.service";
@@ -109,6 +111,9 @@ function UpdateUser() {
 	const avatarInputRef = useRef<HTMLInputElement | null>(null);
 	const avatarObjectUrlRef = useRef<string | null>(null);
 
+	const { hasPermission } = useAuth();
+	const canManageRoles = hasPermission("roles.manage");
+
 	const [form, setForm] = useState<CreateUserFormState>(getInitialFormState);
 	const [initialForm, setInitialForm] = useState<CreateUserFormState>(getInitialFormState);
 	const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -118,6 +123,7 @@ function UpdateUser() {
 	const [majors, setMajors] = useState<Major[]>([]);
 	const [schoolClasses, setSchoolClasses] = useState<SchoolClass[]>([]);
 	const [roles, setRoles] = useState<Role[]>([]);
+	const [displayRoles, setDisplayRoles] = useState<Array<{ name: string; label: string }>>([]);
 	const [loadingOptions, setLoadingOptions] = useState(true);
 	const [loadingUser, setLoadingUser] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
@@ -155,7 +161,9 @@ function UpdateUser() {
 							sort: "label",
 							order: "asc",
 						}),
-						roleService.getRoles(),
+						canManageRoles
+							? roleService.getRoles()
+							: Promise.resolve({ data: [] as Role[] }),
 					]);
 
 				setFaculties(facultyResponse.data);
@@ -164,7 +172,7 @@ function UpdateUser() {
 				setRoles(roleResponse.data);
 			} catch (error) {
 				console.error("Không thể tải danh sách khoa/ngành/lớp/vai trò:", error);
-				toast.error("Không thể tải danh sách khoa, ngành, lớp, vai trò.", {
+				toast.error("Không thể tải danh sách khoa, ngành, lớp.", {
 					position: "top-right",
 				});
 			} finally {
@@ -173,7 +181,7 @@ function UpdateUser() {
 		};
 
 		fetchSelectOptions();
-	}, []);
+	}, [canManageRoles]);
 
 	useEffect(() => {
 		if (!id) {
@@ -203,6 +211,16 @@ function UpdateUser() {
 					class_id: user.class_id ?? null,
 					roles: normalizeRoles(user.roles),
 				};
+
+				const rolesForDisplay = Array.isArray(user.roles)
+					? user.roles
+							.map((r) => {
+								if (typeof r === "string") return { name: r, label: r };
+								return { name: r.name ?? "", label: r.label ?? r.name ?? "" };
+							})
+							.filter((r) => r.name)
+					: [];
+				setDisplayRoles(rolesForDisplay);
 
 				const nextAvatarPreview = user.avatar || DEFAULT_AVATAR_SRC;
 
@@ -386,7 +404,8 @@ function UpdateUser() {
 		if (!form.full_name.trim()) clientValidationErrors.full_name = "Vui lòng nhập họ và tên.";
 		if (!form.username.trim()) clientValidationErrors.username = "Vui lòng nhập username.";
 		if (!form.email.trim()) clientValidationErrors.email = "Vui lòng nhập email.";
-		if (form.roles.length === 0) clientValidationErrors.roles = "Vui lòng chọn vai trò.";
+		if (canManageRoles && form.roles.length === 0)
+			clientValidationErrors.roles = "Vui lòng chọn vai trò.";
 
 		if (Object.keys(clientValidationErrors).length > 0) {
 			setFieldErrors(clientValidationErrors);
@@ -411,7 +430,10 @@ function UpdateUser() {
 			if (form.faculty_id !== null) payload.append("faculty_id", String(form.faculty_id));
 			if (form.major_id !== null) payload.append("major_id", String(form.major_id));
 			if (form.class_id !== null) payload.append("class_id", String(form.class_id));
-			form.roles.forEach((role) => {
+			const rolesToSubmit = canManageRoles
+				? form.roles
+				: displayRoles.map((r) => r.name);
+			rolesToSubmit.forEach((role) => {
 				payload.append("roles[]", role);
 			});
 
@@ -623,29 +645,51 @@ function UpdateUser() {
 
 										<div className='space-y-2'>
 											<Label>
-												Vai trò <span className='text-red-500'>*</span>
+												Vai trò{" "}
+												{canManageRoles ? (
+													<span className='text-red-500'>*</span>
+												) : null}
 											</Label>
-											<Combobox
-												value={form.roles}
-												onValueChange={(value) => {
-													setForm((prev) => ({
-														...prev,
-														roles: value,
-													}));
-													setFieldErrors((prev) => {
-														const next = { ...prev };
-														delete next.roles;
-														return next;
-													});
-												}}
-												options={roleOptions}
-												placeholder='Chọn vai trò'
-												searchPlaceholder='Tìm vai trò...'
-												disabled={
-													loadingOptions || roleOptions.length === 0
-												}
-												multiple={true}
-											/>
+											{canManageRoles ? (
+												<Combobox
+													value={form.roles}
+													onValueChange={(value) => {
+														setForm((prev) => ({
+															...prev,
+															roles: value,
+														}));
+														setFieldErrors((prev) => {
+															const next = { ...prev };
+															delete next.roles;
+															return next;
+														});
+													}}
+													options={roleOptions}
+													placeholder='Chọn vai trò'
+													searchPlaceholder='Tìm vai trò...'
+													disabled={
+														loadingOptions || roleOptions.length === 0
+													}
+													multiple={true}
+												/>
+											) : (
+												<div className='flex flex-wrap gap-1.5 min-h-[36px] items-center'>
+													{displayRoles.length > 0 ? (
+														displayRoles.map((role) => (
+															<Badge
+																key={role.name}
+																variant='secondary'
+																className='rounded-full text-xs'>
+																{role.label}
+															</Badge>
+														))
+													) : (
+														<span className='text-sm text-muted-foreground italic'>
+															Chưa có vai trò
+														</span>
+													)}
+												</div>
+											)}
 											{fieldErrors.roles ? (
 												<p className='text-sm text-destructive'>
 													{fieldErrors.roles}

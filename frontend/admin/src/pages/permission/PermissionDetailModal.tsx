@@ -2,6 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Loader2, Plus, X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -41,6 +42,8 @@ function PermissionDetailModal({
 	allRoles,
 	onUpdate,
 }: PermissionDetailModalProps) {
+	const { hasPermission } = useAuth();
+	const canManagePermissions = hasPermission("permissions.manage");
 	const [localRoles, setLocalRoles] = useState<RoleEntry[]>(() => permission?.roles ?? []);
 	const [removingId, setRemovingId] = useState<number | null>(null);
 	const [roleToRemove, setRoleToRemove] = useState<RoleEntry | null>(null);
@@ -138,25 +141,29 @@ function PermissionDetailModal({
 												variant='outline'
 												className={cn(
 													roleBadgeClass,
-													"pr-1.5 gap-1 items-center",
+													canManagePermissions
+														? "pr-1.5 gap-1 items-center"
+														: "",
 												)}>
 												{role.label}
-												<button
-													type='button'
-													onClick={() => setRoleToRemove(role)}
-													disabled={isBusy || isAdmin}
-													title={
-														isAdmin
-															? "Không thể xóa vai trò Quản trị viên"
-															: undefined
-													}
-													className='ml-0.5 rounded-full p-0.5 hover:bg-primary/10 hover:cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-colors'>
-													{removingId === role.id ? (
-														<Loader2 className='h-3 w-3 animate-spin' />
-													) : (
-														<X className='h-3 w-3' />
-													)}
-												</button>
+												{canManagePermissions ? (
+													<button
+														type='button'
+														onClick={() => setRoleToRemove(role)}
+														disabled={isBusy || isAdmin}
+														title={
+															isAdmin
+																? "Không thể xóa vai trò Quản trị viên"
+																: undefined
+														}
+														className='ml-0.5 rounded-full p-0.5 hover:bg-primary/10 hover:cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-colors'>
+														{removingId === role.id ? (
+															<Loader2 className='h-3 w-3 animate-spin' />
+														) : (
+															<X className='h-3 w-3' />
+														)}
+													</button>
+												) : null}
 											</Badge>
 										);
 									})
@@ -167,36 +174,38 @@ function PermissionDetailModal({
 								)}
 							</div>
 
-							{/* Thêm vai trò */}
-							<div className='flex gap-2'>
-								<Combobox
-									value={selectedToAdd}
-									onValueChange={setSelectedToAdd}
-									options={availableOptions}
-									placeholder='Thêm vai trò...'
-									searchPlaceholder='Tìm vai trò...'
-									triggerClassName='h-8 flex-1'
-									disabled={isBusy}
-									emptyText={
-										allRoles.length === 0
-											? "Đang tải danh sách vai trò..."
-											: "Tất cả vai trò đã được gán"
-									}
-								/>
-								<Button
-									type='button'
-									size='sm'
-									className='h-8 shrink-0'
-									onClick={handleAdd}
-									disabled={!selectedToAdd || isBusy}>
-									{adding ? (
-										<Loader2 className='h-4 w-4 animate-spin' />
-									) : (
-										<Plus className='h-4 w-4' />
-									)}
-									Thêm
-								</Button>
-							</div>
+							{/* Thêm vai trò — chỉ hiện với người có permissions.manage */}
+							{canManagePermissions ? (
+								<div className='flex gap-2'>
+									<Combobox
+										value={selectedToAdd}
+										onValueChange={setSelectedToAdd}
+										options={availableOptions}
+										placeholder='Thêm vai trò...'
+										searchPlaceholder='Tìm vai trò...'
+										triggerClassName='h-8 flex-1'
+										disabled={isBusy}
+										emptyText={
+											allRoles.length === 0
+												? "Đang tải danh sách vai trò..."
+												: "Tất cả vai trò đã được gán"
+										}
+									/>
+									<Button
+										type='button'
+										size='sm'
+										className='h-8 shrink-0'
+										onClick={handleAdd}
+										disabled={!selectedToAdd || isBusy}>
+										{adding ? (
+											<Loader2 className='h-4 w-4 animate-spin' />
+										) : (
+											<Plus className='h-4 w-4' />
+										)}
+										Thêm
+									</Button>
+								</div>
+							) : null}
 						</div>
 					</div>
 				</DialogContent>
