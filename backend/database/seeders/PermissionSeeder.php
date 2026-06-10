@@ -48,6 +48,8 @@ class PermissionSeeder extends Seeder
         'community.media.view'         => 'Xem và quản lý tài nguyên media cộng đồng',
         'community.skills.manage'      => 'Thêm, sửa, xóa, bật/tắt skills của thành viên',
         'community.reports.view'       => 'Xem và xử lý báo cáo vi phạm từ cộng đồng',
+        'mail_templates.view'          => 'Xem danh sách loại mail và template',
+        'mail_templates.manage'        => 'Thêm, sửa, xóa, đặt mặc định mail template; bật/tắt auto-send',
     ];
 
     /**
@@ -78,6 +80,7 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'mail_templates.view', 'mail_templates.manage',
         ],
 
         // Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
@@ -104,6 +107,7 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'mail_templates.view', 'mail_templates.manage',
         ],
 
         // Phó Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
@@ -130,6 +134,7 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'mail_templates.view', 'mail_templates.manage',
         ],
 
         // Trưởng ban Học thuật — chỉ dashboard (chưa có chức năng được giao)
@@ -164,6 +169,7 @@ class PermissionSeeder extends Seeder
             'application_questions.view', 'application_questions.manage',
             'academic_structure.import',
             'academic_data.view',
+            'mail_templates.view', 'mail_templates.manage',
         ],
     ];
 

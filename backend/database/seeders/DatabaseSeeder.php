@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
             MediaFileSeeder::class,
             ChatRoomSeeder::class,
             SkillSeeder::class,
+            MailTemplateSeeder::class,
         ]);
     }
 }

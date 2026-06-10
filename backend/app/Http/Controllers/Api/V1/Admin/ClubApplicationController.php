@@ -7,6 +7,7 @@ use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\ClubApplication\UpdateClubApplicationStatusRequest;
 use App\Models\ClubApplication;
+use App\Services\ApplicationEmailService;
 use App\Services\NotificationService;
 use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
@@ -105,6 +106,8 @@ class ClubApplicationController extends BaseApiController
                 $nextStatus,
                 $clubApplication->id,
             );
+
+            ApplicationEmailService::send($clubApplication->applicant, $nextStatus, $clubApplication->id);
         }
 
         return $this->successResponse(
