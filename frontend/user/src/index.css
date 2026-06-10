@@ -406,20 +406,16 @@
 }
 
 /* ============================================
-   Scrollbar styling
+   Scrollbar visibility
    ============================================ */
+html,
+body {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
 ::-webkit-scrollbar {
-	width: 8px;
-}
-
-::-webkit-scrollbar-track {
-	background: var(--color-surface);
-}
-
-::-webkit-scrollbar-thumb {
-	background: var(--color-primary);
-	border-radius: 4px;
-	border: 2px solid var(--color-surface);
+	display: none;
 }
 
 .no-scrollbar {
