@@ -15,7 +15,7 @@ class ClubApplicationController extends BaseApiController
 {
     private const STATUS_TRANSITIONS = [
         'pending' => ['processing'],
-        'processing' => ['interview'],
+        'processing' => ['interview', 'failed'],
         'interview' => ['passed', 'failed'],
         'passed' => [],
         'failed' => [],
@@ -82,10 +82,10 @@ class ClubApplicationController extends BaseApiController
 
         $admin = auth()->user();
         $statusLabels = [
-            'processing' => 'đang xử lý',
-            'interview' => 'phỏng vấn',
-            'passed' => 'đã duyệt',
-            'failed' => 'từ chối',
+            'processing' => 'Đang xử lý',
+            'interview' => 'Phỏng vấn',
+            'passed' => 'Đạt',
+            'failed' => 'Không đạt',
         ];
         $applicantName = $clubApplication->applicant?->full_name ?? 'ứng viên';
         NotificationService::dispatch(
