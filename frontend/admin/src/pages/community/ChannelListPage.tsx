@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -15,6 +16,16 @@ import {
 	Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -107,6 +118,8 @@ const emptyForm: ChannelFormState = { name: "", description: "", image: null, im
 function ChannelListPage() {
 	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý kênh" }]);
 
+	const [searchParams, setSearchParams] = useSearchParams();
+
 	const [channels, setChannels] = useState<ChannelRecord[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
@@ -117,7 +130,9 @@ function ChannelListPage() {
 		key: "created_at", order: "desc",
 	});
 
-	const [view, setView] = useState<"active" | "trash">("active");
+	const [view, setView] = useState<"active" | "trash">(
+		searchParams.get("view") === "trash" ? "trash" : "active"
+	);
 
 	// Form / dialog state
 	const [formOpen, setFormOpen] = useState(false);
@@ -128,8 +143,16 @@ function ChannelListPage() {
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [restoreTarget, setRestoreTarget] = useState<ChannelRecord | null>(null);
 	const [isRestoring, setIsRestoring] = useState(false);
+	const [forceDeleteTarget, setForceDeleteTarget] = useState<ChannelRecord | null>(null);
+	const [isForceDeleting, setIsForceDeleting] = useState(false);
 
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(channels.map((c) => c.id));
+
+	// Sync view state when URL changes (e.g. from notification link)
+	useEffect(() => {
+		const urlView = searchParams.get("view") === "trash" ? "trash" : "active";
+		setView(urlView);
+	}, [searchParams]);
 
 	useEffect(() => {
 		const timer = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -185,6 +208,12 @@ function ChannelListPage() {
 		sortConfig.order === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> :
 		sortConfig.order === "desc" ? <ArrowDown className="ml-2 h-4 w-4" /> :
 		<ArrowUpDown className="ml-2 h-4 w-4" />;
+
+	const toggleView = () => {
+		const next = view === "trash" ? "active" : "trash";
+		setSearchParams(next === "trash" ? { view: "trash" } : {}, { replace: true });
+		setSearch("");
+	};
 
 	// ── Form handlers ──
 
@@ -299,6 +328,22 @@ function ChannelListPage() {
 		}
 	};
 
+	const handleForceDelete = async () => {
+		if (!forceDeleteTarget) return;
+		setIsForceDeleting(true);
+		try {
+			await channelService.forceDeleteChannel(forceDeleteTarget.id);
+			setChannels((prev) => prev.filter((c) => c.id !== forceDeleteTarget.id));
+			setForceDeleteTarget(null);
+			setReloadToken((p) => p + 1);
+			toast.success("Đã xóa vĩnh viễn kênh.");
+		} catch {
+			toast.error("Không thể xóa vĩnh viễn kênh. Vui lòng thử lại.");
+		} finally {
+			setIsForceDeleting(false);
+		}
+	};
+
 	const totalPosts = channels.reduce((s, c) => s + c.posts_count, 0);
 
 	return (
@@ -342,7 +387,7 @@ function ChannelListPage() {
 							<Button
 								size="sm"
 								variant={view === "trash" ? "secondary" : "outline"}
-								onClick={() => { setView((v) => v === "trash" ? "active" : "trash"); setSearch(""); }}
+								onClick={toggleView}
 								className="h-8 shrink-0"
 							>
 								<Trash2 className="h-4 w-4" />
@@ -467,10 +512,19 @@ function ChannelListPage() {
 																</DropdownMenuItem>
 															</>
 														) : (
-															<DropdownMenuItem onClick={() => setRestoreTarget(channel)}>
-																<RotateCcw className="h-4 w-4" />
-																Khôi phục
-															</DropdownMenuItem>
+															<>
+																<DropdownMenuItem onClick={() => setRestoreTarget(channel)}>
+																	<RotateCcw className="h-4 w-4" />
+																	Khôi phục
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+																	onClick={() => setForceDeleteTarget(channel)}>
+																	<Trash2 className="h-4 w-4 text-destructive" />
+																	Xóa vĩnh viễn
+																</DropdownMenuItem>
+															</>
 														)}
 													</DropdownMenuContent>
 												</DropdownMenu>
@@ -658,6 +712,36 @@ function ChannelListPage() {
 					)}
 				</DialogContent>
 			</Dialog>
+
+			{/* Force delete confirm */}
+			<AlertDialog open={Boolean(forceDeleteTarget)} onOpenChange={(o) => !o && setForceDeleteTarget(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa vĩnh viễn kênh?</AlertDialogTitle>
+						<AlertDialogDescription asChild>
+							<div className="space-y-2">
+								<p>
+									Kênh <span className="font-semibold text-foreground">"{forceDeleteTarget?.name}"</span> sẽ bị xóa hoàn toàn
+									khỏi hệ thống, bao gồm cả ảnh đại diện.
+								</p>
+								<p className="font-medium text-destructive">
+									Hành động này không thể hoàn tác.
+								</p>
+							</div>
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isForceDeleting}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={handleForceDelete}
+							disabled={isForceDeleting}
+						>
+							{isForceDeleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

@@ -514,6 +514,45 @@ class PostController extends BaseApiController
     }
 
     /**
+     * List users who reacted to a post (public).
+     * Returns each reactor with their follow status for the authenticated viewer.
+     */
+    public function reactors(Request $request, int $id): JsonResponse
+    {
+        $viewer = $request->user('sanctum');
+
+        Post::query()
+            ->where('status', 'published')
+            ->visibleTo($viewer)
+            ->findOrFail($id);
+
+        $reactorUsers = Reaction::where('target_type', 'post')
+            ->where('target_id', $id)
+            ->with('user:id,full_name,username,email,avatar')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($r) => $r->user)
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $followingIds = $viewer
+            ? DB::table('user_follows')->where('follower_id', $viewer->id)->pluck('following_id')->all()
+            : [];
+
+        $data = $reactorUsers->map(fn ($user) => [
+            'id'           => $user->id,
+            'full_name'    => $user->full_name,
+            'username'     => $user->username,
+            'email'        => $user->email,
+            'avatar'       => $user->avatar,
+            'is_following' => in_array($user->id, $followingIds),
+        ]);
+
+        return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+    }
+
+    /**
      * Toggle a reaction on a post (auth required).
      * Same type → remove. Different type → switch. No reaction → add.
      */

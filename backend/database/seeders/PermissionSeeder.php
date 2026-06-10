@@ -33,23 +33,26 @@ class PermissionSeeder extends Seeder
         'application_questions.manage' => 'Thêm, sửa, xóa, sắp xếp câu hỏi xét tuyển',
         'academic_structure.import' => 'Import cơ cấu học thuật',
         'academic_data.view' => 'Xem dữ liệu khoa, ngành, lớp',
-        'community.view'               => 'Truy cập khu vực quản lý cộng đồng',
-        'community.channels.manage'    => 'Thêm, sửa, xóa kênh thảo luận',
-        'community.posts.view'         => 'Xem danh sách bài đăng cộng đồng',
-        'community.posts.manage'       => 'Ẩn, ghim, xóa bài đăng cộng đồng',
-        'community.blogs.view'         => 'Xem danh sách blog',
-        'community.blogs.manage'       => 'Tạo, sửa, xuất bản, xóa blog',
-        'community.comments.view'      => 'Xem danh sách bình luận',
-        'community.comments.manage'    => 'Ẩn, xóa bình luận vi phạm',
-        'community.tags.manage'        => 'Thêm, sửa, xóa tags',
+        'community.view' => 'Truy cập khu vực quản lý cộng đồng',
+        'community.channels.manage' => 'Thêm, sửa, xóa kênh thảo luận',
+        'community.posts.view' => 'Xem danh sách bài đăng cộng đồng',
+        'community.posts.manage' => 'Ẩn, ghim, xóa bài đăng cộng đồng',
+        'community.blogs.view' => 'Xem danh sách blog',
+        'community.blogs.manage' => 'Tạo, sửa, xuất bản, xóa blog',
+        'community.comments.view' => 'Xem danh sách bình luận',
+        'community.comments.manage' => 'Ẩn, xóa bình luận vi phạm',
+        'community.tags.manage' => 'Thêm, sửa, xóa tags',
         'community.notifications.send' => 'Gửi thông báo hàng loạt đến người dùng',
-        'community.chat.view'          => 'Xem danh sách phòng chat và nhật ký sự kiện',
-        'community.chat.manage'        => 'Xóa sự kiện hệ thống trong phòng chat',
-        'community.media.view'         => 'Xem và quản lý tài nguyên media cộng đồng',
-        'community.skills.manage'      => 'Thêm, sửa, xóa, bật/tắt skills của thành viên',
-        'community.reports.view'       => 'Xem và xử lý báo cáo vi phạm từ cộng đồng',
-        'mail_templates.view'          => 'Xem danh sách loại mail và template',
-        'mail_templates.manage'        => 'Thêm, sửa, xóa, đặt mặc định mail template; bật/tắt auto-send',
+        'community.chat.view' => 'Xem danh sách phòng chat và nhật ký sự kiện',
+        'community.chat.manage' => 'Xóa sự kiện hệ thống trong phòng chat',
+        'community.media.view' => 'Xem và quản lý tài nguyên media cộng đồng',
+        'community.skills.manage' => 'Thêm, sửa, xóa, bật/tắt skills của thành viên',
+        'community.reports.view' => 'Xem và xử lý báo cáo vi phạm từ cộng đồng',
+        'mail_templates.view' => 'Xem danh sách loại mail và template',
+        'mail_templates.manage' => 'Thêm, sửa, xóa, đặt mặc định mail template; bật/tắt auto-send',
+        'events.view' => 'Xem danh sách và chi tiết sự kiện',
+        'events.manage' => 'Tạo, sửa, xóa, đổi trạng thái sự kiện',
+        'events.check_in' => 'Thực hiện điểm danh sự kiện',
     ];
 
     /**
@@ -81,6 +84,7 @@ class PermissionSeeder extends Seeder
             'community.skills.manage',
             'community.reports.view',
             'mail_templates.view', 'mail_templates.manage',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
         // Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
@@ -108,6 +112,7 @@ class PermissionSeeder extends Seeder
             'community.skills.manage',
             'community.reports.view',
             'mail_templates.view', 'mail_templates.manage',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
         // Phó Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
@@ -135,6 +140,7 @@ class PermissionSeeder extends Seeder
             'community.skills.manage',
             'community.reports.view',
             'mail_templates.view', 'mail_templates.manage',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
         // Trưởng ban Học thuật — chỉ dashboard (chưa có chức năng được giao)
@@ -158,6 +164,7 @@ class PermissionSeeder extends Seeder
             'community.media.view',
             'community.skills.manage',
             'community.reports.view',
+            'events.view', 'events.manage', 'events.check_in',
         ],
 
         // Trưởng ban Tình nguyện — quản lý đơn vị học thuật, ứng tuyển và liên hệ
@@ -170,6 +177,7 @@ class PermissionSeeder extends Seeder
             'academic_structure.import',
             'academic_data.view',
             'mail_templates.view', 'mail_templates.manage',
+            'events.view', 'events.check_in',
         ],
     ];
 

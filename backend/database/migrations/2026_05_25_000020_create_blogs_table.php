@@ -16,7 +16,7 @@ return new class extends Migration
             $table->longText('content');
             $table->text('excerpt')->nullable();
             $table->text('cover_image')->nullable();
-            $table->enum('status', ['draft', 'pending_review', 'published', 'archived'])->default('draft');
+            $table->enum('status', ['draft', 'pending_review', 'published', 'archived', 'hidden'])->default('draft');
             $table->enum('visibility', ['public', 'members', 'private'])->default('public');
             $table->timestamp('published_at')->nullable();
             $table->unsignedBigInteger('view_count')->default(0);
