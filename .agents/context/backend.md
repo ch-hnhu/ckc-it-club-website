@@ -60,7 +60,7 @@
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/admin/login`
 - `POST /api/v1/contacts`
-- Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /blogs`, `GET /blog-tags`, `GET /blogs/{slug}`, and `GET /blogs/{id}/comments`. Post detail and post comments return published posts for everyone, plus archived posts only to their authenticated owner.
+- Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /posts/{id}/reactions/users`, `GET /blogs`, `GET /blog-tags`, `GET /blogs/{slug}`, `GET /blogs/{id}/comments`, and `GET /blogs/{id}/reactions/users`. Post detail and post comments return published posts for everyone, plus archived posts only to their authenticated owner.
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`

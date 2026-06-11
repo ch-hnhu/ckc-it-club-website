@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\BlogReportController;
+use App\Http\Controllers\Api\V1\Admin\MailTemplateController;
 use App\Http\Controllers\Api\V1\Admin\ReportController;
 use App\Http\Controllers\Api\V1\Admin\UnifiedReportController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
@@ -95,6 +96,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/blogs', [UserBlogController::class, 'index']);
         Route::get('/blog-tags', [UserBlogController::class, 'tags']);
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
+        Route::get('/blogs/{id}/reactions/users', [UserBlogController::class, 'reactors']);
 
         // Public event routes (avoid collision with admin /v1/events resource routes)
         Route::get('/events', [UserEventController::class, 'index']);
@@ -480,6 +482,20 @@ Route::prefix('v1')->group(function () {
             Route::patch('unified-reports/{type}/{id}/status', [UnifiedReportController::class, 'updateStatus']);
             Route::post('unified-reports/{type}/{id}/hide', [UnifiedReportController::class, 'hideContent']);
             Route::post('unified-reports/{type}/{id}/dismiss', [UnifiedReportController::class, 'dismiss']);
+        });
+
+        // mail templates
+        Route::middleware('permission:mail_templates.view')->group(function () {
+            Route::get('mail-template-types', [MailTemplateController::class, 'index']);
+            Route::get('mail-template-types/{typeId}', [MailTemplateController::class, 'show']);
+            Route::get('mail-settings/email-notification', [MailTemplateController::class, 'getEmailNotificationSetting']);
+        });
+        Route::middleware('permission:mail_templates.manage')->group(function () {
+            Route::post('mail-template-types/{typeId}/templates', [MailTemplateController::class, 'storeTemplate']);
+            Route::put('mail-template-types/{typeId}/templates/{templateId}', [MailTemplateController::class, 'updateTemplate']);
+            Route::patch('mail-template-types/{typeId}/templates/{templateId}/default', [MailTemplateController::class, 'setDefaultTemplate']);
+            Route::delete('mail-template-types/{typeId}/templates/{templateId}', [MailTemplateController::class, 'destroyTemplate']);
+            Route::patch('mail-settings/email-notification', [MailTemplateController::class, 'toggleEmailNotification']);
         });
     });
 });

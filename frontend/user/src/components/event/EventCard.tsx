@@ -50,7 +50,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, featured = false }) => {
 						className={`${aspect} w-full object-cover transition-transform duration-500 group-hover:scale-105`}
 					/>
 				) : (
-					<div className={`flex ${aspect} w-full items-center justify-center bg-[var(--color-pastel-purple)]`}>
+					<div className={`flex ${aspect} w-full items-center justify-center bg-[var(--color-pastel-green)]`}>
 						<span className='font-heading text-6xl font-extrabold text-[var(--color-text-primary)] opacity-20'>
 							{event.title.charAt(0).toUpperCase()}
 						</span>

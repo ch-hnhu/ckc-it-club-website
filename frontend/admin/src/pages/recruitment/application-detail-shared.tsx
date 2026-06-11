@@ -11,7 +11,7 @@ export const statusMap: Record<ApplicationStatus, { label: string; className: st
 
 export const statusTransitions: Record<ApplicationStatus, ApplicationStatus[]> = {
 	pending: ["processing"],
-	processing: ["interview"],
+	processing: ["interview", "failed"],
 	interview: ["passed", "failed"],
 	passed: [],
 	failed: [],

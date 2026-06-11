@@ -59,7 +59,7 @@ const FeaturedEvent: React.FC<{ event: EventItem }> = ({ event }) => (
 					/>
 				) : (
 					<div
-						className='flex aspect-[4/3] w-full items-center justify-center bg-[var(--color-pastel-purple)] md:aspect-auto md:h-full'
+						className='flex aspect-[4/3] w-full items-center justify-center bg-[var(--color-pastel-green)] md:aspect-auto md:h-full'
 						style={{ minHeight: "340px" }}>
 						<span className='font-heading text-8xl font-extrabold text-[var(--color-text-primary)] opacity-20'>
 							{event.title.charAt(0).toUpperCase()}
@@ -124,6 +124,8 @@ const STATUS_FILTERS: { value: EventStatus | "all"; label: string }[] = [
 	{ value: "ongoing", label: "Đang diễn ra" },
 	{ value: "ended", label: "Đã kết thúc" },
 ];
+
+const HERO_BACKGROUND_IMAGE = "/assets/gif/custom-phaser.gif";
 
 const EventsFeedPage: React.FC = () => {
 	const [events, setEvents] = useState<EventItem[]>([]);
@@ -212,11 +214,19 @@ const EventsFeedPage: React.FC = () => {
 	return (
 		<div className='w-full min-h-screen pb-12 pt-16'>
 			{/* ── Hero banner ── */}
-			<div className='relative flex min-h-[200px] flex-col items-center justify-center overflow-hidden border-b-2 border-black bg-[var(--color-pastel-blue)] px-6 py-14 md:min-h-[240px] md:py-16'>
-				<h1 className='font-heading text-3xl font-extrabold uppercase text-black md:text-5xl'>
+			<div
+				className='relative flex min-h-[260px] flex-col items-center justify-center overflow-hidden border-b-2 border-black px-6 py-14 md:min-h-[300px] md:py-20'
+				style={{
+					backgroundImage: `url('${HERO_BACKGROUND_IMAGE}')`,
+					backgroundSize: "cover",
+					backgroundPosition: "center",
+					backgroundRepeat: "no-repeat",
+				}}>
+				<div className='absolute inset-0 bg-black/35' />
+				<h1 className='relative font-heading text-3xl font-extrabold uppercase text-white drop-shadow-[3px_3px_0_#111] md:text-5xl'>
 					✦ Sự kiện CKC IT Club
 				</h1>
-				<p className='mt-3 max-w-2xl text-center text-sm text-gray-700 md:text-base'>
+				<p className='relative mt-3 max-w-2xl text-center text-sm font-medium text-white/90 drop-shadow-[2px_2px_0_#111] md:text-base'>
 					Khám phá và đăng ký tham gia các sự kiện, workshop, hoạt động sắp tới của câu lạc bộ.
 				</p>
 			</div>

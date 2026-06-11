@@ -94,6 +94,8 @@ class EventController extends BaseApiController
 
     public function cancelRegistration(Request $request, Event $event): JsonResponse
     {
+        abort_if($event->status->value !== 'published', 422, 'Không thể hủy đăng ký khi sự kiện đã bắt đầu.');
+
         $user = $request->user();
         $reg = $event->registrations()->where('user_id', $user->id)->where('status', 'registered')->firstOrFail();
 

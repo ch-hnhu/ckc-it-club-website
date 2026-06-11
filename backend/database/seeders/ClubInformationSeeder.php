@@ -73,6 +73,13 @@ class ClubInformationSeeder extends Seeder
                 'type' => 'boolean',
                 'description' => 'Bật hoặc tắt form đăng ký tham gia câu lạc bộ.',
             ],
+            [
+                'value' => 'auto_send_mail_recruitment',
+                'label' => 'Tự động gửi mail khi cập nhật đơn tuyển',
+                'slug' => 'auto-send-mail-recruitment',
+                'type' => 'boolean',
+                'description' => 'Bật hoặc tắt tính năng tự động gửi email cho ứng viên khi trạng thái đơn ứng tuyển được cập nhật.',
+            ],
         ];
 
         foreach ($clubInformations as $clubInformation) {

@@ -197,7 +197,7 @@ const EventDetailPage: React.FC = () => {
 									className='aspect-[16/9] w-full object-cover md:aspect-[21/9]'
 								/>
 							) : (
-								<div className='flex aspect-[16/9] w-full items-center justify-center bg-[var(--color-pastel-purple)] md:aspect-[21/9]'>
+								<div className='flex aspect-[16/9] w-full items-center justify-center bg-[var(--color-pastel-blue)] md:aspect-[21/9]'>
 									<span className='font-heading text-7xl font-extrabold text-[var(--color-text-primary)] opacity-20'>
 										{event.title.charAt(0).toUpperCase()}
 									</span>
@@ -267,7 +267,9 @@ const EventDetailPage: React.FC = () => {
 						</div>
 
 						{/* Actions */}
-						{event.is_registration_required && event.status === "published" && (
+						{event.is_registration_required &&
+							(event.status === "published" ||
+								(event.status === "ongoing" && event.my_registration_status === "registered")) && (
 							<div className='mt-6 flex flex-wrap items-center gap-3'>
 								{event.my_registration_status === "registered" ? (
 									<>
@@ -277,13 +279,15 @@ const EventDetailPage: React.FC = () => {
 											<Ticket className='h-4 w-4' />
 											Xem vé QR
 										</button>
-										<button
-											onClick={handleCancelRegistration}
-											disabled={actionLoading}
-											className='inline-flex h-11 items-center gap-2 rounded-xl border-2 border-black bg-white px-6 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-50'>
-											{actionLoading && <Loader2 className='h-4 w-4 animate-spin' />}
-											Hủy đăng ký
-										</button>
+										{event.status === "published" && (
+											<button
+												onClick={handleCancelRegistration}
+												disabled={actionLoading}
+												className='inline-flex h-11 items-center gap-2 rounded-xl border-2 border-black bg-white px-6 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-50'>
+												{actionLoading && <Loader2 className='h-4 w-4 animate-spin' />}
+												Hủy đăng ký
+											</button>
+										)}
 									</>
 								) : (
 									<button

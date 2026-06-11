@@ -45,27 +45,29 @@ const LikedByModal: React.FC<LikedByModalProps> = ({ reactors, loading, currentU
 
 	return (
 		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+			className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'
 			onClick={onClose}>
 			<div
-				className="relative flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border-2 border-black shadow-[4px_4px_0_#000]"
+				className='relative flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border-2 border-black shadow-[4px_4px_0_#000]'
 				onClick={(e) => e.stopPropagation()}>
 				{/* Header — theme green */}
-				<div className="flex items-center justify-between border-b-2 border-black bg-[var(--color-primary)] px-5 py-4">
-					<h2 className="text-base font-bold text-black">Liked by</h2>
+				<div className='flex items-center justify-between border-b-2 border-black bg-[var(--color-primary)] px-5 py-4'>
+					<h2 className='text-base font-bold text-black'>Liked by</h2>
 					<button
 						onClick={onClose}
-						className="rounded-lg p-1 text-black/60 transition hover:text-black">
-						<X className="h-5 w-5" />
+						className='rounded-lg p-1 text-black/60 transition hover:text-black'>
+						<X className='h-5 w-5' />
 					</button>
 				</div>
 
 				{/* User list — white background */}
-				<div className="max-h-[420px] overflow-y-auto bg-white p-3">
+				<div className='max-h-[420px] overflow-y-auto bg-white p-3'>
 					{loading ? (
-						<div className="py-10 text-center text-sm text-gray-400">Đang tải...</div>
+						<div className='py-10 text-center text-sm text-gray-400'>Đang tải...</div>
 					) : reactors.length === 0 ? (
-						<div className="py-10 text-center text-sm text-gray-400">Chưa có ai thích bài viết này.</div>
+						<div className='py-10 text-center text-sm text-gray-400'>
+							Chưa có ai thích bài viết này.
+						</div>
 					) : (
 						reactors.map((reactor) => {
 							const avatar = buildAvatar(reactor.full_name, reactor.avatar);
@@ -77,39 +79,39 @@ const LikedByModal: React.FC<LikedByModalProps> = ({ reactors, loading, currentU
 							return (
 								<div
 									key={reactor.id}
-									className="flex items-center gap-3 rounded-xl border-2 border-black bg-white px-3 py-2.5 shadow-[2px_2px_0_#111] mb-2 last:mb-0 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition">
-									<Link to={profileUrl} onClick={onClose} className="shrink-0">
+									className='flex items-center gap-3 rounded-xl border-2 border-black bg-white px-3 py-2.5 mb-2 last:mb-0'>
+									<Link to={profileUrl} onClick={onClose} className='shrink-0'>
 										<img
 											src={avatar}
 											alt={reactor.full_name}
-											className="h-10 w-10 rounded-full border-2 border-black object-cover"
+											className='h-10 w-10 rounded-full border-2 border-black object-cover'
 										/>
 									</Link>
-									<div className="min-w-0 flex-1">
+									<div className='min-w-0 flex-1'>
 										<Link
 											to={profileUrl}
 											onClick={onClose}
-											className="block truncate text-sm font-bold text-black hover:underline">
+											className='block truncate text-sm font-bold text-black hover:underline'>
 											{reactor.full_name}
 										</Link>
-										<span className="text-xs text-gray-500">{handle}</span>
+										<span className='text-xs text-gray-500'>{handle}</span>
 									</div>
 									{!isMe && currentUser && (
 										<button
 											onClick={() => handleFollow(reactor)}
 											className={`flex shrink-0 items-center gap-1.5 rounded-lg border-2 border-black px-3 py-1.5 text-xs font-bold shadow-[2px_2px_0_#000] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${
 												isFollowing
-													? "bg-gray-100 text-black"
+													? "bg-gray-100 text-black shadow-none translate-x-[1px] translate-y-[1px]"
 													: "bg-[var(--color-primary)] text-black"
 											}`}>
 											{isFollowing ? (
 												<>
-													<UserCheck className="h-3.5 w-3.5" />
+													<UserCheck className='h-3.5 w-3.5' />
 													Đang theo dõi
 												</>
 											) : (
 												<>
-													<UserPlus className="h-3.5 w-3.5" />
+													<UserPlus className='h-3.5 w-3.5' />
 													Follow
 												</>
 											)}
