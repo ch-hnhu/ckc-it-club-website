@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PermissionsEnum;
 use App\Enums\RolesEnum;
 use App\Models\AcademicStructureImport;
 use App\Models\Faculty;
@@ -11,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -117,6 +119,10 @@ class AcademicStructureImportTest extends TestCase
     private function createAdminUser(): User
     {
         $adminRole = Role::findOrCreate(RolesEnum::ADMIN->value, 'web');
+        $adminRole->givePermissionTo(
+            Permission::findOrCreate(PermissionsEnum::ADMIN_PANEL_ACCESS->value, 'web'),
+            Permission::findOrCreate(PermissionsEnum::ACADEMIC_STRUCTURE_IMPORT->value, 'web'),
+        );
         $user = User::factory()->create([
             'email' => 'admin@example.com',
             'full_name' => 'Admin User',
