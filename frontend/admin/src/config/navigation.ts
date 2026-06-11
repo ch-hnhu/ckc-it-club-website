@@ -1,5 +1,6 @@
 import {
 	Building,
+	CalendarDays,
 	Globe,
 	House,
 	MailOpen,
@@ -201,6 +202,19 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
+		title: "Quản lý sự kiện",
+		url: "/events",
+		icon: CalendarDays,
+		permission: "events.view",
+		items: [
+			{
+				title: "Sự kiện",
+				url: "/events",
+				permission: "events.view",
+			},
+		],
+	},
+	{
 		title: "Quản lý liên hệ",
 		url: "/contacts",
 		icon: MailOpen,
@@ -259,6 +273,9 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/community\/skills$/, permission: "community.skills.manage" },
 	{ pattern: /^\/community\/reports$/, permission: "community.reports.view" },
 	{ pattern: /^\/community\/blog-reports$/, permission: "community.reports.view" },
+	{ pattern: /^\/events$/, permission: "events.view" },
+	{ pattern: /^\/events\/create$/, permission: "events.manage" },
+	{ pattern: /^\/events\/[^/]+\/edit$/, permission: "events.manage" },
 ];
 
 export function getRequiredPermissionForPath(pathname: string): string | null {

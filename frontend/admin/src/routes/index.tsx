@@ -44,6 +44,9 @@ import ReportListPage from "@/pages/community/ReportListPage";
 import BlogReportListPage from "@/pages/community/BlogReportListPage";
 import MailTemplateListPage from "@/pages/mail-template/MailTemplateListPage";
 import MailTemplateDetailPage from "@/pages/mail-template/MailTemplateDetailPage";
+import EventListPage from "@/pages/event/EventListPage";
+import EventCreatePage from "@/pages/event/EventCreatePage";
+import EventEditPage from "@/pages/event/EventEditPage";
 
 const router = createBrowserRouter([
 	{
@@ -278,6 +281,30 @@ const router = createBrowserRouter([
 			{
 				path: "notifications",
 				element: <NotificationsPage />,
+			},
+			{
+				path: "events",
+				element: (
+					<PermissionRoute permission='events.view'>
+						<EventListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "events/create",
+				element: (
+					<PermissionRoute permission='events.manage'>
+						<EventCreatePage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "events/:id/edit",
+				element: (
+					<PermissionRoute permission='events.manage'>
+						<EventEditPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "community/channels",

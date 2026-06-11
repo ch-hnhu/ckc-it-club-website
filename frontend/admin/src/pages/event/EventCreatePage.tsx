@@ -1,0 +1,555 @@
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import axios from "axios";
+import {
+	ArrowLeft,
+	CalendarDays,
+	ImageIcon,
+	Loader2,
+	Send,
+	UploadCloud,
+	X,
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import StacksEditorWrapper, {
+	type StacksEditorHandle,
+} from "@/components/ui/StacksEditorWrapper";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import departmentService from "@/services/department.service";
+import eventService from "@/services/event.service";
+import type { ApiErrorResponse } from "@/types/api.types";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface DepartmentOption {
+	id: number;
+	name: string;
+}
+
+type CreateStatus = "draft" | "published";
+
+type FormState = {
+	title: string;
+	description: string;
+	location: string;
+	start_at: string;
+	end_at: string;
+	max_attendees: string;
+	is_registration_required: boolean;
+	status: CreateStatus;
+	department_id: string;
+};
+
+type FieldErrors = Partial<
+	Record<keyof FormState | "content" | "thumbnail", string>
+>;
+
+const getInitialForm = (): FormState => ({
+	title: "",
+	description: "",
+	location: "",
+	start_at: "",
+	end_at: "",
+	max_attendees: "",
+	is_registration_required: true,
+	status: "draft",
+	department_id: "none",
+});
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+function EventCreatePage() {
+	useBreadcrumb([
+		{ title: "Dashboard", link: "/" },
+		{ title: "Quản lý sự kiện", link: "/events" },
+		{ title: "Thêm sự kiện" },
+	]);
+
+	const navigate = useNavigate();
+
+	const [form, setForm] = useState<FormState>(getInitialForm);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+	const [submitting, setSubmitting] = useState(false);
+
+	// Editor
+	const editorRef = useRef<StacksEditorHandle>(null);
+
+	// Departments
+	const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+	const [departmentsLoading, setDepartmentsLoading] = useState(true);
+
+	// Thumbnail
+	const [imageFile, setImageFile] = useState<File | null>(null);
+	const [imagePreview, setImagePreview] = useState<string | null>(null);
+	const imageInputRef = useRef<HTMLInputElement>(null);
+
+	// ── Load departments ──
+	useEffect(() => {
+		departmentService
+			.getDepartments({ per_page: 100 })
+			.then((res) => setDepartments(res.data.map((d) => ({ id: d.id, name: d.name }))))
+			.catch(() => toast.error("Không thể tải danh sách ban."))
+			.finally(() => setDepartmentsLoading(false));
+	}, []);
+
+	// ── Image preview ──
+	useEffect(() => {
+		if (!imageFile) { setImagePreview(null); return; }
+		const url = URL.createObjectURL(imageFile);
+		setImagePreview(url);
+		return () => URL.revokeObjectURL(url);
+	}, [imageFile]);
+
+	// ── Helpers ──
+	const setField = <K extends keyof FormState>(key: K, val: FormState[K]) => {
+		setForm((prev) => ({ ...prev, [key]: val }));
+		setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+	};
+
+	const openImageDialog = () => {
+		if (!imageInputRef.current) return;
+		imageInputRef.current.value = "";
+		imageInputRef.current.click();
+	};
+
+	const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		setImageFile(e.target.files?.[0] ?? null);
+	};
+
+	const removeImage = (event: React.MouseEvent) => {
+		event.stopPropagation();
+		setImageFile(null);
+	};
+
+	// ── Validation ──
+	const validate = (): boolean => {
+		const errors: FieldErrors = {};
+		if (!form.title.trim()) errors.title = "Vui lòng nhập tên sự kiện.";
+		if (!form.start_at) errors.start_at = "Vui lòng chọn thời gian bắt đầu.";
+		if (!form.end_at) errors.end_at = "Vui lòng chọn thời gian kết thúc.";
+		if (form.start_at && form.end_at && new Date(form.end_at) <= new Date(form.start_at)) {
+			errors.end_at = "Thời gian kết thúc phải sau thời gian bắt đầu.";
+		}
+		if (form.max_attendees && Number(form.max_attendees) < 1) {
+			errors.max_attendees = "Số lượng tối đa phải lớn hơn 0.";
+		}
+		setFieldErrors(errors);
+		return Object.keys(errors).length === 0;
+	};
+
+	// ── Submit ──
+	const handleSubmit = async (e: FormEvent) => {
+		e.preventDefault();
+		if (!validate()) return;
+
+		const content = editorRef.current?.getContent()?.trim() ?? "";
+
+		setSubmitting(true);
+		try {
+			const formData = new FormData();
+			formData.append("title", form.title.trim());
+			// datetime-local không kèm timezone — gửi ISO (UTC) vì backend lưu giờ UTC
+			formData.append("start_at", new Date(form.start_at).toISOString());
+			formData.append("end_at", new Date(form.end_at).toISOString());
+			formData.append("status", form.status);
+			formData.append("is_registration_required", form.is_registration_required ? "1" : "0");
+			if (form.description.trim()) formData.append("description", form.description.trim());
+			if (content) formData.append("content", content);
+			if (form.location.trim()) formData.append("location", form.location.trim());
+			if (form.is_registration_required && form.max_attendees) {
+				formData.append("max_attendees", form.max_attendees);
+			}
+			if (form.department_id !== "none") formData.append("department_id", form.department_id);
+			if (imageFile) formData.append("thumbnail", imageFile);
+
+			await eventService.createEvent(formData);
+			toast.success("Tạo sự kiện thành công.", { position: "top-right" });
+			navigate("/events");
+		} catch (err) {
+			if (axios.isAxiosError(err)) {
+				const data = err.response?.data as ApiErrorResponse | undefined;
+				if (data?.errors) {
+					const mapped: FieldErrors = {};
+					for (const [key, msgs] of Object.entries(data.errors)) {
+						mapped[key as keyof FieldErrors] = Array.isArray(msgs) ? msgs[0] : String(msgs);
+					}
+					setFieldErrors(mapped);
+					return;
+				}
+				toast.error(data?.message ?? "Có lỗi xảy ra.", { position: "top-right" });
+			} else {
+				toast.error("Có lỗi xảy ra.", { position: "top-right" });
+			}
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	return (
+		<div className="flex flex-col gap-6 p-4 md:p-6 lg:p-8">
+			{/* Back */}
+			<Button asChild variant="outline" className="w-fit">
+				<Link to="/events">
+					<ArrowLeft className="h-4 w-4" />
+					Quay lại
+				</Link>
+			</Button>
+
+			<form onSubmit={(e) => void handleSubmit(e)}>
+				<div className="grid gap-6 lg:grid-cols-3">
+
+					{/* ── Main ── */}
+					<div className="flex flex-col gap-6 lg:col-span-2">
+
+						{/* Thông tin cơ bản */}
+						<Card className="shadow-sm">
+							<CardHeader>
+								<CardTitle>Thông tin sự kiện</CardTitle>
+								<CardDescription>
+									Tên, mô tả ngắn và địa điểm tổ chức sự kiện.
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="flex flex-col gap-5">
+
+								{/* Title */}
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="event-title">
+										Tên sự kiện <span className="text-destructive">*</span>
+									</Label>
+									<Input
+										id="event-title"
+										placeholder="Nhập tên sự kiện..."
+										value={form.title}
+										onChange={(e) => setField("title", e.target.value)}
+										disabled={submitting}
+									/>
+									{fieldErrors.title && (
+										<p className="text-sm text-destructive">{fieldErrors.title}</p>
+									)}
+								</div>
+
+								{/* Description */}
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="event-description">Mô tả ngắn</Label>
+									<Textarea
+										id="event-description"
+										placeholder="Mô tả ngắn về sự kiện (hiển thị ở trang danh sách sự kiện)..."
+										value={form.description}
+										onChange={(e) => setField("description", e.target.value)}
+										disabled={submitting}
+										rows={3}
+										className="resize-none"
+									/>
+									{fieldErrors.description && (
+										<p className="text-sm text-destructive">{fieldErrors.description}</p>
+									)}
+								</div>
+
+								{/* Location */}
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="event-location">Địa điểm</Label>
+									<Input
+										id="event-location"
+										placeholder="VD: Phòng A305, Trường Cao đẳng Kỹ thuật Cao Thắng..."
+										value={form.location}
+										onChange={(e) => setField("location", e.target.value)}
+										disabled={submitting}
+									/>
+									{fieldErrors.location && (
+										<p className="text-sm text-destructive">{fieldErrors.location}</p>
+									)}
+								</div>
+							</CardContent>
+						</Card>
+
+						{/* Thời gian & đăng ký */}
+						<Card className="shadow-sm">
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2">
+									<CalendarDays className="h-5 w-5 text-muted-foreground" />
+									Thời gian & đăng ký
+								</CardTitle>
+								<CardDescription>
+									Thời gian diễn ra và cấu hình đăng ký tham gia sự kiện.
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="flex flex-col gap-5">
+
+								<div className="grid gap-5 sm:grid-cols-2">
+									{/* Start */}
+									<div className="flex flex-col gap-2">
+										<Label htmlFor="event-start">
+											Bắt đầu <span className="text-destructive">*</span>
+										</Label>
+										<Input
+											id="event-start"
+											type="datetime-local"
+											value={form.start_at}
+											onChange={(e) => setField("start_at", e.target.value)}
+											disabled={submitting}
+										/>
+										{fieldErrors.start_at && (
+											<p className="text-sm text-destructive">{fieldErrors.start_at}</p>
+										)}
+									</div>
+
+									{/* End */}
+									<div className="flex flex-col gap-2">
+										<Label htmlFor="event-end">
+											Kết thúc <span className="text-destructive">*</span>
+										</Label>
+										<Input
+											id="event-end"
+											type="datetime-local"
+											value={form.end_at}
+											onChange={(e) => setField("end_at", e.target.value)}
+											disabled={submitting}
+										/>
+										{fieldErrors.end_at && (
+											<p className="text-sm text-destructive">{fieldErrors.end_at}</p>
+										)}
+									</div>
+								</div>
+
+								{/* Registration required */}
+								<div className="flex items-center justify-between rounded-lg border p-4">
+									<div className="space-y-0.5">
+										<Label htmlFor="event-registration-required">Yêu cầu đăng ký</Label>
+										<p className="text-xs text-muted-foreground">
+											Thành viên phải đăng ký trước để tham gia sự kiện.
+										</p>
+									</div>
+									<Switch
+										id="event-registration-required"
+										checked={form.is_registration_required}
+										onCheckedChange={(c) => setField("is_registration_required", c)}
+										disabled={submitting}
+									/>
+								</div>
+
+								{/* Max attendees */}
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="event-max-attendees">Số người tham gia tối đa</Label>
+									<Input
+										id="event-max-attendees"
+										type="number"
+										min={1}
+										placeholder="Để trống nếu không giới hạn"
+										value={form.max_attendees}
+										onChange={(e) => setField("max_attendees", e.target.value)}
+										disabled={submitting || !form.is_registration_required}
+									/>
+									{fieldErrors.max_attendees && (
+										<p className="text-sm text-destructive">{fieldErrors.max_attendees}</p>
+									)}
+								</div>
+							</CardContent>
+						</Card>
+
+						{/* Nội dung chi tiết — StacksEditor */}
+						<Card className="shadow-sm">
+							<CardHeader>
+								<CardTitle>Nội dung chi tiết</CardTitle>
+								<CardDescription>
+									Nội dung đầy đủ của sự kiện với editor hỗ trợ Markdown và Rich text (tuỳ chọn).
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<div
+									className="overflow-hidden rounded-md border bg-background"
+									onClick={() => editorRef.current?.focus()}
+									style={{ cursor: "text" }}>
+									<StacksEditorWrapper
+										ref={editorRef}
+										placeholder="Mô tả chi tiết về chương trình, nội dung sự kiện..."
+									/>
+								</div>
+								{fieldErrors.content && (
+									<p className="mt-2 text-sm text-destructive">{fieldErrors.content}</p>
+								)}
+							</CardContent>
+						</Card>
+
+						{/* Ảnh thumbnail */}
+						<Card className="shadow-sm">
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2">
+									<ImageIcon className="h-5 w-5 text-muted-foreground" />
+									Ảnh sự kiện
+								</CardTitle>
+								<CardDescription>
+									Ảnh thumbnail hiển thị ở trang danh sách và trang chi tiết sự kiện (tuỳ chọn).
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<input
+									ref={imageInputRef}
+									type="file"
+									accept="image/*"
+									className="sr-only"
+									onChange={handleImageChange}
+								/>
+								<div
+									role="button"
+									tabIndex={0}
+									onClick={openImageDialog}
+									onKeyDown={(e) => {
+										if (e.key !== "Enter" && e.key !== " ") return;
+										e.preventDefault();
+										openImageDialog();
+									}}
+									aria-label="Tải ảnh sự kiện"
+									className="group relative flex min-h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 px-6 py-8 text-center transition hover:border-muted-foreground/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+									{imagePreview ? (
+										<div className="w-full space-y-3">
+											<div className="mx-auto max-w-sm overflow-hidden rounded-lg border bg-background shadow-sm">
+												<div className="relative aspect-video w-full bg-muted">
+													<img
+														src={imagePreview}
+														alt="Preview"
+														className="h-full w-full object-cover"
+													/>
+												</div>
+												<div className="flex items-center justify-between border-t px-3 py-2">
+													<p className="truncate text-xs text-muted-foreground">
+														{imageFile?.name}
+													</p>
+													<button
+														type="button"
+														onClick={removeImage}
+														aria-label="Xoá ảnh"
+														className="ml-2 shrink-0 rounded p-0.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive">
+														<X className="h-3.5 w-3.5" />
+													</button>
+												</div>
+											</div>
+											<p className="text-sm text-muted-foreground">Nhấn để thay đổi ảnh</p>
+										</div>
+									) : (
+										<>
+											<UploadCloud className="h-10 w-10 text-muted-foreground/50 transition group-hover:text-muted-foreground" />
+											<p className="mt-3 text-sm font-medium text-muted-foreground">
+												Kéo & thả hoặc nhấn để chọn ảnh
+											</p>
+											<p className="mt-1 text-xs text-muted-foreground/60">
+												Hỗ trợ PNG, JPG, WebP, tối đa 5MB (khuyến nghị 1200×630px)
+											</p>
+										</>
+									)}
+								</div>
+								{fieldErrors.thumbnail && (
+									<p className="mt-2 text-sm text-destructive">{fieldErrors.thumbnail}</p>
+								)}
+							</CardContent>
+						</Card>
+					</div>
+
+					{/* ── Sidebar ── */}
+					<div className="flex flex-col gap-6">
+
+						{/* Trạng thái */}
+						<Card className="shadow-sm">
+							<CardHeader>
+								<CardTitle>Đăng sự kiện</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="event-status">Trạng thái</Label>
+									<Select
+										value={form.status}
+										onValueChange={(v) => setField("status", v as CreateStatus)}
+										disabled={submitting}>
+										<SelectTrigger id="event-status" className="w-full">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="draft">Bản nháp</SelectItem>
+											<SelectItem value="published">Đăng ngay</SelectItem>
+										</SelectContent>
+									</Select>
+									<p className="text-xs text-muted-foreground">
+										{form.status === "draft" && "Lưu nháp, chưa hiển thị với thành viên."}
+										{form.status === "published" && "Đăng ngay và cho phép thành viên xem, đăng ký."}
+									</p>
+								</div>
+							</CardContent>
+						</Card>
+
+						{/* Ban tổ chức */}
+						<Card className="shadow-sm">
+							<CardHeader>
+								<CardTitle>Ban tổ chức</CardTitle>
+								<CardDescription>Ban phụ trách tổ chức sự kiện (tuỳ chọn).</CardDescription>
+							</CardHeader>
+							<CardContent>
+								{departmentsLoading ? (
+									<p className="text-sm text-muted-foreground">Đang tải danh sách ban...</p>
+								) : (
+									<Select
+										value={form.department_id}
+										onValueChange={(v) => setField("department_id", v)}
+										disabled={submitting}>
+										<SelectTrigger id="event-department" className="w-full">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="none">Không thuộc ban nào</SelectItem>
+											{departments.map((d) => (
+												<SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								)}
+								{fieldErrors.department_id && (
+									<p className="mt-2 text-sm text-destructive">{fieldErrors.department_id}</p>
+								)}
+							</CardContent>
+						</Card>
+
+						{/* Actions */}
+						<Card className="shadow-sm">
+							<CardFooter className="flex flex-col gap-3 pt-6">
+								<Button type="submit" className="w-full" disabled={submitting}>
+									{submitting
+										? <Loader2 className="h-4 w-4 animate-spin" />
+										: <Send className="h-4 w-4" />}
+									{submitting ? "Đang lưu..." : "Lưu sự kiện"}
+								</Button>
+								<Button
+									type="button"
+									variant="outline"
+									className="w-full"
+									onClick={() => navigate("/events")}
+									disabled={submitting}>
+									Hủy
+								</Button>
+							</CardFooter>
+						</Card>
+					</div>
+				</div>
+			</form>
+		</div>
+	);
+}
+
+export default EventCreatePage;

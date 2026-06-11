@@ -19,12 +19,18 @@ class EventController extends BaseApiController
         $search = $request->query('search');
         $status = $request->query('status');
 
+        $sortable = ['id', 'title', 'status', 'start_at', 'end_at', 'created_at', 'registrations_count', 'department_name', 'creator_name'];
+        $sort = in_array($request->query('sort'), $sortable, true) ? $request->query('sort') : 'start_at';
+        $order = $request->query('order') === 'asc' ? 'asc' : 'desc';
+
         $events = Event::query()
             ->withCount(['registrations', 'checkIns'])
             ->with('creator:id,full_name,avatar', 'department:id,name')
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
             ->when($status && $status !== 'all', fn ($q) => $q->where('status', $status))
-            ->orderBy('start_at', 'desc')
+            ->when($sort === 'department_name', fn ($q) => $q->orderByRaw("(SELECT name FROM departments WHERE departments.id = events.department_id) {$order}"))
+            ->when($sort === 'creator_name', fn ($q) => $q->orderByRaw("(SELECT full_name FROM users WHERE users.id = events.created_by) {$order}"))
+            ->when(! in_array($sort, ['department_name', 'creator_name'], true), fn ($q) => $q->orderBy($sort, $order))
             ->paginate($perPage);
 
         $events->getCollection()->transform(fn (Event $e) => $this->transform($e));
