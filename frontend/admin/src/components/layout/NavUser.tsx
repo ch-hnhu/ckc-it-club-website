@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronsUpDown, CircleUserRound, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { ChevronsUpDown, LogOut, Moon, Settings, Sun } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SettingsDialog from "@/components/settings/SettingsDialog";
@@ -78,10 +78,6 @@ export function NavUser({ user }: { user: UserType | null }) {
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuItem onClick={() => setSettingsOpen(true)}>
-								<CircleUserRound />
-								Hồ sơ
-							</DropdownMenuItem>
 							<DropdownMenuItem
 								onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
 								{theme === "dark" ? <Sun /> : <Moon />}
