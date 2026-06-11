@@ -59,7 +59,7 @@ const FeaturedEvent: React.FC<{ event: EventItem }> = ({ event }) => (
 					/>
 				) : (
 					<div
-						className='flex aspect-[4/3] w-full items-center justify-center bg-[var(--color-pastel-purple)] md:aspect-auto md:h-full'
+						className='flex aspect-[4/3] w-full items-center justify-center bg-[var(--color-pastel-green)] md:aspect-auto md:h-full'
 						style={{ minHeight: "340px" }}>
 						<span className='font-heading text-8xl font-extrabold text-[var(--color-text-primary)] opacity-20'>
 							{event.title.charAt(0).toUpperCase()}
