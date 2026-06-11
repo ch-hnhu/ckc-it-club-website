@@ -26,6 +26,7 @@ class ClubInformationValueSeeder extends Seeder
                 'home-banners',
                 'facebook-page',
                 'recruitment-enabled',
+                'auto-send-mail-recruitment',
             ])
             ->pluck('id', 'slug');
 
@@ -89,6 +90,13 @@ class ClubInformationValueSeeder extends Seeder
             [
                 'slug' => 'recruitment-enabled',
                 'value' => 'true',
+                'link' => null,
+                'alt' => null,
+                'position' => null,
+            ],
+            [
+                'slug' => 'auto-send-mail-recruitment',
+                'value' => 'false',
                 'link' => null,
                 'alt' => null,
                 'position' => null,

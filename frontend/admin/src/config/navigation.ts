@@ -140,6 +140,11 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/requests",
 				permission: "applications.view",
 			},
+			{
+				title: "Mail template",
+				url: "/mail-templates",
+				permission: "mail_templates.view",
+			},
 		],
 	},
 	{
@@ -238,6 +243,8 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/questions$/, permission: "application_questions.view" },
 	{ pattern: /^\/questions\/[^/]+$/, permission: "application_questions.view" },
 	{ pattern: /^\/answers$/, permission: "applications.view" },
+	{ pattern: /^\/mail-templates$/, permission: "mail_templates.view" },
+	{ pattern: /^\/mail-templates\/[^/]+$/, permission: "mail_templates.view" },
 	{ pattern: /^\/community\/channels$/, permission: "community.channels.manage" },
 	{ pattern: /^\/community\/posts$/, permission: "community.posts.view" },
 	{ pattern: /^\/community\/posts\/[^/]+$/, permission: "community.posts.view" },

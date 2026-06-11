@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import PrivacyBlogModal from "@/components/community/PrivacyBlogModal";
 import ReportBlogModal from "@/components/community/ReportBlogModal";
+import LikedByModal from "@/components/community/LikedByModal";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
 	Breadcrumb,
@@ -36,6 +37,7 @@ import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
 import { userService } from "@/services/user.service";
 import type { Blog, BlogDetail, BlogComment } from "@/types/blog.types";
+import type { Reactor } from "@/types/post.types";
 import {
 	buildAvatar,
 	buildProfileUrl,
@@ -542,6 +544,12 @@ const BlogDetailPage: React.FC = () => {
 	const [liked, setLiked] = useState(false);
 	const [heartCount, setHeartCount] = useState(0);
 	const [reactionLoading, setReactionLoading] = useState(false);
+	const [showLikedByTooltip, setShowLikedByTooltip] = useState(false);
+	const [showLikedByModal, setShowLikedByModal] = useState(false);
+	const [reactors, setReactors] = useState<Reactor[]>([]);
+	const [reactorsLoading, setReactorsLoading] = useState(false);
+	const [reactorsFetched, setReactorsFetched] = useState(false);
+	const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [saved, setSaved] = useState(false);
 	const [saveLoading, setSaveLoading] = useState(false);
 
@@ -587,6 +595,10 @@ const BlogDetailPage: React.FC = () => {
 				setSaved(res.data.my_bookmark ?? false);
 				setFollowed(res.data.user?.is_following ?? false);
 				setIsAlreadyReported(res.data.my_report ?? false);
+				setReactors([]);
+				setReactorsFetched(false);
+				setShowLikedByTooltip(false);
+				setShowLikedByModal(false);
 			})
 			.catch(() => setBlogError("Không tìm thấy bài viết."))
 			.finally(() => setBlogLoading(false));
@@ -810,10 +822,45 @@ const BlogDetailPage: React.FC = () => {
 		}
 	};
 
+	const fetchReactors = async () => {
+		if (!blog || reactorsFetched) return;
+		setReactorsLoading(true);
+		try {
+			const res = await blogService.getReactors(blog.id);
+			setReactors(res.data);
+			setReactorsFetched(true);
+		} catch {
+			// Keep reaction hover non-blocking.
+		} finally {
+			setReactorsLoading(false);
+		}
+	};
+
+	const handleHeartMouseEnter = () => {
+		if (heartCount === 0) return;
+		hoverTimerRef.current = setTimeout(() => {
+			setShowLikedByTooltip(true);
+			void fetchReactors();
+		}, 400);
+	};
+
+	const handleHeartMouseLeave = () => {
+		if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+		setShowLikedByTooltip(false);
+	};
+
+	const handleOpenLikedByModal = () => {
+		setShowLikedByTooltip(false);
+		if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+		setShowLikedByModal(true);
+		void fetchReactors();
+	};
+
 	// Cleanup copy timeout on unmount
 	useEffect(() => {
 		return () => {
 			if (copyResetRef.current) window.clearTimeout(copyResetRef.current);
+			if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
 		};
 	}, []);
 
@@ -1068,47 +1115,84 @@ const BlogDetailPage: React.FC = () => {
 
 									{/* Reactions + actions */}
 									<div className='mt-7 flex flex-wrap items-center gap-2 border-t-2 border-black pt-5'>
-										<button
-											onClick={async () => {
-												if (!user) {
-													navigate("/login");
-													return;
-												}
-												if (reactionLoading) return;
-												const wasLiked = liked;
-												setLiked(!wasLiked);
-												setHeartCount((c) =>
-													wasLiked ? Math.max(0, c - 1) : c + 1,
-												);
-												setReactionLoading(true);
-												try {
-													const res = await blogService.toggleReaction(
-														blog.id,
-														"heart",
-													);
-													setLiked(res.data.my_reaction === "heart");
-													setHeartCount(res.data.reactions_count);
-												} catch {
-													setLiked(wasLiked);
+										<div
+											className='relative'
+											onMouseEnter={handleHeartMouseEnter}
+											onMouseLeave={handleHeartMouseLeave}>
+											<button
+												onClick={async () => {
+													if (!user) {
+														navigate("/login");
+														return;
+													}
+													if (reactionLoading) return;
+													const wasLiked = liked;
+													setLiked(!wasLiked);
 													setHeartCount((c) =>
-														wasLiked ? c + 1 : Math.max(0, c - 1),
+														wasLiked ? Math.max(0, c - 1) : c + 1,
 													);
-												} finally {
-													setReactionLoading(false);
-												}
-											}}
-											disabled={reactionLoading}
-											className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
-											style={{
-												background: liked
-													? "var(--color-pastel-pink)"
-													: "#fff",
-											}}>
-											<Heart
-												className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`}
-											/>
-											{heartCount}
-										</button>
+													setReactorsFetched(false);
+													setReactionLoading(true);
+													try {
+														const res = await blogService.toggleReaction(
+															blog.id,
+															"heart",
+														);
+														setLiked(res.data.my_reaction === "heart");
+														setHeartCount(res.data.reactions_count);
+													} catch {
+														setLiked(wasLiked);
+														setHeartCount((c) =>
+															wasLiked ? c + 1 : Math.max(0, c - 1),
+														);
+													} finally {
+														setReactionLoading(false);
+													}
+												}}
+												disabled={reactionLoading}
+												className='inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-white px-3 text-sm font-bold shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'
+												style={{
+													background: liked
+														? "var(--color-pastel-pink)"
+														: "#fff",
+												}}>
+												<Heart
+													className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`}
+												/>
+												{heartCount}
+											</button>
+
+											{showLikedByTooltip && heartCount > 0 && (
+												<div className='absolute bottom-full left-0 z-30 w-max max-w-[260px] pb-3'>
+													<div className='overflow-hidden rounded-xl border-2 border-black bg-white text-sm text-black shadow-[3px_3px_0_#111]'>
+														{reactorsLoading ? (
+															<div className='px-4 py-3 text-gray-500'>Đang tải...</div>
+														) : (
+															<>
+																<p className='px-4 pb-1 pt-3 font-medium leading-snug'>
+																	{(() => {
+																		if (reactors.length === 0) return null;
+																		const names = reactors.slice(0, 2).map((r) => r.full_name);
+																		const rest = heartCount - names.length;
+																		let text = "Liked by " + names.join(", ");
+																		if (rest > 0) text += ` and ${rest} other${rest > 1 ? "s" : ""}`;
+																		return text;
+																	})()}
+																</p>
+																<button
+																	onClick={handleOpenLikedByModal}
+																	className='block w-full cursor-pointer px-4 py-2.5 text-left text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:underline'>
+																	View all likes
+																</button>
+															</>
+														)}
+													</div>
+													<div className='ml-4 h-2 w-3 overflow-hidden'>
+														<div className='h-3 w-3 -translate-y-1/2 rotate-45 border-b-2 border-r-2 border-black bg-white' />
+													</div>
+												</div>
+											)}
+										</div>
 
 										<button
 											onClick={() => commentInputRef.current?.focus()}
@@ -1317,6 +1401,15 @@ const BlogDetailPage: React.FC = () => {
 						</div>
 					</div>
 				</div>
+			)}
+
+			{showLikedByModal && (
+				<LikedByModal
+					reactors={reactors}
+					loading={reactorsLoading}
+					currentUser={user}
+					onClose={() => setShowLikedByModal(false)}
+				/>
 			)}
 		</div>
 	);

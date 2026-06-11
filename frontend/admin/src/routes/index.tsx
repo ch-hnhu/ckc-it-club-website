@@ -42,6 +42,8 @@ import MediaListPage from "@/pages/community/MediaListPage";
 import SkillListPage from "@/pages/community/SkillListPage";
 import ReportListPage from "@/pages/community/ReportListPage";
 import BlogReportListPage from "@/pages/community/BlogReportListPage";
+import MailTemplateListPage from "@/pages/mail-template/MailTemplateListPage";
+import MailTemplateDetailPage from "@/pages/mail-template/MailTemplateDetailPage";
 
 const router = createBrowserRouter([
 	{
@@ -254,6 +256,22 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='application_questions.view'>
 						<ApplicationQuestionDetailPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "mail-templates",
+				element: (
+					<PermissionRoute permission='mail_templates.view'>
+						<MailTemplateListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "mail-templates/:id",
+				element: (
+					<PermissionRoute permission='mail_templates.view'>
+						<MailTemplateDetailPage />
 					</PermissionRoute>
 				),
 			},
