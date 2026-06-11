@@ -1,6 +1,6 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
-import type { User } from "@/types/user.type";
+import type { User, UserProfile } from "@/types/user.type";
 
 const userService = {
 	async getUsers(params?: {
@@ -32,6 +32,19 @@ const userService = {
 				"Content-Type": "multipart/form-data",
 			},
 		});
+	},
+	async getProfile(): Promise<ApiResponse<UserProfile>> {
+		return api.get("/users/profile");
+	},
+	async updateProfile(payload: FormData): Promise<ApiResponse<UserProfile>> {
+		return api.post<ApiResponse<UserProfile>, FormData>("/users/profile", payload, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+			},
+		});
+	},
+	async checkUsername(username: string): Promise<{ available: boolean }> {
+		return api.get("/users/check-username", { username });
 	},
 	async logout(): Promise<{ success: boolean; message: string }> {
 		return api.post("/auth/logout");
