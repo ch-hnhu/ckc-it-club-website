@@ -84,9 +84,11 @@ export interface EventRecord {
 	thumbnail: string | null;
 	start_at: string | null;
 	end_at: string | null;
+	registration_start_at: string | null;
+	registration_end_at: string | null;
 	location: string | null;
 	max_attendees: number | null;
-	is_registration_required: boolean;
+	is_members_only: boolean;
 	status: EventStatus;
 	creator: EventCreator | null;
 	department: EventDepartment | null;
@@ -441,19 +443,16 @@ function EventListPage() {
 												</div>
 											</TableCell>
 											<TableCell>
-												{event.is_registration_required ? (
-													<div className="space-y-0.5 text-sm">
-														<p>
-															{event.registrations_count.toLocaleString("vi-VN")}
-															{event.max_attendees ? ` / ${event.max_attendees.toLocaleString("vi-VN")}` : ""}
-														</p>
-														<p className="text-xs text-muted-foreground">
-															Check-in: {event.check_ins_count.toLocaleString("vi-VN")}
-														</p>
-													</div>
-												) : (
-													<span className="text-sm text-muted-foreground">Không yêu cầu</span>
-												)}
+												<div className="space-y-0.5 text-sm">
+													<p>
+														{event.registrations_count.toLocaleString("vi-VN")}
+														{event.max_attendees ? ` / ${event.max_attendees.toLocaleString("vi-VN")}` : ""}
+														{event.is_members_only ? " · TV CLB" : ""}
+													</p>
+													<p className="text-xs text-muted-foreground">
+														Check-in: {event.check_ins_count.toLocaleString("vi-VN")}
+													</p>
+												</div>
 											</TableCell>
 											<TableCell>{getStatusBadge(event.status)}</TableCell>
 											<TableCell>

@@ -276,6 +276,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-13`: Event detail QR ticket viewing now falls back to `GET /community/events/{event}/my-ticket` when a registered user's QR token is missing after reload.
 - `2026-06-10`: Blog detail reactions now support viewing the list of users who reacted, matching community post behavior.
 - `2026-06-05`: Edit flows for community posts and blogs now present only cancel/save actions; blog edits save existing content without separate draft or submit-for-review buttons.
 - `2026-06-01`: User chat room type contract no longer includes `type`; all chat rooms returned by `/community/chat-rooms` are treated as standard named rooms.

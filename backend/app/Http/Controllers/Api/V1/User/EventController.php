@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\EventStatus;
+use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Event;
 use App\Models\EventRegistration;
@@ -35,7 +36,7 @@ class EventController extends BaseApiController
             ->orderByDesc('start_at')
             ->paginate($perPage);
 
-        $user = $request->user();
+        $user = auth('sanctum')->user();
         $events->getCollection()->transform(function (Event $e) use ($user) {
             $data = $this->transformPublic($e);
             if ($user) {
@@ -63,7 +64,7 @@ class EventController extends BaseApiController
         $data = $this->transformPublic($event);
         $data['content'] = $event->content;
 
-        if ($user = $request->user()) {
+        if ($user = auth('sanctum')->user()) {
             $reg = $event->registrations()->where('user_id', $user->id)->first();
             $data['my_registration_status'] = $reg?->status;
             $data['my_qr_token'] = $reg?->status === 'registered' ? $reg->qr_token : null;
@@ -79,14 +80,38 @@ class EventController extends BaseApiController
         $event->refresh();
 
         abort_if($event->status->value !== 'published', 422, 'Sự kiện này hiện không mở đăng ký.');
+        abort_if(
+            $event->registration_start_at && now()->lt($event->registration_start_at),
+            422,
+            'Sự kiện chưa mở đăng ký. Vui lòng quay lại sau.'
+        );
+        abort_if(
+            $event->registration_end_at && now()->gt($event->registration_end_at),
+            422,
+            'Đã hết thời gian đăng ký tham gia sự kiện.'
+        );
         abort_if($event->isFull(), 422, 'Sự kiện đã đủ số lượng người tham dự.');
 
         $user = $request->user();
 
+        // Thành viên CLB = có bất kỳ vai trò nào ngoài "user" thường
+        $memberRoles = array_values(array_filter(
+            array_map(fn (RolesEnum $case) => $case->value, RolesEnum::cases()),
+            fn (string $role) => $role !== RolesEnum::USER->value,
+        ));
+        $isClubMember = $user->hasAnyRole($memberRoles);
+
+        // Thành viên CLB được miễn kiểm tra email sinh viên
         abort_if(
-            ! str_ends_with(strtolower((string) $user->email), '@caothang.edu.vn'),
+            ! $isClubMember && ! str_ends_with(strtolower((string) $user->email), '@caothang.edu.vn'),
             422,
             'Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) mới được đăng ký tham gia sự kiện.'
+        );
+
+        abort_if(
+            $event->is_members_only && ! $isClubMember,
+            422,
+            'Sự kiện này chỉ dành cho thành viên câu lạc bộ.'
         );
 
         $existing = $event->registrations()->where('user_id', $user->id)->first();
@@ -159,9 +184,12 @@ class EventController extends BaseApiController
                 : null,
             'start_at' => $event->start_at?->toIso8601String(),
             'end_at' => $event->end_at?->toIso8601String(),
+            'registration_start_at' => $event->registration_start_at?->toIso8601String(),
+            'registration_end_at' => $event->registration_end_at?->toIso8601String(),
             'location' => $event->location,
             'max_attendees' => $event->max_attendees,
-            'is_registration_required' => (bool) $event->is_registration_required,
+            'is_members_only' => (bool) $event->is_members_only,
+            'is_registration_open' => $event->isRegistrationOpen(),
             'status' => $event->status instanceof EventStatus
                 ? $event->status->value
                 : $event->status,

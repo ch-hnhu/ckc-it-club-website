@@ -313,11 +313,11 @@ function EventDetailPage() {
 											className={cn("rounded-full px-3 py-1", statusBadge.className)}>
 											{statusBadge.label}
 										</Badge>
-										{!event.is_registration_required ? (
+										{event.is_members_only ? (
 											<Badge
 												variant='outline'
-												className='border-slate-500/30 bg-slate-500/10 text-slate-700'>
-												Không yêu cầu đăng ký
+												className='border-amber-500/30 bg-amber-500/10 text-amber-700'>
+												Chỉ thành viên CLB
 											</Badge>
 										) : null}
 									</div>
@@ -342,6 +342,22 @@ function EventDetailPage() {
 						<InfoRow label='Thời gian kết thúc' value={formatDate(event.end_at)} />
 						<InfoRow label='Địa điểm' value={event.location || "--"} />
 						<InfoRow
+							label='Mở đăng ký'
+							value={
+								event.registration_start_at
+									? formatDate(event.registration_start_at)
+									: "Ngay khi đăng sự kiện"
+							}
+						/>
+						<InfoRow
+							label='Đóng đăng ký'
+							value={
+								event.registration_end_at
+									? formatDate(event.registration_end_at)
+									: "Đến khi sự kiện bắt đầu"
+							}
+						/>
+						<InfoRow
 							label='Ban tổ chức'
 							value={event.department?.name ?? "--"}
 						/>
@@ -351,15 +367,11 @@ function EventDetailPage() {
 						/>
 						<InfoRow
 							label='Đăng ký / Điểm danh'
-							value={
-								event.is_registration_required
-									? `${event.registrations_count.toLocaleString("vi-VN")}${
-										event.max_attendees
-											? ` / ${event.max_attendees.toLocaleString("vi-VN")}`
-											: ""
-									} đăng ký · ${event.check_ins_count.toLocaleString("vi-VN")} check-in`
-									: "Không yêu cầu đăng ký"
-							}
+							value={`${event.registrations_count.toLocaleString("vi-VN")}${
+								event.max_attendees
+									? ` / ${event.max_attendees.toLocaleString("vi-VN")}`
+									: ""
+							} đăng ký · ${event.check_ins_count.toLocaleString("vi-VN")} check-in`}
 						/>
 						<InfoRow label='Mô tả' value={event.description || "--"} />
 						<InfoRow label='Ngày tạo' value={formatDate(event.created_at)} />
