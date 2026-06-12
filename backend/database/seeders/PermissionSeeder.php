@@ -53,8 +53,8 @@ class PermissionSeeder extends Seeder
         'events.view' => 'Xem danh sách và chi tiết sự kiện',
         'events.manage' => 'Tạo, sửa, xóa, đổi trạng thái sự kiện',
         'events.check_in' => 'Thực hiện điểm danh sự kiện',
-        'gamification.view' => 'Xem luật điểm, cấp độ và bảng xếp hạng',
-        'gamification.manage' => 'Thêm, sửa, xóa luật điểm và cấp độ',
+        'gamification.view' => 'Xem luật điểm, rank và bảng xếp hạng',
+        'gamification.manage' => 'Thêm, sửa, xóa luật điểm và rank',
     ];
 
     /**

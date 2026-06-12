@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
             SkillSeeder::class,
             MailTemplateSeeder::class,
             EventSeeder::class,
-            LevelSeeder::class,
+            RankSeeder::class,
             PointRuleSeeder::class,
         ]);
     }

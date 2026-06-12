@@ -1,5 +1,5 @@
 // src/types/gamification.type.ts
-// Kiểu dữ liệu cho hệ thống Gamification (luật điểm, cấp độ, bảng xếp hạng).
+// Kiểu dữ liệu cho hệ thống Gamification (luật điểm, rank, bảng xếp hạng).
 
 export interface PointRule {
 	id: number;
@@ -25,7 +25,7 @@ export interface PointRulePayload {
 	is_active?: boolean;
 }
 
-export interface Level {
+export interface Rank {
 	id: number;
 	name: string;
 	min_points: number;
@@ -35,13 +35,13 @@ export interface Level {
 	updated_at: string;
 }
 
-export interface LevelPayload {
+export interface RankPayload {
 	name: string;
 	min_points: number;
 	badge?: File | null;
 }
 
-export interface LevelSummary {
+export interface RankSummary {
 	id: number;
 	name: string;
 	badge: string | null;
@@ -55,5 +55,5 @@ export interface LeaderboardEntry {
 	avatar: string | null;
 	points: number;
 	is_me: boolean;
-	level?: LevelSummary | null;
+	member_rank?: RankSummary | null;
 }

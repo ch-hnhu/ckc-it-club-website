@@ -13,7 +13,7 @@ use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
-use App\Http\Controllers\Api\V1\Admin\LevelController;
+use App\Http\Controllers\Api\V1\Admin\RankController;
 use App\Http\Controllers\Api\V1\Admin\MajorController;
 use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
@@ -86,6 +86,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
     Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
     Route::get('/users/{username}/following', [FollowController::class, 'following']);
+    Route::prefix('gamification')->group(function () {
+        Route::get('/leaderboard/weekly', [GamificationController::class, 'weeklyLeaderboard']);
+        Route::get('/leaderboard/all-time', [GamificationController::class, 'allTimeLeaderboard']);
+    });
 
     // Community routes
     Route::prefix('community')->group(function () {
@@ -211,8 +215,6 @@ Route::prefix('v1')->group(function () {
         Route::prefix('gamification')->group(function () {
             Route::get('/me', [GamificationController::class, 'me']);
             Route::get('/me/history', [GamificationController::class, 'history']);
-            Route::get('/leaderboard/weekly', [GamificationController::class, 'weeklyLeaderboard']);
-            Route::get('/leaderboard/all-time', [GamificationController::class, 'allTimeLeaderboard']);
         });
     });
 
@@ -470,22 +472,22 @@ Route::prefix('v1')->group(function () {
             Route::delete('events/{event}', [AdminEventController::class, 'destroy']);
         });
 
-        // gamification (admin) — chỉ quản lý luật điểm & cấp độ, KHÔNG có cộng/trừ điểm thủ công
+        // gamification (admin) — chỉ quản lý luật điểm & rank, KHÔNG có cộng/trừ điểm thủ công
         Route::middleware('permission:gamification.view')->group(function () {
             Route::get('point-rules', [PointRuleController::class, 'index']);
             Route::get('point-rules/{pointRule}', [PointRuleController::class, 'show']);
-            Route::get('levels', [LevelController::class, 'index']);
-            Route::get('levels/{level}', [LevelController::class, 'show']);
+            Route::get('ranks', [RankController::class, 'index']);
+            Route::get('ranks/{rank}', [RankController::class, 'show']);
         });
         Route::middleware('permission:gamification.manage')->group(function () {
             Route::post('point-rules', [PointRuleController::class, 'store']);
             Route::put('point-rules/{pointRule}', [PointRuleController::class, 'update']);
             Route::patch('point-rules/{pointRule}', [PointRuleController::class, 'update']);
             Route::delete('point-rules/{pointRule}', [PointRuleController::class, 'destroy']);
-            Route::post('levels', [LevelController::class, 'store']);
-            Route::put('levels/{level}', [LevelController::class, 'update']);
-            Route::patch('levels/{level}', [LevelController::class, 'update']);
-            Route::delete('levels/{level}', [LevelController::class, 'destroy']);
+            Route::post('ranks', [RankController::class, 'store']);
+            Route::put('ranks/{rank}', [RankController::class, 'update']);
+            Route::patch('ranks/{rank}', [RankController::class, 'update']);
+            Route::delete('ranks/{rank}', [RankController::class, 'destroy']);
         });
 
         // post reports

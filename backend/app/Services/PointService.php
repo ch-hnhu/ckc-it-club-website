@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Level;
+use App\Models\Rank;
 use App\Models\PointRule;
 use App\Models\PointTransaction;
 use App\Models\User;
@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 /**
  * Điểm trung tâm xử lý cộng điểm cho toàn hệ thống.
  *
- * Đây là NƠI DUY NHẤT được phép ghi users.total_points và users.level_id.
+ * Đây là NƠI DUY NHẤT được phép ghi users.total_points và users.rank_id.
  * Không controller hay class nào khác được cập nhật trực tiếp hai cột này.
  */
 class PointService
@@ -100,9 +100,9 @@ class PointService
                 'metadata' => $metadata !== [] ? $metadata : null,
             ]);
 
-            // 5. Cập nhật tổng điểm và đồng bộ cấp độ (gán trực tiếp, không mass-assign).
+            // 5. Cập nhật tổng điểm và đồng bộ rank (gán trực tiếp, không mass-assign).
             $lockedUser->total_points += $rule->points;
-            $lockedUser->level_id = self::resolveLevel($lockedUser->total_points)?->id;
+            $lockedUser->rank_id = self::resolveRank($lockedUser->total_points)?->id;
             $lockedUser->save();
 
             return $transaction;
@@ -110,11 +110,11 @@ class PointService
     }
 
     /**
-     * Tìm cấp độ cao nhất mà user đạt được với số điểm cho trước.
+     * Tìm rank cao nhất mà user đạt được với số điểm cho trước.
      */
-    private static function resolveLevel(int $totalPoints): ?Level
+    private static function resolveRank(int $totalPoints): ?Rank
     {
-        return Level::query()
+        return Rank::query()
             ->where('min_points', '<=', $totalPoints)
             ->orderByDesc('min_points')
             ->first();

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Crown, Medal } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -19,10 +18,7 @@ import gamificationService from "@/services/gamification.service";
 import type { LeaderboardEntry } from "@/types/gamification.type";
 
 function rankBadge(rank: number) {
-	if (rank === 1) return <Crown className='h-4 w-4 text-amber-500' />;
-	if (rank === 2) return <Medal className='h-4 w-4 text-zinc-400' />;
-	if (rank === 3) return <Medal className='h-4 w-4 text-amber-700' />;
-	return <span className='text-sm font-medium text-muted-foreground'>{rank}</span>;
+	return <span className='text-sm font-medium text-muted-foreground'>#{rank}</span>;
 }
 
 function initials(name: string) {
@@ -37,11 +33,11 @@ function initials(name: string) {
 function LeaderboardTable({
 	entries,
 	loading,
-	showLevel,
+	showMemberRank,
 }: {
 	entries: LeaderboardEntry[];
 	loading: boolean;
-	showLevel: boolean;
+	showMemberRank: boolean;
 }) {
 	return (
 		<div className='overflow-hidden rounded-md border'>
@@ -52,8 +48,8 @@ function LeaderboardTable({
 							Hạng
 						</TableHead>
 						<TableHead className='text-sm font-medium'>Thành viên</TableHead>
-						{showLevel && (
-							<TableHead className='text-sm font-medium w-[150px]'>Cấp độ</TableHead>
+						{showMemberRank && (
+							<TableHead className='text-sm font-medium w-[150px]'>Rank</TableHead>
 						)}
 						<TableHead className='text-sm font-medium w-[110px] text-right'>
 							Điểm
@@ -64,7 +60,7 @@ function LeaderboardTable({
 					{loading ? (
 						Array.from({ length: 8 }).map((_, i) => (
 							<TableRow key={i}>
-								<TableCell colSpan={showLevel ? 4 : 3}>
+								<TableCell colSpan={showMemberRank ? 4 : 3}>
 									<Skeleton className='h-6 w-full' />
 								</TableCell>
 							</TableRow>
@@ -97,18 +93,20 @@ function LeaderboardTable({
 										</span>
 									</div>
 								</TableCell>
-								{showLevel && (
+								{showMemberRank && (
 									<TableCell>
-										{entry.level ? (
+										{entry.member_rank ? (
 											<span className='inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium'>
-												{entry.level.badge && (
+												{entry.member_rank.badge && (
 													<img
-														src={resolvePublicAssetUrl(entry.level.badge)}
-														alt={`Badge ${entry.level.name}`}
+														src={resolvePublicAssetUrl(
+															entry.member_rank.badge,
+														)}
+														alt={`Badge ${entry.member_rank.name}`}
 														className='h-5 w-5 object-contain'
 													/>
 												)}
-												{entry.level.name}
+												{entry.member_rank.name}
 											</span>
 										) : (
 											<span className='text-sm text-muted-foreground'>—</span>
@@ -123,7 +121,7 @@ function LeaderboardTable({
 					) : (
 						<TableRow>
 							<TableCell
-								colSpan={showLevel ? 4 : 3}
+								colSpan={showMemberRank ? 4 : 3}
 								className='h-32 text-center text-muted-foreground'>
 								Chưa có dữ liệu xếp hạng.
 							</TableCell>
@@ -178,14 +176,14 @@ function LeaderboardPage() {
 						<TabsTrigger value='all-time'>Mọi thời điểm</TabsTrigger>
 					</TabsList>
 					<TabsContent value='weekly' className='mt-4'>
-						<LeaderboardTable
-							entries={weekly}
-							loading={loadingWeekly}
-							showLevel={false}
-						/>
+							<LeaderboardTable
+								entries={weekly}
+								loading={loadingWeekly}
+								showMemberRank={false}
+							/>
 					</TabsContent>
 					<TabsContent value='all-time' className='mt-4'>
-						<LeaderboardTable entries={allTime} loading={loadingAllTime} showLevel />
+						<LeaderboardTable entries={allTime} loading={loadingAllTime} showMemberRank />
 					</TabsContent>
 				</Tabs>
 			</div>

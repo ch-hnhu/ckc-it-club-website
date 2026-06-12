@@ -73,13 +73,13 @@ class User extends Authenticatable
     }
 
     /**
-     * Gamification — cấp độ hiện tại của user.
-     * total_points & level_id chỉ được ghi qua App\Services\PointService
+     * Gamification — rank hiện tại của user.
+     * total_points & rank_id chỉ được ghi qua App\Services\PointService
      * (cố ý KHÔNG đưa vào $fillable để chặn controller mass-assign).
      */
-    public function level(): BelongsTo
+    public function rank(): BelongsTo
     {
-        return $this->belongsTo(Level::class);
+        return $this->belongsTo(Rank::class);
     }
 
     public function pointTransactions(): \Illuminate\Database\Eloquent\Relations\HasMany

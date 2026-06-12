@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { ImagePlus, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ExternalLink, ImagePlus, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +32,7 @@ import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { resolvePublicAssetUrl } from "@/lib/utils";
 import gamificationService from "@/services/gamification.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import type { Level, LevelPayload } from "@/types/gamification.type";
+import type { Rank, RankPayload } from "@/types/gamification.type";
 
 interface FormState {
 	name: string;
@@ -44,7 +44,7 @@ interface FormState {
 const emptyForm: FormState = { name: "", min_points: 0, badgeFile: null, badgePreview: "" };
 const MAX_BADGE_SIZE = 2 * 1024 * 1024;
 
-function toPayload(form: FormState): LevelPayload {
+function toPayload(form: FormState): RankPayload {
 	return {
 		name: form.name.trim(),
 		min_points: Number(form.min_points),
@@ -54,40 +54,40 @@ function toPayload(form: FormState): LevelPayload {
 
 function extractErrorMessage(error: unknown): string {
 	if (!axios.isAxiosError<ApiErrorResponse>(error)) {
-		return "Không thể lưu level.";
+		return "Không thể lưu rank.";
 	}
 
 	const responseData = error.response?.data;
 	const firstFieldError = Object.values(responseData?.errors ?? {}).flat()[0];
 
-	return firstFieldError ?? responseData?.message ?? "Không thể lưu level.";
+	return firstFieldError ?? responseData?.message ?? "Không thể lưu rank.";
 }
 
-function LevelsPage() {
-	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Level Rules" }]);
+function RanksPage() {
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Rank Rules" }]);
 
-	const [levels, setLevels] = useState<Level[]>([]);
+	const [ranks, setRanks] = useState<Rank[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [reloadToken, setReloadToken] = useState(0);
 
 	const [formOpen, setFormOpen] = useState(false);
 	const badgeInputRef = useRef<HTMLInputElement>(null);
-	const [editTarget, setEditTarget] = useState<Level | null>(null);
+	const [editTarget, setEditTarget] = useState<Rank | null>(null);
 	const [form, setForm] = useState<FormState>(emptyForm);
 	const [isSaving, setIsSaving] = useState(false);
-	const [deleteTarget, setDeleteTarget] = useState<Level | null>(null);
+	const [deleteTarget, setDeleteTarget] = useState<Rank | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
 
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
 		gamificationService
-			.getLevels()
+			.getRanks()
 			.then((res) => {
-				if (!cancelled) setLevels(res.data);
+				if (!cancelled) setRanks(res.data);
 			})
 			.catch(() => {
-				if (!cancelled) toast.error("Không thể tải danh sách level.");
+				if (!cancelled) toast.error("Không thể tải danh sách rank.");
 			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
@@ -103,13 +103,13 @@ function LevelsPage() {
 		setFormOpen(true);
 	};
 
-	const openEdit = (level: Level) => {
-		setEditTarget(level);
+	const openEdit = (rank: Rank) => {
+		setEditTarget(rank);
 		setForm({
-			name: level.name,
-			min_points: level.min_points,
+			name: rank.name,
+			min_points: rank.min_points,
 			badgeFile: null,
-			badgePreview: level.badge ?? "",
+			badgePreview: rank.badge ?? "",
 		});
 		setFormOpen(true);
 	};
@@ -148,17 +148,17 @@ function LevelsPage() {
 
 	const handleSave = async () => {
 		if (!form.name.trim()) {
-			toast.error("Tên level không được để trống.");
+			toast.error("Tên rank không được để trống.");
 			return;
 		}
 		setIsSaving(true);
 		try {
 			if (editTarget) {
-				await gamificationService.updateLevel(editTarget.id, toPayload(form));
-				toast.success("Đã cập nhật level. Chạy lệnh recompute-levels để đồng bộ user.");
+				await gamificationService.updateRank(editTarget.id, toPayload(form));
+				toast.success("Đã cập nhật rank. Chạy lệnh recompute-ranks để đồng bộ user.");
 			} else {
-				await gamificationService.createLevel(toPayload(form));
-				toast.success("Đã tạo level mới.");
+				await gamificationService.createRank(toPayload(form));
+				toast.success("Đã tạo rank mới.");
 			}
 			setFormOpen(false);
 			setReloadToken((p) => p + 1);
@@ -173,12 +173,12 @@ function LevelsPage() {
 		if (!deleteTarget) return;
 		setIsDeleting(true);
 		try {
-			await gamificationService.deleteLevel(deleteTarget.id);
-			toast.success("Đã xóa level.");
+			await gamificationService.deleteRank(deleteTarget.id);
+			toast.success("Đã xóa rank.");
 			setDeleteTarget(null);
 			setReloadToken((p) => p + 1);
 		} catch {
-			toast.error("Không thể xóa level.");
+			toast.error("Không thể xóa rank.");
 		} finally {
 			setIsDeleting(false);
 		}
@@ -189,12 +189,12 @@ function LevelsPage() {
 			<div className='space-y-6 p-4 md:p-6 lg:space-y-8 lg:p-8'>
 				<div className='flex items-start justify-between gap-4'>
 					<div className='space-y-1'>
-						<h2 className='text-2xl font-semibold tracking-tight'>Level Rules</h2>
+						<h2 className='text-2xl font-semibold tracking-tight'>Rank Rules</h2>
 						<p className='text-muted-foreground text-sm'>
-							Levels của thành viên tự cập nhật theo tổng điểm. Sau khi đổi mốc điểm,
+							Ranks của thành viên tự cập nhật theo tổng điểm. Sau khi đổi mốc điểm,
 							chạy{" "}
 							<code className='rounded bg-muted px-1 py-0.5 text-xs'>
-								php artisan gamification:recompute-levels
+								php artisan gamification:recompute-ranks
 							</code>
 							.
 						</p>
@@ -215,7 +215,7 @@ function LevelsPage() {
 								<TableHead className='text-sm font-medium w-[80px] text-center'>
 									Badge
 								</TableHead>
-								<TableHead className='text-sm font-medium '>Level</TableHead>
+								<TableHead className='text-sm font-medium '>Rank</TableHead>
 								<TableHead className='text-sm font-medium w-[140px] text-right'>
 									Mốc điểm tối thiểu
 								</TableHead>
@@ -237,14 +237,14 @@ function LevelsPage() {
 										</TableCell>
 									</TableRow>
 								))
-							) : levels.length > 0 ? (
-								levels.map((level) => (
-									<TableRow key={level.id}>
+							) : ranks.length > 0 ? (
+								ranks.map((rank) => (
+									<TableRow key={rank.id}>
 										<TableCell className='text-center'>
-											{level.badge ? (
+											{rank.badge ? (
 												<img
-													src={resolvePublicAssetUrl(level.badge)}
-													alt={`Badge ${level.name}`}
+													src={resolvePublicAssetUrl(rank.badge)}
+													alt={`Badge ${rank.name}`}
 													className='mx-auto h-10 w-10 object-contain'
 												/>
 											) : (
@@ -253,19 +253,20 @@ function LevelsPage() {
 												</span>
 											)}
 										</TableCell>
-										<TableCell className='font-medium'>{level.name}</TableCell>
+										<TableCell className='font-medium'>{rank.name}</TableCell>
 										<TableCell className='text-right font-semibold'>
-											{level.min_points}
+											{rank.min_points}
 										</TableCell>
 										<TableCell className='max-w-[420px]'>
-											{level.badge ? (
+											{rank.badge ? (
 												<a
-													href={resolvePublicAssetUrl(level.badge)}
+													href={resolvePublicAssetUrl(rank.badge)}
 													target='_blank'
 													rel='noreferrer'
-													className='block truncate font-mono text-xs text-primary underline-offset-4 hover:underline'
-													title={level.badge}>
-													{level.badge}
+													className='inline-flex max-w-full items-center gap-1.5 truncate text-sm font-medium text-primary underline-offset-4 hover:underline'
+													title={rank.badge}>
+													<span className='truncate'>{rank.badge}</span>
+													<ExternalLink className='h-3.5 w-3.5 shrink-0' />
 												</a>
 											) : (
 												<span className='block font-mono text-xs text-muted-foreground'>
@@ -274,7 +275,7 @@ function LevelsPage() {
 											)}
 										</TableCell>
 										<TableCell className='text-center text-sm text-muted-foreground'>
-											{level.users_count ?? 0}
+											{rank.users_count ?? 0}
 										</TableCell>
 										<TableCell>
 											<DropdownMenu>
@@ -289,14 +290,14 @@ function LevelsPage() {
 													align='end'
 													className='w-[170px]'>
 													<DropdownMenuItem
-														onClick={() => openEdit(level)}>
+														onClick={() => openEdit(rank)}>
 														<Pencil className='h-4 w-4' />
 														Sửa
 													</DropdownMenuItem>
 													<DropdownMenuSeparator />
 													<DropdownMenuItem
 														className='text-destructive focus:bg-destructive/10 focus:text-destructive'
-														onClick={() => setDeleteTarget(level)}>
+														onClick={() => setDeleteTarget(rank)}>
 														<Trash2 className='h-4 w-4 text-destructive' />
 														Xóa
 													</DropdownMenuItem>
@@ -310,7 +311,7 @@ function LevelsPage() {
 									<TableCell
 										colSpan={6}
 										className='h-32 text-center text-muted-foreground'>
-										Chưa có level nào. Hãy thêm level đầu tiên!
+										Chưa có rank nào. Hãy thêm rank đầu tiên!
 									</TableCell>
 								</TableRow>
 							)}
@@ -323,15 +324,15 @@ function LevelsPage() {
 			<Dialog open={formOpen} onOpenChange={(o) => !o && setFormOpen(false)}>
 				<DialogContent className='sm:max-w-[480px]'>
 					<DialogHeader>
-						<DialogTitle>{editTarget ? "Sửa level" : "Thêm level mới"}</DialogTitle>
+						<DialogTitle>{editTarget ? "Sửa rank" : "Thêm rank mới"}</DialogTitle>
 					</DialogHeader>
 					<div className='space-y-4'>
 						<div className='space-y-2'>
-							<Label htmlFor='level-name'>
-								Level <span className='text-destructive'>*</span>
+							<Label htmlFor='rank-name'>
+								Rank <span className='text-destructive'>*</span>
 							</Label>
 							<Input
-								id='level-name'
+								id='rank-name'
 								placeholder='vd: Vàng'
 								value={form.name}
 								onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -339,11 +340,11 @@ function LevelsPage() {
 						</div>
 						<div className='grid grid-cols-2 gap-4'>
 							<div className='space-y-2'>
-								<Label htmlFor='level-min'>
+								<Label htmlFor='rank-min'>
 									Mốc điểm tối thiểu <span className='text-destructive'>*</span>
 								</Label>
 								<Input
-									id='level-min'
+									id='rank-min'
 									type='number'
 									min={0}
 									value={form.min_points}
@@ -357,7 +358,7 @@ function LevelsPage() {
 							</div>
 						</div>
 						<div className='space-y-2'>
-							<Label htmlFor='level-badge'>Badge image</Label>
+							<Label htmlFor='rank-badge'>Badge image</Label>
 							<div className='flex items-center gap-3'>
 								<div className='flex h-12 w-12 shrink-0 items-center justify-center rounded-md border bg-muted/30'>
 									{form.badgePreview ? (
@@ -373,7 +374,7 @@ function LevelsPage() {
 								<div className='min-w-0 flex-1'>
 									<Input
 										ref={badgeInputRef}
-										id='level-badge'
+										id='rank-badge'
 										type='file'
 										accept='image/*'
 										className='hidden'
@@ -430,11 +431,11 @@ function LevelsPage() {
 					{deleteTarget && (
 						<>
 							<DialogHeader>
-								<DialogTitle>Xác nhận xóa level</DialogTitle>
+								<DialogTitle>Xác nhận xóa rank</DialogTitle>
 							</DialogHeader>
 							<div className='space-y-3 text-sm text-muted-foreground'>
 								<p>
-									Bạn sắp xóa level{" "}
+									Bạn sắp xóa rank{" "}
 									<span className='font-medium text-foreground'>
 										{deleteTarget.name}
 									</span>
@@ -442,8 +443,8 @@ function LevelsPage() {
 								</p>
 								{(deleteTarget.users_count ?? 0) > 0 && (
 									<p className='rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-400'>
-										{deleteTarget.users_count} thành viên đang ở level này. Họ
-										sẽ được hạ về level phù hợp sau khi recompute.
+										{deleteTarget.users_count} thành viên đang ở rank này. Họ
+										sẽ được hạ về rank phù hợp sau khi recompute.
 									</p>
 								)}
 								<p>Hành động này không thể hoàn tác.</p>
@@ -459,7 +460,7 @@ function LevelsPage() {
 									variant='destructive'
 									onClick={handleDelete}
 									disabled={isDeleting}>
-									{isDeleting ? "Đang xóa..." : "Xóa level"}
+									{isDeleting ? "Đang xóa..." : "Xóa rank"}
 								</Button>
 							</DialogFooter>
 						</>
@@ -470,4 +471,4 @@ function LevelsPage() {
 	);
 }
 
-export default LevelsPage;
+export default RanksPage;

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Models\Level;
 use App\Models\PointTransaction;
+use App\Models\Rank;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,22 +15,22 @@ use Illuminate\Support\Str;
 class GamificationController extends BaseApiController
 {
     /**
-     * Thông tin gamification của user hiện tại: điểm, cấp độ, tiến độ, thứ hạng.
+     * Thông tin gamification của user hiện tại: điểm, rank, tiến độ, thứ hạng.
      */
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->loadMissing('level');
+        $user = $request->user()->loadMissing('rank');
         $totalPoints = (int) $user->total_points;
 
-        $nextLevel = Level::query()
+        $nextRank = Rank::query()
             ->where('min_points', '>', $totalPoints)
             ->orderBy('min_points')
             ->first();
 
-        $currentMin = $user->level?->min_points ?? 0;
+        $currentMin = $user->rank?->min_points ?? 0;
         $progress = null;
-        if ($nextLevel) {
-            $span = $nextLevel->min_points - $currentMin;
+        if ($nextRank) {
+            $span = $nextRank->min_points - $currentMin;
             $progress = $span > 0
                 ? round((($totalPoints - $currentMin) / $span) * 100, 1)
                 : 0.0;
@@ -57,9 +57,9 @@ class GamificationController extends BaseApiController
 
         return $this->successResponse(true, [
             'total_points' => $totalPoints,
-            'level' => $this->formatLevel($user->level),
-            'next_level' => $this->formatLevel($nextLevel),
-            'points_to_next_level' => $nextLevel ? max(0, $nextLevel->min_points - $totalPoints) : null,
+            'current_rank' => $this->formatRank($user->rank),
+            'next_rank' => $this->formatRank($nextRank),
+            'points_to_next_rank' => $nextRank ? max(0, $nextRank->min_points - $totalPoints) : null,
             'progress_percent' => $progress,
             'week_points' => $myWeekPoints,
             'rank_all_time' => $allTimeRank,
@@ -97,12 +97,12 @@ class GamificationController extends BaseApiController
     public function weeklyLeaderboard(Request $request): JsonResponse
     {
         $weekStart = now()->startOfWeek();
-        $levels = Level::query()->get()->keyBy('id');
+        $ranks = Rank::query()->get()->keyBy('id');
 
         $rows = PointTransaction::query()
             ->join('users', 'users.id', '=', 'point_transactions.user_id')
             ->where('point_transactions.created_at', '>=', $weekStart)
-            ->groupBy('users.id', 'users.full_name', 'users.username', 'users.email', 'users.avatar', 'users.level_id')
+            ->groupBy('users.id', 'users.full_name', 'users.username', 'users.email', 'users.avatar', 'users.rank_id')
             ->orderByDesc(DB::raw('SUM(point_transactions.points)'))
             ->limit(50)
             ->get([
@@ -111,11 +111,11 @@ class GamificationController extends BaseApiController
                 'users.username',
                 'users.email',
                 'users.avatar',
-                'users.level_id',
+                'users.rank_id',
                 DB::raw('SUM(point_transactions.points) as points'),
             ]);
 
-        $currentUserId = $request->user()->id;
+        $currentUserId = auth('sanctum')->id();
         $entries = $rows->values()->map(fn ($row, int $i) => [
             'rank' => $i + 1,
             'user_id' => $row->id,
@@ -124,8 +124,8 @@ class GamificationController extends BaseApiController
             'email' => $row->email,
             'avatar' => $this->avatarUrl($row->avatar),
             'points' => (int) $row->points,
-            'level' => $this->formatLevelOrDefault($levels->get($row->level_id)),
-            'is_me' => $row->id === $currentUserId,
+            'member_rank' => $this->formatRankOrDefault($ranks->get($row->rank_id)),
+            'is_me' => $currentUserId !== null && (int) $row->id === (int) $currentUserId,
         ])->all();
 
         return $this->successResponse(true, $entries, 'Lấy bảng xếp hạng tuần thành công.');
@@ -136,12 +136,14 @@ class GamificationController extends BaseApiController
      */
     public function allTimeLeaderboard(Request $request): JsonResponse
     {
+        $currentUserId = auth('sanctum')->id();
+
         $rows = User::query()
-            ->with('level:id,name,badge,min_points')
+            ->with('rank:id,name,badge,min_points')
             ->orderByDesc('total_points')
             ->orderBy('id')
             ->limit(50)
-            ->get(['id', 'full_name', 'username', 'email', 'avatar', 'total_points', 'level_id']);
+            ->get(['id', 'full_name', 'username', 'email', 'avatar', 'total_points', 'rank_id']);
 
         $entries = $rows->values()->map(fn (User $u, int $i) => [
             'rank' => $i + 1,
@@ -151,51 +153,51 @@ class GamificationController extends BaseApiController
             'email' => $u->email,
             'avatar' => $this->avatarUrl($u->avatar),
             'points' => (int) $u->total_points,
-            'level' => $this->formatLevelOrDefault($u->level),
-            'is_me' => $u->id === $request->user()->id,
+            'member_rank' => $this->formatRankOrDefault($u->rank),
+            'is_me' => $currentUserId !== null && (int) $u->id === (int) $currentUserId,
         ]);
 
         return $this->successResponse(true, $entries, 'Lấy bảng xếp hạng tổng thành công.');
     }
 
-    private ?Level $defaultLevel = null;
+    private ?Rank $defaultRank = null;
 
-    private bool $defaultLevelLoaded = false;
+    private bool $defaultRankLoaded = false;
 
     /**
-     * Cấp độ thấp nhất (mặc định, vd Đồng) — dùng khi user chưa có cấp độ.
+     * Rank thấp nhất (mặc định, vd Đồng) — dùng khi user chưa có rank.
      */
-    private function defaultLevel(): ?Level
+    private function defaultRank(): ?Rank
     {
-        if (! $this->defaultLevelLoaded) {
-            $this->defaultLevel = Level::query()->orderBy('min_points')->first();
-            $this->defaultLevelLoaded = true;
+        if (! $this->defaultRankLoaded) {
+            $this->defaultRank = Rank::query()->orderBy('min_points')->first();
+            $this->defaultRankLoaded = true;
         }
 
-        return $this->defaultLevel;
+        return $this->defaultRank;
     }
 
-    private function formatLevel(?Level $level): ?array
+    private function formatRank(?Rank $rank): ?array
     {
-        if (! $level) {
+        if (! $rank) {
             return null;
         }
 
         return [
-            'id' => $level->id,
-            'name' => $level->name,
-            'badge' => $this->badgeUrl($level->badge),
-            'min_points' => $level->min_points,
+            'id' => $rank->id,
+            'name' => $rank->name,
+            'badge' => $this->badgeUrl($rank->badge),
+            'min_points' => $rank->min_points,
         ];
     }
 
     /**
-     * Như formatLevel nhưng rơi về cấp độ mặc định (Đồng) nếu user chưa có cấp độ.
+     * Như formatRank nhưng rơi về rank mặc định (Đồng) nếu user chưa có rank.
      * Dùng cho bảng xếp hạng để luôn có badge hiển thị.
      */
-    private function formatLevelOrDefault(?Level $level): ?array
+    private function formatRankOrDefault(?Rank $rank): ?array
     {
-        return $this->formatLevel($level ?? $this->defaultLevel());
+        return $this->formatRank($rank ?? $this->defaultRank());
     }
 
     private function badgeUrl(?string $badge): ?string

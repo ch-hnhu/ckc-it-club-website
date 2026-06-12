@@ -1,7 +1,7 @@
 // src/types/gamification.types.ts
 // Kiểu dữ liệu Gamification cho giao diện người dùng.
 
-export interface LevelSummary {
+export interface RankSummary {
 	id: number;
 	name: string;
 	badge: string | null;
@@ -10,9 +10,9 @@ export interface LevelSummary {
 
 export interface GamificationMe {
 	total_points: number;
-	level: LevelSummary | null;
-	next_level: LevelSummary | null;
-	points_to_next_level: number | null;
+	current_rank: RankSummary | null;
+	next_rank: RankSummary | null;
+	points_to_next_rank: number | null;
 	progress_percent: number | null;
 	week_points: number;
 	rank_all_time: number;
@@ -38,5 +38,5 @@ export interface LeaderboardEntry {
 	avatar: string | null;
 	points: number;
 	is_me: boolean;
-	level?: LevelSummary | null;
+	member_rank?: RankSummary | null;
 }

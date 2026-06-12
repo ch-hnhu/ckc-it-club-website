@@ -2,13 +2,13 @@ import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type {
 	LeaderboardEntry,
-	Level,
-	LevelPayload,
+	Rank,
+	RankPayload,
 	PointRule,
 	PointRulePayload,
 } from "@/types/gamification.type";
 
-function levelToFormData(payload: LevelPayload): FormData {
+function rankToFormData(payload: RankPayload): FormData {
 	const formData = new FormData();
 	formData.append("name", payload.name);
 	formData.append("min_points", String(payload.min_points));
@@ -48,28 +48,28 @@ const gamificationService = {
 		return api.delete(`/point-rules/${id}`);
 	},
 
-	// ─── Levels ───────────────────────────────────────────────────
-	async getLevels(): Promise<ApiResponse<Level[]>> {
-		return api.get("/levels");
+	// ─── Ranks ───────────────────────────────────────────────────
+	async getRanks(): Promise<ApiResponse<Rank[]>> {
+		return api.get("/ranks");
 	},
 
-	async createLevel(payload: LevelPayload): Promise<ApiResponse<Level>> {
-		return api.post<ApiResponse<Level>, FormData>("/levels", levelToFormData(payload), {
+	async createRank(payload: RankPayload): Promise<ApiResponse<Rank>> {
+		return api.post<ApiResponse<Rank>, FormData>("/ranks", rankToFormData(payload), {
 			headers: { "Content-Type": "multipart/form-data" },
 		});
 	},
 
-	async updateLevel(id: number | string, payload: LevelPayload): Promise<ApiResponse<Level>> {
-		const formData = levelToFormData(payload);
+	async updateRank(id: number | string, payload: RankPayload): Promise<ApiResponse<Rank>> {
+		const formData = rankToFormData(payload);
 		formData.append("_method", "PUT");
 
-		return api.post<ApiResponse<Level>, FormData>(`/levels/${id}`, formData, {
+		return api.post<ApiResponse<Rank>, FormData>(`/ranks/${id}`, formData, {
 			headers: { "Content-Type": "multipart/form-data" },
 		});
 	},
 
-	async deleteLevel(id: number | string): Promise<ApiResponse<null>> {
-		return api.delete(`/levels/${id}`);
+	async deleteRank(id: number | string): Promise<ApiResponse<null>> {
+		return api.delete(`/ranks/${id}`);
 	},
 
 	// ─── Leaderboards ─────────────────────────────────────────────

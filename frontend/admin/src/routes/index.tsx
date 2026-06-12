@@ -48,7 +48,7 @@ import EventListPage from "@/pages/event/EventListPage";
 import EventCreatePage from "@/pages/event/EventCreatePage";
 import EventEditPage from "@/pages/event/EventEditPage";
 import PointRulesPage from "@/pages/gamification/PointRulesPage";
-import LevelsPage from "@/pages/gamification/LevelsPage";
+import RanksPage from "@/pages/gamification/RanksPage";
 import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
 
 const router = createBrowserRouter([
@@ -419,10 +419,10 @@ const router = createBrowserRouter([
 				),
 			},
 			{
-				path: "gamification/levels",
+				path: "gamification/ranks",
 				element: (
 					<PermissionRoute permission="gamification.manage">
-						<LevelsPage />
+						<RanksPage />
 					</PermissionRoute>
 				),
 			},

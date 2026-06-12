@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\RolesEnum;
 use App\Models\PointRule;
+use App\Models\Rank;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
@@ -50,22 +51,45 @@ class GamificationAdminTest extends TestCase
         ])->assertStatus(422);
     }
 
-    public function test_admin_can_create_and_delete_level(): void
+    public function test_admin_can_create_and_delete_rank(): void
     {
         Sanctum::actingAs($this->admin());
 
-        $res = $this->post('/api/v1/levels', [
+        $res = $this->post('/api/v1/ranks', [
             'name' => 'Huyền Thoại',
             'min_points' => 5000,
             'badge' => UploadedFile::fake()->image('level06.png'),
         ], ['Accept' => 'application/json'])->assertCreated();
 
         $id = $res->json('data.id');
-        $this->assertStringContainsString('/storage/level-badges/', $res->json('data.badge'));
-        $this->assertDatabaseHas('levels', ['id' => $id]);
+        $this->assertStringContainsString('/storage/rank-badges/', $res->json('data.badge'));
+        $this->assertDatabaseHas('ranks', ['id' => $id]);
 
-        $this->deleteJson("/api/v1/levels/{$id}")->assertOk();
-        $this->assertDatabaseMissing('levels', ['id' => $id]);
+        $this->deleteJson("/api/v1/ranks/{$id}")->assertOk();
+        $this->assertDatabaseMissing('ranks', ['id' => $id]);
+    }
+
+    public function test_rank_member_counts_are_calculated_from_total_point_ranges(): void
+    {
+        $admin = $this->admin();
+        $admin->forceFill(['total_points' => 9999])->save();
+        Sanctum::actingAs($admin);
+
+        Rank::query()->create(['name' => 'Đồng', 'min_points' => 0]);
+        Rank::query()->create(['name' => 'Bạc', 'min_points' => 100]);
+        Rank::query()->create(['name' => 'Vàng', 'min_points' => 300]);
+
+        $this->createScoredUser('bronze-a', 0);
+        $this->createScoredUser('bronze-b', 99);
+        $this->createScoredUser('silver-a', 100);
+        $this->createScoredUser('silver-b', 299);
+        $this->createScoredUser('gold-a', 300);
+
+        $this->getJson('/api/v1/ranks')
+            ->assertOk()
+            ->assertJsonPath('data.0.users_count', 2)
+            ->assertJsonPath('data.1.users_count', 2)
+            ->assertJsonPath('data.2.users_count', 2);
     }
 
     public function test_regular_user_cannot_manage_point_rules(): void
@@ -97,5 +121,19 @@ class GamificationAdminTest extends TestCase
         $admin->syncRoles(RolesEnum::ADMIN->value);
 
         return $admin;
+    }
+
+    private function createScoredUser(string $username, int $points): User
+    {
+        $user = User::query()->create([
+            'email' => "{$username}@example.com",
+            'username' => $username,
+            'full_name' => ucfirst($username),
+            'is_active' => true,
+        ]);
+
+        $user->forceFill(['total_points' => $points])->save();
+
+        return $user;
     }
 }

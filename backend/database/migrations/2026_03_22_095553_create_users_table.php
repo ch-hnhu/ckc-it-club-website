@@ -44,7 +44,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
 
             $table->unsignedInteger('total_points')->default(0);
-            $table->foreignId('level_id')->nullable();
+            $table->foreignId('rank_id')->nullable();
 
             $table->foreignId('created_by')->nullable()->constrained('users');
             $table->foreignId('updated_by')->nullable()->constrained('users');

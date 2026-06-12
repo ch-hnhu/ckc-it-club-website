@@ -232,8 +232,8 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "gamification.manage",
 			},
 			{
-				title: "Level Rules",
-				url: "/gamification/levels",
+				title: "Rank Rules",
+				url: "/gamification/ranks",
 				permission: "gamification.manage",
 			},
 		],
@@ -302,7 +302,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/events\/[^/]+\/edit$/, permission: "events.manage" },
 	{ pattern: /^\/gamification\/leaderboard$/, permission: "gamification.view" },
 	{ pattern: /^\/gamification\/point-rules$/, permission: "gamification.manage" },
-	{ pattern: /^\/gamification\/levels$/, permission: "gamification.manage" },
+	{ pattern: /^\/gamification\/ranks$/, permission: "gamification.manage" },
 ];
 
 export function getRequiredPermissionForPath(pathname: string): string | null {

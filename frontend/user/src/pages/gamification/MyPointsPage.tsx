@@ -102,7 +102,7 @@ const MyPointsPage: React.FC = () => {
 				<div>
 					<h1 className='font-heading text-3xl font-extrabold text-black'>Điểm của tôi</h1>
 					<p className='mt-1 text-gray-600'>
-						Theo dõi điểm hoạt động, cấp độ và lịch sử tích điểm của bạn.
+						Theo dõi điểm hoạt động, rank và lịch sử tích điểm của bạn.
 					</p>
 				</div>
 				<Link
@@ -113,13 +113,13 @@ const MyPointsPage: React.FC = () => {
 				</Link>
 			</div>
 
-			{/* Level card */}
+			{/* Rank card */}
 			<div className='mb-6 flex flex-col items-center gap-5 rounded-2xl border-2 border-black bg-white p-6 shadow-[4px_4px_0_#111] sm:flex-row sm:p-8'>
 				<div className='flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border-2 border-black bg-[var(--color-pastel-yellow,#FEF3C7)]'>
-					{me?.level?.badge ? (
+					{me?.current_rank?.badge ? (
 						<img
-							src={me.level.badge}
-							alt={me.level.name}
+							src={me.current_rank.badge}
+							alt={me.current_rank.name}
 							className='h-16 w-16 object-contain'
 						/>
 					) : (
@@ -127,11 +127,11 @@ const MyPointsPage: React.FC = () => {
 					)}
 				</div>
 				<div className='flex-1 text-center sm:text-left'>
-					<p className='text-sm font-semibold text-gray-500'>Cấp độ hiện tại</p>
+					<p className='text-sm font-semibold text-gray-500'>Rank hiện tại</p>
 					<p className='font-heading text-2xl font-extrabold text-black'>
-						{me?.level?.name ?? "Chưa có cấp độ"}
+						{me?.current_rank?.name ?? "Chưa có rank"}
 					</p>
-					{me?.next_level ? (
+					{me?.next_rank ? (
 						<>
 							<div className='mt-3 h-3 w-full overflow-hidden rounded-full border-2 border-black bg-gray-100'>
 								<div
@@ -140,13 +140,13 @@ const MyPointsPage: React.FC = () => {
 								/>
 							</div>
 							<p className='mt-2 text-sm text-gray-600'>
-								Còn <span className='font-bold'>{me.points_to_next_level}</span> điểm để
-								lên <span className='font-bold'>{me.next_level.name}</span>
+								Còn <span className='font-bold'>{me.points_to_next_rank}</span> điểm để
+								lên <span className='font-bold'>{me.next_rank.name}</span>
 							</p>
 						</>
 					) : (
 						<p className='mt-2 text-sm text-gray-600'>
-							Bạn đã đạt cấp độ cao nhất. Tuyệt vời!
+							Bạn đã đạt rank cao nhất. Tuyệt vời!
 						</p>
 					)}
 				</div>

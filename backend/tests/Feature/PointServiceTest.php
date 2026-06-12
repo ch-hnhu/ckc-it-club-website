@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Level;
 use App\Models\PointRule;
+use App\Models\Rank;
 use App\Models\User;
 use App\Services\PointService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -70,18 +70,18 @@ class PointServiceTest extends TestCase
         $this->assertSame(6, $user->fresh()->total_points);
     }
 
-    public function test_level_updates_automatically_with_total_points(): void
+    public function test_rank_updates_automatically_with_total_points(): void
     {
         $user = $this->createUser();
-        Level::query()->create(['name' => 'Đồng', 'min_points' => 0]);
-        $silver = Level::query()->create(['name' => 'Bạc', 'min_points' => 100]);
+        Rank::query()->create(['name' => 'Đồng', 'min_points' => 0]);
+        $silver = Rank::query()->create(['name' => 'Bạc', 'min_points' => 100]);
         $this->createRule('post.published', 50);
 
         PointService::award($user, 'post.published');
-        $this->assertNotSame($silver->id, $user->fresh()->level_id);
+        $this->assertNotSame($silver->id, $user->fresh()->rank_id);
 
         PointService::award($user->fresh(), 'post.published');
-        $this->assertSame($silver->id, $user->fresh()->level_id);
+        $this->assertSame($silver->id, $user->fresh()->rank_id);
         $this->assertSame(100, $user->fresh()->total_points);
     }
 

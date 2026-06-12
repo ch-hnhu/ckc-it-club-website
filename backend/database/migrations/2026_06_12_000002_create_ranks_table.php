@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('levels', function (Blueprint $table) {
+        Schema::create('ranks', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->unsignedInteger('min_points')->unique();
@@ -19,16 +19,16 @@ return new class extends Migration
         });
 
         Schema::table('users', function (Blueprint $table) {
-            $table->foreign('level_id')->references('id')->on('levels')->nullOnDelete();
+            $table->foreign('rank_id')->references('id')->on('ranks')->nullOnDelete();
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['level_id']);
+            $table->dropForeign(['rank_id']);
         });
 
-        Schema::dropIfExists('levels');
+        Schema::dropIfExists('ranks');
     }
 };
