@@ -232,6 +232,7 @@
 - `updated_at`
 - If backend `User` payload grows, update the type instead of using `any`.
 - Gamification rank responses use `badge` as an image path/URL. Admin rank create/edit submits badge as an image file with `multipart/form-data`; rank and leaderboard UI render badge images, not the old `icon`/`color` fields. Admin rank management lives at `/gamification/ranks` and calls backend `/ranks`.
+- Admin leaderboard at `/gamification/leaderboard` calls the public gamification leaderboard endpoints with paginated `page`/`per_page` params and auto-loads more rows in 20-record pages when the sentinel at the bottom enters view.
 
 ## Feature-Specific Notes
 

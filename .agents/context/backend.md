@@ -60,8 +60,8 @@
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/admin/login`
 - `POST /api/v1/contacts`
-- `GET /api/v1/gamification/leaderboard/weekly`
-- `GET /api/v1/gamification/leaderboard/all-time`
+- `GET /api/v1/gamification/leaderboard/weekly` with paginated leaderboard data (`page`, `per_page`, default 20).
+- `GET /api/v1/gamification/leaderboard/all-time` with paginated leaderboard data (`page`, `per_page`, default 20).
 - Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /posts/{id}/reactions/users`, `GET /blogs`, `GET /blog-tags`, `GET /blogs/{slug}`, `GET /blogs/{id}/comments`, and `GET /blogs/{id}/reactions/users`. Post detail and post comments return published posts for everyone, plus archived posts only to their authenticated owner.
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`

@@ -98,14 +98,15 @@ class GamificationController extends BaseApiController
     {
         $weekStart = now()->startOfWeek();
         $ranks = Rank::query()->get()->keyBy('id');
+        $perPage = $this->leaderboardPerPage($request);
 
         $rows = PointTransaction::query()
             ->join('users', 'users.id', '=', 'point_transactions.user_id')
             ->where('point_transactions.created_at', '>=', $weekStart)
             ->groupBy('users.id', 'users.full_name', 'users.username', 'users.email', 'users.avatar', 'users.rank_id')
             ->orderByDesc(DB::raw('SUM(point_transactions.points)'))
-            ->limit(50)
-            ->get([
+            ->orderBy('users.id')
+            ->paginate($perPage, [
                 'users.id',
                 'users.full_name',
                 'users.username',
@@ -116,8 +117,10 @@ class GamificationController extends BaseApiController
             ]);
 
         $currentUserId = auth('sanctum')->id();
-        $entries = $rows->values()->map(fn ($row, int $i) => [
-            'rank' => $i + 1,
+        $rankOffset = ($rows->currentPage() - 1) * $rows->perPage();
+
+        $rows->getCollection()->transform(fn ($row, int $i) => [
+            'rank' => $rankOffset + $i + 1,
             'user_id' => $row->id,
             'full_name' => $row->full_name,
             'username' => $row->username,
@@ -126,9 +129,9 @@ class GamificationController extends BaseApiController
             'points' => (int) $row->points,
             'member_rank' => $this->formatRankOrDefault($ranks->get($row->rank_id)),
             'is_me' => $currentUserId !== null && (int) $row->id === (int) $currentUserId,
-        ])->all();
+        ]);
 
-        return $this->successResponse(true, $entries, 'Lấy bảng xếp hạng tuần thành công.');
+        return $this->paginatedResponse($rows, 'Lấy bảng xếp hạng tuần thành công.');
     }
 
     /**
@@ -137,16 +140,18 @@ class GamificationController extends BaseApiController
     public function allTimeLeaderboard(Request $request): JsonResponse
     {
         $currentUserId = auth('sanctum')->id();
+        $perPage = $this->leaderboardPerPage($request);
 
         $rows = User::query()
             ->with('rank:id,name,badge,min_points')
             ->orderByDesc('total_points')
             ->orderBy('id')
-            ->limit(50)
-            ->get(['id', 'full_name', 'username', 'email', 'avatar', 'total_points', 'rank_id']);
+            ->paginate($perPage, ['id', 'full_name', 'username', 'email', 'avatar', 'total_points', 'rank_id']);
 
-        $entries = $rows->values()->map(fn (User $u, int $i) => [
-            'rank' => $i + 1,
+        $rankOffset = ($rows->currentPage() - 1) * $rows->perPage();
+
+        $rows->getCollection()->transform(fn (User $u, int $i) => [
+            'rank' => $rankOffset + $i + 1,
             'user_id' => $u->id,
             'full_name' => $u->full_name,
             'username' => $u->username,
@@ -157,7 +162,12 @@ class GamificationController extends BaseApiController
             'is_me' => $currentUserId !== null && (int) $u->id === (int) $currentUserId,
         ]);
 
-        return $this->successResponse(true, $entries, 'Lấy bảng xếp hạng tổng thành công.');
+        return $this->paginatedResponse($rows, 'Lấy bảng xếp hạng tổng thành công.');
+    }
+
+    private function leaderboardPerPage(Request $request): int
+    {
+        return min(100, max(1, (int) $request->query('per_page', 20)));
     }
 
     private ?Rank $defaultRank = null;
