@@ -60,6 +60,25 @@ class Event extends Model
         return $this->hasMany(EventGalleryItem::class)->orderBy('display_order');
     }
 
+    /**
+     * Tự động chuyển trạng thái theo thời gian thực tế (chỉ tiến, không lùi):
+     * published → ongoing khi đã đến giờ bắt đầu, published/ongoing → ended khi đã qua giờ kết thúc.
+     * Không đụng đến draft, cancelled hay sự kiện đã được kết thúc thủ công.
+     */
+    public static function syncStatuses(): void
+    {
+        static::query()
+            ->where('status', 'published')
+            ->where('start_at', '<=', now())
+            ->where('end_at', '>', now())
+            ->update(['status' => 'ongoing']);
+
+        static::query()
+            ->whereIn('status', ['published', 'ongoing'])
+            ->where('end_at', '<=', now())
+            ->update(['status' => 'ended']);
+    }
+
     public static function generateUniqueSlug(string $title): string
     {
         $base = Str::slug($title);

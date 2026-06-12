@@ -15,12 +15,25 @@ class EventController extends BaseApiController
 {
     public function index(Request $request): JsonResponse
     {
+        Event::syncStatuses();
+
+        $publicStatuses = ['published', 'ongoing', 'ended'];
+        $status = in_array($request->query('status'), $publicStatuses, true)
+            ? $request->query('status')
+            : null;
+        $perPage = min((int) $request->query('per_page', 12), 50);
+        $search = $request->query('search');
+
         $events = Event::query()
-            ->whereIn('status', ['published', 'ongoing'])
+            ->whereIn('status', $status ? [$status] : $publicStatuses)
             ->withCount('registrations')
             ->with('creator:id,full_name,avatar')
-            ->orderBy('start_at', 'asc')
-            ->paginate(12);
+            ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
+            // Đang diễn ra → sắp diễn ra (gần nhất trước) → đã kết thúc (mới nhất trước)
+            ->orderByRaw("CASE status WHEN 'ongoing' THEN 0 WHEN 'published' THEN 1 ELSE 2 END")
+            ->orderByRaw("CASE WHEN status = 'ended' THEN NULL ELSE start_at END asc")
+            ->orderByDesc('start_at')
+            ->paginate($perPage);
 
         $user = $request->user();
         $events->getCollection()->transform(function (Event $e) use ($user) {
@@ -38,6 +51,9 @@ class EventController extends BaseApiController
 
     public function show(Request $request, Event $event): JsonResponse
     {
+        Event::syncStatuses();
+        $event->refresh();
+
         abort_if(
             ! in_array($event->status->value, ['published', 'ongoing', 'ended']),
             404
@@ -59,10 +75,19 @@ class EventController extends BaseApiController
 
     public function register(Request $request, Event $event): JsonResponse
     {
+        Event::syncStatuses();
+        $event->refresh();
+
         abort_if($event->status->value !== 'published', 422, 'Sự kiện này hiện không mở đăng ký.');
         abort_if($event->isFull(), 422, 'Sự kiện đã đủ số lượng người tham dự.');
 
         $user = $request->user();
+
+        abort_if(
+            ! str_ends_with(strtolower((string) $user->email), '@caothang.edu.vn'),
+            422,
+            'Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) mới được đăng ký tham gia sự kiện.'
+        );
 
         $existing = $event->registrations()->where('user_id', $user->id)->first();
 
@@ -94,6 +119,9 @@ class EventController extends BaseApiController
 
     public function cancelRegistration(Request $request, Event $event): JsonResponse
     {
+        Event::syncStatuses();
+        $event->refresh();
+
         abort_if($event->status->value !== 'published', 422, 'Không thể hủy đăng ký khi sự kiện đã bắt đầu.');
 
         $user = $request->user();

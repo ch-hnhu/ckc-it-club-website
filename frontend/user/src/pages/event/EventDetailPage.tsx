@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { CalendarDays, Loader2, MapPin, Ticket, Users, X } from "lucide-react";
+import { CalendarCheck, CalendarDays, Loader2, MapPin, Ticket, Users, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
 	Breadcrumb,
@@ -93,10 +93,20 @@ const EventDetailPage: React.FC = () => {
 		};
 	}, [slug]);
 
+	// Chỉ tài khoản email sinh viên Cao Thắng mới được đăng ký tham gia sự kiện
+	const registrationBlocked =
+		Boolean(user) && !user?.email?.toLowerCase().endsWith("@caothang.edu.vn");
+
 	const handleRegister = async () => {
 		if (!event) return;
 		if (!user) {
 			navigate("/login");
+			return;
+		}
+		if (registrationBlocked) {
+			toast.error(
+				"Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) mới được đăng ký tham gia sự kiện.",
+			);
 			return;
 		}
 
@@ -222,11 +232,19 @@ const EventDetailPage: React.FC = () => {
 							<div className='flex items-start gap-3'>
 								<CalendarDays className='mt-0.5 h-5 w-5 shrink-0 text-[var(--color-text-primary)]' />
 								<div>
-									<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Thời gian</p>
+									<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Bắt đầu</p>
 									<p className='text-sm font-semibold text-black'>
 										{formatEventDateTime(event.start_at)}
 									</p>
-									<p className='text-sm text-gray-500'>đến {formatEventDateTime(event.end_at)}</p>
+								</div>
+							</div>
+							<div className='flex items-start gap-3'>
+								<CalendarCheck className='mt-0.5 h-5 w-5 shrink-0 text-[var(--color-text-primary)]' />
+								<div>
+									<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Kết thúc</p>
+									<p className='text-sm font-semibold text-black'>
+										{formatEventDateTime(event.end_at)}
+									</p>
 								</div>
 							</div>
 							{event.location && (
@@ -248,22 +266,6 @@ const EventDetailPage: React.FC = () => {
 									</p>
 								</div>
 							</div>
-							{event.creator && (
-								<div className='flex items-start gap-3'>
-									<img
-										src={
-											event.creator.avatar ??
-											`https://ui-avatars.com/api/?name=${encodeURIComponent(event.creator.full_name)}&background=d4f2c4&color=111111&bold=true`
-										}
-										alt={event.creator.full_name}
-										className='mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-black object-cover'
-									/>
-									<div>
-										<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Tổ chức bởi</p>
-										<p className='text-sm font-semibold text-black'>{event.creator.full_name}</p>
-									</div>
-								</div>
-							)}
 						</div>
 
 						{/* Actions */}
@@ -290,13 +292,21 @@ const EventDetailPage: React.FC = () => {
 										)}
 									</>
 								) : (
-									<button
-										onClick={handleRegister}
-										disabled={actionLoading || event.is_full}
-										className='inline-flex h-11 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
-										{actionLoading && <Loader2 className='h-4 w-4 animate-spin' />}
-										{event.is_full ? "Sự kiện đã đủ số lượng" : "Đăng ký tham gia"}
-									</button>
+									<div className='flex flex-col items-start gap-2'>
+										<button
+											onClick={handleRegister}
+											disabled={actionLoading || event.is_full || registrationBlocked}
+											className='inline-flex h-11 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
+											{actionLoading && <Loader2 className='h-4 w-4 animate-spin' />}
+											{event.is_full ? "Sự kiện đã đủ số lượng" : "Đăng ký tham gia"}
+										</button>
+										{registrationBlocked && (
+											<p className='text-sm font-medium text-gray-500'>
+												Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) mới được đăng
+												ký tham gia sự kiện.
+											</p>
+										)}
+									</div>
 								)}
 							</div>
 						)}

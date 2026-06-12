@@ -47,6 +47,7 @@ import MailTemplateDetailPage from "@/pages/mail-template/MailTemplateDetailPage
 import EventListPage from "@/pages/event/EventListPage";
 import EventCreatePage from "@/pages/event/EventCreatePage";
 import EventEditPage from "@/pages/event/EventEditPage";
+import EventDetailPage from "@/pages/event/EventDetailPage";
 
 const router = createBrowserRouter([
 	{
@@ -295,6 +296,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='events.manage'>
 						<EventCreatePage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "events/:id",
+				element: (
+					<PermissionRoute permission='events.view'>
+						<EventDetailPage />
 					</PermissionRoute>
 				),
 			},
