@@ -71,6 +71,10 @@ enum PermissionsEnum: string
     case EVENTS_MANAGE   = 'events.manage';
     case EVENTS_CHECK_IN = 'events.check_in';
 
+    // Gamification — admin chỉ quản lý luật điểm & cấp độ, không cộng/trừ điểm thủ công
+    case GAMIFICATION_VIEW   = 'gamification.view';
+    case GAMIFICATION_MANAGE = 'gamification.manage';
+
     public static function values(): array
     {
         return array_column(self::cases(), 'value');

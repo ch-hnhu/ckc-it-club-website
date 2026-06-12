@@ -68,7 +68,23 @@ class User extends Authenticatable
             'date_of_birth' => 'date:Y-m-d',
             'created_at' => 'datetime:d/m/Y',
             'updated_at' => 'datetime:d/m/Y',
+            'total_points' => 'integer',
         ];
+    }
+
+    /**
+     * Gamification — cấp độ hiện tại của user.
+     * total_points & level_id chỉ được ghi qua App\Services\PointService
+     * (cố ý KHÔNG đưa vào $fillable để chặn controller mass-assign).
+     */
+    public function level(): BelongsTo
+    {
+        return $this->belongsTo(Level::class);
+    }
+
+    public function pointTransactions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PointTransaction::class);
     }
 
     public function faculty()

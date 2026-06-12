@@ -209,6 +209,9 @@
 - admin role create payload uses `label` for the display name, `name` for the internal value, and `is_system` as a boolean flag.
 - belongs to `faculty`, `major`, `school class`.
 - can create/update other records through `created_by` and `updated_by`.
+- `levels`
+- gamification level records use `name`, unique `min_points`, and `badge`; seeded badges use user-site paths such as `/assets/img/level01.png`, while admin uploads store files on the Laravel `public` disk under `level-badges/` and return `/storage/...` URLs.
+- seeded level data has 6 tiers: Đồng, Bạc, Vàng, Bạch Kim, Kim Cương, and Tinh Anh. The old `icon`/`color` level contract is obsolete.
 - `faculties`
 - top-level academic grouping.
 - has many `majors`.

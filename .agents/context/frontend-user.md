@@ -211,6 +211,7 @@
 - It keeps form state locally, submits to the backend through `contact.service.ts`, and resets the form after a successful response.
 - Contact submissions are stored in the backend `contacts` table through the public API.
 - Community create-post submissions require an authenticated user, a real channel slug, title, editor content, and optional image/video media up to 20 MB. Successful submissions redirect to `/cong-dong/bai-viet/{id}`.
+- Gamification level summaries use `badge` as an image path/URL. The old `icon`/`color` fields are obsolete.
 
 ## Environment Variables
 

@@ -5,6 +5,25 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function resolvePublicAssetUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  if (/^(https?:)?\/\//.test(path) || path.startsWith("data:") || path.startsWith("blob:")) {
+    return path;
+  }
+
+  const baseUrl = import.meta.env.VITE_USER_SITE_URL || "http://localhost:5174";
+  if (baseUrl && path.startsWith("/assets/")) {
+    return `${String(baseUrl).replace(/\/$/, "")}${path}`;
+  }
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+  if (backendUrl && path.startsWith("/storage/")) {
+    return `${String(backendUrl).replace(/\/$/, "")}${path}`;
+  }
+
+  return path;
+}
+
 export function timeAgo(isoString: string): string {
   const diff = Date.now() - new Date(isoString).getTime();
   const minutes = Math.floor(diff / 60_000);

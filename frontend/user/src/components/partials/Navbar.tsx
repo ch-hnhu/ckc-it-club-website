@@ -42,7 +42,6 @@ type NavItem = {
 const BASE_NAV_ITEMS: NavItem[] = [
 	{ label: "Cộng đồng", href: "/cong-dong", dropdown: true },
 	{ label: "Tài nguyên", href: "#resources" },
-	{ label: "Bảng xếp hạng", href: "#leaderboard" },
 	{ label: "Sự kiện", href: "/su-kien" },
 	{ label: "Khóa học", href: "#courses" },
 	{ label: "Liên hệ", href: "/lien-he" },
@@ -52,7 +51,7 @@ const APPLY_NAV_ITEM: NavItem = { label: "Ứng tuyển", href: "/ung-tuyen", hi
 
 const COMMUNITY_DROPDOWN = [
 	{ id: "home", label: "Trang chủ", to: "/cong-dong", icon: Home },
-	{ id: "leaderboard", label: "Bảng xếp hạng", to: "/cong-dong", icon: Trophy },
+	{ id: "leaderboard", label: "Bảng xếp hạng", to: "/cong-dong/bang-xep-hang", icon: Trophy },
 	{ id: "showcase", label: "Showcase dự án", to: "/cong-dong", icon: Monitor },
 	{ id: "challenge", label: "Thử thách tháng", to: "/cong-dong", icon: Crown },
 	{ id: "code", label: "#30DaysOfCode", to: "/cong-dong", icon: Code2 },
@@ -226,6 +225,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 					role='menuitem'>
 					<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
 					<span>Đã lưu</span>
+				</Link>
+				<Link
+					to='/diem-cua-toi'
+					onClick={() => closeProfileMenu(isMobile)}
+					className={profileMenuItemClass}
+					role='menuitem'>
+					<Trophy className='h-5 w-5 shrink-0 text-gray-600' />
+					<span>Điểm của tôi</span>
 				</Link>
 				<Link
 					to='/tai-khoan?tabIndex=0'
@@ -630,6 +637,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 										className={profileMenuItemClass}>
 										<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
 										<span>Đã lưu</span>
+									</Link>
+									<Link
+										to='/diem-cua-toi'
+										onClick={closeMobileMenu}
+										className={profileMenuItemClass}
+										role='menuitem'>
+										<Trophy className='h-5 w-5 shrink-0 text-gray-600' />
+										<span>Điểm của tôi</span>
 									</Link>
 									<Link
 										to='/tai-khoan?tabIndex=0'

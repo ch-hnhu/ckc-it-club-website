@@ -53,6 +53,8 @@ class PermissionSeeder extends Seeder
         'events.view' => 'Xem danh sách và chi tiết sự kiện',
         'events.manage' => 'Tạo, sửa, xóa, đổi trạng thái sự kiện',
         'events.check_in' => 'Thực hiện điểm danh sự kiện',
+        'gamification.view' => 'Xem luật điểm, cấp độ và bảng xếp hạng',
+        'gamification.manage' => 'Thêm, sửa, xóa luật điểm và cấp độ',
     ];
 
     /**
@@ -85,6 +87,7 @@ class PermissionSeeder extends Seeder
             'community.reports.view',
             'mail_templates.view', 'mail_templates.manage',
             'events.view', 'events.manage', 'events.check_in',
+            'gamification.view', 'gamification.manage',
         ],
 
         // Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
@@ -113,6 +116,7 @@ class PermissionSeeder extends Seeder
             'community.reports.view',
             'mail_templates.view', 'mail_templates.manage',
             'events.view', 'events.manage', 'events.check_in',
+            'gamification.view', 'gamification.manage',
         ],
 
         // Phó Chủ nhiệm — full chức năng, chỉ xem/cập nhật người dùng (không tạo/xóa/phân quyền)
@@ -141,6 +145,7 @@ class PermissionSeeder extends Seeder
             'community.reports.view',
             'mail_templates.view', 'mail_templates.manage',
             'events.view', 'events.manage', 'events.check_in',
+            'gamification.view', 'gamification.manage',
         ],
 
         // Trưởng ban Học thuật — chỉ dashboard (chưa có chức năng được giao)

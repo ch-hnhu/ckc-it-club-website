@@ -47,6 +47,9 @@ import MailTemplateDetailPage from "@/pages/mail-template/MailTemplateDetailPage
 import EventListPage from "@/pages/event/EventListPage";
 import EventCreatePage from "@/pages/event/EventCreatePage";
 import EventEditPage from "@/pages/event/EventEditPage";
+import PointRulesPage from "@/pages/gamification/PointRulesPage";
+import LevelsPage from "@/pages/gamification/LevelsPage";
+import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
 
 const router = createBrowserRouter([
 	{
@@ -404,6 +407,30 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.reports.view">
 						<BlogReportListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "gamification/point-rules",
+				element: (
+					<PermissionRoute permission="gamification.manage">
+						<PointRulesPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "gamification/levels",
+				element: (
+					<PermissionRoute permission="gamification.manage">
+						<LevelsPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "gamification/leaderboard",
+				element: (
+					<PermissionRoute permission="gamification.view">
+						<LeaderboardPage />
 					</PermissionRoute>
 				),
 			},

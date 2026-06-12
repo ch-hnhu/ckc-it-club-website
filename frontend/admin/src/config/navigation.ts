@@ -1,4 +1,5 @@
 import {
+	Award,
 	Building,
 	CalendarDays,
 	Globe,
@@ -215,6 +216,29 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
+		title: "Điểm & Bảng xếp hạng",
+		url: "/gamification/leaderboard",
+		icon: Award,
+		permission: "gamification.view",
+		items: [
+			{
+				title: "Leaderboard",
+				url: "/gamification/leaderboard",
+				permission: "gamification.view",
+			},
+			{
+				title: "Activity Point Rules",
+				url: "/gamification/point-rules",
+				permission: "gamification.manage",
+			},
+			{
+				title: "Level Rules",
+				url: "/gamification/levels",
+				permission: "gamification.manage",
+			},
+		],
+	},
+	{
 		title: "Quản lý liên hệ",
 		url: "/contacts",
 		icon: MailOpen,
@@ -276,6 +300,9 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/events$/, permission: "events.view" },
 	{ pattern: /^\/events\/create$/, permission: "events.manage" },
 	{ pattern: /^\/events\/[^/]+\/edit$/, permission: "events.manage" },
+	{ pattern: /^\/gamification\/leaderboard$/, permission: "gamification.view" },
+	{ pattern: /^\/gamification\/point-rules$/, permission: "gamification.manage" },
+	{ pattern: /^\/gamification\/levels$/, permission: "gamification.manage" },
 ];
 
 export function getRequiredPermissionForPath(pathname: string): string | null {
