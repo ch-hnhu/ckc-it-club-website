@@ -74,7 +74,8 @@ class User extends Authenticatable
 
     /**
      * Gamification — rank hiện tại của user.
-     * total_points & rank_id chỉ được ghi qua App\Services\PointService
+     * total_points chỉ được ghi qua App\Services\PointService.
+     * rank_id được đồng bộ qua PointService và App\Services\RankSyncService
      * (cố ý KHÔNG đưa vào $fillable để chặn controller mass-assign).
      */
     public function rank(): BelongsTo

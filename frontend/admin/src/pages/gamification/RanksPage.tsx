@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { ExternalLink, ImagePlus, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+	ExternalLink,
+	ImageIcon,
+	ImagePlus,
+	MoreHorizontal,
+	Pencil,
+	Plus,
+	Trash2,
+	X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -155,10 +164,10 @@ function RanksPage() {
 		try {
 			if (editTarget) {
 				await gamificationService.updateRank(editTarget.id, toPayload(form));
-				toast.success("Đã cập nhật rank. Chạy lệnh recompute-ranks để đồng bộ user.");
+				toast.success("Đã cập nhật rank. Hệ thống đang đồng bộ rank thành viên.");
 			} else {
 				await gamificationService.createRank(toPayload(form));
-				toast.success("Đã tạo rank mới.");
+				toast.success("Đã tạo rank mới. Hệ thống đang đồng bộ rank thành viên.");
 			}
 			setFormOpen(false);
 			setReloadToken((p) => p + 1);
@@ -174,7 +183,7 @@ function RanksPage() {
 		setIsDeleting(true);
 		try {
 			await gamificationService.deleteRank(deleteTarget.id);
-			toast.success("Đã xóa rank.");
+			toast.success("Đã xóa rank. Hệ thống đang đồng bộ rank thành viên.");
 			setDeleteTarget(null);
 			setReloadToken((p) => p + 1);
 		} catch {
@@ -191,12 +200,8 @@ function RanksPage() {
 					<div className='space-y-1'>
 						<h2 className='text-2xl font-semibold tracking-tight'>Rank Rules</h2>
 						<p className='text-muted-foreground text-sm'>
-							Ranks của thành viên tự cập nhật theo tổng điểm. Sau khi đổi mốc điểm,
-							chạy{" "}
-							<code className='rounded bg-muted px-1 py-0.5 text-xs'>
-								php artisan gamification:recompute-ranks
-							</code>
-							.
+							Ranks của thành viên tự cập nhật theo tổng điểm. Khi đổi mức điểm của
+							rank, hệ thống sẽ tự động đồng bộ lại rank.
 						</p>
 					</div>
 					<Button
@@ -248,9 +253,9 @@ function RanksPage() {
 													className='mx-auto h-10 w-10 object-contain'
 												/>
 											) : (
-												<span className='text-sm text-muted-foreground'>
-													—
-												</span>
+												<div className='mx-auto flex h-10 w-10 items-center justify-center rounded-md border bg-muted'>
+													<ImageIcon className='h-4 w-4 text-muted-foreground' />
+												</div>
 											)}
 										</TableCell>
 										<TableCell className='font-medium'>{rank.name}</TableCell>
@@ -360,7 +365,7 @@ function RanksPage() {
 						<div className='space-y-2'>
 							<Label htmlFor='rank-badge'>Badge image</Label>
 							<div className='flex items-center gap-3'>
-								<div className='flex h-12 w-12 shrink-0 items-center justify-center rounded-md border bg-muted/30'>
+								<div className='flex h-12 w-12 shrink-0 items-center justify-center rounded-md border bg-muted'>
 									{form.badgePreview ? (
 										<img
 											src={resolvePublicAssetUrl(form.badgePreview)}
@@ -368,7 +373,7 @@ function RanksPage() {
 											className='h-10 w-10 object-contain'
 										/>
 									) : (
-										<span className='text-xs text-muted-foreground'>—</span>
+										<ImageIcon className='h-4 w-4 text-muted-foreground' />
 									)}
 								</div>
 								<div className='min-w-0 flex-1'>
@@ -443,8 +448,8 @@ function RanksPage() {
 								</p>
 								{(deleteTarget.users_count ?? 0) > 0 && (
 									<p className='rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-400'>
-										{deleteTarget.users_count} thành viên đang ở rank này. Họ
-										sẽ được hạ về rank phù hợp sau khi recompute.
+										{deleteTarget.users_count} thành viên đang ở rank này. Họ sẽ
+										được chuyển về rank phù hợp sau khi hệ thống đồng bộ.
 									</p>
 								)}
 								<p>Hành động này không thể hoàn tác.</p>

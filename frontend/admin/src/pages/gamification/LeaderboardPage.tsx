@@ -16,6 +16,7 @@ import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { resolvePublicAssetUrl } from "@/lib/utils";
 import gamificationService from "@/services/gamification.service";
 import type { LeaderboardEntry } from "@/types/gamification.type";
+import { Link } from "react-router-dom";
 
 const PER_PAGE = 20;
 
@@ -92,7 +93,9 @@ function LeaderboardTable({
 						state.entries.map((entry) => (
 							<TableRow
 								key={entry.user_id}
-								className={entry.is_me ? "bg-primary/5" : undefined}>
+								className={
+									entry.is_me ? "bg-primary/5 hover:bg-primary/5" : undefined
+								}>
 								<TableCell className='text-center'>
 									<div className='flex items-center justify-center'>
 										{rankBadge(entry.rank)}
@@ -107,11 +110,13 @@ function LeaderboardTable({
 											</AvatarFallback>
 										</Avatar>
 										<span className='font-medium'>
-											{entry.full_name}
+											<Link to={`/users/${entry.user_id}`}>
+												{entry.full_name}
+											</Link>
 											{entry.is_me && (
-												<Badge variant='secondary' className='ml-2'>
+												<span className='inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ml-2'>
 													Bạn
-												</Badge>
+												</span>
 											)}
 										</span>
 									</div>
@@ -137,7 +142,7 @@ function LeaderboardTable({
 									</TableCell>
 								)}
 								<TableCell className='text-right font-semibold'>
-									{entry.points}
+									{entry.points} XP
 								</TableCell>
 							</TableRow>
 						))
@@ -277,11 +282,11 @@ function LeaderboardPage() {
 
 				<Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)}>
 					<TabsList>
-						<TabsTrigger value='weekly'>Tuần này</TabsTrigger>
-						<TabsTrigger value='all-time'>Mọi thời điểm</TabsTrigger>
+						<TabsTrigger value='weekly'>Weekly</TabsTrigger>
+						<TabsTrigger value='all-time'>All Time</TabsTrigger>
 					</TabsList>
 					<TabsContent value='weekly' className='mt-4'>
-						<LeaderboardTable state={weekly} showMemberRank={false} />
+						<LeaderboardTable state={weekly} showMemberRank />
 					</TabsContent>
 					<TabsContent value='all-time' className='mt-4'>
 						<LeaderboardTable state={allTime} showMemberRank />

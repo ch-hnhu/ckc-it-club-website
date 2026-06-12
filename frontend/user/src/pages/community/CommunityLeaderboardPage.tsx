@@ -411,7 +411,7 @@ const CommunityLeaderboardPage: React.FC = () => {
 								? "border-[var(--color-primary-dark)] text-black"
 								: "border-transparent text-gray-400 hover:text-gray-600"
 						}`}>
-						Tuần này
+						Weekly
 					</button>
 					<button
 						onClick={() => setTab("all-time")}
@@ -420,7 +420,7 @@ const CommunityLeaderboardPage: React.FC = () => {
 								? "border-[var(--color-primary-dark)] text-black"
 								: "border-transparent text-gray-400 hover:text-gray-600"
 						}`}>
-						Mọi thời điểm
+						All Time
 					</button>
 				</div>
 

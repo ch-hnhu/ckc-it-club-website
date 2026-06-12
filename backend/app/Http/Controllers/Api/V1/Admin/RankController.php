@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Jobs\RecomputeUserRanksJob;
 use App\Models\Rank;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -15,8 +16,7 @@ use Illuminate\Support\Str;
 /**
  * Quản lý rank gamification.
  *
- * Sau khi sửa ngưỡng điểm, chạy `php artisan gamification:recompute-ranks`
- * để đồng bộ rank_id của toàn bộ user (không chạy trong request để tránh nặng).
+ * Sau khi rank thay đổi, backend tự enqueue job đồng bộ rank_id của toàn bộ user.
  */
 class RankController extends BaseApiController
 {
@@ -52,6 +52,7 @@ class RankController extends BaseApiController
         }
 
         $rank = Rank::create($data);
+        $this->queueRankSync();
 
         return $this->createdResponse($this->transformRank($rank), 'Tạo rank thành công.');
     }
@@ -68,6 +69,7 @@ class RankController extends BaseApiController
         }
 
         $rank->update($data);
+        $this->queueRankSync();
 
         return $this->successResponse(true, $this->transformRank($rank->fresh()), 'Cập nhật rank thành công.');
     }
@@ -76,8 +78,14 @@ class RankController extends BaseApiController
     {
         $this->deleteStoredBadge($rank->badge);
         $rank->delete();
+        $this->queueRankSync();
 
         return $this->successResponse(true, null, 'Xóa rank thành công.');
+    }
+
+    private function queueRankSync(): void
+    {
+        RecomputeUserRanksJob::dispatch()->afterCommit();
     }
 
     private function validateData(Request $request, ?int $ignoreId = null): array
