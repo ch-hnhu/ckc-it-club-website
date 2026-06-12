@@ -106,7 +106,7 @@ class GamificationController extends BaseApiController
             ->groupBy('users.id', 'users.full_name', 'users.username', 'users.email', 'users.avatar', 'users.rank_id')
             ->orderByDesc(DB::raw('SUM(point_transactions.points)'))
             ->orderBy('users.id')
-            ->paginate($perPage, [
+            ->select([
                 'users.id',
                 'users.full_name',
                 'users.username',
@@ -114,7 +114,8 @@ class GamificationController extends BaseApiController
                 'users.avatar',
                 'users.rank_id',
                 DB::raw('SUM(point_transactions.points) as points'),
-            ]);
+            ])
+            ->paginate($perPage);
 
         $currentUserId = auth('sanctum')->id();
         $rankOffset = ($rows->currentPage() - 1) * $rows->perPage();
