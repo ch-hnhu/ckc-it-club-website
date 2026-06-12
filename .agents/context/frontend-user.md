@@ -84,6 +84,8 @@
 - dense community page with sidebar, feed, and right rail
 - `/cong-dong/dang-bai`
 - community create-post form linked from the composer entry and post button
+- `/cong-dong/bang-xep-hang`
+- public community leaderboard page; guests can view weekly and all-time rankings without logging in
 - `/login`
 - credential login page with Google/GitHub OAuth popup buttons.
 - `/register`
@@ -211,6 +213,8 @@
 - It keeps form state locally, submits to the backend through `contact.service.ts`, and resets the form after a successful response.
 - Contact submissions are stored in the backend `contacts` table through the public API.
 - Community create-post submissions require an authenticated user, a real channel slug, title, editor content, and optional image/video media up to 20 MB. Successful submissions redirect to `/cong-dong/bai-viet/{id}`.
+- Gamification rank summaries use `badge` as an image path/URL. The old `icon`/`color` fields are obsolete. User gamification `/me` reads `current_rank`, `next_rank`, and `points_to_next_rank`; leaderboard rows read `member_rank` so `rank` remains the numeric leaderboard position.
+- The community leaderboard right rail links to the seeded blog slug `gioi-thieu-bang-xep-hang`; its teaser card fetches the blog detail to show cover image, title, reading time, and published date.
 
 ## Environment Variables
 

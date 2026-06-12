@@ -6,6 +6,7 @@ import CommunityChatPage from "@/pages/community/CommunityChatPage";
 import CommunityCreatePage from "@/pages/community/CommunityCreatePage";
 import EditPostPage from "@/pages/community/EditPostPage";
 import CommunityPostDetailPage from "@/pages/community/CommunityPostDetailPage";
+import CommunityLeaderboardPage from "@/pages/community/CommunityLeaderboardPage";
 import BlogFeedPage from "@/pages/blog/BlogFeedPage";
 import BlogCreatePage from "@/pages/blog/BlogCreatePage";
 import BlogDetailPage from "@/pages/blog/BlogDetailPage";
@@ -17,6 +18,7 @@ import NotificationsPage from "@/pages/notification/NotificationsPage";
 import ApplicationPage from "@/pages/ApplicationPage";
 import UserProfilePage from "@/pages/user/UserProfilePage";
 import AccountPage from "@/pages/user/AccountPage";
+import MyPointsPage from "@/pages/gamification/MyPointsPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import RegisterVerifyOtpPage from "@/pages/auth/RegisterVerifyOtpPage";
@@ -77,6 +79,10 @@ const router = createBrowserRouter([
 				element: <EventDetailPage />,
 			},
 			{
+				path: "diem-cua-toi",
+				element: <MyPointsPage />,
+			},
+			{
 				// Dynamic catch-all for /@username profile pages — must be last
 				// Static routes above (blog, lien-he, cong-dong) always win on exact match
 				path: ":username",
@@ -105,6 +111,10 @@ const router = createBrowserRouter([
 					{
 						path: "dang-bai",
 						element: <CommunityCreatePage />,
+					},
+					{
+						path: "bang-xep-hang",
+						element: <CommunityLeaderboardPage />,
 					},
 					{
 						path: ":channelSlug",

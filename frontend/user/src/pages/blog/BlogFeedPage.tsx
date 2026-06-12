@@ -73,18 +73,15 @@ const FeaturedArticle: React.FC<{ blog: Blog; isHighlight?: boolean }> = ({ blog
 			className='group block overflow-hidden rounded-2xl border-2 border-black bg-white'>
 			<div className='flex flex-col md:flex-row'>
 				{/* Image — 58% width on desktop */}
-				<div className='relative shrink-0 overflow-hidden md:w-[58%]'>
+				<div className='relative aspect-[4/3] max-h-[340px] shrink-0 overflow-hidden bg-gray-100 md:h-[380px] md:max-h-[420px] md:w-[58%] md:aspect-auto lg:h-[420px]'>
 					{blog.featured_image ? (
 						<img
 							src={blog.featured_image}
 							alt={blog.title}
-							className='aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-105 md:aspect-auto md:h-full'
-							style={{ minHeight: "380px" }}
+							className='h-full w-full object-cover transition-transform duration-500 group-hover:scale-105'
 						/>
 					) : (
-						<div
-							className='flex aspect-[4/3] w-full items-center justify-center bg-[var(--color-pastel-green)] md:aspect-auto md:h-full'
-							style={{ minHeight: "380px" }}>
+						<div className='flex h-full w-full items-center justify-center bg-[var(--color-pastel-green)]'>
 							<span className='font-heading text-8xl font-extrabold text-[var(--color-text-primary)] opacity-20'>
 								{blog.title.charAt(0).toUpperCase()}
 							</span>

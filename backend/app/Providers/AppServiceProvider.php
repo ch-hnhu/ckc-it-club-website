@@ -2,6 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\Blog;
+use App\Models\Comment;
+use App\Models\Post;
+use App\Models\Reaction;
+use App\Observers\BlogObserver;
+use App\Observers\CommentObserver;
+use App\Observers\PostObserver;
+use App\Observers\ReactionObserver;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -23,5 +31,11 @@ class AppServiceProvider extends ServiceProvider
         if (app()->environment('production')) {
             URL::forceScheme('https');
         }
+
+        // Gamification — cộng điểm tự động qua PointService khi có hành động thật.
+        Blog::observe(BlogObserver::class);
+        Post::observe(PostObserver::class);
+        Comment::observe(CommentObserver::class);
+        Reaction::observe(ReactionObserver::class);
     }
 }

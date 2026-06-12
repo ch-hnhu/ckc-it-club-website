@@ -1,6 +1,8 @@
-import { ChevronsUpDown, CircleUserRound, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { useState } from "react";
+import { ChevronsUpDown, LogOut, Moon, Settings, Sun } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import SettingsDialog from "@/components/settings/SettingsDialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -25,6 +27,7 @@ export function NavUser({ user }: { user: UserType | null }) {
 	const { isMobile } = useSidebar();
 	const navigate = useNavigate();
 	const { theme, setTheme } = useTheme();
+	const [settingsOpen, setSettingsOpen] = useState(false);
 
 	const handleLogout = async () => {
 		try {
@@ -75,16 +78,12 @@ export function NavUser({ user }: { user: UserType | null }) {
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuItem>
-								<CircleUserRound />
-								Hồ sơ
-							</DropdownMenuItem>
 							<DropdownMenuItem
 								onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
 								{theme === "dark" ? <Sun /> : <Moon />}
 								{theme === "dark" ? "Giao diện sáng" : "Giao diện tối"}
 							</DropdownMenuItem>
-							<DropdownMenuItem>
+							<DropdownMenuItem onClick={() => setSettingsOpen(true)}>
 								<Settings />
 								Cài đặt
 							</DropdownMenuItem>
@@ -97,6 +96,7 @@ export function NavUser({ user }: { user: UserType | null }) {
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</SidebarMenuItem>
+			<SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
 		</SidebarMenu>
 	);
 }

@@ -739,9 +739,7 @@ class BlogController extends BaseApiController
             ] : null,
             'title'           => $blog->title,
             'excerpt'         => $blog->excerpt,
-            'featured_image'  => $blog->cover_image
-                ? Storage::disk('public')->url($blog->cover_image)
-                : null,
+            'featured_image'  => $this->coverImageUrl($blog->cover_image),
             'status'          => $blog->status,
             'visibility'      => $blog->visibility ?? 'public',
             'published_at'    => $blog->published_at?->toIso8601String(),
@@ -759,6 +757,19 @@ class BlogController extends BaseApiController
             'created_at'      => $blog->created_at?->toIso8601String(),
             'updated_at'      => $blog->updated_at?->toIso8601String(),
         ];
+    }
+
+    private function coverImageUrl(?string $coverImage): ?string
+    {
+        if (! $coverImage) {
+            return null;
+        }
+
+        if (Str::startsWith($coverImage, ['http://', 'https://', '/assets/', '/storage/'])) {
+            return $coverImage;
+        }
+
+        return Storage::disk('public')->url($coverImage);
     }
 
     private function transformComment(Comment $comment, array $myReactions = []): array

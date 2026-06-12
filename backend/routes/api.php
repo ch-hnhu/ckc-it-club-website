@@ -13,10 +13,12 @@ use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
+use App\Http\Controllers\Api\V1\Admin\RankController;
 use App\Http\Controllers\Api\V1\Admin\MajorController;
 use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
+use App\Http\Controllers\Api\V1\Admin\PointRuleController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\BlogReportController;
 use App\Http\Controllers\Api\V1\Admin\MailTemplateController;
@@ -34,6 +36,7 @@ use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\EventController as UserEventController;
+use App\Http\Controllers\Api\V1\User\GamificationController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
@@ -77,12 +80,16 @@ Route::prefix('v1')->group(function () {
         $activeValue = $info->clubInformationValues()->where('is_active', true)->orderBy('position')->first();
         return response()->json([
             'success' => true,
-            'data'    => ['value' => $activeValue?->value, 'type' => $info->type],
+            'data' => ['value' => $activeValue?->value, 'type' => $info->type],
         ]);
     });
     Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
     Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
     Route::get('/users/{username}/following', [FollowController::class, 'following']);
+    Route::prefix('gamification')->group(function () {
+        Route::get('/leaderboard/weekly', [GamificationController::class, 'weeklyLeaderboard']);
+        Route::get('/leaderboard/all-time', [GamificationController::class, 'allTimeLeaderboard']);
+    });
 
     // Community routes
     Route::prefix('community')->group(function () {
@@ -202,6 +209,12 @@ Route::prefix('v1')->group(function () {
             Route::post('/profile', [ProfileController::class, 'update']);
             Route::delete('/account', [ProfileController::class, 'deleteAccount']);
             Route::post('/{username}/follow', [FollowController::class, 'toggle']);
+        });
+
+        // gamification
+        Route::prefix('gamification')->group(function () {
+            Route::get('/me', [GamificationController::class, 'me']);
+            Route::get('/me/history', [GamificationController::class, 'history']);
         });
     });
 
@@ -459,6 +472,24 @@ Route::prefix('v1')->group(function () {
             Route::patch('events/{event}/status', [AdminEventController::class, 'updateStatus']);
             Route::post('events/{event}/check-in', [AdminEventController::class, 'checkIn']);
             Route::delete('events/{event}', [AdminEventController::class, 'destroy']);
+        });
+
+        // gamification (admin) — chỉ quản lý luật điểm & rank, KHÔNG có cộng/trừ điểm thủ công
+        Route::middleware('permission:gamification.view')->group(function () {
+            Route::get('point-rules', [PointRuleController::class, 'index']);
+            Route::get('point-rules/{pointRule}', [PointRuleController::class, 'show']);
+            Route::get('ranks', [RankController::class, 'index']);
+            Route::get('ranks/{rank}', [RankController::class, 'show']);
+        });
+        Route::middleware('permission:gamification.manage')->group(function () {
+            Route::post('point-rules', [PointRuleController::class, 'store']);
+            Route::put('point-rules/{pointRule}', [PointRuleController::class, 'update']);
+            Route::patch('point-rules/{pointRule}', [PointRuleController::class, 'update']);
+            Route::delete('point-rules/{pointRule}', [PointRuleController::class, 'destroy']);
+            Route::post('ranks', [RankController::class, 'store']);
+            Route::put('ranks/{rank}', [RankController::class, 'update']);
+            Route::patch('ranks/{rank}', [RankController::class, 'update']);
+            Route::delete('ranks/{rank}', [RankController::class, 'destroy']);
         });
 
         // post reports

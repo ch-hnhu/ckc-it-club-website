@@ -60,6 +60,8 @@
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/admin/login`
 - `POST /api/v1/contacts`
+- `GET /api/v1/gamification/leaderboard/weekly`
+- `GET /api/v1/gamification/leaderboard/all-time`
 - Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /posts/{id}/reactions/users`, `GET /blogs`, `GET /blog-tags`, `GET /blogs/{slug}`, `GET /blogs/{id}/comments`, and `GET /blogs/{id}/reactions/users`. Post detail and post comments return published posts for everyone, plus archived posts only to their authenticated owner.
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
@@ -71,6 +73,8 @@
 - `POST /api/v1/community/blogs`
 - `POST /api/v1/community/blogs/{id}/reactions`
 - `POST /api/v1/community/blogs/{id}/comments`
+- `GET /api/v1/gamification/me`
+- `GET /api/v1/gamification/me/history`
 - `GET /api/v1/`
 - `GET /api/v1/users`
 - `GET /api/v1/faculties`
@@ -209,6 +213,12 @@
 - admin role create payload uses `label` for the display name, `name` for the internal value, and `is_system` as a boolean flag.
 - belongs to `faculty`, `major`, `school class`.
 - can create/update other records through `created_by` and `updated_by`.
+- `ranks`
+- gamification rank records use `name`, unique `min_points`, and `badge`; current seeded badges use absolute Supabase image URLs, and API formatting also preserves `/assets/...` paths for frontend-bundled badges. Admin uploads store files on the Laravel `public` disk under `rank-badges/` and return `/storage/...` URLs.
+- admin rank listing/detail returns `users_count` computed from `users.total_points` ranges between rank thresholds, not from the potentially stale `users.rank_id` relationship.
+- seeded rank data has 6 tiers: Đồng, Bạc, Vàng, Bạch Kim, Kim Cương, and Tinh Anh. The old `icon`/`color` rank contract is obsolete.
+- `blogs`
+- seeded blogs include `gioi-thieu-bang-xep-hang`, used by the user leaderboard right rail. Blog cover images can be uploaded storage paths or public frontend asset paths such as `/assets/img/level03.png`; API transforms keep `/assets/`, `/storage/`, and absolute URLs unchanged.
 - `faculties`
 - top-level academic grouping.
 - has many `majors`.
