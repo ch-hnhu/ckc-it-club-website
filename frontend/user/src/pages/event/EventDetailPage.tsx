@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { CalendarCheck, CalendarDays, Loader2, MapPin, Ticket, TicketX, Users, X } from "lucide-react";
+import { CalendarCheck, CalendarDays, Download, Loader2, MapPin, Ticket, TicketX, Users, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
 	Breadcrumb,
@@ -30,11 +30,75 @@ const DetailSkeleton: React.FC = () => (
 	</div>
 );
 
+function toSafeFileName(value: string) {
+	const normalized = value
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+
+	return normalized || "event-ticket";
+}
+
 const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () => void }> = ({
 	qrToken,
 	event,
 	onClose,
-}) => (
+}) => {
+	const qrRef = useRef<SVGSVGElement | null>(null);
+
+	const handleDownloadQr = () => {
+		const svg = qrRef.current;
+
+		if (!svg) {
+			toast.error("Không thể tải mã QR. Vui lòng thử lại.");
+			return;
+		}
+
+		const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
+		clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+		clonedSvg.setAttribute("width", "512");
+		clonedSvg.setAttribute("height", "512");
+
+		const svgText = new XMLSerializer().serializeToString(clonedSvg);
+		const svgBlob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+		const svgUrl = URL.createObjectURL(svgBlob);
+		const image = new Image();
+
+		image.onload = () => {
+			const canvas = document.createElement("canvas");
+			canvas.width = 512;
+			canvas.height = 512;
+			const context = canvas.getContext("2d");
+
+			if (!context) {
+				URL.revokeObjectURL(svgUrl);
+				toast.error("Không thể tải mã QR. Vui lòng thử lại.");
+				return;
+			}
+
+			context.fillStyle = "#ffffff";
+			context.fillRect(0, 0, canvas.width, canvas.height);
+			context.drawImage(image, 0, 0, canvas.width, canvas.height);
+			URL.revokeObjectURL(svgUrl);
+
+			const link = document.createElement("a");
+			link.href = canvas.toDataURL("image/png");
+			link.download = `ve-qr-${toSafeFileName(event.title)}.png`;
+			link.click();
+			toast.success("Đã tải mã QR vé sự kiện.");
+		};
+
+		image.onerror = () => {
+			URL.revokeObjectURL(svgUrl);
+			toast.error("Không thể tải mã QR. Vui lòng thử lại.");
+		};
+
+		image.src = svgUrl;
+	};
+
+	return (
 	<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4'>
 		<div className='relative w-full max-w-sm rounded-2xl border-2 border-black bg-white p-7 text-center shadow-[6px_6px_0_#111]'>
 			<button
@@ -46,8 +110,15 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 			<h2 className='font-heading text-lg font-extrabold text-black'>Vé tham dự sự kiện</h2>
 			<p className='mt-1 line-clamp-2 text-sm font-semibold text-gray-700'>{event.title}</p>
 			<div className='mx-auto mt-5 flex w-fit items-center justify-center rounded-2xl border-2 border-black bg-white p-4'>
-				<QRCodeSVG value={qrToken} size={200} />
+				<QRCodeSVG ref={qrRef} value={qrToken} size={200} />
 			</div>
+			<button
+				type='button'
+				onClick={handleDownloadQr}
+				className='neo-btn neo-btn-secondary mx-auto mt-4 inline-flex h-10 items-center gap-2 px-4 text-sm'>
+				<Download className='h-4 w-4' />
+				Tải QR
+			</button>
 			<p className='mt-4 text-xs text-gray-500'>{formatEventDateTime(event.start_at)}</p>
 			{event.location && <p className='text-xs text-gray-500'>{event.location}</p>}
 			<p className='mt-4 text-xs font-medium text-gray-400'>
@@ -55,7 +126,8 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 			</p>
 		</div>
 	</div>
-);
+	);
+};
 
 const EventDetailPage: React.FC = () => {
 	const { slug } = useParams<{ slug: string }>();
