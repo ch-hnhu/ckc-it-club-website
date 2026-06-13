@@ -116,7 +116,8 @@ const FeaturedEvent: React.FC<{ event: EventItem }> = ({ event }) => (
 
 // ─── EventsFeedPage ─────────────────────────────────────────────────────────────
 
-const PER_PAGE = 9;
+const PREVIEW_PER_PAGE = 7;  // 1 featured + 6 grid
+const EXPANDED_PER_PAGE = 9; // 3 × 3 grid
 
 const STATUS_FILTERS: { value: EventStatus | "all"; label: string }[] = [
 	{ value: "all", label: "Tất cả" },
@@ -134,6 +135,7 @@ const EventsFeedPage: React.FC = () => {
 	const [error, setError] = useState<string | null>(null);
 	const [hasMore, setHasMore] = useState(false);
 	const [page, setPage] = useState(1);
+	const [showAll, setShowAll] = useState(false);
 
 	const [searchInput, setSearchInput] = useState("");
 	const [search, setSearch] = useState("");
@@ -149,15 +151,23 @@ const EventsFeedPage: React.FC = () => {
 		}, 400);
 	};
 
+	// Khi filter thay đổi → về lại chế độ mặc định
+	useEffect(() => {
+		setShowAll(false);
+	}, [search, statusFilter]);
+
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
 		setError(null);
 		setPage(1);
 
+		const isExpanded = showAll || Boolean(search || statusFilter !== "all");
+		const perPage = isExpanded ? EXPANDED_PER_PAGE : PREVIEW_PER_PAGE;
+
 		eventService
 			.getEvents({
-				per_page: PER_PAGE,
+				per_page: perPage,
 				page: 1,
 				...(search ? { search } : {}),
 				...(statusFilter !== "all" ? { status: statusFilter } : {}),
@@ -178,7 +188,7 @@ const EventsFeedPage: React.FC = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [search, statusFilter]);
+	}, [search, statusFilter, showAll]);
 
 	const handleLoadMore = () => {
 		const nextPage = page + 1;
@@ -186,7 +196,7 @@ const EventsFeedPage: React.FC = () => {
 
 		eventService
 			.getEvents({
-				per_page: PER_PAGE,
+				per_page: EXPANDED_PER_PAGE,
 				page: nextPage,
 				...(search ? { search } : {}),
 				...(statusFilter !== "all" ? { status: statusFilter } : {}),
@@ -201,9 +211,15 @@ const EventsFeedPage: React.FC = () => {
 	};
 
 	const isFiltered = Boolean(search || statusFilter !== "all");
+	const isExpandedMode = showAll || isFiltered;
+
+	// Highlight: sự kiện sắp diễn ra có thời gian bắt đầu gần nhất
+	const nearestUpcoming = events
+		.filter((e) => e.status === "published" && e.start_at)
+		.sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())[0];
 
 	const featuredEvent = !isFiltered && events.length > 0
-		? (events.find((e) => e.status === "ongoing") ?? events[0])
+		? (nearestUpcoming ?? events[0])
 		: null;
 
 	const gridEvents = featuredEvent ? events.filter((e) => e.id !== featuredEvent.id) : events;
@@ -310,7 +326,11 @@ const EventsFeedPage: React.FC = () => {
 						{gridEvents.length > 0 && (
 							<div className='space-y-6'>
 								<h2 className='font-heading text-xl font-extrabold text-black'>
-									{isFiltered ? "Kết quả tìm kiếm" : "Sự kiện khác"}
+									{isFiltered
+										? "Kết quả tìm kiếm"
+										: showAll
+											? "Tất cả sự kiện"
+											: "Sự kiện khác"}
 								</h2>
 
 								<div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
@@ -321,7 +341,20 @@ const EventsFeedPage: React.FC = () => {
 										Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={`more-${i}`} />)}
 								</div>
 
-								{hasMore && !loadingMore && (
+								{/* ── Nút Xem tất cả (chế độ preview) ── */}
+								{!isExpandedMode && hasMore && (
+									<div className='flex justify-center pt-2'>
+										<button
+											onClick={() => setShowAll(true)}
+											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-7 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											Xem tất cả sự kiện
+											<ArrowRight className='h-4 w-4' />
+										</button>
+									</div>
+								)}
+
+								{/* ── Nút Tải thêm (chế độ expanded) ── */}
+								{isExpandedMode && hasMore && !loadingMore && (
 									<div className='flex justify-center pt-2'>
 										<button
 											onClick={handleLoadMore}
@@ -332,13 +365,13 @@ const EventsFeedPage: React.FC = () => {
 									</div>
 								)}
 
-								{loadingMore && (
+								{isExpandedMode && loadingMore && (
 									<div className='flex justify-center py-4'>
 										<Loader2 className='h-6 w-6 animate-spin text-black' />
 									</div>
 								)}
 
-								{!hasMore && events.length > 0 && (
+								{isExpandedMode && !hasMore && events.length > 0 && (
 									<p className='text-center text-sm font-medium text-gray-400'>
 										✦ Bạn đã xem hết tất cả sự kiện
 									</p>

@@ -1,6 +1,7 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type { EventRecord, EventStats, EventStatus } from "@/pages/event/EventListPage";
+import type { EventRegistrationRecord } from "@/pages/event/EventDetailPage";
 
 const eventService = {
 	async getEvents(params?: {
@@ -48,6 +49,17 @@ const eventService = {
 
 	async deleteEvent(id: number | string): Promise<ApiResponse<null>> {
 		return api.delete(`/events/${id}`);
+	},
+
+	async getRegistrations(id: number | string): Promise<ApiResponse<EventRegistrationRecord[]>> {
+		return api.get(`/events/${id}/registrations`);
+	},
+
+	async checkIn(
+		id: number | string,
+		payload: { qr_token: string } | { registration_id: number },
+	): Promise<ApiResponse<EventRegistrationRecord>> {
+		return api.post<ApiResponse<EventRegistrationRecord>>(`/events/${id}/check-in`, payload);
 	},
 };
 

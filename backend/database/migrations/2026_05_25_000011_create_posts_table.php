@@ -18,6 +18,7 @@ return new class extends Migration
             $table->enum('visibility', ['public', 'members', 'private'])->default('public');
             $table->enum('status', ['draft', 'published', 'hidden', 'archived'])->default('draft');
             $table->boolean('is_pinned')->default(false);
+            $table->timestamp('pinned_at')->nullable();
             $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();

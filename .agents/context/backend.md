@@ -456,6 +456,7 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-06-13`: Public user event listing/detail now resolve an optional Sanctum bearer token so authenticated viewers receive their event registration status and QR token without making the route private.
 - `2026-06-05`: Admin post management removed pin-specific admin sorting/stats, added soft-deleted post listing through `GET /posts/trash`, and added restore through `PATCH /posts/{post}/restore`.
 - `2026-06-03`: User community post listing `GET /api/v1/community/posts?username=` now matches authors by username or email prefix, keeping profile post lists consistent with public profile lookup and blog listing.
 - `2026-06-01`: Admin channel create/update now accepts an uploaded image file in `image`, stores it on the public disk under `channels/`, and returns a public image URL while preserving existing external image URLs.

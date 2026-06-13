@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { CalendarDays, Loader2, MapPin, Ticket, Users, X } from "lucide-react";
+import { CalendarCheck, CalendarDays, Loader2, MapPin, Ticket, TicketX, Users, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
 	Breadcrumb,
@@ -93,10 +93,48 @@ const EventDetailPage: React.FC = () => {
 		};
 	}, [slug]);
 
+	// Thành viên CLB = có bất kỳ vai trò nào ngoài "user" thường
+	const isClubMember = Boolean(user?.roles?.some((role) => role !== "user"));
+
+	// Chỉ email sinh viên Cao Thắng mới được đăng ký; thành viên CLB được miễn kiểm tra email
+	const registrationBlocked =
+		Boolean(user) &&
+		!isClubMember &&
+		!user?.email?.toLowerCase().endsWith("@caothang.edu.vn");
+
+	// Sự kiện chỉ dành cho thành viên CLB — tài khoản chỉ có vai trò "user" không được đăng ký
+	const membersOnlyBlocked = Boolean(event?.is_members_only) && Boolean(user) && !isClubMember;
+
+	// Khoảng thời gian mở đăng ký (null = không giới hạn ở phía đó)
+	const registrationNotYetOpen = Boolean(
+		event?.registration_start_at && new Date(event.registration_start_at) > new Date(),
+	);
+	const registrationClosed = Boolean(
+		event?.registration_end_at && new Date(event.registration_end_at) < new Date(),
+	);
+
 	const handleRegister = async () => {
 		if (!event) return;
 		if (!user) {
 			navigate("/login");
+			return;
+		}
+		if (registrationBlocked) {
+			toast.error(
+				"Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) mới được đăng ký tham gia sự kiện.",
+			);
+			return;
+		}
+		if (membersOnlyBlocked) {
+			toast.error("Sự kiện này chỉ dành cho thành viên câu lạc bộ.");
+			return;
+		}
+		if (registrationNotYetOpen) {
+			toast.error("Sự kiện chưa mở đăng ký. Vui lòng quay lại sau.");
+			return;
+		}
+		if (registrationClosed) {
+			toast.error("Đã hết thời gian đăng ký tham gia sự kiện.");
 			return;
 		}
 
@@ -142,6 +180,34 @@ const EventDetailPage: React.FC = () => {
 			);
 		} catch {
 			toast.error("Không thể hủy đăng ký. Vui lòng thử lại.");
+		} finally {
+			setActionLoading(false);
+		}
+	};
+
+	const handleShowTicket = async () => {
+		if (!event) return;
+
+		if (event.my_qr_token) {
+			setShowTicket(true);
+			return;
+		}
+
+		setActionLoading(true);
+		try {
+			const res = await eventService.getMyTicket(event.id);
+			setEvent((prev) =>
+				prev
+					? {
+							...prev,
+							my_registration_status: "registered",
+							my_qr_token: res.data.qr_token,
+						}
+					: prev,
+			);
+			setShowTicket(true);
+		} catch {
+			toast.error("Không thể tải vé QR. Vui lòng thử lại.");
 		} finally {
 			setActionLoading(false);
 		}
@@ -222,11 +288,19 @@ const EventDetailPage: React.FC = () => {
 							<div className='flex items-start gap-3'>
 								<CalendarDays className='mt-0.5 h-5 w-5 shrink-0 text-[var(--color-text-primary)]' />
 								<div>
-									<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Thời gian</p>
+									<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Bắt đầu</p>
 									<p className='text-sm font-semibold text-black'>
 										{formatEventDateTime(event.start_at)}
 									</p>
-									<p className='text-sm text-gray-500'>đến {formatEventDateTime(event.end_at)}</p>
+								</div>
+							</div>
+							<div className='flex items-start gap-3'>
+								<CalendarCheck className='mt-0.5 h-5 w-5 shrink-0 text-[var(--color-text-primary)]' />
+								<div>
+									<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Kết thúc</p>
+									<p className='text-sm font-semibold text-black'>
+										{formatEventDateTime(event.end_at)}
+									</p>
 								</div>
 							</div>
 							{event.location && (
@@ -248,35 +322,45 @@ const EventDetailPage: React.FC = () => {
 									</p>
 								</div>
 							</div>
-							{event.creator && (
-								<div className='flex items-start gap-3'>
-									<img
-										src={
-											event.creator.avatar ??
-											`https://ui-avatars.com/api/?name=${encodeURIComponent(event.creator.full_name)}&background=d4f2c4&color=111111&bold=true`
-										}
-										alt={event.creator.full_name}
-										className='mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-black object-cover'
-									/>
-									<div>
-										<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Tổ chức bởi</p>
-										<p className='text-sm font-semibold text-black'>{event.creator.full_name}</p>
-									</div>
+							<div className='flex items-start gap-3'>
+								<Ticket className='mt-0.5 h-5 w-5 shrink-0 text-[var(--color-text-primary)]' />
+								<div>
+									<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Mở đăng ký</p>
+									<p className='text-sm font-semibold text-black'>
+										{event.registration_start_at
+											? formatEventDateTime(event.registration_start_at)
+											: "Ngay khi đăng sự kiện"}
+									</p>
 								</div>
-							)}
+							</div>
+							<div className='flex items-start gap-3'>
+								<TicketX className='mt-0.5 h-5 w-5 shrink-0 text-[var(--color-text-primary)]' />
+								<div>
+									<p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Đóng đăng ký</p>
+									<p className='text-sm font-semibold text-black'>
+										{event.registration_end_at
+											? formatEventDateTime(event.registration_end_at)
+											: "Đến khi sự kiện bắt đầu"}
+									</p>
+								</div>
+							</div>
 						</div>
 
 						{/* Actions */}
-						{event.is_registration_required &&
-							(event.status === "published" ||
-								(event.status === "ongoing" && event.my_registration_status === "registered")) && (
+						{(event.status === "published" ||
+							(event.status === "ongoing" && event.my_registration_status === "registered")) && (
 							<div className='mt-6 flex flex-wrap items-center gap-3'>
 								{event.my_registration_status === "registered" ? (
 									<>
 										<button
-											onClick={() => setShowTicket(true)}
+											onClick={handleShowTicket}
+											disabled={actionLoading}
 											className='inline-flex h-11 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-											<Ticket className='h-4 w-4' />
+											{actionLoading ? (
+												<Loader2 className='h-4 w-4 animate-spin' />
+											) : (
+												<Ticket className='h-4 w-4' />
+											)}
 											Xem vé QR
 										</button>
 										{event.status === "published" && (
@@ -290,13 +374,41 @@ const EventDetailPage: React.FC = () => {
 										)}
 									</>
 								) : (
-									<button
-										onClick={handleRegister}
-										disabled={actionLoading || event.is_full}
-										className='inline-flex h-11 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
-										{actionLoading && <Loader2 className='h-4 w-4 animate-spin' />}
-										{event.is_full ? "Sự kiện đã đủ số lượng" : "Đăng ký tham gia"}
-									</button>
+									<div className='flex flex-col items-start gap-2'>
+										<button
+											onClick={handleRegister}
+											disabled={
+												actionLoading ||
+												event.is_full ||
+												registrationBlocked ||
+												membersOnlyBlocked ||
+												registrationNotYetOpen ||
+												registrationClosed
+											}
+											className='inline-flex h-11 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-50'>
+											{actionLoading && <Loader2 className='h-4 w-4 animate-spin' />}
+											{membersOnlyBlocked
+												? "Dành cho thành viên CLB"
+												: registrationNotYetOpen
+													? "Chưa mở đăng ký"
+													: registrationClosed
+														? "Đã hết hạn đăng ký"
+														: event.is_full
+															? "Sự kiện đã đủ số lượng"
+															: "Đăng ký tham gia"}
+										</button>
+										{registrationBlocked && (
+											<p className='text-sm font-medium text-gray-500'>
+												Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) mới được đăng
+												ký tham gia sự kiện.
+											</p>
+										)}
+										{membersOnlyBlocked && (
+											<p className='text-sm font-medium text-gray-500'>
+												Sự kiện này chỉ dành cho thành viên câu lạc bộ.
+											</p>
+										)}
+									</div>
 								)}
 							</div>
 						)}

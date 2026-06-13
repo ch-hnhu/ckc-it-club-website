@@ -463,12 +463,14 @@ Route::prefix('v1')->group(function () {
             Route::get('events/stats', [AdminEventController::class, 'stats']);
             Route::get('events', [AdminEventController::class, 'index']);
             Route::get('events/{event}', [AdminEventController::class, 'show']);
+            Route::get('events/{event}/registrations', [AdminEventController::class, 'registrations']);
         });
         Route::middleware('permission:events.manage')->group(function () {
             Route::post('events', [AdminEventController::class, 'store']);
             Route::put('events/{event}', [AdminEventController::class, 'update']);
             Route::patch('events/{event}', [AdminEventController::class, 'update']);
             Route::patch('events/{event}/status', [AdminEventController::class, 'updateStatus']);
+            Route::post('events/{event}/check-in', [AdminEventController::class, 'checkIn']);
             Route::delete('events/{event}', [AdminEventController::class, 'destroy']);
         });
 

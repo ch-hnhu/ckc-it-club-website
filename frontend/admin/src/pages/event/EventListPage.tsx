@@ -9,11 +9,10 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	Eye,
 	Filter,
-	Flag,
 	ImageIcon,
 	MoreHorizontal,
-	Play,
 	Plus,
 	Trash2,
 } from "lucide-react";
@@ -59,6 +58,7 @@ import {
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useTableSelection } from "@/hooks/useTableSelection";
 import { cn } from "@/lib/utils";
+import { STATUS_MAP } from "@/pages/event/event-status";
 import eventService from "@/services/event.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -84,9 +84,11 @@ export interface EventRecord {
 	thumbnail: string | null;
 	start_at: string | null;
 	end_at: string | null;
+	registration_start_at: string | null;
+	registration_end_at: string | null;
 	location: string | null;
 	max_attendees: number | null;
-	is_registration_required: boolean;
+	is_members_only: boolean;
 	status: EventStatus;
 	creator: EventCreator | null;
 	department: EventDepartment | null;
@@ -125,28 +127,6 @@ function truncate(str: string, max = 70) {
 	return str.length <= max ? str : `${str.slice(0, max).trimEnd()}…`;
 }
 
-const STATUS_MAP: Record<EventStatus, { label: string; className: string }> = {
-	draft: {
-		label: "Bản nháp",
-		className: "border-amber-500/20 bg-amber-500/10 text-amber-700 hover:bg-amber-500/10",
-	},
-	published: {
-		label: "Đã đăng",
-		className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
-	},
-	ongoing: {
-		label: "Đang diễn ra",
-		className: "border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
-	},
-	ended: {
-		label: "Đã kết thúc",
-		className: "border-slate-500/20 bg-slate-500/10 text-slate-600 hover:bg-slate-500/10",
-	},
-	cancelled: {
-		label: "Đã hủy",
-		className: "border-rose-500/20 bg-rose-500/10 text-rose-700 hover:bg-rose-500/10",
-	},
-};
 
 function getStatusBadge(status: EventStatus) {
 	const { label, className } = STATUS_MAP[status];
@@ -277,28 +257,26 @@ function EventListPage() {
 		}
 	};
 
-	type NextAction = { next: EventStatus; label: string; icon: "publish" | "start" | "end" | "cancel" };
+	type NextAction = { next: EventStatus; label: string; icon: "publish" | "cancel" };
 
+	// Trạng thái "Đang diễn ra"/"Đã kết thúc" được backend tự cập nhật theo thời gian sự kiện
 	const getNextActions = (status: EventStatus): NextAction[] => {
 		if (status === "draft")     return [{ next: "published", label: "Đăng sự kiện", icon: "publish" }];
-		if (status === "published") return [
-			{ next: "ongoing",   label: "Bắt đầu diễn ra", icon: "start" },
-			{ next: "cancelled", label: "Hủy sự kiện",     icon: "cancel" },
-		];
-		if (status === "ongoing")   return [
-			{ next: "ended",     label: "Kết thúc sự kiện", icon: "end" },
-			{ next: "cancelled", label: "Hủy sự kiện",      icon: "cancel" },
-		];
+		if (status === "published") return [{ next: "cancelled", label: "Hủy sự kiện", icon: "cancel" }];
+		if (status === "ongoing")   return [{ next: "cancelled", label: "Hủy sự kiện", icon: "cancel" }];
 		if (status === "cancelled") return [{ next: "published", label: "Đăng lại sự kiện", icon: "publish" }];
 		return [];
 	};
 
 	const actionIcons = {
 		publish: <CalendarCheck className="h-4 w-4" />,
-		start: <Play className="h-4 w-4" />,
-		end: <Flag className="h-4 w-4" />,
 		cancel: <Ban className="h-4 w-4" />,
 	} as const;
+
+	// Trang chi tiết admin: thông tin sự kiện + danh sách người tham gia + điểm danh QR
+	const handleViewDetail = (event: EventRecord) => {
+		navigate(`/events/${event.id}`);
+	};
 
 	return (
 		<div className="min-h-full bg-background">
@@ -465,19 +443,16 @@ function EventListPage() {
 												</div>
 											</TableCell>
 											<TableCell>
-												{event.is_registration_required ? (
-													<div className="space-y-0.5 text-sm">
-														<p>
-															{event.registrations_count.toLocaleString("vi-VN")}
-															{event.max_attendees ? ` / ${event.max_attendees.toLocaleString("vi-VN")}` : ""}
-														</p>
-														<p className="text-xs text-muted-foreground">
-															Check-in: {event.check_ins_count.toLocaleString("vi-VN")}
-														</p>
-													</div>
-												) : (
-													<span className="text-sm text-muted-foreground">Không yêu cầu</span>
-												)}
+												<div className="space-y-0.5 text-sm">
+													<p>
+														{event.registrations_count.toLocaleString("vi-VN")}
+														{event.max_attendees ? ` / ${event.max_attendees.toLocaleString("vi-VN")}` : ""}
+														{event.is_members_only ? " · TV CLB" : ""}
+													</p>
+													<p className="text-xs text-muted-foreground">
+														Check-in: {event.check_ins_count.toLocaleString("vi-VN")}
+													</p>
+												</div>
 											</TableCell>
 											<TableCell>{getStatusBadge(event.status)}</TableCell>
 											<TableCell>
@@ -505,6 +480,10 @@ function EventListPage() {
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end" className="w-[200px]">
+														<DropdownMenuItem onClick={() => handleViewDetail(event)}>
+															<Eye className="h-4 w-4" />
+															Xem chi tiết
+														</DropdownMenuItem>
 														{getNextActions(event.status).map(({ next, label, icon }) => (
 															<DropdownMenuItem
 																key={next}
@@ -514,7 +493,7 @@ function EventListPage() {
 																{label}
 															</DropdownMenuItem>
 														))}
-														{getNextActions(event.status).length > 0 && <DropdownMenuSeparator />}
+														<DropdownMenuSeparator />
 														<DropdownMenuItem
 															className="text-destructive focus:bg-destructive/10 focus:text-destructive"
 															onClick={() => setDeleteTarget(event)}>

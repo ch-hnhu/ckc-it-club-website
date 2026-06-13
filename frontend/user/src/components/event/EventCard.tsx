@@ -19,8 +19,8 @@ const STATUS_LABEL: Record<EventStatus, string> = {
 
 const STATUS_BADGE_CLASS: Record<EventStatus, string> = {
 	draft: "bg-gray-100 text-gray-600",
-	published: "bg-[var(--color-pastel-blue)] text-black",
-	ongoing: "bg-[var(--color-primary)] text-black",
+	published: "bg-[var(--color-primary)] text-black",
+	ongoing: "bg-[var(--color-pastel-blue)] text-black",
 	ended: "bg-gray-100 text-gray-500",
 	cancelled: "bg-[var(--color-pastel-pink)] text-black",
 };
