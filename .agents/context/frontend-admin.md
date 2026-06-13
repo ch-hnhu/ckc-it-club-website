@@ -362,6 +362,8 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-14`: Admin event status actions now use the backend-synced status returned by the API, so badges reflect time-based transitions after schedule/status changes.
+- `2026-06-14`: Admin event list now displays event start and end times in separate sortable `Bắt đầu` and `Kết thúc` columns instead of a combined time column.
 - `2026-06-13`: Admin event QR check-in scanner now creates a fresh scan region per mount and clears/stops stale `html5-qrcode` instances to prevent duplicated camera previews in React StrictMode.
 - `2026-06-05`: Admin post management removed pin controls, renders post content Markdown in detail, and added a same-page trash/restore flow backed by `/posts/trash` and `/posts/{post}/restore`.
 - `2026-06-01`: Admin channel create/edit dialog uses a file input for channel avatar images and submits channel forms as `multipart/form-data`.

@@ -99,6 +99,26 @@ class Event extends Model
             ->update(['status' => 'ended']);
     }
 
+    public function syncStatusFromSchedule(): void
+    {
+        if (in_array($this->status->value, ['draft', 'cancelled'], true)) {
+            return;
+        }
+
+        $now = now();
+        $nextStatus = EventStatus::PUBLISHED;
+
+        if ($this->end_at && $this->end_at->lte($now)) {
+            $nextStatus = EventStatus::ENDED;
+        } elseif ($this->start_at && $this->start_at->lte($now)) {
+            $nextStatus = EventStatus::ONGOING;
+        }
+
+        if ($this->status !== $nextStatus) {
+            $this->forceFill(['status' => $nextStatus])->save();
+        }
+    }
+
     public static function generateUniqueSlug(string $title): string
     {
         $base = Str::slug($title);

@@ -6,6 +6,8 @@ use App\Enums\EventStatus;
 use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Event;
+use App\Models\EventFeedback;
+use App\Models\EventGalleryItem;
 use App\Models\EventRegistration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -63,15 +65,105 @@ class EventController extends BaseApiController
         $event->loadCount(['registrations', 'feedbacks']);
         $data = $this->transformPublic($event);
         $data['content'] = $event->content;
+        $data['gallery'] = $event->galleryItems()->get()->map(fn (EventGalleryItem $item) => [
+            'id' => $item->id,
+            'image_url' => $item->image_url,
+            'caption' => $item->caption,
+        ])->all();
+        $data['feedback_summary'] = $this->feedbackSummary($event);
 
         if ($user = auth('sanctum')->user()) {
             $reg = $event->registrations()->where('user_id', $user->id)->first();
             $data['my_registration_status'] = $reg?->status;
             $data['my_qr_token'] = $reg?->status === 'registered' ? $reg->qr_token : null;
-            $data['has_feedback'] = $event->feedbacks()->where('user_id', $user->id)->exists();
+            $data['my_attended'] = $event->checkIns()->where('user_id', $user->id)->exists();
+            $myFeedback = $event->feedbacks()->where('user_id', $user->id)->first();
+            $data['my_feedback'] = $myFeedback
+                ? ['rating' => $myFeedback->rating, 'comment' => $myFeedback->comment]
+                : null;
+            $data['has_feedback'] = $myFeedback !== null;
         }
 
         return $this->successResponse(true, $data, 'Lấy thông tin sự kiện thành công.');
+    }
+
+    /**
+     * Danh sách đánh giá công khai của một sự kiện (hiển thị ở trang chi tiết).
+     */
+    public function feedbacks(Request $request, Event $event): JsonResponse
+    {
+        $perPage = min((int) $request->query('per_page', 10), 50);
+
+        $feedbacks = $event->feedbacks()
+            ->with('user:id,full_name,avatar')
+            ->latest()
+            ->paginate($perPage);
+
+        $feedbacks->getCollection()->transform(fn (EventFeedback $f) => [
+            'id' => $f->id,
+            'rating' => $f->rating,
+            'comment' => $f->comment,
+            'created_at' => $f->created_at?->toIso8601String(),
+            'user' => $f->user
+                ? ['id' => $f->user->id, 'full_name' => $f->user->full_name, 'avatar' => $f->user->avatar]
+                : null,
+        ]);
+
+        return $this->paginatedResponse($feedbacks, 'Lấy đánh giá sự kiện thành công.');
+    }
+
+    /**
+     * Gửi (hoặc cập nhật) đánh giá sau khi sự kiện kết thúc. Chỉ người đã điểm danh mới được đánh giá.
+     */
+    public function submitFeedback(Request $request, Event $event): JsonResponse
+    {
+        Event::syncStatuses();
+        $event->refresh();
+
+        abort_if($event->status->value !== 'ended', 422, 'Chỉ có thể đánh giá sau khi sự kiện đã kết thúc.');
+
+        $user = $request->user();
+
+        abort_if(
+            ! $event->checkIns()->where('user_id', $user->id)->exists(),
+            422,
+            'Chỉ người đã tham dự sự kiện mới có thể gửi đánh giá.'
+        );
+
+        $data = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:1000',
+        ]);
+
+        $feedback = EventFeedback::updateOrCreate(
+            ['event_id' => $event->id, 'user_id' => $user->id],
+            ['rating' => $data['rating'], 'comment' => $data['comment'] ?? null],
+        );
+
+        return $this->successResponse(true, [
+            'rating' => $feedback->rating,
+            'comment' => $feedback->comment,
+        ], 'Cảm ơn bạn đã gửi đánh giá!');
+    }
+
+    /**
+     * Tổng hợp điểm đánh giá: trung bình, tổng số và phân phối theo từng mức sao.
+     */
+    private function feedbackSummary(Event $event): array
+    {
+        $ratings = $event->feedbacks()->pluck('rating');
+        $total = $ratings->count();
+
+        $distribution = [];
+        foreach (range(1, 5) as $star) {
+            $distribution[$star] = $ratings->filter(fn ($r) => (int) $r === $star)->count();
+        }
+
+        return [
+            'average_rating' => $total > 0 ? round($ratings->avg(), 1) : 0,
+            'total' => $total,
+            'distribution' => $distribution,
+        ];
     }
 
     public function register(Request $request, Event $event): JsonResponse

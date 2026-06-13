@@ -29,10 +29,45 @@ export interface EventItem {
 	my_registration_status?: RegistrationStatus | null;
 }
 
+export interface EventGalleryImage {
+	id: number;
+	image_url: string;
+	caption: string | null;
+}
+
+export interface EventFeedbackSummary {
+	average_rating: number;
+	total: number;
+	distribution: Record<string, number>;
+}
+
+export interface MyFeedback {
+	rating: number;
+	comment: string | null;
+}
+
 export interface EventDetail extends EventItem {
 	content: string | null;
 	my_qr_token?: string | null;
 	has_feedback?: boolean;
+	gallery?: EventGalleryImage[];
+	feedback_summary?: EventFeedbackSummary;
+	my_attended?: boolean;
+	my_feedback?: MyFeedback | null;
+}
+
+export interface EventFeedbackUser {
+	id: number;
+	full_name: string;
+	avatar: string | null;
+}
+
+export interface EventFeedbackItem {
+	id: number;
+	rating: number;
+	comment: string | null;
+	created_at: string;
+	user: EventFeedbackUser | null;
 }
 
 export interface EventListParams {
