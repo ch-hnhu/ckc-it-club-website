@@ -105,7 +105,10 @@ function QrScannerRegion({ onDecoded }: { onDecoded: (token: string) => void }) 
 
 	return (
 		<div className='overflow-hidden rounded-lg border bg-black'>
-			<div ref={wrapperRef} className='[&_video]:!h-auto [&_video]:!w-full' />
+			<div
+				ref={wrapperRef}
+				className='max-w-full [&_*]:max-w-full [&_video]:!h-auto [&_video]:max-h-[42vh] [&_video]:!w-full [&_video]:object-cover'
+			/>
 			{cameraError ? (
 				<div className='flex h-40 items-center justify-center p-4'>
 					<p className='text-center text-sm text-white/80'>{cameraError}</p>
@@ -172,7 +175,7 @@ function EventCheckInDialog({ open, onOpenChange, eventId, onCheckedIn }: EventC
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className='sm:max-w-[440px]'>
+			<DialogContent className='max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[440px]'>
 				<DialogHeader>
 					<DialogTitle className='flex items-center gap-2'>
 						<ScanLine className='h-5 w-5' />
@@ -197,9 +200,10 @@ function EventCheckInDialog({ open, onOpenChange, eventId, onCheckedIn }: EventC
 					</div>
 
 					{lastResult?.type === "success" ? (
-						<div className='flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3'>
-							<CheckCircle2 className='h-5 w-5 shrink-0 text-emerald-600' />
-							<Avatar className='h-9 w-9'>
+						<div className='flex min-w-0 flex-col gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 sm:flex-row sm:items-center'>
+							<div className='flex min-w-0 flex-1 items-center gap-3'>
+								<CheckCircle2 className='h-5 w-5 shrink-0 text-emerald-600' />
+							<Avatar className='h-9 w-9 shrink-0'>
 								<AvatarImage src={lastResult.registration.user?.avatar ?? undefined} />
 								<AvatarFallback>
 									{(lastResult.registration.user?.full_name ?? "?").charAt(0).toUpperCase()}
@@ -213,17 +217,20 @@ function EventCheckInDialog({ open, onOpenChange, eventId, onCheckedIn }: EventC
 									{lastResult.registration.user?.email}
 								</p>
 							</div>
-							<Badge variant='outline' className='shrink-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-700'>
+							</div>
+							<Badge variant='outline' className='w-fit shrink-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 sm:ml-auto'>
 								{timeFormatter.format(lastResult.at)}
 							</Badge>
 						</div>
 					) : null}
 
 					{lastResult?.type === "error" ? (
-						<div className='flex items-center gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3'>
-							<XCircle className='h-5 w-5 shrink-0 text-rose-600' />
-							<p className='min-w-0 flex-1 text-sm text-rose-700'>{lastResult.message}</p>
-							<Badge variant='outline' className='shrink-0 border-rose-500/30 bg-rose-500/10 text-rose-700'>
+						<div className='flex min-w-0 flex-col gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 sm:flex-row sm:items-center'>
+							<div className='flex min-w-0 flex-1 items-center gap-3'>
+								<XCircle className='h-5 w-5 shrink-0 text-rose-600' />
+								<p className='min-w-0 flex-1 break-words text-sm text-rose-700'>{lastResult.message}</p>
+							</div>
+							<Badge variant='outline' className='w-fit shrink-0 border-rose-500/30 bg-rose-500/10 text-rose-700 sm:ml-auto'>
 								{timeFormatter.format(lastResult.at)}
 							</Badge>
 						</div>

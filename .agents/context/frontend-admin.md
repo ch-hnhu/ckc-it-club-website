@@ -260,6 +260,7 @@
 - `NotificationBell` polls unread count and links to `/notifications`; the full notification page uses paginated personal notification payloads.
 - Event check-in:
 - QR check-in lives in `src/pages/event/EventCheckInDialog.tsx`, uses `html5-qrcode`, requests the environment-facing camera, and creates a fresh DOM region per scanner mount so React StrictMode cleanup cannot duplicate camera previews.
+- The QR dialog constrains scanner/video height and uses responsive success/error result cards so a completed scan cannot overflow or break the modal layout on narrow/short viewports.
 - Department management:
 - route `/divisions`
 - server-driven pagination, search, sort, status display through `CompactBadgeList`, row selection, member counts, create/update/delete modal flows, and row actions backed by backend department endpoints. Department delete is blocked when the department still has members; bulk delete uses a popup confirmation and only proceeds for selected departments without members.
