@@ -66,6 +66,15 @@ enum PermissionsEnum: string
     case COMMUNITY_MEDIA_VIEW         = 'community.media.view';
     case COMMUNITY_SKILLS_MANAGE      = 'community.skills.manage';
 
+    // Sự kiện
+    case EVENTS_VIEW     = 'events.view';
+    case EVENTS_MANAGE   = 'events.manage';
+    case EVENTS_CHECK_IN = 'events.check_in';
+
+    // Gamification — admin chỉ quản lý luật điểm & rank, không cộng/trừ điểm thủ công
+    case GAMIFICATION_VIEW   = 'gamification.view';
+    case GAMIFICATION_MANAGE = 'gamification.manage';
+
     public static function values(): array
     {
         return array_column(self::cases(), 'value');

@@ -47,6 +47,24 @@ const chatService = {
 		return api.delete(`/chat-rooms/${id}`);
 	},
 
+	async getTrash(params?: {
+		page?: number;
+		per_page?: number;
+		search?: string;
+		sort?: string;
+		order?: "asc" | "desc";
+	}): Promise<PaginatedResponse<ChatRoomRecord>> {
+		return api.get("/chat-rooms/trash", params as Record<string, unknown>);
+	},
+
+	async restoreRoom(id: number): Promise<ApiResponse<ChatRoomRecord>> {
+		return api.patch(`/chat-rooms/${id}/restore`);
+	},
+
+	async forceDeleteRoom(id: number): Promise<ApiResponse<null>> {
+		return api.delete(`/chat-rooms/${id}/force-delete`);
+	},
+
 	async getSystemMessages(
 		roomId: number,
 		params?: {

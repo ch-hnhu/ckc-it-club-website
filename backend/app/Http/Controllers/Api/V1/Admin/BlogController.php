@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
+use App\Models\BlogReport;
 use App\Notifications\AdminActionNotification;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -115,23 +117,25 @@ class BlogController extends BaseApiController
             ->pluck('count', 'status');
 
         return $this->successResponse(true, [
-            'total' => $counts->sum(),
-            'published' => (int) ($counts['published'] ?? 0),
-            'draft' => (int) ($counts['draft'] ?? 0),
-            'archived' => (int) ($counts['archived'] ?? 0),
+            'total'          => $counts->sum(),
+            'published'      => (int) ($counts['published'] ?? 0),
+            'draft'          => (int) ($counts['draft'] ?? 0),
+            'archived'       => (int) ($counts['archived'] ?? 0),
             'pending_review' => (int) ($counts['pending_review'] ?? 0),
+            'hidden'         => (int) ($counts['hidden'] ?? 0),
         ], ApiMessage::RETRIEVED);
     }
 
     public function updateStatus(Request $request, Blog $blog): JsonResponse
     {
-        $request->validate(['status' => 'required|in:draft,pending_review,published,archived']);
+        $request->validate(['status' => 'required|in:draft,pending_review,published,archived,hidden']);
 
         $previousStatus = $blog->status;
-        $status = $request->string('status')->value();
+        $status         = $request->string('status')->value();
+        $admin          = $request->user() ?? auth()->user();
 
         $blog->update([
-            'status' => $status,
+            'status'       => $status,
             'published_at' => $status === 'published' && ! $blog->published_at ? now() : $blog->published_at,
         ]);
 
@@ -139,7 +143,6 @@ class BlogController extends BaseApiController
         if ($previousStatus !== 'published' && $status === 'published') {
             $blog->load('author:id,full_name,email');
             $author = $blog->author;
-            $admin = auth()->user();
 
             if ($author) {
                 $author->notify(new AdminActionNotification(
@@ -151,6 +154,30 @@ class BlogController extends BaseApiController
                     $admin?->full_name ?? 'Admin',
                     "/blog/{$blog->slug}",
                 ));
+            }
+        }
+
+        // Khi un-hide: reset tất cả report resolved → pending để admin xem xét lại
+        if ($previousStatus === 'hidden' && $status !== 'hidden') {
+            $resetCount = BlogReport::where('blog_id', $blog->id)
+                ->where('status', 'resolved')
+                ->update([
+                    'status'      => 'pending',
+                    'resolved_by' => null,
+                    'resolved_at' => null,
+                ]);
+
+            if ($resetCount > 0) {
+                NotificationService::dispatch(
+                    title: 'Báo cáo cần xem xét lại',
+                    message: "{$admin->full_name} đã bật lại blog \"{$blog->title}\". {$resetCount} báo cáo đã được chuyển về chờ xử lý.",
+                    action: 'status_changed',
+                    entityType: 'blog_report',
+                    entityId: $blog->id,
+                    performedBy: $admin->full_name,
+                    link: '/community/reports',
+                    excludeUserId: $admin->id,
+                );
             }
         }
 
@@ -195,9 +222,7 @@ class BlogController extends BaseApiController
             'title' => $blog->title,
             'slug' => $blog->slug,
             'excerpt' => $blog->excerpt,
-            'featured_image' => $blog->cover_image
-                ? Storage::disk('public')->url($blog->cover_image)
-                : null,
+            'featured_image' => $this->coverImageUrl($blog->cover_image),
             'status' => $blog->status,
             'published_at' => $blog->published_at?->toIso8601String(),
             'is_highlight' => (bool) $blog->is_highlight,
@@ -212,5 +237,18 @@ class BlogController extends BaseApiController
             'created_at' => $blog->created_at?->toIso8601String(),
             'updated_at' => $blog->updated_at?->toIso8601String(),
         ];
+    }
+
+    private function coverImageUrl(?string $coverImage): ?string
+    {
+        if (! $coverImage) {
+            return null;
+        }
+
+        if (Str::startsWith($coverImage, ['http://', 'https://', '/assets/', '/storage/'])) {
+            return $coverImage;
+        }
+
+        return Storage::disk('public')->url($coverImage);
     }
 }

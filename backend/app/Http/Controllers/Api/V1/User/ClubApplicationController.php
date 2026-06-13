@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\ApplicationAnswer;
 use App\Models\ApplicationQuestion;
 use App\Models\ClubApplication;
+use App\Models\ClubInformation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -54,8 +55,24 @@ class ClubApplicationController extends BaseApiController
         ], 'Application retrieved successfully', HttpStatus::OK);
     }
 
+    // ─── Helper ──────────────────────────────────────────────────────────────
+
+    private function isRecruitmentEnabled(): bool
+    {
+        $info = ClubInformation::where('slug', 'recruitment-enabled')->first();
+        $value = $info?->clubInformationValues()->where('is_active', true)->value('value');
+        return ($value ?? 'true') === 'true';
+    }
+
     public function store(Request $request): JsonResponse
     {
+        if (! $this->isRecruitmentEnabled()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Form đăng ký tạm thời đã đóng.',
+            ], 403);
+        }
+
         $userId = auth()->id();
 
         $existing = ClubApplication::where('created_by', $userId)->exists();

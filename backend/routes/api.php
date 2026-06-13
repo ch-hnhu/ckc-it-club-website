@@ -11,13 +11,17 @@ use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
+use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
+use App\Http\Controllers\Api\V1\Admin\RankController;
 use App\Http\Controllers\Api\V1\Admin\MajorController;
 use App\Http\Controllers\Api\V1\Admin\MediaFileController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
+use App\Http\Controllers\Api\V1\Admin\PointRuleController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\BlogReportController;
+use App\Http\Controllers\Api\V1\Admin\MailTemplateController;
 use App\Http\Controllers\Api\V1\Admin\ReportController;
 use App\Http\Controllers\Api\V1\Admin\UnifiedReportController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
@@ -31,6 +35,8 @@ use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
+use App\Http\Controllers\Api\V1\User\EventController as UserEventController;
+use App\Http\Controllers\Api\V1\User\GamificationController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
 use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
@@ -64,21 +70,49 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
     Route::get('/community/channels', [ChannelController::class, 'index']);
+
+    // Public club config — returns the active value for a given slug (no auth required)
+    Route::get('/club-config/{slug}', function (string $slug) {
+        $info = \App\Models\ClubInformation::where('slug', $slug)->first();
+        if (! $info) {
+            return response()->json(['success' => false, 'data' => null, 'message' => 'Config not found.'], 404);
+        }
+        $activeValue = $info->clubInformationValues()->where('is_active', true)->orderBy('position')->first();
+        return response()->json([
+            'success' => true,
+            'data' => ['value' => $activeValue?->value, 'type' => $info->type],
+        ]);
+    });
     Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
     Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
     Route::get('/users/{username}/following', [FollowController::class, 'following']);
+    Route::prefix('gamification')->group(function () {
+        Route::get('/leaderboard/weekly', [GamificationController::class, 'weeklyLeaderboard']);
+        Route::get('/leaderboard/all-time', [GamificationController::class, 'allTimeLeaderboard']);
+    });
 
     // Community routes
     Route::prefix('community')->group(function () {
         // Public (read-only, published posts only)
         Route::get('/posts', [UserPostController::class, 'index']);
         Route::get('/posts/{id}/comments', [UserPostController::class, 'comments']);
+        Route::get('/posts/{id}/reactions/users', [UserPostController::class, 'reactors']);
         Route::get('/channels', [UserChannelController::class, 'index']);
 
         // Public blog routes
         Route::get('/blogs', [UserBlogController::class, 'index']);
         Route::get('/blog-tags', [UserBlogController::class, 'tags']);
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
+        Route::get('/blogs/{id}/reactions/users', [UserBlogController::class, 'reactors']);
+
+        // Public event routes (avoid collision with admin /v1/events resource routes)
+        Route::get('/events', [UserEventController::class, 'index']);
+        Route::get('/events/{event:slug}', [UserEventController::class, 'show']);
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/events/{event}/register', [UserEventController::class, 'register']);
+            Route::delete('/events/{event}/register', [UserEventController::class, 'cancelRegistration']);
+            Route::get('/events/{event}/my-ticket', [UserEventController::class, 'myTicket']);
+        });
 
         // Chat rooms (public list, auth for messages, admin-only create)
         Route::get('/chat-rooms', [UserChatController::class, 'index']);
@@ -175,6 +209,12 @@ Route::prefix('v1')->group(function () {
             Route::post('/profile', [ProfileController::class, 'update']);
             Route::delete('/account', [ProfileController::class, 'deleteAccount']);
             Route::post('/{username}/follow', [FollowController::class, 'toggle']);
+        });
+
+        // gamification
+        Route::prefix('gamification')->group(function () {
+            Route::get('/me', [GamificationController::class, 'me']);
+            Route::get('/me/history', [GamificationController::class, 'history']);
         });
     });
 
@@ -327,11 +367,14 @@ Route::prefix('v1')->group(function () {
 
         // channels
         Route::middleware('permission:community.channels.manage')->group(function () {
+            Route::get('channels/trash', [ChannelController::class, 'trash']);
             Route::get('channels', [ChannelController::class, 'index']);
             Route::post('channels', [ChannelController::class, 'store']);
             Route::put('channels/{channel}', [ChannelController::class, 'update']);
             Route::patch('channels/{channel}', [ChannelController::class, 'update']);
             Route::delete('channels/{channel}', [ChannelController::class, 'destroy']);
+            Route::patch('channels/{id}/restore', [ChannelController::class, 'restore']);
+            Route::delete('channels/{id}/force-delete', [ChannelController::class, 'forceDestroy']);
         });
 
         // posts
@@ -344,6 +387,7 @@ Route::prefix('v1')->group(function () {
             Route::post('posts/bulk-delete', [PostController::class, 'bulkDestroy']);
             Route::patch('posts/{post}/status', [PostController::class, 'updateStatus']);
             Route::patch('posts/{post}/restore', [PostController::class, 'restore']);
+            Route::delete('posts/{id}/force-delete', [PostController::class, 'forceDestroy']);
             Route::delete('posts/{post}', [PostController::class, 'destroy']);
         });
 
@@ -373,6 +417,7 @@ Route::prefix('v1')->group(function () {
         // chat rooms
         Route::middleware('permission:community.chat.view')->group(function () {
             Route::get('chat-rooms/stats', [ChatRoomController::class, 'stats']);
+            Route::get('chat-rooms/trash', [ChatRoomController::class, 'trash']);
             Route::get('chat-rooms', [ChatRoomController::class, 'index']);
             Route::get('chat-rooms/{room}/system-messages', [ChatRoomController::class, 'systemMessages']);
         });
@@ -382,6 +427,8 @@ Route::prefix('v1')->group(function () {
             Route::patch('chat-rooms/{room}', [ChatRoomController::class, 'update']);
             Route::delete('chat-rooms/{room}', [ChatRoomController::class, 'destroy']);
             Route::delete('chat-rooms/{room}/messages/{message}', [ChatRoomController::class, 'destroyMessage']);
+            Route::patch('chat-rooms/{id}/restore', [ChatRoomController::class, 'restore']);
+            Route::delete('chat-rooms/{id}/force-delete', [ChatRoomController::class, 'forceDestroy']);
         });
 
         // tags
@@ -411,6 +458,40 @@ Route::prefix('v1')->group(function () {
             Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
         });
 
+        // events (admin)
+        Route::middleware('permission:events.view')->group(function () {
+            Route::get('events/stats', [AdminEventController::class, 'stats']);
+            Route::get('events', [AdminEventController::class, 'index']);
+            Route::get('events/{event}', [AdminEventController::class, 'show']);
+            Route::get('events/{event}/registrations', [AdminEventController::class, 'registrations']);
+        });
+        Route::middleware('permission:events.manage')->group(function () {
+            Route::post('events', [AdminEventController::class, 'store']);
+            Route::put('events/{event}', [AdminEventController::class, 'update']);
+            Route::patch('events/{event}', [AdminEventController::class, 'update']);
+            Route::patch('events/{event}/status', [AdminEventController::class, 'updateStatus']);
+            Route::post('events/{event}/check-in', [AdminEventController::class, 'checkIn']);
+            Route::delete('events/{event}', [AdminEventController::class, 'destroy']);
+        });
+
+        // gamification (admin) — chỉ quản lý luật điểm & rank, KHÔNG có cộng/trừ điểm thủ công
+        Route::middleware('permission:gamification.view')->group(function () {
+            Route::get('point-rules', [PointRuleController::class, 'index']);
+            Route::get('point-rules/{pointRule}', [PointRuleController::class, 'show']);
+            Route::get('ranks', [RankController::class, 'index']);
+            Route::get('ranks/{rank}', [RankController::class, 'show']);
+        });
+        Route::middleware('permission:gamification.manage')->group(function () {
+            Route::post('point-rules', [PointRuleController::class, 'store']);
+            Route::put('point-rules/{pointRule}', [PointRuleController::class, 'update']);
+            Route::patch('point-rules/{pointRule}', [PointRuleController::class, 'update']);
+            Route::delete('point-rules/{pointRule}', [PointRuleController::class, 'destroy']);
+            Route::post('ranks', [RankController::class, 'store']);
+            Route::put('ranks/{rank}', [RankController::class, 'update']);
+            Route::patch('ranks/{rank}', [RankController::class, 'update']);
+            Route::delete('ranks/{rank}', [RankController::class, 'destroy']);
+        });
+
         // post reports
         Route::middleware('permission:community.reports.view')->group(function () {
             Route::get('reports/stats', [ReportController::class, 'stats']);
@@ -433,6 +514,21 @@ Route::prefix('v1')->group(function () {
             Route::get('unified-reports', [UnifiedReportController::class, 'index']);
             Route::patch('unified-reports/{type}/{id}/status', [UnifiedReportController::class, 'updateStatus']);
             Route::post('unified-reports/{type}/{id}/hide', [UnifiedReportController::class, 'hideContent']);
+            Route::post('unified-reports/{type}/{id}/dismiss', [UnifiedReportController::class, 'dismiss']);
+        });
+
+        // mail templates
+        Route::middleware('permission:mail_templates.view')->group(function () {
+            Route::get('mail-template-types', [MailTemplateController::class, 'index']);
+            Route::get('mail-template-types/{typeId}', [MailTemplateController::class, 'show']);
+            Route::get('mail-settings/email-notification', [MailTemplateController::class, 'getEmailNotificationSetting']);
+        });
+        Route::middleware('permission:mail_templates.manage')->group(function () {
+            Route::post('mail-template-types/{typeId}/templates', [MailTemplateController::class, 'storeTemplate']);
+            Route::put('mail-template-types/{typeId}/templates/{templateId}', [MailTemplateController::class, 'updateTemplate']);
+            Route::patch('mail-template-types/{typeId}/templates/{templateId}/default', [MailTemplateController::class, 'setDefaultTemplate']);
+            Route::delete('mail-template-types/{typeId}/templates/{templateId}', [MailTemplateController::class, 'destroyTemplate']);
+            Route::patch('mail-settings/email-notification', [MailTemplateController::class, 'toggleEmailNotification']);
         });
     });
 });

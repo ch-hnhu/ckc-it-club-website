@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/Dashboard";
 import FacultyList from "@/pages/faculty/FacultyList";
@@ -42,6 +42,15 @@ import MediaListPage from "@/pages/community/MediaListPage";
 import SkillListPage from "@/pages/community/SkillListPage";
 import ReportListPage from "@/pages/community/ReportListPage";
 import BlogReportListPage from "@/pages/community/BlogReportListPage";
+import MailTemplateListPage from "@/pages/mail-template/MailTemplateListPage";
+import MailTemplateDetailPage from "@/pages/mail-template/MailTemplateDetailPage";
+import EventListPage from "@/pages/event/EventListPage";
+import EventCreatePage from "@/pages/event/EventCreatePage";
+import EventEditPage from "@/pages/event/EventEditPage";
+import EventDetailPage from "@/pages/event/EventDetailPage";
+import PointRulesPage from "@/pages/gamification/PointRulesPage";
+import RanksPage from "@/pages/gamification/RanksPage";
+import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
 
 const router = createBrowserRouter([
 	{
@@ -92,7 +101,7 @@ const router = createBrowserRouter([
 			{
 				path: "roles",
 				element: (
-					<PermissionRoute permission='roles.manage'>
+					<PermissionRoute permission='roles.view'>
 						<RoleList />
 					</PermissionRoute>
 				),
@@ -100,7 +109,7 @@ const router = createBrowserRouter([
 			{
 				path: "roles/:id",
 				element: (
-					<PermissionRoute permission='roles.manage'>
+					<PermissionRoute permission='roles.view'>
 						<RoleDetailPage />
 					</PermissionRoute>
 				),
@@ -108,7 +117,7 @@ const router = createBrowserRouter([
 			{
 				path: "permissions",
 				element: (
-					<PermissionRoute permission='permissions.manage'>
+					<PermissionRoute permission='permissions.view'>
 						<PermissionList />
 					</PermissionRoute>
 				),
@@ -258,8 +267,56 @@ const router = createBrowserRouter([
 				),
 			},
 			{
+				path: "mail-templates",
+				element: (
+					<PermissionRoute permission='mail_templates.view'>
+						<MailTemplateListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "mail-templates/:id",
+				element: (
+					<PermissionRoute permission='mail_templates.view'>
+						<MailTemplateDetailPage />
+					</PermissionRoute>
+				),
+			},
+			{
 				path: "notifications",
 				element: <NotificationsPage />,
+			},
+			{
+				path: "events",
+				element: (
+					<PermissionRoute permission='events.view'>
+						<EventListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "events/create",
+				element: (
+					<PermissionRoute permission='events.manage'>
+						<EventCreatePage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "events/:id",
+				element: (
+					<PermissionRoute permission='events.view'>
+						<EventDetailPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "events/:id/edit",
+				element: (
+					<PermissionRoute permission='events.manage'>
+						<EventEditPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "community/channels",
@@ -326,6 +383,11 @@ const router = createBrowserRouter([
 				),
 			},
 			{
+				// Redirect alias — xử lý link cũ trong thông báo
+				path: "community/chat-rooms",
+				element: <Navigate to="/community/chat" replace />,
+			},
+			{
 				path: "community/media",
 				element: (
 					<PermissionRoute permission="community.media.view">
@@ -354,6 +416,30 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.reports.view">
 						<BlogReportListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "gamification/point-rules",
+				element: (
+					<PermissionRoute permission="gamification.manage">
+						<PointRulesPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "gamification/ranks",
+				element: (
+					<PermissionRoute permission="gamification.manage">
+						<RanksPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "gamification/leaderboard",
+				element: (
+					<PermissionRoute permission="gamification.view">
+						<LeaderboardPage />
 					</PermissionRoute>
 				),
 			},

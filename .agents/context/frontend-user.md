@@ -58,6 +58,7 @@
 - community channels are fetched in `CommunityPage` from public `GET /community/channels` through `communityService`; the page keeps a seeded local fallback list if the request fails.
 - `/cong-dong/dang-bai` lives inside `CommunityLayout`, renders only the create-post form content, and submits authenticated posts to `POST /community/posts` through `postService.createPost`.
 - Community post cards and detail render the post overflow menu dynamically: authors see pin/edit/privacy/archive/delete actions, while other viewers see save/report actions backed by the bookmark and report endpoints.
+- Blog detail reaction counts can open the same reactor list modal used by community posts, backed by `GET /community/blogs/{id}/reactions/users`.
 - Community post detail owner menu is wired to real actions: pin/unpin, edit route, privacy modal, archive/restore, and delete confirmation. Viewer menu actions use real bookmark and report flows.
 - Own-profile empty states for Posts and Blog show direct create CTAs linking to `/cong-dong/dang-bai` and `/blog/dang-bai`; the same CTAs appear in overview carousel panels when those lists are empty.
 - Profile post lists and overview carousels display pinned posts first and mark pinned content with a `Pin` badge instead of the older energy/Zap marker.
@@ -83,6 +84,8 @@
 - dense community page with sidebar, feed, and right rail
 - `/cong-dong/dang-bai`
 - community create-post form linked from the composer entry and post button
+- `/cong-dong/bang-xep-hang`
+- public community leaderboard page; guests can view weekly and all-time rankings without logging in. Weekly and all-time tabs use paginated leaderboard endpoints and auto-load 20 more rows when the user scrolls to the bottom sentinel.
 - `/login`
 - credential login page with Google/GitHub OAuth popup buttons.
 - `/register`
@@ -210,6 +213,8 @@
 - It keeps form state locally, submits to the backend through `contact.service.ts`, and resets the form after a successful response.
 - Contact submissions are stored in the backend `contacts` table through the public API.
 - Community create-post submissions require an authenticated user, a real channel slug, title, editor content, and optional image/video media up to 20 MB. Successful submissions redirect to `/cong-dong/bai-viet/{id}`.
+- Gamification rank summaries use `badge` as an image path/URL. The old `icon`/`color` fields are obsolete. User gamification `/me` reads `current_rank`, `next_rank`, and `points_to_next_rank`; leaderboard rows read `member_rank` so `rank` remains the numeric leaderboard position. Leaderboard list responses are paginated, not full arrays.
+- The community leaderboard right rail links to the seeded blog slug `gioi-thieu-bang-xep-hang`; its teaser card fetches the blog detail to show cover image, title, reading time, and published date.
 
 ## Environment Variables
 
@@ -271,6 +276,8 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-13`: Event detail QR ticket viewing now falls back to `GET /community/events/{event}/my-ticket` when a registered user's QR token is missing after reload.
+- `2026-06-10`: Blog detail reactions now support viewing the list of users who reacted, matching community post behavior.
 - `2026-06-05`: Edit flows for community posts and blogs now present only cancel/save actions; blog edits save existing content without separate draft or submit-for-review buttons.
 - `2026-06-01`: User chat room type contract no longer includes `type`; all chat rooms returned by `/community/chat-rooms` are treated as standard named rooms.
 - `2026-06-01`: Community chat initially requests 30 latest messages and scroll-up pagination requests older batches with `before` plus `before_id` cursor parameters.

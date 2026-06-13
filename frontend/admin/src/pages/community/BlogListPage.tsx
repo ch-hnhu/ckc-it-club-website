@@ -9,6 +9,7 @@ import {
 	ChevronsLeft,
 	ChevronsRight,
 	Eye,
+	EyeOff,
 	Filter,
 	MoreHorizontal,
 	Plus,
@@ -62,7 +63,7 @@ import blogService from "@/services/blog.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type BlogStatus = "draft" | "pending_review" | "published" | "archived";
+export type BlogStatus = "draft" | "pending_review" | "published" | "archived" | "hidden";
 
 export interface BlogTag {
 	id: number;
@@ -101,6 +102,7 @@ export interface BlogStats {
 	draft: number;
 	archived: number;
 	pending_review?: number;
+	hidden?: number;
 }
 
 export interface BlogDetail extends BlogRecord {
@@ -145,6 +147,10 @@ const STATUS_MAP: Record<BlogStatus, { label: string; className: string }> = {
 		label: "Lưu trữ",
 		className: "border-slate-500/20 bg-slate-500/10 text-slate-600 hover:bg-slate-500/10",
 	},
+	hidden: {
+		label: "Đã ẩn",
+		className: "border-rose-500/20 bg-rose-500/10 text-rose-700 hover:bg-rose-500/10",
+	},
 };
 
 function getStatusBadge(status: BlogStatus) {
@@ -164,6 +170,7 @@ const statusOptions: Array<{ value: BlogStatus | "all"; label: string }> = [
 	{ value: "pending_review", label: "Chờ duyệt" },
 	{ value: "draft", label: "Bản nháp" },
 	{ value: "archived", label: "Lưu trữ" },
+	{ value: "hidden", label: "Đã ẩn" },
 ];
 
 const emptyStats: BlogStats = { total: 0, published: 0, draft: 0, archived: 0 };
@@ -268,7 +275,11 @@ function BlogListPage() {
 		try {
 			await blogService.updateStatus(blog.id, next);
 			setBlogs((prev) => prev.map((b) => b.id === blog.id ? { ...b, status: next } : b));
-			toast.success(`Đã chuyển blog sang "${STATUS_MAP[next].label}".`);
+			const message =
+				next === "hidden" ? "Đã ẩn bài viết." :
+				next === "published" && blog.status === "hidden" ? "Đã hiện bài viết." :
+				`Đã chuyển blog sang "${STATUS_MAP[next].label}".`;
+			toast.success(message);
 			setReloadToken((p) => p + 1);
 		} catch {
 			toast.error("Không thể cập nhật trạng thái blog.");
@@ -291,11 +302,14 @@ function BlogListPage() {
 		}
 	};
 
-	const getNextActions = (status: BlogStatus): Array<{ next: BlogStatus; label: string }> => {
-		if (status === "draft") return [{ next: "published", label: "Xuất bản" }];
-		if (status === "pending_review") return [{ next: "published", label: "Duyệt" }];
-		if (status === "published") return [];
-		if (status === "archived") return [{ next: "published", label: "Khôi phục" }];
+	type NextAction = { next: BlogStatus; label: string; icon: "book" | "eye" | "eye-off" };
+
+	const getNextActions = (status: BlogStatus): NextAction[] => {
+		if (status === "draft")          return [{ next: "published", label: "Xuất bản", icon: "book" }];
+		if (status === "pending_review") return [{ next: "published", label: "Duyệt & xuất bản", icon: "book" }];
+		if (status === "published")      return [{ next: "hidden",    label: "Ẩn bài viết", icon: "eye-off" }];
+		if (status === "hidden")         return [{ next: "published", label: "Hiện bài viết", icon: "eye" }];
+		if (status === "archived")       return [{ next: "published", label: "Khôi phục", icon: "book" }];
 		return [];
 	};
 
@@ -314,25 +328,28 @@ function BlogListPage() {
 				</div>
 
 				{/* Stats */}
-				<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+				<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 					{([
-						{ label: "Tổng blog", value: stats.total, color: "sky", desc: "Tổng số bài viết trong hệ thống." },
-						{ label: "Đã xuất bản", value: stats.published, color: "emerald", desc: "Bài viết đang hiển thị công khai." },
-						{ label: "Bản nháp", value: stats.draft, color: "amber", desc: "Bài viết chưa được xuất bản." },
-						{ label: "Lưu trữ", value: stats.archived, color: "slate", desc: "Bài viết đã được lưu trữ." },
+						{ label: "Tổng blog",     value: stats.total,              color: "sky",   desc: "Tổng số bài viết trong hệ thống." },
+						{ label: "Đã xuất bản",   value: stats.published,          color: "emerald", desc: "Bài viết đang hiển thị công khai." },
+						{ label: "Bản nháp",      value: stats.draft,              color: "amber", desc: "Bài viết chưa được xuất bản." },
+						{ label: "Lưu trữ",       value: stats.archived,           color: "slate", desc: "Bài viết đã được lưu trữ." },
+						{ label: "Đã ẩn",         value: stats.hidden ?? 0,        color: "rose",  desc: "Bài viết bị admin ẩn." },
 					] as const).map(({ label, value, color, desc }) => (
 						<div key={label} className={cn("rounded-2xl border p-5 shadow-sm",
-							color === "sky" && "border-sky-500/15 bg-sky-500/5",
+							color === "sky"     && "border-sky-500/15 bg-sky-500/5",
 							color === "emerald" && "border-emerald-500/15 bg-emerald-500/5",
-							color === "amber" && "border-amber-500/15 bg-amber-500/5",
-							color === "slate" && "border-slate-500/15 bg-slate-500/5",
+							color === "amber"   && "border-amber-500/15 bg-amber-500/5",
+							color === "slate"   && "border-slate-500/15 bg-slate-500/5",
+							color === "rose"    && "border-rose-500/15 bg-rose-500/5",
 						)}>
 							<p className="text-sm font-semibold text-foreground">{label}</p>
 							<p className={cn("mt-1 text-3xl font-semibold tracking-tight",
-								color === "sky" && "text-sky-700 dark:text-sky-300",
+								color === "sky"     && "text-sky-700 dark:text-sky-300",
 								color === "emerald" && "text-emerald-700 dark:text-emerald-300",
-								color === "amber" && "text-amber-700 dark:text-amber-300",
-								color === "slate" && "text-slate-600 dark:text-slate-400",
+								color === "amber"   && "text-amber-700 dark:text-amber-300",
+								color === "slate"   && "text-slate-600 dark:text-slate-400",
+								color === "rose"    && "text-rose-700 dark:text-rose-300",
 							)}>{value}</p>
 							<p className="mt-1 text-xs text-muted-foreground">{desc}</p>
 						</div>
@@ -500,9 +517,14 @@ function BlogListPage() {
 																{blog.is_highlight ? "Bỏ highlight" : "Đặt làm highlight"}
 															</DropdownMenuItem>
 														)}
-														{getNextActions(blog.status).map(({ next, label }) => (
-															<DropdownMenuItem key={next} onClick={() => void handleChangeStatus(blog, next)}>
-																<BookOpen className="h-4 w-4" />
+														{getNextActions(blog.status).map(({ next, label, icon }) => (
+															<DropdownMenuItem
+																key={next}
+																onClick={() => void handleChangeStatus(blog, next)}
+																className={icon === "eye-off" ? "text-rose-600 focus:bg-rose-500/10 focus:text-rose-600" : ""}>
+																{icon === "eye-off" ? <EyeOff className="h-4 w-4" /> :
+																 icon === "eye"     ? <Eye className="h-4 w-4" /> :
+																                     <BookOpen className="h-4 w-4" />}
 																{label}
 															</DropdownMenuItem>
 														))}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
-export function useTableSelection(rowIds: number[]) {
-	const [selectedIds, setSelectedIds] = useState<number[]>([]);
+export function useTableSelection<T extends number | string>(rowIds: T[]) {
+	const [selectedIds, setSelectedIds] = useState<T[]>([]);
 
 	useEffect(() => {
 		const visibleIds = new Set(rowIds);
@@ -15,6 +15,7 @@ export function useTableSelection(rowIds: number[]) {
 
 			return next;
 		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [rowIds]);
 
 	const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -24,17 +25,16 @@ export function useTableSelection(rowIds: number[]) {
 		setSelectedIds(checked ? [...new Set(rowIds)] : []);
 	};
 
-	const toggleOne = (rowId: number, checked: boolean) => {
+	const toggleOne = (rowId: T, checked: boolean) => {
 		setSelectedIds((prev) => {
 			if (checked) {
 				return prev.includes(rowId) ? prev : [...prev, rowId];
 			}
-
 			return prev.filter((id) => id !== rowId);
 		});
 	};
 
-	const isSelected = (rowId: number) => selectedIdSet.has(rowId);
+	const isSelected = (rowId: T) => selectedIdSet.has(rowId);
 
 	return {
 		allSelected,

@@ -7,6 +7,8 @@ use App\Models\Blog;
 use App\Models\Post;
 use App\Models\User;
 use App\Notifications\UserCommunityNotification;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class UserNotificationService
 {
@@ -26,21 +28,21 @@ class UserNotificationService
 
         $reactionLabel = match ($reactionType) {
             'heart' => 'tim',
-            'like'  => 'thích',
-            'haha'  => 'haha',
-            'wow'   => 'wow',
-            'sad'   => 'buồn',
+            'like' => 'thích',
+            'haha' => 'haha',
+            'wow' => 'wow',
+            'sad' => 'buồn',
             default => 'thích',
         };
 
         self::send($recipient, $actor, [
-            'title'         => 'Bài viết được yêu thích',
-            'message'       => "{$actor->full_name} đã thả {$reactionLabel} bài viết của bạn",
-            'type'          => 'reaction',
+            'title' => 'Bài viết được yêu thích',
+            'message' => "{$actor->full_name} đã thả {$reactionLabel} bài viết của bạn",
+            'type' => 'reaction',
             'reaction_type' => $reactionType,
-            'target_type'   => 'post',
-            'target_id'     => $post->id,
-            'link'          => "/cong-dong/bai-viet/{$post->id}",
+            'target_type' => 'post',
+            'target_id' => $post->id,
+            'link' => "/cong-dong/bai-viet/{$post->id}",
         ]);
     }
 
@@ -60,12 +62,12 @@ class UserNotificationService
         }
 
         self::send($recipient, $actor, [
-            'title'       => "{$actor->full_name} đã bình luận vào bài viết của bạn",
-            'message'     => $commentContent,
-            'type'        => 'comment',
+            'title' => "{$actor->full_name} đã bình luận vào bài viết của bạn",
+            'message' => $commentContent,
+            'type' => 'comment',
             'target_type' => 'post',
-            'target_id'   => $post->id,
-            'link'        => "/cong-dong/bai-viet/{$post->id}#comment-{$commentId}",
+            'target_id' => $post->id,
+            'link' => "/cong-dong/bai-viet/{$post->id}#comment-{$commentId}",
         ]);
     }
 
@@ -86,12 +88,12 @@ class UserNotificationService
         }
 
         self::send($recipient, $actor, [
-            'title'       => "{$actor->full_name} đã trả lời bình luận của bạn",
-            'message'     => $replyContent,
-            'type'        => 'comment_reply',
+            'title' => "{$actor->full_name} đã trả lời bình luận của bạn",
+            'message' => $replyContent,
+            'type' => 'comment_reply',
             'target_type' => 'post',
-            'target_id'   => $post->id,
-            'link'        => "/cong-dong/bai-viet/{$post->id}#comment-{$replyCommentId}",
+            'target_id' => $post->id,
+            'link' => "/cong-dong/bai-viet/{$post->id}#comment-{$replyCommentId}",
         ]);
     }
 
@@ -111,12 +113,12 @@ class UserNotificationService
         }
 
         self::send($recipient, $actor, [
-            'title'       => "{$actor->full_name} đã trả lời bình luận của bạn",
-            'message'     => $replyContent,
-            'type'        => 'blog_comment_reply',
+            'title' => "{$actor->full_name} đã trả lời bình luận của bạn",
+            'message' => $replyContent,
+            'type' => 'blog_comment_reply',
             'target_type' => 'blog',
-            'target_id'   => $blog->id,
-            'link'        => "/blog/{$blog->slug}#comment-{$replyCommentId}",
+            'target_id' => $blog->id,
+            'link' => "/blog/{$blog->slug}#comment-{$replyCommentId}",
         ]);
     }
 
@@ -136,12 +138,12 @@ class UserNotificationService
         }
 
         self::send($recipient, $actor, [
-            'title'       => "{$actor->full_name} đã bình luận vào blog của bạn",
-            'message'     => $commentContent,
-            'type'        => 'blog_comment',
+            'title' => "{$actor->full_name} đã bình luận vào blog của bạn",
+            'message' => $commentContent,
+            'type' => 'blog_comment',
             'target_type' => 'blog',
-            'target_id'   => $blog->id,
-            'link'        => "/blog/{$blog->slug}#comment-{$commentId}",
+            'target_id' => $blog->id,
+            'link' => "/blog/{$blog->slug}#comment-{$commentId}",
         ]);
     }
 
@@ -154,12 +156,12 @@ class UserNotificationService
         Blog $blog,
     ): void {
         self::send($recipient, $actor, [
-            'title'       => 'Blog được duyệt',
-            'message'     => "Blog \"{$blog->title}\" của bạn đã được duyệt và xuất bản",
-            'type'        => 'blog_approved',
+            'title' => 'Blog được duyệt',
+            'message' => "Blog \"{$blog->title}\" của bạn đã được duyệt và xuất bản",
+            'type' => 'blog_approved',
             'target_type' => 'blog',
-            'target_id'   => $blog->id,
-            'link'        => "/blog/{$blog->slug}",
+            'target_id' => $blog->id,
+            'link' => "/blog/{$blog->slug}",
         ]);
     }
 
@@ -196,12 +198,12 @@ class UserNotificationService
         };
 
         self::send($recipient, $actor, [
-            'title'       => $title,
-            'message'     => $message,
-            'type'        => 'application_status',
+            'title' => $title,
+            'message' => $message,
+            'type' => 'application_status',
             'target_type' => 'club_application',
-            'target_id'   => $applicationId,
-            'link'        => '/ung-tuyen',
+            'target_id' => $applicationId,
+            'link' => '/ung-tuyen',
         ]);
     }
 
@@ -222,21 +224,21 @@ class UserNotificationService
 
         $reactionLabel = match ($reactionType) {
             'heart' => 'tim',
-            'like'  => 'thích',
-            'haha'  => 'haha',
-            'wow'   => 'wow',
-            'sad'   => 'buồn',
+            'like' => 'thích',
+            'haha' => 'haha',
+            'wow' => 'wow',
+            'sad' => 'buồn',
             default => 'thích',
         };
 
         self::send($recipient, $actor, [
-            'title'         => 'Bình luận được yêu thích',
-            'message'       => "{$actor->full_name} đã thả {$reactionLabel} bình luận của bạn",
-            'type'          => 'blog_comment_reaction',
+            'title' => 'Bình luận được yêu thích',
+            'message' => "{$actor->full_name} đã thả {$reactionLabel} bình luận của bạn",
+            'type' => 'blog_comment_reaction',
             'reaction_type' => $reactionType,
-            'target_type'   => 'blog',
-            'target_id'     => $blog->id,
-            'link'          => "/blog/{$blog->slug}#comment-{$commentId}",
+            'target_type' => 'blog',
+            'target_id' => $blog->id,
+            'link' => "/blog/{$blog->slug}#comment-{$commentId}",
         ]);
     }
 
@@ -248,12 +250,12 @@ class UserNotificationService
         User $actor,
     ): void {
         self::send($recipient, $actor, [
-            'title'       => "{$actor->full_name} đã bắt đầu theo dõi bạn",
-            'message'     => "Hãy ghé thăm trang cá nhân của họ!",
-            'type'        => 'follow',
+            'title' => "{$actor->full_name} đã bắt đầu theo dõi bạn",
+            'message' => 'Hãy ghé thăm trang cá nhân của họ!',
+            'type' => 'follow',
             'target_type' => 'user',
-            'target_id'   => $actor->id,
-            'link'        => "/@{$actor->username}",
+            'target_id' => $actor->id,
+            'link' => "/@{$actor->username}",
         ]);
     }
 
@@ -272,12 +274,57 @@ class UserNotificationService
         }
 
         self::send($recipient, $actor, [
-            'title'       => 'Bạn được nhắc đến',
-            'message'     => "{$actor->full_name} đã nhắc đến bạn",
-            'type'        => 'mention',
+            'title' => 'Bạn được nhắc đến',
+            'message' => "{$actor->full_name} đã nhắc đến bạn",
+            'type' => 'mention',
             'target_type' => $targetType,
-            'target_id'   => $targetId,
-            'link'        => $link,
+            'target_id' => $targetId,
+            'link' => $link,
+        ]);
+    }
+
+    /**
+     * Notify the reporter when an admin hides content they reported.
+     * Sends a real-time WebSocket push + DB notification.
+     */
+    public static function dispatchReportResolved(
+        User $reporter,
+        User $admin,
+        string $contentType,   // 'post' | 'blog'
+        string $contentTitle,
+    ): void {
+        $label = $contentType === 'post' ? 'bài viết' : 'blog';
+
+        self::send($reporter, $admin, [
+            'title' => 'Báo cáo vi phạm đã được xử lý',
+            'message' => "Báo cáo của bạn về {$label} \"{$contentTitle}\" đã được xem xét. Nội dung vi phạm đã bị ẩn.",
+            'type' => 'report_resolved',
+            'target_type' => "{$contentType}_report",
+            'target_id' => 0,
+            'link' => '',
+        ]);
+    }
+
+    /**
+     * Notify the reporter when an admin dismisses their report (no violation found).
+     * Sends a real-time WebSocket push + DB notification.
+     */
+    public static function dispatchReportDismissed(
+        User $reporter,
+        User $admin,
+        string $contentType,
+        string $contentTitle,
+        string $contentLink,
+    ): void {
+        $label = $contentType === 'post' ? 'bài viết' : 'blog';
+
+        self::send($reporter, $admin, [
+            'title' => 'Báo cáo vi phạm đã được xem xét',
+            'message' => "Báo cáo của bạn về {$label} \"{$contentTitle}\" đã được xem xét. Chúng tôi không tìm thấy vi phạm trong nội dung này.",
+            'type' => 'report_dismissed',
+            'target_type' => "{$contentType}_report",
+            'target_id' => 0,
+            'link' => $contentLink,
         ]);
     }
 
@@ -291,10 +338,10 @@ class UserNotificationService
     {
         // Attach actor details once — every notification type carries this
         $data['actor'] = [
-            'id'        => $actor->id,
+            'id' => $actor->id,
             'full_name' => $actor->full_name,
-            'avatar'    => $actor->avatar,
-            'username'  => $actor->username,
+            'avatar' => $actor->avatar,
+            'username' => $actor->username,
         ];
 
         // 1. Persist to DB via Laravel's notification system
@@ -306,14 +353,22 @@ class UserNotificationService
         // 3. Push real-time via Reverb WebSocket (private channel per user).
         //    Payload mirrors the DB notification shape so the frontend can
         //    handle WS events and REST responses with one type.
-        broadcast(new NotificationSent(
-            $recipient->id,
-            [
-                'id'         => $saved?->id,
-                'data'       => $data,   // nested under 'data' — matches $user->notifications() format
-                'read_at'    => null,
-                'created_at' => now()->toISOString(),
-            ],
-        ));
+        try {
+            broadcast(new NotificationSent(
+                $recipient->id,
+                [
+                    'id' => $saved?->id,
+                    'data' => $data,   // nested under 'data' — matches $user->notifications() format
+                    'read_at' => null,
+                    'created_at' => now()->toISOString(),
+                ],
+            ));
+        } catch (Throwable $e) {
+            Log::warning('User notification broadcast failed', [
+                'recipient_id' => $recipient->id,
+                'type' => $data['type'] ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

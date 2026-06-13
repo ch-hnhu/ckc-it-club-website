@@ -10,6 +10,7 @@ use App\Models\Comment;
 use App\Models\MediaFile;
 use App\Models\Post;
 use App\Models\Reaction;
+use App\Services\NotificationService;
 use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -438,6 +439,18 @@ class PostController extends BaseApiController
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            // Notify all admins about the new report
+            $reporter = $request->user();
+            NotificationService::dispatch(
+                title: 'Báo cáo vi phạm mới',
+                message: "{$reporter->full_name} đã báo cáo bài viết \"{$post->title}\".",
+                action: 'created',
+                entityType: 'post_report',
+                entityId: $id,
+                performedBy: $reporter->full_name,
+                link: '/community/reports',
+            );
         }
 
         return $this->successResponse(true, [], 'Báo cáo đã được ghi nhận.');
@@ -496,6 +509,45 @@ class PostController extends BaseApiController
                 ->where('post_id', $id)
                 ->exists()
             : false;
+
+        return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * List users who reacted to a post (public).
+     * Returns each reactor with their follow status for the authenticated viewer.
+     */
+    public function reactors(Request $request, int $id): JsonResponse
+    {
+        $viewer = $request->user('sanctum');
+
+        Post::query()
+            ->where('status', 'published')
+            ->visibleTo($viewer)
+            ->findOrFail($id);
+
+        $reactorUsers = Reaction::where('target_type', 'post')
+            ->where('target_id', $id)
+            ->with('user:id,full_name,username,email,avatar')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($r) => $r->user)
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $followingIds = $viewer
+            ? DB::table('user_follows')->where('follower_id', $viewer->id)->pluck('following_id')->all()
+            : [];
+
+        $data = $reactorUsers->map(fn ($user) => [
+            'id'           => $user->id,
+            'full_name'    => $user->full_name,
+            'username'     => $user->username,
+            'email'        => $user->email,
+            'avatar'       => $user->avatar,
+            'is_following' => in_array($user->id, $followingIds),
+        ]);
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
     }

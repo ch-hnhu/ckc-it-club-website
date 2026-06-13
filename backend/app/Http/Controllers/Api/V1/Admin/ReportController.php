@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\PostReport;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -72,6 +73,7 @@ class ReportController extends BaseApiController
             'reviewing' => PostReport::where('status', 'reviewing')->count(),
             'resolved'  => PostReport::where('status', 'resolved')->count(),
             'dismissed' => PostReport::where('status', 'dismissed')->count(),
+            'superseded' => PostReport::where('status', 'superseded')->count(),
         ], 'Lấy thống kê thành công.');
     }
 
@@ -82,15 +84,37 @@ class ReportController extends BaseApiController
         ]);
 
         $status  = $request->input('status');
+        $userId  = $request->user()->id;
+        $admin   = $request->user();
         $payload = ['status' => $status];
 
         if (in_array($status, ['resolved', 'dismissed'])) {
-            $payload['resolved_by'] = $request->user()->id;
+            $payload['resolved_by'] = $userId;
             $payload['resolved_at'] = now();
         }
 
         $report->update($payload);
         $report->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+
+        $statusLabel  = match ($status) {
+            'pending'   => 'chờ xử lý',
+            'reviewing' => 'đang xem xét',
+            'resolved'  => 'đã xử lý',
+            'dismissed' => 'đã bỏ qua',
+            default     => $status,
+        };
+        $contentTitle = $report->post?->title ?? 'Bài viết đã xóa';
+
+        NotificationService::dispatch(
+            title: 'Trạng thái báo cáo được cập nhật',
+            message: "{$admin->full_name} đã cập nhật báo cáo bài viết \"{$contentTitle}\" thành {$statusLabel}.",
+            action: 'status_changed',
+            entityType: 'post_report',
+            entityId: $report->id,
+            performedBy: $admin->full_name,
+            link: '/community/reports',
+            excludeUserId: $userId,
+        );
 
         return $this->successResponse(true, $this->transform($report), 'Cập nhật trạng thái thành công.');
     }
@@ -111,6 +135,20 @@ class ReportController extends BaseApiController
         ]);
 
         $report->load(['post:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+
+        $admin        = $request->user();
+        $contentTitle = $report->post?->title ?? 'Bài viết đã xóa';
+
+        NotificationService::dispatch(
+            title: 'Nội dung vi phạm đã bị ẩn',
+            message: "{$admin->full_name} đã ẩn bài viết \"{$contentTitle}\" và đánh dấu báo cáo là đã xử lý.",
+            action: 'status_changed',
+            entityType: 'post_report',
+            entityId: $report->id,
+            performedBy: $admin->full_name,
+            link: '/community/reports',
+            excludeUserId: $request->user()->id,
+        );
 
         return $this->successResponse(true, $this->transform($report), 'Đã ẩn bài viết và đánh dấu đã xử lý.');
     }

@@ -10,6 +10,7 @@ import type {
 	BlogReactionResponse,
 	ReactionType,
 } from "@/types/blog.types";
+import type { Reactor } from "@/types/post.types";
 
 export const blogService = {
 	getBlogs: (params?: BlogListParams) =>
@@ -64,6 +65,10 @@ export const blogService = {
 
 	toggleReaction: (blogId: number, type: string) =>
 		api.post<ApiResponse<BlogReactionResponse>>(`/community/blogs/${blogId}/reactions`, { type }),
+
+	/** Get the list of users who reacted to a blog. */
+	getReactors: (blogId: number) =>
+		api.get<ApiResponse<Reactor[]>>(`/community/blogs/${blogId}/reactions/users`),
 
 	toggleBookmark: (blogId: number) =>
 		api.post<ApiResponse<{ bookmarked: boolean }>>(`/community/blogs/${blogId}/bookmark`),

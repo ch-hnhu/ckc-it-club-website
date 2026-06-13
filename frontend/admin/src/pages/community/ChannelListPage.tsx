@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -11,9 +12,20 @@ import {
 	MoreHorizontal,
 	Pencil,
 	Plus,
+	RotateCcw,
 	Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,6 +78,7 @@ export interface ChannelRecord {
 	image: string | null;
 	posts_count: number;
 	created_at: string;
+	deleted_at?: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -105,6 +118,8 @@ const emptyForm: ChannelFormState = { name: "", description: "", image: null, im
 function ChannelListPage() {
 	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý kênh" }]);
 
+	const [searchParams, setSearchParams] = useSearchParams();
+
 	const [channels, setChannels] = useState<ChannelRecord[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
@@ -115,6 +130,10 @@ function ChannelListPage() {
 		key: "created_at", order: "desc",
 	});
 
+	const [view, setView] = useState<"active" | "trash">(
+		searchParams.get("view") === "trash" ? "trash" : "active"
+	);
+
 	// Form / dialog state
 	const [formOpen, setFormOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<ChannelRecord | null>(null);
@@ -122,8 +141,18 @@ function ChannelListPage() {
 	const [isSaving, setIsSaving] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<ChannelRecord | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [restoreTarget, setRestoreTarget] = useState<ChannelRecord | null>(null);
+	const [isRestoring, setIsRestoring] = useState(false);
+	const [forceDeleteTarget, setForceDeleteTarget] = useState<ChannelRecord | null>(null);
+	const [isForceDeleting, setIsForceDeleting] = useState(false);
 
 	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(channels.map((c) => c.id));
+
+	// Sync view state when URL changes (e.g. from notification link)
+	useEffect(() => {
+		const urlView = searchParams.get("view") === "trash" ? "trash" : "active";
+		setView(urlView);
+	}, [searchParams]);
 
 	useEffect(() => {
 		const timer = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -132,19 +161,24 @@ function ChannelListPage() {
 
 	useEffect(() => {
 		setMeta((p) => ({ ...p, current_page: 1 }));
-	}, [debouncedSearch, sortConfig]);
+	}, [debouncedSearch, sortConfig, view]);
 
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
 
-		channelService.getChannels({
+		const params = {
 			page: meta.current_page,
 			per_page: meta.per_page,
 			search: debouncedSearch || undefined,
 			sort: sortConfig.key ?? undefined,
 			order: sortConfig.order ?? undefined,
-		}).then((res) => {
+		};
+		const fetchFn = view === "trash"
+			? channelService.getTrash(params)
+			: channelService.getChannels(params);
+
+		fetchFn.then((res) => {
 			if (cancelled) return;
 			setChannels(res.data);
 			setMeta((p) => ({
@@ -159,7 +193,7 @@ function ChannelListPage() {
 		});
 
 		return () => { cancelled = true; };
-	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken, sortConfig]);
+	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken, sortConfig, view]);
 
 	const handleSort = (key: SortKey) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -174,6 +208,12 @@ function ChannelListPage() {
 		sortConfig.order === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> :
 		sortConfig.order === "desc" ? <ArrowDown className="ml-2 h-4 w-4" /> :
 		<ArrowUpDown className="ml-2 h-4 w-4" />;
+
+	const toggleView = () => {
+		const next = view === "trash" ? "active" : "trash";
+		setSearchParams(next === "trash" ? { view: "trash" } : {}, { replace: true });
+		setSearch("");
+	};
 
 	// ── Form handlers ──
 
@@ -272,6 +312,38 @@ function ChannelListPage() {
 		}
 	};
 
+	const handleRestore = async () => {
+		if (!restoreTarget) return;
+		setIsRestoring(true);
+		try {
+			await channelService.restoreChannel(restoreTarget.id);
+			setChannels((prev) => prev.filter((c) => c.id !== restoreTarget.id));
+			setRestoreTarget(null);
+			setReloadToken((p) => p + 1);
+			toast.success("Đã khôi phục kênh.");
+		} catch {
+			toast.error("Không thể khôi phục kênh. Vui lòng thử lại.");
+		} finally {
+			setIsRestoring(false);
+		}
+	};
+
+	const handleForceDelete = async () => {
+		if (!forceDeleteTarget) return;
+		setIsForceDeleting(true);
+		try {
+			await channelService.forceDeleteChannel(forceDeleteTarget.id);
+			setChannels((prev) => prev.filter((c) => c.id !== forceDeleteTarget.id));
+			setForceDeleteTarget(null);
+			setReloadToken((p) => p + 1);
+			toast.success("Đã xóa vĩnh viễn kênh.");
+		} catch {
+			toast.error("Không thể xóa vĩnh viễn kênh. Vui lòng thử lại.");
+		} finally {
+			setIsForceDeleting(false);
+		}
+	};
+
 	const totalPosts = channels.reduce((s, c) => s + c.posts_count, 0);
 
 	return (
@@ -287,32 +359,47 @@ function ChannelListPage() {
 				</div>
 
 				{/* Stats */}
-				<div className="grid gap-4 sm:grid-cols-2">
-					<div className="rounded-2xl border border-indigo-500/15 bg-indigo-500/5 p-5 shadow-sm">
-						<p className="text-sm font-semibold text-foreground">Tổng kênh</p>
-						<p className="mt-1 text-3xl font-semibold tracking-tight text-indigo-700 dark:text-indigo-300">{meta.total}</p>
-						<p className="mt-1 text-xs text-muted-foreground">Số kênh thảo luận đang hoạt động.</p>
+				{view === "active" && (
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="rounded-2xl border border-indigo-500/15 bg-indigo-500/5 p-5 shadow-sm">
+							<p className="text-sm font-semibold text-foreground">Tổng kênh</p>
+							<p className="mt-1 text-3xl font-semibold tracking-tight text-indigo-700 dark:text-indigo-300">{meta.total}</p>
+							<p className="mt-1 text-xs text-muted-foreground">Số kênh thảo luận đang hoạt động.</p>
+						</div>
+						<div className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-5 shadow-sm">
+							<p className="text-sm font-semibold text-foreground">Tổng bài đăng</p>
+							<p className="mt-1 text-3xl font-semibold tracking-tight text-violet-700 dark:text-violet-300">{totalPosts}</p>
+							<p className="mt-1 text-xs text-muted-foreground">Tổng số bài đăng thuộc tất cả các kênh.</p>
+						</div>
 					</div>
-					<div className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-5 shadow-sm">
-						<p className="text-sm font-semibold text-foreground">Tổng bài đăng</p>
-						<p className="mt-1 text-3xl font-semibold tracking-tight text-violet-700 dark:text-violet-300">{totalPosts}</p>
-						<p className="mt-1 text-xs text-muted-foreground">Tổng số bài đăng thuộc tất cả các kênh.</p>
-					</div>
-				</div>
+				)}
 
 				{/* Filter + Table */}
 				<div className="flex flex-col gap-4">
 					<div className="flex flex-row items-center justify-between gap-3">
 						<Input
-							placeholder="Tìm kiếm theo tên kênh hoặc slug..."
+							placeholder={view === "trash" ? "Tìm kiếm trong thùng rác..." : "Tìm kiếm theo tên kênh hoặc slug..."}
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className="h-8 min-w-0 flex-1 max-w-80"
 						/>
-						<Button size="sm" onClick={openCreate} className="h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
-							<Plus className="h-4 w-4" />
-							Thêm kênh
-						</Button>
+						<div className="flex items-center gap-2">
+							<Button
+								size="sm"
+								variant={view === "trash" ? "secondary" : "outline"}
+								onClick={toggleView}
+								className="h-8 shrink-0"
+							>
+								<Trash2 className="h-4 w-4" />
+								{view === "trash" ? "Đang xem thùng rác" : "Thùng rác"}
+							</Button>
+							{view === "active" && (
+								<Button size="sm" onClick={openCreate} className="h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90">
+									<Plus className="h-4 w-4" />
+									Thêm kênh
+								</Button>
+							)}
+						</div>
 					</div>
 
 					<div className="overflow-hidden rounded-md border">
@@ -350,7 +437,7 @@ function ChannelListPage() {
 									</TableHead>
 									<TableHead className="w-[140px]">
 										<Button variant="ghost" onClick={() => handleSort("created_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Ngày tạo {getSortIcon("created_at")}
+											{view === "trash" ? "Ngày xóa" : "Ngày tạo"} {getSortIcon("created_at")}
 										</Button>
 									</TableHead>
 									<TableHead className="w-[52px]" />
@@ -397,7 +484,11 @@ function ChannelListPage() {
 													{channel.posts_count}
 												</Badge>
 											</TableCell>
-											<TableCell className="text-sm text-muted-foreground">{formatDate(channel.created_at)}</TableCell>
+											<TableCell className="text-sm text-muted-foreground">
+												{view === "trash"
+													? formatDate(channel.deleted_at ?? null)
+													: formatDate(channel.created_at)}
+											</TableCell>
 											<TableCell>
 												<DropdownMenu>
 													<DropdownMenuTrigger asChild>
@@ -406,17 +497,35 @@ function ChannelListPage() {
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end" className="w-[160px]">
-														<DropdownMenuItem onClick={() => openEdit(channel)}>
-															<Pencil className="h-4 w-4" />
-															Sửa kênh
-														</DropdownMenuItem>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem
-															className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-															onClick={() => setDeleteTarget(channel)}>
-															<Trash2 className="h-4 w-4 text-destructive" />
-															Xóa kênh
-														</DropdownMenuItem>
+														{view === "active" ? (
+															<>
+																<DropdownMenuItem onClick={() => openEdit(channel)}>
+																	<Pencil className="h-4 w-4" />
+																	Sửa kênh
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+																	onClick={() => setDeleteTarget(channel)}>
+																	<Trash2 className="h-4 w-4 text-destructive" />
+																	Xóa kênh
+																</DropdownMenuItem>
+															</>
+														) : (
+															<>
+																<DropdownMenuItem onClick={() => setRestoreTarget(channel)}>
+																	<RotateCcw className="h-4 w-4" />
+																	Khôi phục
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+																	onClick={() => setForceDeleteTarget(channel)}>
+																	<Trash2 className="h-4 w-4 text-destructive" />
+																	Xóa vĩnh viễn
+																</DropdownMenuItem>
+															</>
+														)}
 													</DropdownMenuContent>
 												</DropdownMenu>
 											</TableCell>
@@ -425,7 +534,9 @@ function ChannelListPage() {
 								) : (
 									<TableRow>
 										<TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-											Không tìm thấy kênh nào. Hãy thêm kênh đầu tiên!
+											{view === "trash"
+												? "Thùng rác trống."
+												: "Không tìm thấy kênh nào. Hãy thêm kênh đầu tiên!"}
 										</TableCell>
 									</TableRow>
 								)}
@@ -436,7 +547,9 @@ function ChannelListPage() {
 									<TableCell colSpan={8}>
 										<div className="flex items-center justify-between px-2">
 											<p className="flex-1 text-sm text-muted-foreground">
-												Đang hiển thị {channels.length} trên tổng {meta.total} kênh.
+												{view === "trash"
+													? `Thùng rác: ${channels.length} / ${meta.total} kênh.`
+													: `Đang hiển thị ${channels.length} trên tổng ${meta.total} kênh.`}
 											</p>
 											<div className="flex items-center space-x-6 lg:space-x-8">
 												<div className="flex items-center space-x-2">
@@ -546,6 +659,33 @@ function ChannelListPage() {
 				</DialogContent>
 			</Dialog>
 
+			{/* Restore confirm */}
+			<Dialog open={Boolean(restoreTarget)} onOpenChange={(o) => !o && setRestoreTarget(null)}>
+				<DialogContent className="sm:max-w-[440px]">
+					{restoreTarget && (
+						<>
+							<DialogHeader><DialogTitle>Xác nhận khôi phục kênh</DialogTitle></DialogHeader>
+							<div className="space-y-3 text-sm text-muted-foreground">
+								<p>
+									Khôi phục kênh <span className="font-semibold text-foreground">"{restoreTarget.name}"</span>
+									{restoreTarget.posts_count > 0 && (
+										<> cùng với <strong className="text-foreground">{restoreTarget.posts_count}</strong> bài đăng liên quan</>
+									)}
+									?
+								</p>
+								<p>Kênh và các bài đăng sẽ hiển thị trở lại trong cộng đồng.</p>
+							</div>
+							<DialogFooter>
+								<Button variant="outline" onClick={() => setRestoreTarget(null)} disabled={isRestoring}>Hủy</Button>
+								<Button onClick={handleRestore} disabled={isRestoring}>
+									{isRestoring ? "Đang khôi phục..." : "Khôi phục"}
+								</Button>
+							</DialogFooter>
+						</>
+					)}
+				</DialogContent>
+			</Dialog>
+
 			{/* Delete confirm */}
 			<Dialog open={Boolean(deleteTarget)} onOpenChange={(o) => !o && setDeleteTarget(null)}>
 				<DialogContent className="sm:max-w-[440px]">
@@ -560,7 +700,7 @@ function ChannelListPage() {
 										Xóa kênh sẽ ảnh hưởng đến các bài đăng liên quan.
 									</p>
 								)}
-								<p>Hành động này không thể hoàn tác.</p>
+								<p>Kênh đã xóa có thể khôi phục lại từ thùng rác.</p>
 							</div>
 							<DialogFooter>
 								<Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>Hủy</Button>
@@ -572,6 +712,36 @@ function ChannelListPage() {
 					)}
 				</DialogContent>
 			</Dialog>
+
+			{/* Force delete confirm */}
+			<AlertDialog open={Boolean(forceDeleteTarget)} onOpenChange={(o) => !o && setForceDeleteTarget(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa vĩnh viễn kênh?</AlertDialogTitle>
+						<AlertDialogDescription asChild>
+							<div className="space-y-2">
+								<p>
+									Kênh <span className="font-semibold text-foreground">"{forceDeleteTarget?.name}"</span> sẽ bị xóa hoàn toàn
+									khỏi hệ thống, bao gồm cả ảnh đại diện.
+								</p>
+								<p className="font-medium text-destructive">
+									Hành động này không thể hoàn tác.
+								</p>
+							</div>
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isForceDeleting}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={handleForceDelete}
+							disabled={isForceDeleting}
+						>
+							{isForceDeleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

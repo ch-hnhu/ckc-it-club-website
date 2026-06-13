@@ -231,6 +231,8 @@
 - `created_at`
 - `updated_at`
 - If backend `User` payload grows, update the type instead of using `any`.
+- Gamification rank responses use `badge` as an image path/URL. Admin rank create/edit submits badge as an image file with `multipart/form-data`; rank and leaderboard UI render badge images, not the old `icon`/`color` fields. Admin rank management lives at `/gamification/ranks` and calls backend `/ranks`; after create/update/delete, backend queues automatic user rank synchronization so admins no longer run `gamification:recompute-ranks` manually.
+- Admin leaderboard at `/gamification/leaderboard` calls the public gamification leaderboard endpoints with paginated `page`/`per_page` params and auto-loads more rows in 20-record pages when the sentinel at the bottom enters view.
 
 ## Feature-Specific Notes
 
@@ -256,6 +258,8 @@
 - Notifications:
 - `notification.service.ts` owns both personal notification endpoints (`GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`) and the admin log endpoints (`GET /notifications/log`, `GET /notifications/admin-stats`, `DELETE /notifications/{id}/admin`).
 - `NotificationBell` polls unread count and links to `/notifications`; the full notification page uses paginated personal notification payloads.
+- Event check-in:
+- QR check-in lives in `src/pages/event/EventCheckInDialog.tsx`, uses `html5-qrcode`, requests the environment-facing camera, and creates a fresh DOM region per scanner mount so React StrictMode cleanup cannot duplicate camera previews.
 - Department management:
 - route `/divisions`
 - server-driven pagination, search, sort, status display through `CompactBadgeList`, row selection, member counts, create/update/delete modal flows, and row actions backed by backend department endpoints. Department delete is blocked when the department still has members; bulk delete uses a popup confirmation and only proceeds for selected departments without members.
@@ -293,12 +297,14 @@
 - Community post management:
 - route `/community/posts`
 - admin post management no longer exposes pin/unpin actions, pin sort, or pinned stats. The content detail dialog renders saved Markdown through `src/lib/markdown.ts`, and the trash icon beside the status filter toggles the soft-deleted post list with row-level restore actions.
+- Community report management uses backend report statuses `pending`, `reviewing`, `resolved`, `dismissed`, and system-generated `superseded`; filter dropdowns and stats include `superseded`, but manual status actions should not set it directly.
 
 ## Environment Variables
 
 - Required:
 - `VITE_API_URL`
 - `VITE_BACKEND_URL`
+- `VITE_USER_SITE_URL` is used to resolve user-site public assets such as `/assets/img/level01.png` when admin runs on a different origin.
 - Optional but currently undocumented in `.env.example`:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_KEY`
@@ -355,6 +361,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-13`: Admin event QR check-in scanner now creates a fresh scan region per mount and clears/stops stale `html5-qrcode` instances to prevent duplicated camera previews in React StrictMode.
 - `2026-06-05`: Admin post management removed pin controls, renders post content Markdown in detail, and added a same-page trash/restore flow backed by `/posts/trash` and `/posts/{post}/restore`.
 - `2026-06-01`: Admin channel create/edit dialog uses a file input for channel avatar images and submits channel forms as `multipart/form-data`.
 - `2026-06-01`: Admin chat room management no longer depends on room `type`; the list removed direct/group filtering and type stats because `chat_rooms.type` was dropped.

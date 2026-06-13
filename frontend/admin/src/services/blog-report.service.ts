@@ -15,7 +15,7 @@ export interface BlogReportRecord {
 	resolver: { id: number; full_name: string } | null;
 	reason: "spam" | "offensive" | "misinformation" | "inappropriate" | "other";
 	description: string | null;
-	status: "pending" | "reviewing" | "resolved" | "dismissed";
+	status: "pending" | "reviewing" | "resolved" | "dismissed" | "superseded";
 	resolved_at: string | null;
 	created_at: string;
 }
@@ -26,6 +26,7 @@ export interface BlogReportStats {
 	reviewing: number;
 	resolved: number;
 	dismissed: number;
+	superseded: number;
 }
 
 const blogReportService = {

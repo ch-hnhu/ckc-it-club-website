@@ -24,7 +24,6 @@ class DatabaseSeeder extends Seeder
             ApplicationQuestionOptionSeeder::class,
             ClubApplicationSeeder::class,
             ApplicationAnswerSeeder::class,
-            // Community module — thứ tự phụ thuộc: channel → tag → post → blog → comment → reaction
             ChannelSeeder::class,
             TagSeeder::class,
             PostSeeder::class,
@@ -34,6 +33,10 @@ class DatabaseSeeder extends Seeder
             MediaFileSeeder::class,
             ChatRoomSeeder::class,
             SkillSeeder::class,
+            MailTemplateSeeder::class,
+            EventSeeder::class,
+            RankSeeder::class,
+            PointRuleSeeder::class,
         ]);
     }
 }

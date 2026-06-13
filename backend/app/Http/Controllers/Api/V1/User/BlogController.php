@@ -11,6 +11,7 @@ use App\Models\MediaFile;
 use App\Models\Comment;
 use App\Models\Reaction;
 use App\Models\Tag;
+use App\Services\NotificationService;
 use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -482,6 +483,45 @@ class BlogController extends BaseApiController
         ], ApiMessage::UPDATED);
     }
 
+    /**
+     * List users who reacted to a blog (public).
+     * Returns each reactor with their follow status for the authenticated viewer.
+     */
+    public function reactors(Request $request, int $id): JsonResponse
+    {
+        $viewer = $request->user('sanctum');
+
+        Blog::query()
+            ->where('status', 'published')
+            ->visibleTo($viewer)
+            ->findOrFail($id);
+
+        $reactorUsers = Reaction::where('target_type', 'blog')
+            ->where('target_id', $id)
+            ->with('user:id,full_name,username,email,avatar')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($reaction) => $reaction->user)
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $followingIds = $viewer
+            ? DB::table('user_follows')->where('follower_id', $viewer->id)->pluck('following_id')->all()
+            : [];
+
+        $data = $reactorUsers->map(fn ($user) => [
+            'id'           => $user->id,
+            'full_name'    => $user->full_name,
+            'username'     => $user->username,
+            'email'        => $user->email,
+            'avatar'       => $user->avatar,
+            'is_following' => in_array($user->id, $followingIds),
+        ]);
+
+        return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+    }
+
     public function comments(int $id): JsonResponse
     {
         Blog::where('status', 'published')->findOrFail($id);
@@ -647,6 +687,18 @@ class BlogController extends BaseApiController
                 'created_at'  => now(),
                 'updated_at'  => now(),
             ]);
+
+            // Notify all admins about the new report
+            $reporter = $request->user();
+            NotificationService::dispatch(
+                title: 'Báo cáo vi phạm mới',
+                message: "{$reporter->full_name} đã báo cáo blog \"{$blog->title}\".",
+                action: 'created',
+                entityType: 'blog_report',
+                entityId: $id,
+                performedBy: $reporter->full_name,
+                link: '/community/reports',
+            );
         }
 
         return $this->successResponse(true, [], 'Báo cáo đã được ghi nhận.');
@@ -687,9 +739,7 @@ class BlogController extends BaseApiController
             ] : null,
             'title'           => $blog->title,
             'excerpt'         => $blog->excerpt,
-            'featured_image'  => $blog->cover_image
-                ? Storage::disk('public')->url($blog->cover_image)
-                : null,
+            'featured_image'  => $this->coverImageUrl($blog->cover_image),
             'status'          => $blog->status,
             'visibility'      => $blog->visibility ?? 'public',
             'published_at'    => $blog->published_at?->toIso8601String(),
@@ -707,6 +757,19 @@ class BlogController extends BaseApiController
             'created_at'      => $blog->created_at?->toIso8601String(),
             'updated_at'      => $blog->updated_at?->toIso8601String(),
         ];
+    }
+
+    private function coverImageUrl(?string $coverImage): ?string
+    {
+        if (! $coverImage) {
+            return null;
+        }
+
+        if (Str::startsWith($coverImage, ['http://', 'https://', '/assets/', '/storage/'])) {
+            return $coverImage;
+        }
+
+        return Storage::disk('public')->url($coverImage);
     }
 
     private function transformComment(Comment $comment, array $myReactions = []): array

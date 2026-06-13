@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-	BookOpen,
 	Bookmark,
 	ChevronDown,
 	ChevronLeft,
@@ -11,6 +10,7 @@ import {
 	LogIn,
 	LogOut,
 	Menu,
+	MessageSquare,
 	Monitor,
 	SlidersHorizontal,
 	Trophy,
@@ -19,10 +19,7 @@ import {
 	X,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import {
-	logout,
-	type AuthUser,
-} from "../../services/auth.service";
+import { logout, type AuthUser } from "../../services/auth.service";
 import { buildProfileUrl } from "@/lib/utils";
 import NotificationBell from "@/components/partials/NotificationBell";
 
@@ -41,10 +38,10 @@ type NavItem = {
 
 const BASE_NAV_ITEMS: NavItem[] = [
 	{ label: "Cộng đồng", href: "/cong-dong", dropdown: true },
-	{ label: "Tài nguyên", href: "#resources" },
-	{ label: "Bảng xếp hạng", href: "#leaderboard" },
-	{ label: "Sự kiện", href: "#events" },
-	{ label: "Khóa học", href: "#courses" },
+	{ label: "Tài nguyên", href: "/tai-nguyen" },
+	{ label: "Sự kiện", href: "/su-kien" },
+	{ label: "Blog", href: "/blog" },
+	{ label: "Khóa học", href: "/khoa-hoc" },
 	{ label: "Liên hệ", href: "/lien-he" },
 ];
 
@@ -52,11 +49,11 @@ const APPLY_NAV_ITEM: NavItem = { label: "Ứng tuyển", href: "/ung-tuyen", hi
 
 const COMMUNITY_DROPDOWN = [
 	{ id: "home", label: "Trang chủ", to: "/cong-dong", icon: Home },
-	{ id: "leaderboard", label: "Bảng xếp hạng", to: "/cong-dong", icon: Trophy },
+	{ id: "chat", label: "Phòng chat", to: "/cong-dong/chat", icon: MessageSquare },
+	{ id: "leaderboard", label: "Bảng xếp hạng", to: "/cong-dong/bang-xep-hang", icon: Trophy },
 	{ id: "showcase", label: "Showcase dự án", to: "/cong-dong", icon: Monitor },
 	{ id: "challenge", label: "Thử thách tháng", to: "/cong-dong", icon: Crown },
 	{ id: "code", label: "#30DaysOfCode", to: "/cong-dong", icon: Code2 },
-	{ id: "blog", label: "Blog", to: "/blog", icon: BookOpen },
 ];
 
 const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
@@ -228,6 +225,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 					<span>Đã lưu</span>
 				</Link>
 				<Link
+					to='/diem-cua-toi'
+					onClick={() => closeProfileMenu(isMobile)}
+					className={profileMenuItemClass}
+					role='menuitem'>
+					<Trophy className='h-5 w-5 shrink-0 text-gray-600' />
+					<span>Điểm của tôi</span>
+				</Link>
+				<Link
 					to='/tai-khoan?tabIndex=0'
 					onClick={() => closeProfileMenu(isMobile)}
 					className={profileMenuItemClass}
@@ -304,9 +309,13 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 												<div className='absolute top-[calc(100%+10px)] left-0 z-50 flex w-56 flex-col gap-1.5 overflow-hidden rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
 													{COMMUNITY_DROPDOWN.map((sub) => {
 														const subActive =
-															(sub.id === "blog" &&
+															(sub.id === "chat" &&
 																location.pathname.startsWith(
-																	"/blog",
+																	"/cong-dong/chat",
+																)) ||
+															(sub.id === "leaderboard" &&
+																location.pathname.startsWith(
+																	"/cong-dong/bang-xep-hang",
 																)) ||
 															(sub.id === "home" &&
 																location.pathname === "/cong-dong");
@@ -630,6 +639,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 										className={profileMenuItemClass}>
 										<Bookmark className='h-5 w-5 shrink-0 text-gray-600' />
 										<span>Đã lưu</span>
+									</Link>
+									<Link
+										to='/diem-cua-toi'
+										onClick={closeMobileMenu}
+										className={profileMenuItemClass}
+										role='menuitem'>
+										<Trophy className='h-5 w-5 shrink-0 text-gray-600' />
+										<span>Điểm của tôi</span>
 									</Link>
 									<Link
 										to='/tai-khoan?tabIndex=0'

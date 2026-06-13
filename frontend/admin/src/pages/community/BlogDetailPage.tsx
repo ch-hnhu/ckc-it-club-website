@@ -78,6 +78,11 @@ const STATUS_MAP: Record<BlogStatus, { label: string; className: string }> = {
 		className:
 			"border-slate-500/20 bg-slate-500/10 text-slate-600 hover:bg-slate-500/10",
 	},
+	hidden: {
+		label: "Đã ẩn",
+		className:
+			"border-gray-500/20 bg-gray-500/10 text-gray-600 hover:bg-gray-500/10",
+	},
 };
 
 function getStatusBadge(status: BlogStatus) {

@@ -8,12 +8,12 @@ export interface UserNotificationActor {
 export interface UserNotificationData {
 	title: string;
 	message: string;
-	type: "reaction" | "comment" | "comment_reply" | "mention" | "follow" | "blog_comment" | "blog_comment_reply" | "blog_approved";
+	type: "reaction" | "comment" | "comment_reply" | "mention" | "follow" | "blog_comment" | "blog_comment_reply" | "blog_approved" | "report_resolved" | "report_dismissed";
 	actor: UserNotificationActor;
 	reaction_type?: string;
 	target_type: string;
 	target_id: number;
-	link: string;
+	link?: string | null;
 }
 
 export interface UserNotification {
