@@ -258,6 +258,8 @@
 - Notifications:
 - `notification.service.ts` owns both personal notification endpoints (`GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`) and the admin log endpoints (`GET /notifications/log`, `GET /notifications/admin-stats`, `DELETE /notifications/{id}/admin`).
 - `NotificationBell` polls unread count and links to `/notifications`; the full notification page uses paginated personal notification payloads.
+- Event check-in:
+- QR check-in lives in `src/pages/event/EventCheckInDialog.tsx`, uses `html5-qrcode`, requests the environment-facing camera, and creates a fresh DOM region per scanner mount so React StrictMode cleanup cannot duplicate camera previews.
 - Department management:
 - route `/divisions`
 - server-driven pagination, search, sort, status display through `CompactBadgeList`, row selection, member counts, create/update/delete modal flows, and row actions backed by backend department endpoints. Department delete is blocked when the department still has members; bulk delete uses a popup confirmation and only proceeds for selected departments without members.
@@ -359,6 +361,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-13`: Admin event QR check-in scanner now creates a fresh scan region per mount and clears/stops stale `html5-qrcode` instances to prevent duplicated camera previews in React StrictMode.
 - `2026-06-05`: Admin post management removed pin controls, renders post content Markdown in detail, and added a same-page trash/restore flow backed by `/posts/trash` and `/posts/{post}/restore`.
 - `2026-06-01`: Admin channel create/edit dialog uses a file input for channel avatar images and submits channel forms as `multipart/form-data`.
 - `2026-06-01`: Admin chat room management no longer depends on room `type`; the list removed direct/group filtering and type stats because `chat_rooms.type` was dropped.
