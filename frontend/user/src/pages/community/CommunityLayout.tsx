@@ -30,7 +30,7 @@ export type CommunityLayoutContext = {
 const PRIMARY_NAV = [
 	{ id: "home", label: "Trang chủ", icon: Home, to: "/cong-dong" },
 	{ id: "chat", label: "Phòng chat", icon: MessageSquare, to: "/cong-dong/chat" },
-	{ id: "leaderboard", label: "Bảng xếp hạng", icon: Trophy, to: "/cong-dong" },
+	{ id: "leaderboard", label: "Bảng xếp hạng", icon: Trophy, to: "/cong-dong/bang-xep-hang" },
 	{ id: "showcase", label: "Showcase dự án", icon: Monitor, to: "/cong-dong" },
 	{ id: "challenge", label: "Thử thách tháng", icon: Crown, to: "/cong-dong" },
 	{ id: "code", label: "#30DaysOfCode", icon: Code2, to: "/cong-dong" },
@@ -89,7 +89,14 @@ const CommunityLayout: React.FC = () => {
 	const location = useLocation();
 
 	const isChat = location.pathname.startsWith("/cong-dong/chat");
-	const pageMode = channelSlug && !isChat ? "channel" : isChat ? "chat" : "home";
+	const isLeaderboard = location.pathname.startsWith("/cong-dong/bang-xep-hang");
+	const pageMode = isLeaderboard
+		? "leaderboard"
+		: channelSlug && !isChat
+			? "channel"
+			: isChat
+				? "chat"
+				: "home";
 	const activeChannel = channelSlug ?? "";
 
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -151,7 +158,8 @@ const CommunityLayout: React.FC = () => {
 					const Icon = item.icon;
 					const isActive =
 						(item.id === "home" && pageMode === "home") ||
-						(item.id === "chat" && pageMode === "chat");
+						(item.id === "chat" && pageMode === "chat") ||
+						(item.id === "leaderboard" && pageMode === "leaderboard");
 					return (
 						<Link
 							key={item.id}

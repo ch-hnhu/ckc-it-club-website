@@ -54,8 +54,10 @@ type FormState = {
 	location: string;
 	start_at: string;
 	end_at: string;
+	registration_start_at: string;
+	registration_end_at: string;
 	max_attendees: string;
-	is_registration_required: boolean;
+	is_members_only: boolean;
 	status: CreateStatus;
 	department_id: string;
 };
@@ -70,8 +72,10 @@ const getInitialForm = (): FormState => ({
 	location: "",
 	start_at: "",
 	end_at: "",
+	registration_start_at: "",
+	registration_end_at: "",
 	max_attendees: "",
-	is_registration_required: true,
+	is_members_only: false,
 	status: "draft",
 	department_id: "none",
 });
@@ -150,6 +154,13 @@ function EventCreatePage() {
 		if (form.start_at && form.end_at && new Date(form.end_at) <= new Date(form.start_at)) {
 			errors.end_at = "Thời gian kết thúc phải sau thời gian bắt đầu.";
 		}
+		if (
+			form.registration_start_at &&
+			form.registration_end_at &&
+			new Date(form.registration_end_at) <= new Date(form.registration_start_at)
+		) {
+			errors.registration_end_at = "Thời gian đóng đăng ký phải sau thời gian mở đăng ký.";
+		}
 		if (form.max_attendees && Number(form.max_attendees) < 1) {
 			errors.max_attendees = "Số lượng tối đa phải lớn hơn 0.";
 		}
@@ -172,12 +183,18 @@ function EventCreatePage() {
 			formData.append("start_at", new Date(form.start_at).toISOString());
 			formData.append("end_at", new Date(form.end_at).toISOString());
 			formData.append("status", form.status);
-			formData.append("is_registration_required", form.is_registration_required ? "1" : "0");
+			formData.append("is_members_only", form.is_members_only ? "1" : "0");
 			if (form.description.trim()) formData.append("description", form.description.trim());
 			if (content) formData.append("content", content);
 			if (form.location.trim()) formData.append("location", form.location.trim());
-			if (form.is_registration_required && form.max_attendees) {
+			if (form.max_attendees) {
 				formData.append("max_attendees", form.max_attendees);
+			}
+			if (form.registration_start_at) {
+				formData.append("registration_start_at", new Date(form.registration_start_at).toISOString());
+			}
+			if (form.registration_end_at) {
+				formData.append("registration_end_at", new Date(form.registration_end_at).toISOString());
 			}
 			if (form.department_id !== "none") formData.append("department_id", form.department_id);
 			if (imageFile) formData.append("thumbnail", imageFile);
@@ -331,20 +348,57 @@ function EventCreatePage() {
 									</div>
 								</div>
 
-								{/* Registration required */}
+								{/* Members only */}
 								<div className="flex items-center justify-between rounded-lg border p-4">
 									<div className="space-y-0.5">
-										<Label htmlFor="event-registration-required">Yêu cầu đăng ký</Label>
+										<Label htmlFor="event-members-only">Yêu cầu thành viên CLB</Label>
 										<p className="text-xs text-muted-foreground">
-											Thành viên phải đăng ký trước để tham gia sự kiện.
+											Khi bật, chỉ thành viên câu lạc bộ mới được đăng ký tham gia sự kiện.
 										</p>
 									</div>
 									<Switch
-										id="event-registration-required"
-										checked={form.is_registration_required}
-										onCheckedChange={(c) => setField("is_registration_required", c)}
+										id="event-members-only"
+										checked={form.is_members_only}
+										onCheckedChange={(c) => setField("is_members_only", c)}
 										disabled={submitting}
 									/>
+								</div>
+
+								{/* Registration window */}
+								<div className="grid gap-5 sm:grid-cols-2">
+									<div className="flex flex-col gap-2">
+										<Label htmlFor="event-registration-start">Mở đăng ký</Label>
+										<Input
+											id="event-registration-start"
+											type="datetime-local"
+											value={form.registration_start_at}
+											onChange={(e) => setField("registration_start_at", e.target.value)}
+											disabled={submitting}
+										/>
+										<p className="text-xs text-muted-foreground">
+											Để trống nếu mở đăng ký ngay khi đăng sự kiện.
+										</p>
+										{fieldErrors.registration_start_at && (
+											<p className="text-sm text-destructive">{fieldErrors.registration_start_at}</p>
+										)}
+									</div>
+
+									<div className="flex flex-col gap-2">
+										<Label htmlFor="event-registration-end">Đóng đăng ký</Label>
+										<Input
+											id="event-registration-end"
+											type="datetime-local"
+											value={form.registration_end_at}
+											onChange={(e) => setField("registration_end_at", e.target.value)}
+											disabled={submitting}
+										/>
+										<p className="text-xs text-muted-foreground">
+											Để trống nếu nhận đăng ký đến khi sự kiện bắt đầu.
+										</p>
+										{fieldErrors.registration_end_at && (
+											<p className="text-sm text-destructive">{fieldErrors.registration_end_at}</p>
+										)}
+									</div>
 								</div>
 
 								{/* Max attendees */}
@@ -357,7 +411,7 @@ function EventCreatePage() {
 										placeholder="Để trống nếu không giới hạn"
 										value={form.max_attendees}
 										onChange={(e) => setField("max_attendees", e.target.value)}
-										disabled={submitting || !form.is_registration_required}
+										disabled={submitting}
 									/>
 									{fieldErrors.max_attendees && (
 										<p className="text-sm text-destructive">{fieldErrors.max_attendees}</p>

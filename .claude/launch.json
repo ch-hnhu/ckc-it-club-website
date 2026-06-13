@@ -21,6 +21,13 @@
       "runtimeArgs": ["run", "dev", "--prefix", "frontend/admin", "--", "--port", "5180", "--strictPort"],
       "port": 5180,
       "autoPort": false
+    },
+    {
+      "name": "user-frontend-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend/user", "--", "--port", "5181", "--strictPort"],
+      "port": 5181,
+      "autoPort": false
     }
   ]
 }

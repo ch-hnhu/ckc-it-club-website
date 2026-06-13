@@ -47,6 +47,10 @@ import MailTemplateDetailPage from "@/pages/mail-template/MailTemplateDetailPage
 import EventListPage from "@/pages/event/EventListPage";
 import EventCreatePage from "@/pages/event/EventCreatePage";
 import EventEditPage from "@/pages/event/EventEditPage";
+import EventDetailPage from "@/pages/event/EventDetailPage";
+import PointRulesPage from "@/pages/gamification/PointRulesPage";
+import RanksPage from "@/pages/gamification/RanksPage";
+import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
 
 const router = createBrowserRouter([
 	{
@@ -299,6 +303,14 @@ const router = createBrowserRouter([
 				),
 			},
 			{
+				path: "events/:id",
+				element: (
+					<PermissionRoute permission='events.view'>
+						<EventDetailPage />
+					</PermissionRoute>
+				),
+			},
+			{
 				path: "events/:id/edit",
 				element: (
 					<PermissionRoute permission='events.manage'>
@@ -404,6 +416,30 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.reports.view">
 						<BlogReportListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "gamification/point-rules",
+				element: (
+					<PermissionRoute permission="gamification.manage">
+						<PointRulesPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "gamification/ranks",
+				element: (
+					<PermissionRoute permission="gamification.manage">
+						<RanksPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "gamification/leaderboard",
+				element: (
+					<PermissionRoute permission="gamification.view">
+						<LeaderboardPage />
 					</PermissionRoute>
 				),
 			},

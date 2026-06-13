@@ -16,9 +16,12 @@ export interface EventItem {
 	thumbnail: string | null;
 	start_at: string;
 	end_at: string;
+	registration_start_at: string | null;
+	registration_end_at: string | null;
 	location: string | null;
 	max_attendees: number | null;
-	is_registration_required: boolean;
+	is_members_only: boolean;
+	is_registration_open: boolean;
 	status: EventStatus;
 	registrations_count: number;
 	is_full: boolean;

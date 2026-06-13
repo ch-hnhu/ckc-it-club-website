@@ -15,6 +15,19 @@ export interface User {
 	updated_at: string;
 }
 
+export interface UserProfile {
+	id: number;
+	full_name: string;
+	username: string | null;
+	email: string;
+	avatar: string | null;
+	bio: string | null;
+	gender: string | null;
+	date_of_birth: string | null;
+	is_active: boolean;
+	created_at: string;
+}
+
 export interface CurrentUser {
 	id: number;
 	full_name: string;

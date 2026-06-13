@@ -17,7 +17,8 @@ class Event extends Model
         'created_by', 'department_id', 'title', 'slug',
         'description', 'content', 'thumbnail',
         'start_at', 'end_at', 'location',
-        'max_attendees', 'is_registration_required', 'status',
+        'registration_start_at', 'registration_end_at',
+        'max_attendees', 'is_members_only', 'status',
     ];
 
     protected function casts(): array
@@ -25,9 +26,28 @@ class Event extends Model
         return [
             'start_at' => 'datetime',
             'end_at' => 'datetime',
-            'is_registration_required' => 'boolean',
+            'registration_start_at' => 'datetime',
+            'registration_end_at' => 'datetime',
+            'is_members_only' => 'boolean',
             'status' => EventStatus::class,
         ];
+    }
+
+    /**
+     * Sự kiện có đang trong khoảng thời gian mở đăng ký không.
+     * Null = không giới hạn ở phía đó.
+     */
+    public function isRegistrationOpen(): bool
+    {
+        if ($this->registration_start_at && now()->lt($this->registration_start_at)) {
+            return false;
+        }
+
+        if ($this->registration_end_at && now()->gt($this->registration_end_at)) {
+            return false;
+        }
+
+        return true;
     }
 
     public function creator(): BelongsTo
@@ -58,6 +78,25 @@ class Event extends Model
     public function galleryItems(): HasMany
     {
         return $this->hasMany(EventGalleryItem::class)->orderBy('display_order');
+    }
+
+    /**
+     * Tự động chuyển trạng thái theo thời gian thực tế (chỉ tiến, không lùi):
+     * published → ongoing khi đã đến giờ bắt đầu, published/ongoing → ended khi đã qua giờ kết thúc.
+     * Không đụng đến draft, cancelled hay sự kiện đã được kết thúc thủ công.
+     */
+    public static function syncStatuses(): void
+    {
+        static::query()
+            ->where('status', 'published')
+            ->where('start_at', '<=', now())
+            ->where('end_at', '>', now())
+            ->update(['status' => 'ongoing']);
+
+        static::query()
+            ->whereIn('status', ['published', 'ongoing'])
+            ->where('end_at', '<=', now())
+            ->update(['status' => 'ended']);
     }
 
     public static function generateUniqueSlug(string $title): string

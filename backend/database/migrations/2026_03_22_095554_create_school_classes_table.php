@@ -31,6 +31,14 @@ return new class extends Migration
 			$table->foreign('updated_by')->references('id')->on('users');
 			$table->foreign('deleted_by')->references('id')->on('users');
 		});
+
+		// FK học vụ của users đặt ở đây (sau khi đủ cả 3 bảng) vì users phải
+		// tạo trước faculties/majors/school_classes do các cột created_by → users.
+		Schema::table('users', function (Blueprint $table) {
+			$table->foreign('faculty_id')->references('id')->on('faculties');
+			$table->foreign('major_id')->references('id')->on('majors');
+			$table->foreign('class_id')->references('id')->on('school_classes');
+		});
 	}
 
 	/**
@@ -38,6 +46,12 @@ return new class extends Migration
 	 */
 	public function down(): void
 	{
+		Schema::table('users', function (Blueprint $table) {
+			$table->dropForeign(['faculty_id']);
+			$table->dropForeign(['major_id']);
+			$table->dropForeign(['class_id']);
+		});
+
 		Schema::dropIfExists('school_classes');
 	}
 };

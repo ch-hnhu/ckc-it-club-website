@@ -231,6 +231,7 @@
 - `created_at`
 - `updated_at`
 - If backend `User` payload grows, update the type instead of using `any`.
+- Gamification rank responses use `badge` as an image path/URL. Admin rank create/edit submits badge as an image file with `multipart/form-data`; rank and leaderboard UI render badge images, not the old `icon`/`color` fields. Admin rank management lives at `/gamification/ranks` and calls backend `/ranks`.
 
 ## Feature-Specific Notes
 
@@ -300,6 +301,7 @@
 - Required:
 - `VITE_API_URL`
 - `VITE_BACKEND_URL`
+- `VITE_USER_SITE_URL` is used to resolve user-site public assets such as `/assets/img/level01.png` when admin runs on a different origin.
 - Optional but currently undocumented in `.env.example`:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_KEY`
