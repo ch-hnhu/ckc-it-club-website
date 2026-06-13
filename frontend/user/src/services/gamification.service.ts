@@ -15,9 +15,15 @@ export const gamificationService = {
 			per_page: perPage,
 		}),
 
-	getWeeklyLeaderboard: () =>
-		api.get<ApiResponse<LeaderboardEntry[]>>("/gamification/leaderboard/weekly"),
+	getWeeklyLeaderboard: (page = 1, perPage = 20) =>
+		api.get<PaginatedResponse<LeaderboardEntry>>("/gamification/leaderboard/weekly", {
+			page,
+			per_page: perPage,
+		}),
 
-	getAllTimeLeaderboard: () =>
-		api.get<ApiResponse<LeaderboardEntry[]>>("/gamification/leaderboard/all-time"),
+	getAllTimeLeaderboard: (page = 1, perPage = 20) =>
+		api.get<PaginatedResponse<LeaderboardEntry>>("/gamification/leaderboard/all-time", {
+			page,
+			per_page: perPage,
+		}),
 };

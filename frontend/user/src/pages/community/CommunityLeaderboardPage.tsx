@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { Loader2, Menu, Trophy } from "lucide-react";
 import type { CommunityLayoutContext } from "./CommunityLayout";
@@ -10,8 +10,27 @@ import type { LeaderboardEntry } from "@/types/gamification.types";
 
 type TabKey = "weekly" | "all-time";
 
+const PER_PAGE = 20;
 const COMMUNITY_LOGO = "https://www.codedex.io/images/community/trophy.gif";
 const LEADERBOARD_BLOG_SLUG = "gioi-thieu-bang-xep-hang";
+
+interface LeaderboardState {
+	entries: LeaderboardEntry[];
+	page: number;
+	hasMore: boolean;
+	loadingInitial: boolean;
+	loadingMore: boolean;
+	total: number;
+}
+
+const createLeaderboardState = (): LeaderboardState => ({
+	entries: [],
+	page: 1,
+	hasMore: true,
+	loadingInitial: true,
+	loadingMore: false,
+	total: 0,
+});
 
 const PixelXpIcon: React.FC = () => (
 	<svg
@@ -141,9 +160,11 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry }) => (
 
 		<div className='min-w-0 flex-1'>
 			<div className='flex items-center gap-2'>
-				<span className='truncate font-heading text-base font-extrabold text-black'>
-					{entry.full_name}
-				</span>
+				<Link to={`/@${entry.username ?? entry.email}`}>
+					<span className='truncate font-heading text-base font-extrabold text-black'>
+						{entry.full_name}
+					</span>
+				</Link>
 				{entry.member_rank?.badge && (
 					<img
 						src={entry.member_rank.badge}
@@ -247,33 +268,102 @@ const CommunityLeaderboardPage: React.FC = () => {
 	const { setIsSidebarOpen } = useOutletContext<CommunityLayoutContext>();
 
 	const [tab, setTab] = useState<TabKey>("weekly");
-	const [weekly, setWeekly] = useState<LeaderboardEntry[]>([]);
-	const [allTime, setAllTime] = useState<LeaderboardEntry[]>([]);
-	const [loadingWeekly, setLoadingWeekly] = useState(true);
-	const [loadingAllTime, setLoadingAllTime] = useState(true);
+	const [weekly, setWeekly] = useState<LeaderboardState>(createLeaderboardState);
+	const [allTime, setAllTime] = useState<LeaderboardState>(createLeaderboardState);
+	const sentinelRef = useRef<HTMLDivElement>(null);
+
+	const updateLeaderboardState = useCallback(
+		(scope: TabKey, updater: (state: LeaderboardState) => LeaderboardState) => {
+			if (scope === "weekly") {
+				setWeekly(updater);
+				return;
+			}
+
+			setAllTime(updater);
+		},
+		[],
+	);
+
+	const loadLeaderboardPage = useCallback(
+		async (scope: TabKey, pageNum: number) => {
+			updateLeaderboardState(scope, (current) => ({
+				...current,
+				loadingInitial: pageNum === 1,
+				loadingMore: pageNum > 1,
+			}));
+
+			try {
+				const res =
+					scope === "weekly"
+						? await gamificationService.getWeeklyLeaderboard(pageNum, PER_PAGE)
+						: await gamificationService.getAllTimeLeaderboard(pageNum, PER_PAGE);
+
+				updateLeaderboardState(scope, (current) => ({
+					...current,
+					entries: pageNum === 1 ? res.data : [...current.entries, ...res.data],
+					page: res.meta.current_page,
+					hasMore: res.meta.current_page < res.meta.last_page,
+					total: res.meta.total,
+				}));
+			} catch {
+				updateLeaderboardState(scope, (current) => ({
+					...current,
+					hasMore: false,
+				}));
+			} finally {
+				updateLeaderboardState(scope, (current) => ({
+					...current,
+					loadingInitial: false,
+					loadingMore: false,
+				}));
+			}
+		},
+		[updateLeaderboardState],
+	);
 
 	useEffect(() => {
-		let cancelled = false;
-		gamificationService
-			.getWeeklyLeaderboard()
-			.then((res) => !cancelled && setWeekly(res.data))
-			.catch(() => {})
-			.finally(() => !cancelled && setLoadingWeekly(false));
-
-		gamificationService
-			.getAllTimeLeaderboard()
-			.then((res) => !cancelled && setAllTime(res.data))
-			.catch(() => {})
-			.finally(() => !cancelled && setLoadingAllTime(false));
-
-		return () => {
-			cancelled = true;
-		};
-	}, []);
+		void loadLeaderboardPage("weekly", 1);
+		void loadLeaderboardPage("all-time", 1);
+	}, [loadLeaderboardPage]);
 
 	const isWeekly = tab === "weekly";
-	const entries = isWeekly ? weekly : allTime;
-	const loading = isWeekly ? loadingWeekly : loadingAllTime;
+	const currentLeaderboard = isWeekly ? weekly : allTime;
+
+	const handleLoadMore = useCallback(() => {
+		if (
+			!currentLeaderboard.hasMore ||
+			currentLeaderboard.loadingInitial ||
+			currentLeaderboard.loadingMore
+		) {
+			return;
+		}
+
+		void loadLeaderboardPage(tab, currentLeaderboard.page + 1);
+	}, [
+		currentLeaderboard.hasMore,
+		currentLeaderboard.loadingInitial,
+		currentLeaderboard.loadingMore,
+		currentLeaderboard.page,
+		loadLeaderboardPage,
+		tab,
+	]);
+
+	useEffect(() => {
+		const sentinel = sentinelRef.current;
+		if (!sentinel) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					handleLoadMore();
+				}
+			},
+			{ rootMargin: "180px 0px", threshold: 0.1 },
+		);
+
+		observer.observe(sentinel);
+		return () => observer.disconnect();
+	}, [handleLoadMore]);
 
 	return (
 		<div className='community-content'>
@@ -321,7 +411,7 @@ const CommunityLeaderboardPage: React.FC = () => {
 								? "border-[var(--color-primary-dark)] text-black"
 								: "border-transparent text-gray-400 hover:text-gray-600"
 						}`}>
-						Tuần này
+						Weekly
 					</button>
 					<button
 						onClick={() => setTab("all-time")}
@@ -330,18 +420,18 @@ const CommunityLeaderboardPage: React.FC = () => {
 								? "border-[var(--color-primary-dark)] text-black"
 								: "border-transparent text-gray-400 hover:text-gray-600"
 						}`}>
-						Mọi thời điểm
+						All Time
 					</button>
 				</div>
 
 				{/* List */}
-				{loading ? (
+				{currentLeaderboard.loadingInitial && currentLeaderboard.entries.length === 0 ? (
 					<div className='flex min-h-[30vh] items-center justify-center'>
 						<Loader2 className='h-7 w-7 animate-spin text-gray-400' />
 					</div>
-				) : entries.length > 0 ? (
+				) : currentLeaderboard.entries.length > 0 ? (
 					<ul className='space-y-1.5'>
-						{entries.map((entry) => (
+						{currentLeaderboard.entries.map((entry) => (
 							<li key={entry.user_id}>
 								<LeaderboardRow entry={entry} />
 							</li>
@@ -351,6 +441,21 @@ const CommunityLeaderboardPage: React.FC = () => {
 					<div className='py-16 text-center text-gray-500'>
 						Chưa có dữ liệu xếp hạng cho khoảng thời gian này.
 					</div>
+				)}
+
+				<div ref={sentinelRef} className='h-3' />
+
+				{currentLeaderboard.loadingMore && (
+					<div className='flex items-center justify-center gap-2 py-5 text-sm font-bold text-gray-500'>
+						<Loader2 className='h-4 w-4 animate-spin' />
+						Đang tải thêm...
+					</div>
+				)}
+
+				{!currentLeaderboard.hasMore && currentLeaderboard.entries.length > 0 && (
+					<p className='py-5 text-center text-xs font-bold text-gray-500'>
+						Đã hiển thị tất cả {currentLeaderboard.total} thành viên.
+					</p>
 				)}
 			</main>
 

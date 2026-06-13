@@ -15,7 +15,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 
-const QR_REGION_ID = "event-check-in-qr-reader";
+const QR_REGION_ID_PREFIX = "event-check-in-qr-reader";
 // Khoảng nghỉ giữa 2 lần đọc cùng một mã — tránh gọi API liên tục khi vé còn trước camera
 const SAME_TOKEN_COOLDOWN_MS = 4000;
 
@@ -33,9 +33,49 @@ type ScanResult =
 // đã được mount bên trong DialogContent (Radix render qua portal)
 function QrScannerRegion({ onDecoded }: { onDecoded: (token: string) => void }) {
 	const [cameraError, setCameraError] = useState<string | null>(null);
+	const wrapperRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
-		const scanner = new Html5Qrcode(QR_REGION_ID);
+		const wrapper = wrapperRef.current;
+		if (!wrapper) return;
+
+		const region = document.createElement("div");
+		region.id = `${QR_REGION_ID_PREFIX}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		wrapper.replaceChildren(region);
+
+		const scanner = new Html5Qrcode(region.id);
+		let isDisposed = false;
+		let hasStarted = false;
+
+		const clearScanner = () => {
+			try {
+				scanner.clear();
+			} catch {
+				// The html5-qrcode instance can already be cleared during StrictMode cleanup.
+			}
+		};
+
+		const removeRegion = () => {
+			if (region.parentElement === wrapper) {
+				region.remove();
+			}
+		};
+
+		const stopScanner = () => {
+			if (scanner.isScanning || hasStarted) {
+				void scanner
+					.stop()
+					.catch(() => {})
+					.finally(() => {
+						clearScanner();
+						removeRegion();
+					});
+				return;
+			}
+
+			clearScanner();
+			removeRegion();
+		};
 
 		scanner
 			.start(
@@ -44,27 +84,28 @@ function QrScannerRegion({ onDecoded }: { onDecoded: (token: string) => void }) 
 				(decodedText) => onDecoded(decodedText),
 				undefined,
 			)
+			.then(() => {
+				hasStarted = true;
+				if (isDisposed) {
+					stopScanner();
+				}
+			})
 			.catch(() => {
+				if (isDisposed) return;
 				setCameraError(
 					"Không thể truy cập camera. Hãy kiểm tra quyền truy cập camera của trình duyệt.",
 				);
 			});
 
 		return () => {
-			if (scanner.isScanning) {
-				scanner
-					.stop()
-					.then(() => scanner.clear())
-					.catch(() => {});
-			} else {
-				scanner.clear();
-			}
+			isDisposed = true;
+			stopScanner();
 		};
 	}, [onDecoded]);
 
 	return (
 		<div className='overflow-hidden rounded-lg border bg-black'>
-			<div id={QR_REGION_ID} className='[&_video]:!w-full' />
+			<div ref={wrapperRef} className='[&_video]:!h-auto [&_video]:!w-full' />
 			{cameraError ? (
 				<div className='flex h-40 items-center justify-center p-4'>
 					<p className='text-center text-sm text-white/80'>{cameraError}</p>

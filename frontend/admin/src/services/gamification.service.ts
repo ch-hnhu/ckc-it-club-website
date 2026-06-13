@@ -73,12 +73,21 @@ const gamificationService = {
 	},
 
 	// ─── Leaderboards ─────────────────────────────────────────────
-	async getWeeklyLeaderboard(): Promise<ApiResponse<LeaderboardEntry[]>> {
-		return api.get("/gamification/leaderboard/weekly");
+	async getWeeklyLeaderboard(page = 1, perPage = 20): Promise<PaginatedResponse<LeaderboardEntry>> {
+		return api.get("/gamification/leaderboard/weekly", {
+			page,
+			per_page: perPage,
+		});
 	},
 
-	async getAllTimeLeaderboard(): Promise<ApiResponse<LeaderboardEntry[]>> {
-		return api.get("/gamification/leaderboard/all-time");
+	async getAllTimeLeaderboard(
+		page = 1,
+		perPage = 20,
+	): Promise<PaginatedResponse<LeaderboardEntry>> {
+		return api.get("/gamification/leaderboard/all-time", {
+			page,
+			per_page: perPage,
+		});
 	},
 };
 
