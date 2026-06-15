@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import { CalendarCheck, CalendarDays, Download, Loader2, MapPin, Star, Ticket, TicketX, Users, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -172,6 +172,14 @@ const EventDetailPage: React.FC = () => {
 	const [galleryVisible, setGalleryVisible] = useState(GALLERY_PAGE_SIZE);
 	const [lightbox, setLightbox] = useState<string | null>(null);
 
+	// Deep-link tới phản hồi của một người (mở từ trang admin: ?feedback_user=<id>)
+	const [searchParams, setSearchParams] = useSearchParams();
+	const focusFeedbackUserId = searchParams.get("feedback_user")
+		? Number(searchParams.get("feedback_user"))
+		: null;
+	const [highlightedFeedbackId, setHighlightedFeedbackId] = useState<number | null>(null);
+	const feedbackItemRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
 	useEffect(() => {
 		if (!slug) return;
 		let cancelled = false;
@@ -223,7 +231,7 @@ const EventDetailPage: React.FC = () => {
 		}
 	}, [event?.id, event?.status, event?.my_feedback, event?.feedback_summary?.total]);
 
-	const handleLoadMoreFeedbacks = async () => {
+	const handleLoadMoreFeedbacks = useCallback(async () => {
 		if (!event) return;
 		const next = feedbackPage + 1;
 		setLoadingMoreFeedback(true);
@@ -237,7 +245,69 @@ const EventDetailPage: React.FC = () => {
 		} finally {
 			setLoadingMoreFeedback(false);
 		}
-	};
+	}, [event, feedbackPage]);
+
+	const clearFeedbackParam = useCallback(() => {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete("feedback_user");
+				return next;
+			},
+			{ replace: true },
+		);
+	}, [setSearchParams]);
+
+	// Tự tải thêm trang phản hồi tới khi tìm thấy người được chỉ định, rồi cuộn + làm nổi
+	useEffect(() => {
+		if (focusFeedbackUserId == null) return;
+		if (!event || event.status !== "ended") return;
+
+		if ((event.feedback_summary?.total ?? 0) === 0) {
+			toast("Người này chưa có phản hồi cho sự kiện.");
+			clearFeedbackParam();
+			return;
+		}
+
+		if (feedbacks.length === 0) return; // đang tải trang đầu
+
+		const target = feedbacks.find((fb) => fb.user?.id === focusFeedbackUserId);
+		if (target) {
+			setHighlightedFeedbackId(target.id);
+			requestAnimationFrame(() => {
+				feedbackItemRefs.current[target.id]?.scrollIntoView({
+					behavior: "smooth",
+					block: "center",
+				});
+			});
+			clearFeedbackParam();
+			return;
+		}
+
+		if (feedbackHasMore && !loadingMoreFeedback) {
+			void handleLoadMoreFeedbacks();
+			return;
+		}
+
+		if (!feedbackHasMore) {
+			toast("Không tìm thấy phản hồi của người này.");
+			clearFeedbackParam();
+		}
+	}, [
+		focusFeedbackUserId,
+		event,
+		feedbacks,
+		feedbackHasMore,
+		loadingMoreFeedback,
+		handleLoadMoreFeedbacks,
+		clearFeedbackParam,
+	]);
+
+	useEffect(() => {
+		if (highlightedFeedbackId == null) return;
+		const timer = window.setTimeout(() => setHighlightedFeedbackId(null), 3000);
+		return () => window.clearTimeout(timer);
+	}, [highlightedFeedbackId]);
 
 	const handleSubmitFeedback = async () => {
 		if (!event) return;
@@ -731,7 +801,14 @@ const EventDetailPage: React.FC = () => {
 									{feedbacks.map((fb) => (
 										<div
 											key={fb.id}
-											className='rounded-2xl border-2 border-black bg-white p-4 shadow-[2px_2px_0_#111]'>
+											ref={(el) => {
+												feedbackItemRefs.current[fb.id] = el;
+											}}
+											className={`rounded-2xl border-2 border-black bg-white p-4 shadow-[2px_2px_0_#111] transition ${
+												highlightedFeedbackId === fb.id
+													? "ring-4 ring-[var(--color-primary)] ring-offset-2"
+													: ""
+											}`}>
 											<div className='flex items-center justify-between gap-2'>
 												<div className='flex items-center gap-2.5'>
 													{fb.user?.avatar ? (
