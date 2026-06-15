@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
@@ -10,11 +10,17 @@ import {
 	ChevronsRight,
 	Edit,
 	Eye,
+	GripVertical,
 	ImageIcon,
+	Loader2,
 	MoreHorizontal,
 	ScanLine,
 	Search,
+	Star,
+	Trash2,
+	UploadCloud,
 	UserCheck,
+	Users,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +29,9 @@ import EventCheckInDialog from "@/pages/event/EventCheckInDialog";
 import { STATUS_MAP } from "@/pages/event/event-status";
 import type { EventRecord, EventStatus } from "@/pages/event/EventListPage";
 import eventService from "@/services/event.service";
+import type { EventFeedbackItem, EventFeedbackResponse, EventGalleryItem } from "@/services/event.service";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -133,6 +141,427 @@ function InfoRow({ label, value }: { label: React.ReactNode; value: React.ReactN
 		<div className='flex flex-col gap-1 rounded-lg border bg-muted/20 p-4'>
 			<p className='text-xs font-medium uppercase text-muted-foreground'>{label}</p>
 			<div className='text-sm font-medium break-words'>{value}</div>
+		</div>
+	);
+}
+
+function StarRow({ rating, className }: { rating: number; className?: string }) {
+	return (
+		<div className={cn("flex items-center gap-0.5", className)}>
+			{[1, 2, 3, 4, 5].map((star) => (
+				<Star
+					key={star}
+					className={cn(
+						"h-4 w-4",
+						star <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30",
+					)}
+				/>
+			))}
+		</div>
+	);
+}
+
+// ─── Feedback tab ──────────────────────────────────────────────────────────────
+
+const feedbackRatingOptions: Array<{ value: string; label: string }> = [
+	{ value: "all", label: "Tất cả số sao" },
+	{ value: "5", label: "5 sao" },
+	{ value: "4", label: "4 sao" },
+	{ value: "3", label: "3 sao" },
+	{ value: "2", label: "2 sao" },
+	{ value: "1", label: "1 sao" },
+];
+
+function FeedbackPanel({ eventId, canManage }: { eventId: number; canManage: boolean }) {
+	const [data, setData] = useState<EventFeedbackResponse | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [search, setSearch] = useState("");
+	const [ratingFilter, setRatingFilter] = useState("all");
+	const [deleteTarget, setDeleteTarget] = useState<EventFeedbackItem | null>(null);
+	const [isDeleting, setIsDeleting] = useState(false);
+
+	const fetchFeedbacks = useCallback(() => {
+		setLoading(true);
+		eventService
+			.getFeedbacks(eventId)
+			.then((res) => setData(res.data))
+			.catch(() => toast.error("Không thể tải đánh giá sự kiện.", { position: "top-right" }))
+			.finally(() => setLoading(false));
+	}, [eventId]);
+
+	useEffect(() => {
+		fetchFeedbacks();
+	}, [fetchFeedbacks]);
+
+	const filteredItems = useMemo(() => {
+		if (!data) return [];
+		const normalized = search.trim().toLowerCase();
+		return data.items.filter((item) => {
+			const matchesRating = ratingFilter === "all" || String(item.rating) === ratingFilter;
+			const matchesSearch =
+				!normalized ||
+				item.user?.full_name?.toLowerCase().includes(normalized) ||
+				item.user?.email.toLowerCase().includes(normalized) ||
+				item.comment?.toLowerCase().includes(normalized);
+			return matchesRating && matchesSearch;
+		});
+	}, [data, search, ratingFilter]);
+
+	const handleDelete = async () => {
+		if (!deleteTarget) return;
+		setIsDeleting(true);
+		try {
+			await eventService.deleteFeedback(eventId, deleteTarget.id);
+			setDeleteTarget(null);
+			toast.success("Đã xóa đánh giá.", { position: "top-right" });
+			fetchFeedbacks();
+		} catch {
+			toast.error("Không thể xóa đánh giá. Vui lòng thử lại.", { position: "top-right" });
+		} finally {
+			setIsDeleting(false);
+		}
+	};
+
+	if (loading) {
+		return (
+			<div className='flex flex-col gap-4'>
+				<Skeleton className='h-40 w-full rounded-xl' />
+				<Skeleton className='h-24 w-full rounded-xl' />
+			</div>
+		);
+	}
+
+	if (!data || data.stats.total === 0) {
+		return (
+			<div className='flex h-40 flex-col items-center justify-center gap-2 rounded-md border text-center'>
+				<Star className='h-8 w-8 text-muted-foreground/40' />
+				<p className='text-sm font-medium'>Chưa có đánh giá nào.</p>
+				<p className='text-sm text-muted-foreground'>
+					Đánh giá sẽ xuất hiện sau khi người tham dự gửi phản hồi.
+				</p>
+			</div>
+		);
+	}
+
+	const { stats } = data;
+	const maxCount = Math.max(...Object.values(stats.distribution), 1);
+
+	return (
+		<div className='flex flex-col gap-6'>
+			{/* Summary */}
+			<div className='grid gap-6 rounded-xl border bg-muted/20 p-6 sm:grid-cols-[auto_1fr]'>
+				<div className='flex flex-col items-center justify-center gap-1 sm:border-r sm:pr-6'>
+					<span className='text-4xl font-semibold'>{stats.average_rating.toFixed(1)}</span>
+					<StarRow rating={Math.round(stats.average_rating)} />
+					<span className='text-xs text-muted-foreground'>{stats.total} đánh giá</span>
+				</div>
+				<div className='flex flex-col justify-center gap-1.5'>
+					{[5, 4, 3, 2, 1].map((star) => {
+						const count = stats.distribution[String(star)] ?? 0;
+						return (
+							<div key={star} className='flex items-center gap-2 text-sm'>
+								<span className='w-3 text-muted-foreground'>{star}</span>
+								<Star className='h-3.5 w-3.5 fill-amber-400 text-amber-400' />
+								<div className='h-2 flex-1 overflow-hidden rounded-full bg-muted'>
+									<div
+										className='h-full rounded-full bg-amber-400'
+										style={{ width: `${(count / maxCount) * 100}%` }}
+									/>
+								</div>
+								<span className='w-8 text-right text-muted-foreground'>{count}</span>
+							</div>
+						);
+					})}
+					<p className='mt-2 text-xs text-muted-foreground'>
+						Tỉ lệ phản hồi: {stats.response_rate}% ({stats.total}/{stats.attended_count} người đã điểm danh)
+					</p>
+				</div>
+			</div>
+
+			{/* Toolbar */}
+			<div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
+				<div className='relative flex-1 sm:max-w-sm'>
+					<Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+					<Input
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder='Tìm theo tên, email hoặc nội dung...'
+						className='h-8 pl-9'
+					/>
+				</div>
+				<Select value={ratingFilter} onValueChange={setRatingFilter}>
+					<SelectTrigger className='h-8 w-[160px]'>
+						<SelectValue placeholder='Lọc số sao' />
+					</SelectTrigger>
+					<SelectContent>
+						{feedbackRatingOptions.map((option) => (
+							<SelectItem key={option.value} value={option.value}>
+								{option.label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+
+			{/* List */}
+			<div className='flex flex-col gap-3'>
+				{filteredItems.map((item) => (
+					<div key={item.id} className='flex gap-3 rounded-lg border p-4'>
+						<Avatar className='h-9 w-9'>
+							<AvatarImage src={item.user?.avatar ?? undefined} />
+							<AvatarFallback className='text-xs'>
+								{(item.user?.full_name ?? "?").charAt(0).toUpperCase()}
+							</AvatarFallback>
+						</Avatar>
+						<div className='flex flex-1 flex-col gap-1'>
+							<div className='flex flex-wrap items-center justify-between gap-2'>
+								<div className='flex items-center gap-2'>
+									<span className='text-sm font-medium'>{item.user?.full_name ?? "Ẩn danh"}</span>
+									<StarRow rating={item.rating} />
+								</div>
+								<div className='flex items-center gap-2'>
+									<span className='text-xs text-muted-foreground'>{formatDate(item.created_at)}</span>
+									{canManage && (
+										<button
+											type='button'
+											onClick={() => setDeleteTarget(item)}
+											aria-label='Xóa đánh giá'
+											className='rounded p-1 text-muted-foreground transition hover:bg-rose-500/10 hover:text-rose-600'>
+											<Trash2 className='h-4 w-4' />
+										</button>
+									)}
+								</div>
+							</div>
+							{item.user?.email && (
+								<span className='text-xs text-muted-foreground'>{item.user.email}</span>
+							)}
+							{item.comment ? (
+								<p className='text-sm text-muted-foreground'>{item.comment}</p>
+							) : (
+								<p className='text-sm italic text-muted-foreground/60'>Không có nhận xét.</p>
+							)}
+						</div>
+					</div>
+				))}
+				{filteredItems.length === 0 && (
+					<div className='flex h-32 flex-col items-center justify-center gap-1 rounded-md border text-center'>
+						<p className='text-sm font-medium'>Không có đánh giá phù hợp.</p>
+						<p className='text-sm text-muted-foreground'>Thử đổi từ khóa hoặc bộ lọc số sao.</p>
+					</div>
+				)}
+			</div>
+
+			<AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa đánh giá này?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Đánh giá của{" "}
+							<span className='font-semibold text-foreground'>
+								{deleteTarget?.user?.full_name ?? "người dùng"}
+							</span>{" "}
+							sẽ bị xóa vĩnh viễn và không thể khôi phục.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(e) => {
+								e.preventDefault();
+								void handleDelete();
+							}}
+							disabled={isDeleting}>
+							{isDeleting ? "Đang xóa..." : "Xóa đánh giá"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</div>
+	);
+}
+
+// ─── Gallery tab ─────────────────────────────────────────────────────────────
+
+function GalleryPanel({ eventId, canManage }: { eventId: number; canManage: boolean }) {
+	const [items, setItems] = useState<EventGalleryItem[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [uploading, setUploading] = useState(false);
+	const [deleteTarget, setDeleteTarget] = useState<EventGalleryItem | null>(null);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const [dragIndex, setDragIndex] = useState<number | null>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const fetchGallery = useCallback(() => {
+		setLoading(true);
+		eventService
+			.getGallery(eventId)
+			.then((res) => setItems(res.data))
+			.catch(() => toast.error("Không thể tải thư viện ảnh.", { position: "top-right" }))
+			.finally(() => setLoading(false));
+	}, [eventId]);
+
+	useEffect(() => {
+		fetchGallery();
+	}, [fetchGallery]);
+
+	const handleUpload = async (files: FileList | null) => {
+		if (!files || files.length === 0) return;
+		setUploading(true);
+		try {
+			const formData = new FormData();
+			Array.from(files).forEach((file) => formData.append("images[]", file));
+			const res = await eventService.uploadGallery(eventId, formData);
+			setItems((prev) => [...prev, ...res.data]);
+			toast.success(`Đã tải lên ${res.data.length} ảnh.`, { position: "top-right" });
+		} catch {
+			toast.error("Không thể tải ảnh lên. Vui lòng thử lại.", { position: "top-right" });
+		} finally {
+			setUploading(false);
+			if (fileInputRef.current) fileInputRef.current.value = "";
+		}
+	};
+
+	const handleDelete = async () => {
+		if (!deleteTarget) return;
+		setIsDeleting(true);
+		try {
+			await eventService.deleteGalleryItem(eventId, deleteTarget.id);
+			setItems((prev) => prev.filter((i) => i.id !== deleteTarget.id));
+			setDeleteTarget(null);
+			toast.success("Đã xóa ảnh.", { position: "top-right" });
+		} catch {
+			toast.error("Không thể xóa ảnh. Vui lòng thử lại.", { position: "top-right" });
+		} finally {
+			setIsDeleting(false);
+		}
+	};
+
+	const persistOrder = (ordered: EventGalleryItem[]) => {
+		eventService
+			.reorderGallery(eventId, ordered.map((i) => i.id))
+			.catch(() => toast.error("Không thể lưu thứ tự ảnh.", { position: "top-right" }));
+	};
+
+	const handleDrop = (targetIndex: number) => {
+		if (dragIndex === null || dragIndex === targetIndex) {
+			setDragIndex(null);
+			return;
+		}
+		const reordered = [...items];
+		const [moved] = reordered.splice(dragIndex, 1);
+		reordered.splice(targetIndex, 0, moved);
+		setItems(reordered);
+		setDragIndex(null);
+		persistOrder(reordered);
+	};
+
+	return (
+		<div className='flex flex-col gap-4'>
+			{canManage && (
+				<div className='flex items-center justify-between gap-2'>
+					<p className='text-sm text-muted-foreground'>
+						{items.length} ảnh · Kéo thả để sắp xếp lại thứ tự hiển thị.
+					</p>
+					<input
+						ref={fileInputRef}
+						type='file'
+						accept='image/*'
+						multiple
+						className='sr-only'
+						onChange={(e) => void handleUpload(e.target.files)}
+					/>
+					<Button
+						size='sm'
+						className='h-8 bg-foreground text-background hover:bg-foreground/90'
+						disabled={uploading}
+						onClick={() => fileInputRef.current?.click()}>
+						{uploading ? (
+							<Loader2 className='h-4 w-4 animate-spin' />
+						) : (
+							<UploadCloud className='h-4 w-4' />
+						)}
+						Tải ảnh lên
+					</Button>
+				</div>
+			)}
+
+			{loading ? (
+				<div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
+					{Array.from({ length: 4 }).map((_, i) => (
+						<Skeleton key={i} className='aspect-square w-full rounded-lg' />
+					))}
+				</div>
+			) : items.length === 0 ? (
+				<div className='flex h-40 flex-col items-center justify-center gap-2 rounded-md border text-center'>
+					<ImageIcon className='h-8 w-8 text-muted-foreground/40' />
+					<p className='text-sm font-medium'>Chưa có ảnh nào trong thư viện.</p>
+					{canManage && (
+						<p className='text-sm text-muted-foreground'>Nhấn "Tải ảnh lên" để thêm ảnh sự kiện.</p>
+					)}
+				</div>
+			) : (
+				<div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
+					{items.map((item, index) => (
+						<div
+							key={item.id}
+							draggable={canManage}
+							onDragStart={() => setDragIndex(index)}
+							onDragOver={(e) => e.preventDefault()}
+							onDrop={() => handleDrop(index)}
+							className={cn(
+								"group relative aspect-square overflow-hidden rounded-lg border bg-muted",
+								canManage && "cursor-move",
+								dragIndex === index && "opacity-50",
+							)}>
+							<img
+								src={item.image_url}
+								alt={item.caption ?? ""}
+								className='h-full w-full object-cover'
+							/>
+							{item.caption && (
+								<div className='absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2'>
+									<p className='truncate text-xs text-white'>{item.caption}</p>
+								</div>
+							)}
+							{canManage && (
+								<>
+									<div className='absolute left-1.5 top-1.5 rounded bg-black/50 p-1 text-white opacity-0 transition group-hover:opacity-100'>
+										<GripVertical className='h-3.5 w-3.5' />
+									</div>
+									<button
+										type='button'
+										onClick={() => setDeleteTarget(item)}
+										className='absolute right-1.5 top-1.5 rounded bg-black/50 p-1 text-white opacity-0 transition hover:bg-rose-600 group-hover:opacity-100'>
+										<Trash2 className='h-3.5 w-3.5' />
+									</button>
+								</>
+							)}
+						</div>
+					))}
+				</div>
+			)}
+
+			<AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa ảnh này?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Ảnh sẽ bị xóa khỏi thư viện sự kiện và không thể khôi phục.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(e) => {
+								e.preventDefault();
+								void handleDelete();
+							}}
+							disabled={isDeleting}>
+							{isDeleting ? "Đang xóa..." : "Xóa ảnh"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }
@@ -379,8 +808,24 @@ function EventDetailPage() {
 					</CardContent>
 				</Card>
 
-				{/* Participants section */}
-				<div className='flex flex-col gap-4'>
+				{/* Tabs: participants / feedback / gallery */}
+				<Tabs defaultValue='registrations' className='gap-4'>
+					<TabsList>
+						<TabsTrigger value='registrations'>
+							<Users className='h-4 w-4' />
+							Người tham gia
+						</TabsTrigger>
+						<TabsTrigger value='feedback'>
+							<Star className='h-4 w-4' />
+							Đánh giá
+						</TabsTrigger>
+						<TabsTrigger value='gallery'>
+							<ImageIcon className='h-4 w-4' />
+							Thư viện ảnh
+						</TabsTrigger>
+					</TabsList>
+
+					<TabsContent value='registrations' className='flex flex-col gap-4'>
 					<div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
 						<div className='flex flex-1 items-center justify-between gap-2'>
 							<div className='flex flex-1 items-center gap-2'>
@@ -594,7 +1039,16 @@ function EventDetailPage() {
 							</TableFooter>
 						</Table>
 					</div>
-				</div>
+					</TabsContent>
+
+					<TabsContent value='feedback'>
+						<FeedbackPanel eventId={event.id} canManage={canManageEvent} />
+					</TabsContent>
+
+					<TabsContent value='gallery'>
+						<GalleryPanel eventId={event.id} canManage={canManageEvent} />
+					</TabsContent>
+				</Tabs>
 			</div>
 
 			<EventCheckInDialog

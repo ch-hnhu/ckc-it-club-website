@@ -7,11 +7,14 @@ use App\Enums\EventStatus;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Event;
 use App\Models\EventCheckIn;
+use App\Models\EventFeedback;
+use App\Models\EventGalleryItem;
 use App\Models\EventRegistration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class EventController extends BaseApiController
 {
@@ -75,6 +78,7 @@ class EventController extends BaseApiController
             ]);
         });
 
+        $event->syncStatusFromSchedule();
         $event->load('creator:id,full_name,avatar', 'department:id,name');
 
         return $this->createdResponse($this->transform($event), 'Tạo sự kiện thành công.');
@@ -116,10 +120,12 @@ class EventController extends BaseApiController
         }
 
         $event->update($data);
+        $event->refresh();
+        $event->syncStatusFromSchedule();
 
         $event->load('creator:id,full_name,avatar', 'department:id,name');
 
-        return $this->successResponse(true, $this->transform($event->fresh(['creator', 'department'])), 'Cập nhật sự kiện thành công.');
+        return $this->successResponse(true, $this->transform($event), 'Cập nhật sự kiện thành công.');
     }
 
     public function updateStatus(Request $request, Event $event): JsonResponse
@@ -130,8 +136,10 @@ class EventController extends BaseApiController
         ]);
 
         $event->update(['status' => $request->input('status')]);
+        $event->refresh();
+        $event->syncStatusFromSchedule();
 
-        return $this->successResponse(true, ['status' => $event->fresh()->status->value], 'Cập nhật trạng thái thành công.');
+        return $this->successResponse(true, ['status' => $event->status->value], 'Cập nhật trạng thái thành công.');
     }
 
     public function destroy(Event $event): JsonResponse
@@ -228,6 +236,157 @@ class EventController extends BaseApiController
             'ended' => (int) ($counts['ended'] ?? 0),
             'cancelled' => (int) ($counts['cancelled'] ?? 0),
         ], ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Danh sách đánh giá + thống kê (trung bình, phân phối sao, tỉ lệ phản hồi).
+     */
+    public function feedbacks(Event $event): JsonResponse
+    {
+        $feedbacks = $event->feedbacks()
+            ->with('user:id,full_name,email,avatar')
+            ->latest()
+            ->get()
+            ->map(fn (EventFeedback $f) => [
+                'id' => $f->id,
+                'rating' => $f->rating,
+                'comment' => $f->comment,
+                'created_at' => $f->created_at?->toIso8601String(),
+                'user' => $f->user ? [
+                    'id' => $f->user->id,
+                    'full_name' => $f->user->full_name,
+                    'email' => $f->user->email,
+                    'avatar' => $f->user->avatar,
+                ] : null,
+            ]);
+
+        $ratings = $feedbacks->pluck('rating');
+        $total = $ratings->count();
+
+        $distribution = [];
+        foreach (range(1, 5) as $star) {
+            $distribution[$star] = $ratings->filter(fn ($r) => (int) $r === $star)->count();
+        }
+
+        $attendedCount = $event->checkIns()->distinct('user_id')->count('user_id');
+
+        return $this->successResponse(true, [
+            'items' => $feedbacks,
+            'stats' => [
+                'average_rating' => $total > 0 ? round($ratings->avg(), 1) : 0,
+                'total' => $total,
+                'distribution' => $distribution,
+                'attended_count' => $attendedCount,
+                'response_rate' => $attendedCount > 0 ? (int) round($total / $attendedCount * 100) : 0,
+            ],
+        ], ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Xóa (kiểm duyệt) một đánh giá không phù hợp.
+     */
+    public function destroyFeedback(Event $event, EventFeedback $feedback): JsonResponse
+    {
+        abort_if($feedback->event_id !== $event->id, 404);
+
+        $feedback->delete();
+
+        return $this->successResponse(true, null, 'Đã xóa đánh giá.');
+    }
+
+    /**
+     * Danh sách ảnh trong thư viện sự kiện (sắp theo display_order).
+     */
+    public function gallery(Event $event): JsonResponse
+    {
+        $items = $event->galleryItems()
+            ->get()
+            ->map(fn (EventGalleryItem $item) => $this->transformGalleryItem($item));
+
+        return $this->successResponse(true, $items, ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Tải một hoặc nhiều ảnh lên thư viện sự kiện.
+     */
+    public function storeGalleryItem(Request $request, Event $event): JsonResponse
+    {
+        $request->validate([
+            'images' => 'required|array|min:1|max:20',
+            'images.*' => 'image|max:5120',
+            'caption' => 'nullable|string|max:255',
+        ]);
+
+        $maxOrder = (int) $event->galleryItems()->max('display_order');
+
+        $created = DB::transaction(function () use ($request, $event, &$maxOrder) {
+            $items = [];
+            foreach ($request->file('images') as $file) {
+                $path = $file->store("event-gallery/{$event->id}", 'public');
+                $items[] = EventGalleryItem::create([
+                    'event_id' => $event->id,
+                    'uploaded_by' => $request->user()->id,
+                    'image_url' => Storage::disk('public')->url($path),
+                    'caption' => $request->input('caption'),
+                    'display_order' => ++$maxOrder,
+                ]);
+            }
+
+            return $items;
+        });
+
+        $data = collect($created)->map(fn (EventGalleryItem $item) => $this->transformGalleryItem($item));
+
+        return $this->createdResponse($data, 'Tải ảnh lên thành công.');
+    }
+
+    /**
+     * Xóa một ảnh khỏi thư viện (kèm xóa file vật lý nếu lưu trên storage nội bộ).
+     */
+    public function destroyGalleryItem(Event $event, EventGalleryItem $galleryItem): JsonResponse
+    {
+        abort_if($galleryItem->event_id !== $event->id, 404);
+
+        $path = Str::after($galleryItem->image_url, '/storage/');
+        if ($path && $path !== $galleryItem->image_url) {
+            Storage::disk('public')->delete($path);
+        }
+
+        $galleryItem->delete();
+
+        return $this->successResponse(true, null, 'Đã xóa ảnh.');
+    }
+
+    /**
+     * Sắp xếp lại thứ tự ảnh trong thư viện theo mảng id truyền lên.
+     */
+    public function reorderGallery(Request $request, Event $event): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        DB::transaction(function () use ($data, $event) {
+            foreach ($data['ids'] as $order => $id) {
+                EventGalleryItem::where('event_id', $event->id)
+                    ->where('id', $id)
+                    ->update(['display_order' => $order]);
+            }
+        });
+
+        return $this->successResponse(true, null, 'Đã cập nhật thứ tự ảnh.');
+    }
+
+    private function transformGalleryItem(EventGalleryItem $item): array
+    {
+        return [
+            'id' => $item->id,
+            'image_url' => $item->image_url,
+            'caption' => $item->caption,
+            'display_order' => $item->display_order,
+            'created_at' => $item->created_at?->toIso8601String(),
+        ];
     }
 
     private function transformRegistration(EventRegistration $registration): array

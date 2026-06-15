@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\Event;
 use App\Models\EventCheckIn;
 use App\Models\EventFeedback;
+use App\Models\EventGalleryItem;
 use App\Models\EventRegistration;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -195,6 +196,7 @@ class EventSeeder extends Seeder
                 'registrations' => 12,
                 'check_ins'     => 9,
                 'feedbacks'     => 7,
+                'gallery'       => 6,
             ],
             [
                 'title'         => 'Chiến dịch Tình nguyện mùa hè xanh 2026',
@@ -227,6 +229,7 @@ class EventSeeder extends Seeder
                 'registrations' => 18,
                 'check_ins'     => 16,
                 'feedbacks'     => 11,
+                'gallery'       => 8,
             ],
 
             // ── Bản nháp & đã hủy ────────────────────────────────────────────
@@ -343,6 +346,28 @@ class EventSeeder extends Seeder
                     'user_id'  => $registration->user_id,
                     'rating'   => [4, 5, 5, 4, 3][$i % 5],
                     'comment'  => $sampleComments[$i % count($sampleComments)],
+                ]);
+            }
+
+            $galleryCount = $data['gallery'] ?? 0;
+            $galleryCaptions = [
+                'Khoảnh khắc khai mạc sự kiện',
+                'Các bạn sinh viên hăng say tham gia',
+                'Phần trình bày của diễn giả',
+                'Hoạt động nhóm sôi nổi',
+                'Giao lưu, hỏi đáp cuối chương trình',
+                'Chụp ảnh lưu niệm toàn thể',
+                null,
+                null,
+            ];
+
+            for ($i = 0; $i < $galleryCount; $i++) {
+                EventGalleryItem::create([
+                    'event_id'      => $event->id,
+                    'uploaded_by'   => $admin->id,
+                    'image_url'     => "https://picsum.photos/seed/event-{$event->id}-{$i}/800/600",
+                    'caption'       => $galleryCaptions[$i % count($galleryCaptions)],
+                    'display_order' => $i,
                 ]);
             }
         }

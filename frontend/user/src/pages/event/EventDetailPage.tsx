@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { CalendarCheck, CalendarDays, Loader2, MapPin, Ticket, TicketX, Users, X } from "lucide-react";
+import { CalendarCheck, CalendarDays, Download, Loader2, MapPin, Star, Ticket, TicketX, Users, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
 	Breadcrumb,
@@ -12,10 +12,31 @@ import {
 } from "@/components/ui/breadcrumb";
 import type { AuthUser } from "@/services/auth.service";
 import { eventService } from "@/services/event.service";
-import type { EventDetail } from "@/types/event.types";
+import type { EventDetail, EventFeedbackItem } from "@/types/event.types";
 import { EventStatusBadge } from "@/components/event/EventCard";
 import { formatEventDateTime } from "@/lib/eventFormat";
 import { renderMarkdownContent } from "@/lib/markdown";
+
+const GALLERY_PAGE_SIZE = 3;
+const FEEDBACK_PAGE_SIZE = 3;
+
+const StarDisplay: React.FC<{ rating: number; size?: "sm" | "md" }> = ({ rating, size = "md" }) => {
+	const dim = size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4";
+	return (
+		<div className='flex items-center gap-0.5'>
+			{[1, 2, 3, 4, 5].map((star) => (
+				<Star
+					key={star}
+					className={`${dim} ${
+						star <= rating
+							? "fill-[var(--color-pastel-amber)] text-[var(--color-pastel-amber)]"
+							: "text-gray-300"
+					}`}
+				/>
+			))}
+		</div>
+	);
+};
 
 const DetailSkeleton: React.FC = () => (
 	<div className='animate-pulse space-y-5'>
@@ -30,11 +51,75 @@ const DetailSkeleton: React.FC = () => (
 	</div>
 );
 
+function toSafeFileName(value: string) {
+	const normalized = value
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+
+	return normalized || "event-ticket";
+}
+
 const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () => void }> = ({
 	qrToken,
 	event,
 	onClose,
-}) => (
+}) => {
+	const qrRef = useRef<SVGSVGElement | null>(null);
+
+	const handleDownloadQr = () => {
+		const svg = qrRef.current;
+
+		if (!svg) {
+			toast.error("Không thể tải mã QR. Vui lòng thử lại.");
+			return;
+		}
+
+		const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
+		clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+		clonedSvg.setAttribute("width", "512");
+		clonedSvg.setAttribute("height", "512");
+
+		const svgText = new XMLSerializer().serializeToString(clonedSvg);
+		const svgBlob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+		const svgUrl = URL.createObjectURL(svgBlob);
+		const image = new Image();
+
+		image.onload = () => {
+			const canvas = document.createElement("canvas");
+			canvas.width = 512;
+			canvas.height = 512;
+			const context = canvas.getContext("2d");
+
+			if (!context) {
+				URL.revokeObjectURL(svgUrl);
+				toast.error("Không thể tải mã QR. Vui lòng thử lại.");
+				return;
+			}
+
+			context.fillStyle = "#ffffff";
+			context.fillRect(0, 0, canvas.width, canvas.height);
+			context.drawImage(image, 0, 0, canvas.width, canvas.height);
+			URL.revokeObjectURL(svgUrl);
+
+			const link = document.createElement("a");
+			link.href = canvas.toDataURL("image/png");
+			link.download = `ve-qr-${toSafeFileName(event.title)}.png`;
+			link.click();
+			toast.success("Đã tải mã QR vé sự kiện.");
+		};
+
+		image.onerror = () => {
+			URL.revokeObjectURL(svgUrl);
+			toast.error("Không thể tải mã QR. Vui lòng thử lại.");
+		};
+
+		image.src = svgUrl;
+	};
+
+	return (
 	<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4'>
 		<div className='relative w-full max-w-sm rounded-2xl border-2 border-black bg-white p-7 text-center shadow-[6px_6px_0_#111]'>
 			<button
@@ -46,8 +131,15 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 			<h2 className='font-heading text-lg font-extrabold text-black'>Vé tham dự sự kiện</h2>
 			<p className='mt-1 line-clamp-2 text-sm font-semibold text-gray-700'>{event.title}</p>
 			<div className='mx-auto mt-5 flex w-fit items-center justify-center rounded-2xl border-2 border-black bg-white p-4'>
-				<QRCodeSVG value={qrToken} size={200} />
+				<QRCodeSVG ref={qrRef} value={qrToken} size={200} />
 			</div>
+			<button
+				type='button'
+				onClick={handleDownloadQr}
+				className='neo-btn neo-btn-secondary mx-auto mt-4 inline-flex h-10 items-center gap-2 px-4 text-sm'>
+				<Download className='h-4 w-4' />
+				Tải QR
+			</button>
 			<p className='mt-4 text-xs text-gray-500'>{formatEventDateTime(event.start_at)}</p>
 			{event.location && <p className='text-xs text-gray-500'>{event.location}</p>}
 			<p className='mt-4 text-xs font-medium text-gray-400'>
@@ -55,7 +147,8 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 			</p>
 		</div>
 	</div>
-);
+	);
+};
 
 const EventDetailPage: React.FC = () => {
 	const { slug } = useParams<{ slug: string }>();
@@ -67,6 +160,17 @@ const EventDetailPage: React.FC = () => {
 	const [error, setError] = useState<string | null>(null);
 	const [actionLoading, setActionLoading] = useState(false);
 	const [showTicket, setShowTicket] = useState(false);
+
+	const [feedbacks, setFeedbacks] = useState<EventFeedbackItem[]>([]);
+	const [feedbackPage, setFeedbackPage] = useState(1);
+	const [feedbackHasMore, setFeedbackHasMore] = useState(false);
+	const [loadingMoreFeedback, setLoadingMoreFeedback] = useState(false);
+	const [ratingInput, setRatingInput] = useState(0);
+	const [hoverRating, setHoverRating] = useState(0);
+	const [commentInput, setCommentInput] = useState("");
+	const [submittingFeedback, setSubmittingFeedback] = useState(false);
+	const [galleryVisible, setGalleryVisible] = useState(GALLERY_PAGE_SIZE);
+	const [lightbox, setLightbox] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!slug) return;
@@ -92,6 +196,81 @@ const EventDetailPage: React.FC = () => {
 			cancelled = true;
 		};
 	}, [slug]);
+
+	// Khi sự kiện đã kết thúc: nạp danh sách đánh giá và điền sẵn đánh giá của người dùng (nếu có)
+	useEffect(() => {
+		if (!event || event.status !== "ended") return;
+
+		if (event.my_feedback) {
+			setRatingInput(event.my_feedback.rating);
+			setCommentInput(event.my_feedback.comment ?? "");
+		}
+
+		if ((event.feedback_summary?.total ?? 0) > 0) {
+			let cancelled = false;
+			eventService
+				.getFeedbacks(event.id, { page: 1, per_page: FEEDBACK_PAGE_SIZE })
+				.then((res) => {
+					if (cancelled) return;
+					setFeedbacks(res.data);
+					setFeedbackPage(1);
+					setFeedbackHasMore(res.meta.current_page < res.meta.last_page);
+				})
+				.catch(() => {});
+			return () => {
+				cancelled = true;
+			};
+		}
+	}, [event?.id, event?.status, event?.my_feedback, event?.feedback_summary?.total]);
+
+	const handleLoadMoreFeedbacks = async () => {
+		if (!event) return;
+		const next = feedbackPage + 1;
+		setLoadingMoreFeedback(true);
+		try {
+			const res = await eventService.getFeedbacks(event.id, { page: next, per_page: FEEDBACK_PAGE_SIZE });
+			setFeedbacks((prev) => [...prev, ...res.data]);
+			setFeedbackPage(next);
+			setFeedbackHasMore(res.meta.current_page < res.meta.last_page);
+		} catch {
+			toast.error("Không thể tải thêm đánh giá. Vui lòng thử lại.");
+		} finally {
+			setLoadingMoreFeedback(false);
+		}
+	};
+
+	const handleSubmitFeedback = async () => {
+		if (!event) return;
+		if (ratingInput < 1) {
+			toast.error("Vui lòng chọn số sao đánh giá.");
+			return;
+		}
+
+		setSubmittingFeedback(true);
+		try {
+			await eventService.submitFeedback(event.id, {
+				rating: ratingInput,
+				comment: commentInput.trim() || null,
+			});
+			toast.success("Cảm ơn bạn đã gửi đánh giá!");
+
+			const [detail, list] = await Promise.all([
+				eventService.getEvent(event.slug),
+				eventService.getFeedbacks(event.id, { page: 1, per_page: FEEDBACK_PAGE_SIZE }),
+			]);
+			setEvent(detail.data);
+			setFeedbacks(list.data);
+			setFeedbackPage(1);
+			setFeedbackHasMore(list.meta.current_page < list.meta.last_page);
+		} catch (err) {
+			const message =
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+				"Không thể gửi đánh giá. Vui lòng thử lại.";
+			toast.error(message);
+		} finally {
+			setSubmittingFeedback(false);
+		}
+	};
 
 	// Thành viên CLB = có bất kỳ vai trò nào ngoài "user" thường
 	const isClubMember = Boolean(user?.roles?.some((role) => role !== "user"));
@@ -422,12 +601,209 @@ const EventDetailPage: React.FC = () => {
 								/>
 							</div>
 						)}
+
+						{/* Gallery */}
+						{event.gallery && event.gallery.length > 0 && (
+							<section className='mt-10 border-t-2 border-gray-200 pt-8'>
+								<h2 className='font-heading text-xl font-extrabold text-black'>Thư viện ảnh</h2>
+								<div className='mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3'>
+									{event.gallery.slice(0, galleryVisible).map((img) => (
+										<button
+											key={img.id}
+											type='button'
+											onClick={() => setLightbox(img.image_url)}
+											className='group relative aspect-square overflow-hidden rounded-xl border-2 border-black bg-gray-100 shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											<img
+												src={img.image_url}
+												alt={img.caption ?? ""}
+												className='h-full w-full object-cover'
+											/>
+											{img.caption && (
+												<div className='absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 text-left'>
+													<p className='truncate text-xs font-semibold text-white'>{img.caption}</p>
+												</div>
+											)}
+										</button>
+									))}
+								</div>
+								{galleryVisible < event.gallery.length && (
+									<div className='mt-5 flex justify-center'>
+										<button
+											type='button'
+											onClick={() => setGalleryVisible((v) => v + GALLERY_PAGE_SIZE)}
+											className='inline-flex h-10 items-center gap-2 rounded-xl border-2 border-black bg-white px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											Xem thêm ảnh ({event.gallery.length - galleryVisible})
+										</button>
+									</div>
+								)}
+							</section>
+						)}
+
+						{/* Feedback */}
+						{event.status === "ended" && (
+							<section className='mt-10 border-t-2 border-gray-200 pt-8'>
+								<h2 className='font-heading text-xl font-extrabold text-black'>Đánh giá sự kiện</h2>
+
+								{event.feedback_summary && event.feedback_summary.total > 0 && (
+									<div className='mt-5 flex items-center gap-5 rounded-2xl border-2 border-black bg-white p-5 shadow-[3px_3px_0_#111]'>
+										<div className='shrink-0 text-center'>
+											<p className='font-heading text-4xl font-extrabold text-black'>
+												{event.feedback_summary.average_rating.toFixed(1)}
+											</p>
+											<StarDisplay rating={Math.round(event.feedback_summary.average_rating)} />
+											<p className='mt-1 text-xs text-gray-500'>
+												{event.feedback_summary.total} đánh giá
+											</p>
+										</div>
+										<div className='flex-1 space-y-1'>
+											{[5, 4, 3, 2, 1].map((star) => {
+												const count = event.feedback_summary?.distribution[String(star)] ?? 0;
+												const pct =
+													event.feedback_summary && event.feedback_summary.total > 0
+														? (count / event.feedback_summary.total) * 100
+														: 0;
+												return (
+													<div key={star} className='flex items-center gap-2 text-xs'>
+														<span className='w-3 text-gray-500'>{star}</span>
+														<Star className='h-3 w-3 fill-[var(--color-pastel-amber)] text-[var(--color-pastel-amber)]' />
+														<div className='h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200'>
+															<div
+																className='h-full rounded-full bg-[var(--color-pastel-amber)]'
+																style={{ width: `${pct}%` }}
+															/>
+														</div>
+														<span className='w-6 text-right text-gray-500'>{count}</span>
+													</div>
+												);
+											})}
+										</div>
+									</div>
+								)}
+
+								{/* Feedback form for attendees */}
+								{user && event.my_attended && (
+									<div className='mt-5 rounded-2xl border-2 border-black bg-[var(--color-pastel-yellow)] p-5 shadow-[3px_3px_0_#111]'>
+										<p className='font-heading text-sm font-extrabold text-black'>
+											{event.my_feedback
+												? "Cập nhật đánh giá của bạn"
+												: "Bạn đã tham dự — hãy để lại đánh giá!"}
+										</p>
+										<div className='mt-3 flex items-center gap-1'>
+											{[1, 2, 3, 4, 5].map((star) => (
+												<button
+													key={star}
+													type='button'
+													onMouseEnter={() => setHoverRating(star)}
+													onMouseLeave={() => setHoverRating(0)}
+													onClick={() => setRatingInput(star)}
+													className='p-0.5'
+													aria-label={`${star} sao`}>
+													<Star
+														className={`h-7 w-7 transition ${
+															(hoverRating || ratingInput) >= star
+																? "fill-[var(--color-pastel-amber)] text-[var(--color-pastel-amber)]"
+																: "text-gray-300"
+														}`}
+													/>
+												</button>
+											))}
+										</div>
+										<textarea
+											value={commentInput}
+											onChange={(e) => setCommentInput(e.target.value)}
+											rows={3}
+											maxLength={1000}
+											placeholder='Chia sẻ cảm nhận của bạn về sự kiện (không bắt buộc)...'
+											className='mt-3 w-full resize-none rounded-xl border-2 border-black bg-white p-3 text-sm text-black outline-none transition focus:shadow-[2px_2px_0_#111]'
+										/>
+										<button
+											onClick={handleSubmitFeedback}
+											disabled={submittingFeedback}
+											className='mt-3 inline-flex h-10 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-50'>
+											{submittingFeedback && <Loader2 className='h-4 w-4 animate-spin' />}
+											{event.my_feedback ? "Cập nhật đánh giá" : "Gửi đánh giá"}
+										</button>
+									</div>
+								)}
+
+								{/* Feedback list */}
+								<div className='mt-5 space-y-3'>
+									{feedbacks.map((fb) => (
+										<div
+											key={fb.id}
+											className='rounded-2xl border-2 border-black bg-white p-4 shadow-[2px_2px_0_#111]'>
+											<div className='flex items-center justify-between gap-2'>
+												<div className='flex items-center gap-2.5'>
+													{fb.user?.avatar ? (
+														<img
+															src={fb.user.avatar}
+															alt=''
+															className='h-8 w-8 rounded-full border-2 border-black object-cover'
+														/>
+													) : (
+														<div className='flex h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-[var(--color-pastel-blue)] text-xs font-extrabold text-black'>
+															{(fb.user?.full_name ?? "?").charAt(0).toUpperCase()}
+														</div>
+													)}
+													<div>
+														<p className='text-sm font-bold text-black'>
+															{fb.user?.full_name ?? "Ẩn danh"}
+														</p>
+														<StarDisplay rating={fb.rating} size='sm' />
+													</div>
+												</div>
+												<span className='text-xs text-gray-400'>
+													{formatEventDateTime(fb.created_at)}
+												</span>
+											</div>
+											{fb.comment && (
+												<p className='mt-2 text-sm leading-6 text-gray-700'>{fb.comment}</p>
+											)}
+										</div>
+									))}
+									{(!event.feedback_summary || event.feedback_summary.total === 0) && (
+										<p className='text-sm text-gray-500'>Chưa có đánh giá nào cho sự kiện này.</p>
+									)}
+									{feedbackHasMore && (
+										<div className='flex justify-center pt-1'>
+											<button
+												type='button'
+												onClick={handleLoadMoreFeedbacks}
+												disabled={loadingMoreFeedback}
+												className='inline-flex h-10 items-center gap-2 rounded-xl border-2 border-black bg-white px-5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-50'>
+												{loadingMoreFeedback && <Loader2 className='h-4 w-4 animate-spin' />}
+												Xem thêm đánh giá
+											</button>
+										</div>
+									)}
+								</div>
+							</section>
+						)}
 					</>
 				)}
 			</main>
 
 			{showTicket && event?.my_qr_token && (
 				<TicketModal qrToken={event.my_qr_token} event={event} onClose={() => setShowTicket(false)} />
+			)}
+
+			{lightbox && (
+				<div
+					className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4'
+					onClick={() => setLightbox(null)}>
+					<button
+						type='button'
+						onClick={() => setLightbox(null)}
+						className='absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg border-2 border-white text-white transition hover:bg-white/10'>
+						<X className='h-5 w-5' />
+					</button>
+					<img
+						src={lightbox}
+						alt=''
+						className='max-h-[90vh] max-w-full rounded-xl border-2 border-white object-contain'
+						onClick={(e) => e.stopPropagation()}
+					/>
+				</div>
 			)}
 		</div>
 	);

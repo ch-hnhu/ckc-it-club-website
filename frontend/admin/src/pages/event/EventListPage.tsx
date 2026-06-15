@@ -142,6 +142,7 @@ type SortKey =
 	| "title"
 	| "status"
 	| "start_at"
+	| "end_at"
 	| "registrations_count"
 	| "created_at"
 	| "department_name"
@@ -232,9 +233,10 @@ function EventListPage() {
 
 	const handleChangeStatus = async (event: EventRecord, next: EventStatus) => {
 		try {
-			await eventService.updateStatus(event.id, next);
-			setEvents((prev) => prev.map((e) => e.id === event.id ? { ...e, status: next } : e));
-			toast.success(`Đã chuyển sự kiện sang "${STATUS_MAP[next].label}".`);
+			const response = await eventService.updateStatus(event.id, next);
+			const syncedStatus = response.data.status;
+			setEvents((prev) => prev.map((e) => e.id === event.id ? { ...e, status: syncedStatus } : e));
+			toast.success(`Đã chuyển sự kiện sang "${STATUS_MAP[syncedStatus].label}".`);
 			setReloadToken((p) => p + 1);
 		} catch {
 			toast.error("Không thể cập nhật trạng thái sự kiện.");
@@ -354,9 +356,14 @@ function EventListPage() {
 											Ban tổ chức {getSortIcon("department_name")}
 										</Button>
 									</TableHead>
-									<TableHead className="w-[180px]">
+									<TableHead className="w-[170px]">
 										<Button variant="ghost" onClick={() => handleSort("start_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
-											Thời gian {getSortIcon("start_at")}
+											Bắt đầu {getSortIcon("start_at")}
+										</Button>
+									</TableHead>
+									<TableHead className="w-[170px]">
+										<Button variant="ghost" onClick={() => handleSort("end_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+											Kết thúc {getSortIcon("end_at")}
 										</Button>
 									</TableHead>
 									<TableHead className="w-[120px]">
@@ -383,7 +390,7 @@ function EventListPage() {
 									Array.from({ length: meta.per_page }).map((_, i) => (
 										<TableRow key={i}>
 											<TableCell><Skeleton className="h-4 w-4" /></TableCell>
-											<TableCell colSpan={8}><Skeleton className="h-4 w-full" /></TableCell>
+											<TableCell colSpan={9}><Skeleton className="h-4 w-full" /></TableCell>
 										</TableRow>
 									))
 								) : events.length > 0 ? (
@@ -437,10 +444,10 @@ function EventListPage() {
 												)}
 											</TableCell>
 											<TableCell>
-												<div className="space-y-0.5 text-sm text-muted-foreground">
-													<p>{formatDate(event.start_at)}</p>
-													<p className="text-xs">đến {formatDate(event.end_at)}</p>
-												</div>
+												<p className="text-sm text-muted-foreground">{formatDate(event.start_at)}</p>
+											</TableCell>
+											<TableCell>
+												<p className="text-sm text-muted-foreground">{formatDate(event.end_at)}</p>
 											</TableCell>
 											<TableCell>
 												<div className="space-y-0.5 text-sm">
@@ -507,7 +514,7 @@ function EventListPage() {
 									))
 								) : (
 									<TableRow>
-										<TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+										<TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
 											Không tìm thấy sự kiện nào phù hợp.
 										</TableCell>
 									</TableRow>
@@ -516,7 +523,7 @@ function EventListPage() {
 
 							<TableFooter className="bg-transparent">
 								<TableRow>
-									<TableCell colSpan={9}>
+									<TableCell colSpan={10}>
 										<div className="flex items-center justify-between px-2">
 											<p className="flex-1 text-sm text-muted-foreground">
 												Đang hiển thị {events.length} trên tổng {meta.total} sự kiện.
