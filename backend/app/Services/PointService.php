@@ -10,24 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/**
- * Điểm trung tâm xử lý cộng điểm cho toàn hệ thống.
- *
- * Đây là NƠI DUY NHẤT được phép ghi users.total_points và users.rank_id.
- * Không controller hay class nào khác được cập nhật trực tiếp hai cột này.
- */
 class PointService
 {
-    /**
-     * Cộng điểm cho user theo một luật điểm (point_rule).
-     *
-     * Trả về PointTransaction nếu cộng thành công, hoặc null nếu bị bỏ qua vì:
-     *  - luật không tồn tại / đang tắt
-     *  - đã cộng điểm cho đúng source này rồi (chống trùng)
-     *  - đã chạm giới hạn max_per_day / max_per_week
-     *
-     * @param  Model|null  $source  Đối tượng gốc (Blog|Post|Comment|Reaction) để chống trùng.
-     */
     public static function award(
         User $user,
         string $ruleKey,
