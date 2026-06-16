@@ -81,6 +81,7 @@ export interface EventRecord {
 	title: string;
 	slug: string;
 	description: string | null;
+	feedback_form_url: string | null;
 	thumbnail: string | null;
 	start_at: string | null;
 	end_at: string | null;

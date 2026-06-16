@@ -15,7 +15,7 @@ class Event extends Model
 
     protected $fillable = [
         'created_by', 'department_id', 'title', 'slug',
-        'description', 'content', 'thumbnail',
+        'description', 'content', 'thumbnail', 'feedback_form_url',
         'start_at', 'end_at', 'location',
         'registration_start_at', 'registration_end_at',
         'max_attendees', 'is_members_only', 'status',

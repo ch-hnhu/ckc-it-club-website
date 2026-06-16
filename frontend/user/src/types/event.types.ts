@@ -48,6 +48,7 @@ export interface MyFeedback {
 
 export interface EventDetail extends EventItem {
 	content: string | null;
+	feedback_form_url?: string | null;
 	my_qr_token?: string | null;
 	has_feedback?: boolean;
 	gallery?: EventGalleryImage[];

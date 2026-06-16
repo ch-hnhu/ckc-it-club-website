@@ -65,6 +65,7 @@ class EventController extends BaseApiController
         $event->loadCount(['registrations', 'feedbacks']);
         $data = $this->transformPublic($event);
         $data['content'] = $event->content;
+        $data['feedback_form_url'] = $event->feedback_form_url;
         $data['gallery'] = $event->galleryItems()->get()->map(fn (EventGalleryItem $item) => [
             'id' => $item->id,
             'image_url' => $item->image_url,

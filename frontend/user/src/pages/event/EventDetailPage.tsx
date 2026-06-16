@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
-import { CalendarCheck, CalendarDays, Download, Loader2, MapPin, Star, Ticket, TicketX, Users, X } from "lucide-react";
+import { CalendarCheck, CalendarDays, Download, ExternalLink, Loader2, MapPin, MessageSquareText, Star, Ticket, TicketX, Users, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
 	Breadcrumb,
@@ -669,6 +669,32 @@ const EventDetailPage: React.FC = () => {
 									className='s-prose'
 									dangerouslySetInnerHTML={{ __html: renderMarkdownContent(event.content) }}
 								/>
+							</div>
+						)}
+
+						{/* Góp ý — chỉ hiển thị khi có link form góp ý và người dùng đã tham dự sự kiện */}
+						{event.feedback_form_url && event.my_attended && (
+							<div className='mt-6 flex flex-col gap-4 rounded-2xl border-2 border-black bg-white p-5 shadow-[3px_3px_0_#111] sm:flex-row sm:items-center sm:justify-between'>
+								<div className='flex flex-col gap-1'>
+									<div className='flex items-center gap-2'>
+										<MessageSquareText className='h-5 w-5 text-[var(--color-text-primary)]' />
+										<p className='font-heading text-sm font-extrabold text-black'>
+											Đóng góp ý kiến cho sự kiện
+										</p>
+									</div>
+									<p className='text-sm text-gray-700'>
+										Ý kiến của bạn giúp ban tổ chức cải thiện những sự kiện tiếp theo.
+									</p>
+								</div>
+								<a
+									href={event.feedback_form_url}
+									target='_blank'
+									rel='noopener noreferrer'
+									className='inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+									<MessageSquareText className='h-4 w-4' />
+									Gửi góp ý
+									<ExternalLink className='h-4 w-4' />
+								</a>
 							</div>
 						)}
 
