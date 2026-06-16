@@ -42,6 +42,14 @@ class PointRuleSeeder extends Seeder
                 'max_per_day' => 20,
                 'max_per_week' => null,
             ],
+            [
+                'key' => 'event.checkin',
+                'name' => 'Tham gia sự kiện',
+                'description' => 'Cộng điểm khi điểm danh thành công tại sự kiện (mỗi lần điểm danh tính 1 lần).',
+                'points' => 30,
+                'max_per_day' => null,
+                'max_per_week' => null,
+            ],
         ];
 
         foreach ($rules as $rule) {

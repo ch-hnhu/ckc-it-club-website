@@ -490,10 +490,8 @@ Route::prefix('v1')->group(function () {
             Route::get('ranks/{rank}', [RankController::class, 'show']);
         });
         Route::middleware('permission:gamification.manage')->group(function () {
-            Route::post('point-rules', [PointRuleController::class, 'store']);
             Route::put('point-rules/{pointRule}', [PointRuleController::class, 'update']);
             Route::patch('point-rules/{pointRule}', [PointRuleController::class, 'update']);
-            Route::delete('point-rules/{pointRule}', [PointRuleController::class, 'destroy']);
             Route::post('ranks', [RankController::class, 'store']);
             Route::put('ranks/{rank}', [RankController::class, 'update']);
             Route::patch('ranks/{rank}', [RankController::class, 'update']);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,6 @@ import gamificationService from "@/services/gamification.service";
 import type { PointRule, PointRulePayload } from "@/types/gamification.type";
 
 interface FormState {
-	key: string;
 	name: string;
 	description: string;
 	points: number;
@@ -44,19 +43,8 @@ interface FormState {
 	is_active: boolean;
 }
 
-const emptyForm: FormState = {
-	key: "",
-	name: "",
-	description: "",
-	points: 0,
-	max_per_day: "",
-	max_per_week: "",
-	is_active: true,
-};
-
 function toPayload(form: FormState): PointRulePayload {
 	return {
-		key: form.key.trim(),
 		name: form.name.trim(),
 		description: form.description.trim() || null,
 		points: Number(form.points),
@@ -75,7 +63,7 @@ function PointRulesPage() {
 
 	const [formOpen, setFormOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<PointRule | null>(null);
-	const [form, setForm] = useState<FormState>(emptyForm);
+	const [form, setForm] = useState<FormState>({ name: "", description: "", points: 0, max_per_day: "", max_per_week: "", is_active: true });
 	const [isSaving, setIsSaving] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<PointRule | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -99,16 +87,9 @@ function PointRulesPage() {
 		};
 	}, [reloadToken]);
 
-	const openCreate = () => {
-		setEditTarget(null);
-		setForm(emptyForm);
-		setFormOpen(true);
-	};
-
 	const openEdit = (rule: PointRule) => {
 		setEditTarget(rule);
 		setForm({
-			key: rule.key,
 			name: rule.name,
 			description: rule.description ?? "",
 			points: rule.points,
@@ -120,8 +101,8 @@ function PointRulesPage() {
 	};
 
 	const handleSave = async () => {
-		if (!form.key.trim() || !form.name.trim()) {
-			toast.error("Key và tên rule không được để trống.");
+		if (!form.name.trim()) {
+			toast.error("Tên rule không được để trống.");
 			return;
 		}
 		setIsSaving(true);
@@ -129,14 +110,11 @@ function PointRulesPage() {
 			if (editTarget) {
 				await gamificationService.updatePointRule(editTarget.id, toPayload(form));
 				toast.success("Đã cập nhật rule.");
-			} else {
-				await gamificationService.createPointRule(toPayload(form));
-				toast.success("Đã tạo rule mới.");
 			}
 			setFormOpen(false);
 			setReloadToken((p) => p + 1);
 		} catch {
-			toast.error("Không thể lưu rule. Kiểm tra key có bị trùng không.");
+			toast.error("Không thể lưu rule.");
 		} finally {
 			setIsSaving(false);
 		}
@@ -170,13 +148,6 @@ function PointRulesPage() {
 							động thật — không cộng/trừ thủ công.
 						</p>
 					</div>
-					<Button
-						size='sm'
-						onClick={openCreate}
-						className='h-8 shrink-0 bg-foreground text-background hover:bg-foreground/90'>
-						<Plus className='h-4 w-4' />
-						Thêm
-					</Button>
 				</div>
 
 				<div className='overflow-hidden rounded-md border'>
@@ -283,7 +254,7 @@ function PointRulesPage() {
 									<TableCell
 										colSpan={8}
 										className='h-32 text-center text-muted-foreground'>
-										Chưa có rule nào. Hãy thêm rule đầu tiên!
+										Chưa có rule nào.
 									</TableCell>
 								</TableRow>
 							)}
@@ -296,21 +267,23 @@ function PointRulesPage() {
 			<Dialog open={formOpen} onOpenChange={(o) => !o && setFormOpen(false)}>
 				<DialogContent className='sm:max-w-[520px]'>
 					<DialogHeader>
-						<DialogTitle>{editTarget ? "Sửa rule" : "Thêm rule mới"}</DialogTitle>
+						<DialogTitle>Sửa rule</DialogTitle>
 					</DialogHeader>
 					<div className='space-y-4'>
+						<div className='space-y-1'>
+							<Label className='text-muted-foreground text-xs'>Key (không thể thay đổi)</Label>
+							<p className='font-mono text-sm'>{editTarget?.key}</p>
+						</div>
 						<div className='grid grid-cols-2 gap-4'>
 							<div className='space-y-2'>
-								<Label htmlFor='rule-key'>
-									Key <span className='text-destructive'>*</span>
+								<Label htmlFor='rule-name'>
+									Tên <span className='text-destructive'>*</span>
 								</Label>
 								<Input
-									id='rule-key'
-									placeholder='vd: blog.published'
-									value={form.key}
-									onChange={(e) =>
-										setForm((p) => ({ ...p, key: e.target.value }))
-									}
+									id='rule-name'
+									placeholder='vd: Xuất bản blog'
+									value={form.name}
+									onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
 								/>
 							</div>
 							<div className='space-y-2'>
@@ -326,17 +299,6 @@ function PointRulesPage() {
 									}
 								/>
 							</div>
-						</div>
-						<div className='space-y-2'>
-							<Label htmlFor='rule-name'>
-								Tên <span className='text-destructive'>*</span>
-							</Label>
-							<Input
-								id='rule-name'
-								placeholder='vd: Xuất bản blog'
-								value={form.name}
-								onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-							/>
 						</div>
 						<div className='space-y-2'>
 							<Label htmlFor='rule-description'>Mô tả</Label>
@@ -396,7 +358,7 @@ function PointRulesPage() {
 							Hủy
 						</Button>
 						<Button onClick={handleSave} disabled={isSaving}>
-							{isSaving ? "Đang lưu..." : editTarget ? "Lưu" : "Tạo"}
+							{isSaving ? "Đang lưu..." : "Lưu"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

@@ -33,10 +33,6 @@ const gamificationService = {
 		return api.get("/point-rules", params as Record<string, unknown>);
 	},
 
-	async createPointRule(payload: PointRulePayload): Promise<ApiResponse<PointRule>> {
-		return api.post<ApiResponse<PointRule>, PointRulePayload>("/point-rules", payload);
-	},
-
 	async updatePointRule(
 		id: number | string,
 		payload: PointRulePayload,

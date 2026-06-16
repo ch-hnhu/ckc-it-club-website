@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import {
 	Archive,
+	Award,
 	Bookmark,
 	BookOpen,
 	BookOpenText,
@@ -179,6 +180,61 @@ const PostSkeleton: React.FC = () => (
 	</div>
 );
 
+const PixelXpIcon: React.FC = () => (
+	<svg
+		xmlns='http://www.w3.org/2000/svg'
+		width='32'
+		height='32'
+		viewBox='0 0 32 32'
+		fill='none'
+		aria-hidden='true'>
+		<g clipPath='url(#profile-xp-clip)'>
+			<path
+				fillRule='evenodd'
+				clipRule='evenodd'
+				d='M14 0H18V2H14V0ZM12 6V2H14V6H12ZM10 10V6H12V10H10ZM6 12V10H10V12H6ZM2 14V12H6V14H2ZM2 18H0V14H2V18ZM6 20H2V18H6V20ZM10 22H6V20H10V22ZM12 26H10V22H12V26ZM14 30V26H12V30H14ZM18 30V32H14V30H18ZM20 26V30H18V26H20ZM22 22V26H20V22H22ZM26 20V22H22V20H26ZM30 18V20H26V18H30ZM30 14H32V18H30V14ZM26 12H30V14H26V12ZM22 10H26V12H22V10ZM20 6H22V10H20V6ZM20 6V2H18V6H20Z'
+				fill='#020617'
+			/>
+			<path
+				fillRule='evenodd'
+				clipRule='evenodd'
+				d='M14 2H18V6H20V10H22V12H26V14H30V18H26V20H22V22H20V26H18V30H14V26H12V22H10V20H6V18H2V14H6V12H10V10H12V6H14V2Z'
+				fill='#EAB308'
+			/>
+			<path
+				fillRule='evenodd'
+				clipRule='evenodd'
+				d='M18 2H16V16H18H20H22H26V12H22V10H20V6H18V2Z'
+				fill='#FDE047'
+			/>
+			<rect x='26' y='14' width='4' height='2' fill='#FDE047' />
+			<path
+				fillRule='evenodd'
+				clipRule='evenodd'
+				d='M18 2H16V6H18V10H20V12H22V14H26V16H30V14H26V12H22V10H20V6H18V2Z'
+				fill='white'
+			/>
+			<path
+				fillRule='evenodd'
+				clipRule='evenodd'
+				d='M2 16H14H16V30H14V26H12V22H10V20H6V18H2V16Z'
+				fill='#CA8A04'
+			/>
+			<path
+				fillRule='evenodd'
+				clipRule='evenodd'
+				d='M16 16H2V18H6V20H10V22H12V26H14V30H16V26V22V20V18V16Z'
+				fill='#CA8A04'
+			/>
+		</g>
+		<defs>
+			<clipPath id='profile-xp-clip'>
+				<rect width='32' height='32' fill='white' />
+			</clipPath>
+		</defs>
+	</svg>
+);
+
 // ─── Stats Card ───────────────────────────────────────────────────────────────
 
 interface StatsCardProps {
@@ -214,6 +270,43 @@ const StatsCard: React.FC<StatsCardProps> = ({ profile }) => (
 				</span>
 				<span className='font-heading text-sm font-extrabold text-black'>
 					{profile.likes_count}
+				</span>
+			</div>
+		</div>
+	</div>
+);
+
+const GamificationCard: React.FC<StatsCardProps> = ({ profile }) => (
+	<div className='rounded-2xl border-2 border-black bg-white p-4 shadow-[4px_4px_0_#111]'>
+		<div className='space-y-3'>
+			<div className='flex items-center justify-between gap-3'>
+				<div className='flex items-center gap-3'>
+					<div className='flex h-10 w-10 items-center justify-center'>
+						<PixelXpIcon />
+					</div>
+					<span className='text-sm font-bold text-gray-600'>Tổng XP</span>
+				</div>
+				<span className='font-heading text-lg font-extrabold text-black'>
+					{profile.total_points ?? 0}
+				</span>
+			</div>
+			<div className='flex items-center justify-between gap-3'>
+				<div className='flex items-center gap-3'>
+					<div className='flex h-10 w-10 items-center justify-center'>
+						{profile.current_rank?.badge ? (
+							<img
+								src={profile.current_rank.badge}
+								alt={profile.current_rank.name}
+								className='h-10 w-14 object-contain'
+							/>
+						) : (
+							<Award className='h-5 w-5 text-black/50' />
+						)}
+					</div>
+					<span className='text-sm font-bold text-gray-600'>Rank</span>
+				</div>
+				<span className='max-w-32 truncate text-right font-heading text-lg font-extrabold text-black'>
+					{profile.current_rank?.name ?? "Chưa có"}
 				</span>
 			</div>
 		</div>
@@ -1941,6 +2034,8 @@ const UserProfilePage: React.FC = () => {
 							date_of_birth: null,
 							is_active: true,
 							is_school_student: true,
+							total_points: 0,
+							current_rank: null,
 							posts_count: 12,
 							blogs_count: 0,
 							content_count: 12,
@@ -2196,61 +2291,8 @@ const UserProfilePage: React.FC = () => {
 						{/* ── Sidebar ── */}
 						<aside className='hidden w-72 shrink-0 self-start sticky top-24 lg:block'>
 							<div className='space-y-5'>
+								<GamificationCard profile={profile} />
 								<StatsCard profile={profile} />
-
-								{/* Member info card */}
-								<div className='rounded-2xl border-2 border-black bg-white p-4 shadow-[4px_4px_0_#111]'>
-									<h2 className='mb-4 font-heading text-base font-extrabold text-black'>
-										Thông tin thành viên
-									</h2>
-									<div className='space-y-2.5 text-sm'>
-										{profile.student_code && (
-											<div className='flex items-center justify-between'>
-												<span className='text-gray-500'>MSSV</span>
-												<span className='font-bold text-black'>
-													{profile.student_code}
-												</span>
-											</div>
-										)}
-										{profile.faculty && (
-											<div className='flex items-center justify-between'>
-												<span className='text-gray-500'>Khoa</span>
-												<span className='max-w-[60%] text-right font-bold text-black'>
-													{profile.faculty}
-												</span>
-											</div>
-										)}
-										{profile.major && (
-											<div className='flex items-center justify-between'>
-												<span className='text-gray-500'>Ngành</span>
-												<span className='max-w-[60%] text-right font-bold text-black'>
-													{profile.major}
-												</span>
-											</div>
-										)}
-										{profile.class_name && (
-											<div className='flex items-center justify-between'>
-												<span className='text-gray-500'>Lớp</span>
-												<span className='font-bold text-black'>
-													{profile.class_name}
-												</span>
-											</div>
-										)}
-										<div className='flex items-center justify-between border-t-2 border-dashed border-gray-200 pt-2'>
-											<span className='text-gray-500'>Tham gia</span>
-											<span className='font-bold text-black'>
-												{new Date(profile.created_at).toLocaleDateString(
-													"vi-VN",
-													{
-														day: "numeric",
-														month: "short",
-														year: "numeric",
-													},
-												)}
-											</span>
-										</div>
-									</div>
-								</div>
 
 								<SkillsCard skills={profile.skills} />
 
