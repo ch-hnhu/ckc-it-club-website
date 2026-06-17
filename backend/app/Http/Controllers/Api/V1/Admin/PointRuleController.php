@@ -46,37 +46,9 @@ class PointRuleController extends BaseApiController
         return $this->successResponse(true, $pointRule, ApiMessage::RETRIEVED);
     }
 
-    public function store(Request $request): JsonResponse
-    {
-        $data = $this->validateData($request);
-
-        $rule = PointRule::create($data);
-
-        return $this->createdResponse($rule, 'Tạo luật điểm thành công.');
-    }
-
     public function update(Request $request, PointRule $pointRule): JsonResponse
     {
-        $data = $this->validateData($request, $pointRule->id);
-
-        $pointRule->update($data);
-
-        return $this->successResponse(true, $pointRule->fresh(), 'Cập nhật luật điểm thành công.');
-    }
-
-    public function destroy(PointRule $pointRule): JsonResponse
-    {
-        $pointRule->delete();
-
-        return $this->successResponse(true, null, 'Xóa luật điểm thành công.');
-    }
-
-    private function validateData(Request $request, ?int $ignoreId = null): array
-    {
-        $uniqueKey = 'required|string|max:255|unique:point_rules,key'.($ignoreId ? ",{$ignoreId}" : '');
-
-        return $request->validate([
-            'key' => $uniqueKey,
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'points' => 'required|integer',
@@ -84,5 +56,9 @@ class PointRuleController extends BaseApiController
             'max_per_week' => 'nullable|integer|min:1',
             'is_active' => 'boolean',
         ]);
+
+        $pointRule->update($data);
+
+        return $this->successResponse(true, $pointRule->fresh(), 'Cập nhật luật điểm thành công.');
     }
 }

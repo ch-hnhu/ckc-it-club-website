@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\User\UpdateProfileRequest;
 use App\Models\Blog;
 use App\Models\Post;
+use App\Models\Rank;
 use App\Models\Skill;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -18,9 +19,13 @@ use Throwable;
 
 class ProfileController extends BaseApiController
 {
+    private ?Rank $defaultRank = null;
+
+    private bool $defaultRankLoaded = false;
+
     private function formatProfile(User $user, ?User $viewer): array
     {
-        $user->loadMissing(['faculty', 'major', 'class', 'skills']);
+        $user->loadMissing(['faculty', 'major', 'class', 'skills', 'rank']);
         $postsCount = $this->countPosts($user->id, $viewer);
         $blogsCount = $this->countBlogs($user->id);
         $isOwnProfile = $viewer && $viewer->id === $user->id;
@@ -43,6 +48,8 @@ class ProfileController extends BaseApiController
             'gender' => $user->gender,
             'date_of_birth' => $user->date_of_birth?->format('Y-m-d'),
             'is_active' => $user->is_active,
+            'total_points' => (int) $user->total_points,
+            'current_rank' => $this->formatRankOrDefault($user->rank),
             'posts_count' => $postsCount,
             'blogs_count' => $blogsCount,
             'content_count' => $postsCount + $blogsCount,
@@ -219,6 +226,48 @@ class ProfileController extends BaseApiController
                 });
             })
             ->count();
+    }
+
+    private function formatRank(?Rank $rank): ?array
+    {
+        if (! $rank) {
+            return null;
+        }
+
+        return [
+            'id' => $rank->id,
+            'name' => $rank->name,
+            'badge' => $this->badgeUrl($rank->badge),
+            'min_points' => $rank->min_points,
+        ];
+    }
+
+    private function formatRankOrDefault(?Rank $rank): ?array
+    {
+        return $this->formatRank($rank ?? $this->defaultRank());
+    }
+
+    private function defaultRank(): ?Rank
+    {
+        if (! $this->defaultRankLoaded) {
+            $this->defaultRank = Rank::query()->orderBy('min_points')->first();
+            $this->defaultRankLoaded = true;
+        }
+
+        return $this->defaultRank;
+    }
+
+    private function badgeUrl(?string $badge): ?string
+    {
+        if (! $badge) {
+            return null;
+        }
+
+        if (Str::startsWith($badge, ['http://', 'https://', '/assets/'])) {
+            return $badge;
+        }
+
+        return Storage::disk('public')->url($badge);
     }
 
     /**
