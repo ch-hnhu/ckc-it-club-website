@@ -56,8 +56,11 @@ import tagService from "@/services/tag.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export type TagModelType = "blog" | "course";
+
 export interface TagRecord {
 	id: number;
+	model_type: TagModelType;
 	name: string;
 	slug: string;
 	posts_count: number;
@@ -130,6 +133,7 @@ function TagListPage() {
 			search: debouncedSearch || undefined,
 			sort: sortConfig.key ?? undefined,
 			order: sortConfig.order ?? undefined,
+			model_type: "blog",
 		}).then((res) => {
 			if (cancelled) return;
 			setTags(res.data);
@@ -192,6 +196,7 @@ function TagListPage() {
 				toast.success("Đã cập nhật tag.");
 			} else {
 				const res = await tagService.createTag({
+					model_type: "blog",
 					name: form.name,
 				});
 				setTags((prev) => [res.data, ...prev]);

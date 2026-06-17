@@ -1,6 +1,6 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
-import type { TagRecord } from "@/pages/community/TagListPage";
+import type { TagModelType, TagRecord } from "@/pages/community/TagListPage";
 
 const tagService = {
 	async getTags(params?: {
@@ -9,11 +9,13 @@ const tagService = {
 		search?: string;
 		sort?: string;
 		order?: "asc" | "desc";
+		model_type?: TagModelType;
 	}): Promise<PaginatedResponse<TagRecord>> {
 		return api.get("/tags", params as Record<string, unknown>);
 	},
 
 	async createTag(payload: {
+		model_type?: TagModelType;
 		name: string;
 		slug?: string;
 		description?: string | null;
