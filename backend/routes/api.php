@@ -108,10 +108,12 @@ Route::prefix('v1')->group(function () {
         // Public event routes (avoid collision with admin /v1/events resource routes)
         Route::get('/events', [UserEventController::class, 'index']);
         Route::get('/events/{event:slug}', [UserEventController::class, 'show']);
+        Route::get('/events/{event}/feedbacks', [UserEventController::class, 'feedbacks']);
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/events/{event}/register', [UserEventController::class, 'register']);
             Route::delete('/events/{event}/register', [UserEventController::class, 'cancelRegistration']);
             Route::get('/events/{event}/my-ticket', [UserEventController::class, 'myTicket']);
+            Route::post('/events/{event}/feedback', [UserEventController::class, 'submitFeedback']);
         });
 
         // Chat rooms (public list, auth for messages, admin-only create)
@@ -464,6 +466,8 @@ Route::prefix('v1')->group(function () {
             Route::get('events', [AdminEventController::class, 'index']);
             Route::get('events/{event}', [AdminEventController::class, 'show']);
             Route::get('events/{event}/registrations', [AdminEventController::class, 'registrations']);
+            Route::get('events/{event}/feedbacks', [AdminEventController::class, 'feedbacks']);
+            Route::get('events/{event}/gallery', [AdminEventController::class, 'gallery']);
         });
         Route::middleware('permission:events.manage')->group(function () {
             Route::post('events', [AdminEventController::class, 'store']);
@@ -471,6 +475,10 @@ Route::prefix('v1')->group(function () {
             Route::patch('events/{event}', [AdminEventController::class, 'update']);
             Route::patch('events/{event}/status', [AdminEventController::class, 'updateStatus']);
             Route::post('events/{event}/check-in', [AdminEventController::class, 'checkIn']);
+            Route::delete('events/{event}/feedbacks/{feedback}', [AdminEventController::class, 'destroyFeedback']);
+            Route::post('events/{event}/gallery', [AdminEventController::class, 'storeGalleryItem']);
+            Route::patch('events/{event}/gallery/reorder', [AdminEventController::class, 'reorderGallery']);
+            Route::delete('events/{event}/gallery/{galleryItem}', [AdminEventController::class, 'destroyGalleryItem']);
             Route::delete('events/{event}', [AdminEventController::class, 'destroy']);
         });
 
@@ -482,10 +490,8 @@ Route::prefix('v1')->group(function () {
             Route::get('ranks/{rank}', [RankController::class, 'show']);
         });
         Route::middleware('permission:gamification.manage')->group(function () {
-            Route::post('point-rules', [PointRuleController::class, 'store']);
             Route::put('point-rules/{pointRule}', [PointRuleController::class, 'update']);
             Route::patch('point-rules/{pointRule}', [PointRuleController::class, 'update']);
-            Route::delete('point-rules/{pointRule}', [PointRuleController::class, 'destroy']);
             Route::post('ranks', [RankController::class, 'store']);
             Route::put('ranks/{rank}', [RankController::class, 'update']);
             Route::patch('ranks/{rank}', [RankController::class, 'update']);

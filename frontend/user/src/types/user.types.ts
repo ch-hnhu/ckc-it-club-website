@@ -1,3 +1,5 @@
+import type { RankSummary } from "@/types/gamification.types";
+
 export interface UserProfile {
 	id: number;
 	full_name: string;
@@ -17,6 +19,8 @@ export interface UserProfile {
 	date_of_birth: string | null;
 	is_active: boolean;
 	is_school_student: boolean;
+	total_points: number;
+	current_rank: RankSummary | null;
 	posts_count: number;
 	blogs_count: number;
 	content_count: number;

@@ -62,6 +62,7 @@
 - `POST /api/v1/contacts`
 - `GET /api/v1/gamification/leaderboard/weekly` with paginated leaderboard data (`page`, `per_page`, default 20).
 - `GET /api/v1/gamification/leaderboard/all-time` with paginated leaderboard data (`page`, `per_page`, default 20).
+- `GET /api/v1/users/profile/{username}` returns public profile details plus gamification summary fields `total_points` and `current_rank`.
 - Community public read routes under `/api/v1/community`: `GET /channels`, `GET /posts`, `GET /posts/{id}`, `GET /posts/{id}/comments`, `GET /posts/{id}/reactions/users`, `GET /blogs`, `GET /blog-tags`, `GET /blogs/{slug}`, `GET /blogs/{id}/comments`, and `GET /blogs/{id}/reactions/users`. Post detail and post comments return published posts for everyone, plus archived posts only to their authenticated owner.
 - Authenticated API routes under Sanctum:
 - `GET /api/v1/auth/me`
@@ -205,6 +206,7 @@
 
 - `users`
 - identity, OAuth provider data, profile fields, academic references, active flag.
+- user profile API responses expose `total_points` and formatted `current_rank` for user-facing gamification display; `current_rank` falls back to the lowest rank (default seeded `Đồng`) when `users.rank_id` is null.
 - admin-created avatars are stored on Laravel `public` disk under `avatars/`, and the relative path is persisted in `users.avatar`.
 - admin create/update user flow persists `gender` and `is_active` directly on the `users` table and assigns the selected Spatie roles from the submitted `roles` array.
 - when create/update user assigns a department head role (`academic-head`, `communications-head`, or `volunteer-head`), backend also attaches that user to the matching department if needed and removes that same head role from any other user; unrelated roles are preserved.
@@ -214,7 +216,7 @@
 - belongs to `faculty`, `major`, `school class`.
 - can create/update other records through `created_by` and `updated_by`.
 - `ranks`
-- gamification rank records use `name`, unique `min_points`, and `badge`; current seeded badges use absolute Supabase image URLs, and API formatting also preserves `/assets/...` paths for frontend-bundled badges. Admin uploads store files on the Laravel `public` disk under `rank-badges/` and return `/storage/...` URLs.
+- gamification rank records use `name`, unique `min_points`, and `badge`; current seeded badges use absolute Supabase image URLs, and API formatting also preserves `/assets/...` paths for frontend-bundled badges. Admin uploads store files on the Laravel `public` disk under `rank-badges/` and return `/storage/...` URLs. User gamification `/me` and profile responses fall back to the lowest rank as the default current rank when a user's `rank_id` is not set.
 - admin rank listing/detail returns `users_count` computed from `users.total_points` ranges between rank thresholds, not from the potentially stale `users.rank_id` relationship.
 - admin rank create/update/delete dispatches `RecomputeUserRanksJob` to recompute `users.rank_id` in the background. Production deployments must keep a Laravel queue worker running because `QUEUE_CONNECTION=database` is the default.
 - seeded rank data has 6 tiers: Đồng, Bạc, Vàng, Bạch Kim, Kim Cương, and Tinh Anh. The old `icon`/`color` rank contract is obsolete.
@@ -456,6 +458,7 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-06-14`: Admin event create/update/status changes now resync a non-draft/non-cancelled event's status from its updated `start_at`/`end_at`, allowing schedule edits to move events back to `published` or `ongoing` as well as forward to `ended`.
 - `2026-06-13`: Public user event listing/detail now resolve an optional Sanctum bearer token so authenticated viewers receive their event registration status and QR token without making the route private.
 - `2026-06-05`: Admin post management removed pin-specific admin sorting/stats, added soft-deleted post listing through `GET /posts/trash`, and added restore through `PATCH /posts/{post}/restore`.
 - `2026-06-03`: User community post listing `GET /api/v1/community/posts?username=` now matches authors by username or email prefix, keeping profile post lists consistent with public profile lookup and blog listing.

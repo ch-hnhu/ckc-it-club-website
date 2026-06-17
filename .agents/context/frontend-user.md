@@ -63,6 +63,7 @@
 - Own-profile empty states for Posts and Blog show direct create CTAs linking to `/cong-dong/dang-bai` and `/blog/dang-bai`; the same CTAs appear in overview carousel panels when those lists are empty.
 - Profile post lists and overview carousels display pinned posts first and mark pinned content with a `Pin` badge instead of the older energy/Zap marker.
 - Profile tab badges and stats update optimistically when a published post is archived or deleted so archived posts are not counted in the published Posts badge.
+- Profile right sidebar includes a compact gamification panel with only total XP and current rank, read from `total_points` and `current_rank` on the profile response.
 
 ## Route Surface
 
@@ -214,6 +215,8 @@
 - Contact submissions are stored in the backend `contacts` table through the public API.
 - Community create-post submissions require an authenticated user, a real channel slug, title, editor content, and optional image/video media up to 20 MB. Successful submissions redirect to `/cong-dong/bai-viet/{id}`.
 - Gamification rank summaries use `badge` as an image path/URL. The old `icon`/`color` fields are obsolete. User gamification `/me` reads `current_rank`, `next_rank`, and `points_to_next_rank`; leaderboard rows read `member_rank` so `rank` remains the numeric leaderboard position. Leaderboard list responses are paginated, not full arrays.
+- Public and authenticated profile responses include gamification summary fields `total_points` and `current_rank` for the profile sidebar panel.
+- `/diem-cua-toi` loads point history from `/gamification/me/history` in pages of 5 entries and appends the next page through a “Tải thêm” button until the paginated response has no more pages.
 - The community leaderboard right rail links to the seeded blog slug `gioi-thieu-bang-xep-hang`; its teaser card fetches the blog detail to show cover image, title, reading time, and published date.
 
 ## Environment Variables
@@ -276,6 +279,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-13`: Event detail ticket modal now includes a `Tải QR` action that downloads the displayed ticket QR as a PNG file.
 - `2026-06-13`: Event detail QR ticket viewing now falls back to `GET /community/events/{event}/my-ticket` when a registered user's QR token is missing after reload.
 - `2026-06-10`: Blog detail reactions now support viewing the list of users who reacted, matching community post behavior.
 - `2026-06-05`: Edit flows for community posts and blogs now present only cancel/save actions; blog edits save existing content without separate draft or submit-for-review buttons.

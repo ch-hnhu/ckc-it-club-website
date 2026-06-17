@@ -21,13 +21,14 @@ class GamificationController extends BaseApiController
     {
         $user = $request->user()->loadMissing('rank');
         $totalPoints = (int) $user->total_points;
+        $currentRank = $user->rank ?? $this->defaultRank();
 
         $nextRank = Rank::query()
             ->where('min_points', '>', $totalPoints)
             ->orderBy('min_points')
             ->first();
 
-        $currentMin = $user->rank?->min_points ?? 0;
+        $currentMin = $currentRank?->min_points ?? 0;
         $progress = null;
         if ($nextRank) {
             $span = $nextRank->min_points - $currentMin;
@@ -57,7 +58,7 @@ class GamificationController extends BaseApiController
 
         return $this->successResponse(true, [
             'total_points' => $totalPoints,
-            'current_rank' => $this->formatRank($user->rank),
+            'current_rank' => $this->formatRank($currentRank),
             'next_rank' => $this->formatRank($nextRank),
             'points_to_next_rank' => $nextRank ? max(0, $nextRank->min_points - $totalPoints) : null,
             'progress_percent' => $progress,

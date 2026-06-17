@@ -24,6 +24,14 @@ if [ "$APP_ROLE" = "reverb" ]; then
   exec php artisan reverb:start --host=0.0.0.0 --port="$PORT_TO_BIND"
 fi
 
+if [ "$APP_ROLE" = "worker" ]; then
+  exec php artisan queue:work \
+    --sleep=3 \
+    --tries=3 \
+    --timeout=60 \
+    --max-time=3600
+fi
+
 PORT_TO_BIND="${PORT:-10000}"
 
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
@@ -33,6 +41,8 @@ fi
 if [ "${RUN_SEEDERS:-false}" = "true" ]; then
   php artisan db:seed --force
 fi
+
+php artisan storage:link --force 2>/dev/null || true
 
 cat >/etc/nginx/http.d/default.conf <<'NGINXCONF'
 server {

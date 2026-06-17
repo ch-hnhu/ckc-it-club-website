@@ -16,7 +16,6 @@ export interface PointRule {
 }
 
 export interface PointRulePayload {
-	key: string;
 	name: string;
 	description?: string | null;
 	points: number;
