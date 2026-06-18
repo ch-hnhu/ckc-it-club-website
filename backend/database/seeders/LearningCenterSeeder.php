@@ -1,0 +1,691 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Enums\CourseLevel;
+use App\Enums\CourseStatus;
+use App\Enums\TagModelType;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+class LearningCenterSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $adminId = DB::table('users')->where('email', 'admin@gmail.com')->value('id');
+
+        if (! $adminId) {
+            return;
+        }
+
+        $multipleChoiceId = DB::table('question_types')
+            ->where('key', 'multiple_choice')
+            ->value('id');
+
+        if (! $multipleChoiceId) {
+            $this->command->warn('QuestionTypeSeeder chưa chạy — bỏ qua LearningCenterSeeder.');
+            return;
+        }
+
+        $tagIds   = $this->seedCourseTags($adminId);
+        $courseId = $this->seedCourse($adminId, $tagIds);
+
+        $this->seedLessons($courseId, $adminId, $multipleChoiceId);
+    }
+
+    // ── Tags ────────────────────────────────────────────────────────────────
+
+    private function seedCourseTags(int $adminId): array
+    {
+        $tags = [
+            ['name' => 'HTML & CSS',       'description' => 'Ngôn ngữ đánh dấu và định dạng trang web.'],
+            ['name' => 'JavaScript',        'description' => 'Ngôn ngữ lập trình phía client.'],
+            ['name' => 'Web Development',   'description' => 'Phát triển ứng dụng web.'],
+        ];
+
+        $ids = [];
+        foreach ($tags as $tag) {
+            $slug = Str::slug($tag['name']);
+            DB::table('tags')->updateOrInsert(
+                ['model_type' => TagModelType::COURSE->value, 'slug' => $slug],
+                [
+                    'model_type'  => TagModelType::COURSE->value,
+                    'name'        => $tag['name'],
+                    'slug'        => $slug,
+                    'description' => $tag['description'],
+                    'created_by'  => $adminId,
+                    'updated_by'  => $adminId,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]
+            );
+            $ids[] = DB::table('tags')
+                ->where('model_type', TagModelType::COURSE->value)
+                ->where('slug', $slug)
+                ->value('id');
+        }
+
+        return $ids;
+    }
+
+    // ── Course ───────────────────────────────────────────────────────────────
+
+    private function seedCourse(int $adminId, array $tagIds): int
+    {
+        $slug = 'lap-trinh-web-co-ban';
+
+        if (DB::table('courses')->where('slug', $slug)->exists()) {
+            return DB::table('courses')->where('slug', $slug)->value('id');
+        }
+
+        $courseId = DB::table('courses')->insertGetId([
+            'title'       => 'Lập trình Web Cơ Bản',
+            'slug'        => $slug,
+            'description' => 'Khoá học nhập môn lập trình web dành cho thành viên CLB IT CKC. '
+                           . 'Từ HTML, CSS đến JavaScript và Responsive Design — 6 buổi học thực hành, 1 buổi tổng kết.',
+            'thumbnail'   => null,
+            'level'       => CourseLevel::BEGINNER->value,
+            'status'      => CourseStatus::PUBLISHED->value,
+            'created_by'  => $adminId,
+            'updated_by'  => $adminId,
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+
+        foreach (array_filter($tagIds) as $tagId) {
+            DB::table('course_tags')->insertOrIgnore([
+                'course_id' => $courseId,
+                'tag_id'    => $tagId,
+            ]);
+        }
+
+        return $courseId;
+    }
+
+    // ── Lessons ──────────────────────────────────────────────────────────────
+
+    private function seedLessons(int $courseId, int $adminId, int $typeId): void
+    {
+        $lessons = $this->getLessonsData();
+
+        foreach ($lessons as $order => $data) {
+            $slug = Str::slug($data['title']);
+
+            if (DB::table('lessons')->where('course_id', $courseId)->where('slug', $slug)->exists()) {
+                continue;
+            }
+
+            $lessonId = DB::table('lessons')->insertGetId([
+                'course_id'           => $courseId,
+                'title'               => $data['title'],
+                'slug'                => $slug,
+                'description'         => $data['description'],
+                'order'               => $order + 1,
+                'status'              => CourseStatus::PUBLISHED->value,
+                'resource_url'        => $data['resource_url'],
+                'resource_label'      => $data['resource_label'],
+                'video_url'           => $data['video_url'],
+                'video_duration'      => $data['video_duration'],
+                'document'            => $data['document'],
+                'assignment_url'      => $data['assignment_url'],
+                'assignment_deadline' => $data['assignment_deadline'],
+                'created_by'          => $adminId,
+                'updated_by'          => $adminId,
+                'created_at'          => now(),
+                'updated_at'          => now(),
+            ]);
+
+            $quizId = DB::table('quizzes')->insertGetId([
+                'lesson_id'  => $lessonId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            foreach ($data['questions'] as $qOrder => $q) {
+                $questionId = DB::table('quiz_questions')->insertGetId([
+                    'quiz_id'          => $quizId,
+                    'question_type_id' => $typeId,
+                    'content'          => $q['content'],
+                    'image'            => null,
+                    'order'            => $qOrder + 1,
+                    'metadata'         => null,
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]);
+
+                foreach ($q['options'] as $optOrder => $opt) {
+                    DB::table('quiz_question_options')->insert([
+                        'question_id' => $questionId,
+                        'content'     => $opt['content'],
+                        'image'       => null,
+                        'is_correct'  => $opt['is_correct'],
+                        'order'       => $optOrder + 1,
+                        'metadata'    => null,
+                        'created_at'  => now(),
+                        'updated_at'  => now(),
+                    ]);
+                }
+            }
+        }
+    }
+
+    // ── Data ─────────────────────────────────────────────────────────────────
+
+    private function getLessonsData(): array
+    {
+        return [
+            // Buổi 1
+            [
+                'title'          => 'Buổi 1: Giới thiệu HTML & Cấu trúc trang web',
+                'description'    => 'Làm quen với HTML — ngôn ngữ đánh dấu siêu văn bản, cách trình duyệt đọc và hiển thị nội dung.',
+                'resource_url'   => 'https://developer.mozilla.org/vi/docs/Learn/HTML/Introduction_to_HTML',
+                'resource_label' => 'MDN Web Docs — Giới thiệu HTML',
+                'video_url'      => 'https://www.youtube.com/embed/qz0aGYrrlhU',
+                'video_duration' => 4800,
+                'assignment_url' => 'https://forms.gle/placeholder-buoi-1',
+                'assignment_deadline' => now()->addDays(7),
+                'document'       => <<<'MD'
+## HTML là gì?
+
+**HTML** (HyperText Markup Language) là ngôn ngữ đánh dấu tiêu chuẩn để xây dựng trang web. HTML mô tả **cấu trúc** của trang bằng các thẻ (tags).
+
+## Cấu trúc tài liệu HTML
+
+```html
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Trang web đầu tiên</title>
+  </head>
+  <body>
+    <h1>Xin chào thế giới!</h1>
+    <p>Đây là đoạn văn đầu tiên.</p>
+  </body>
+</html>
+```
+
+## Các thẻ HTML phổ biến
+
+| Thẻ | Ý nghĩa |
+|---|---|
+| `<h1>` – `<h6>` | Tiêu đề cấp 1–6 |
+| `<p>` | Đoạn văn |
+| `<a href="">` | Liên kết |
+| `<img src="">` | Hình ảnh |
+| `<ul>`, `<ol>`, `<li>` | Danh sách |
+| `<div>`, `<span>` | Container bố cục |
+
+## Thực hành
+
+Tạo file `index.html` và viết trang giới thiệu bản thân gồm: tiêu đề, đoạn mô tả, danh sách kỹ năng và một liên kết đến GitHub của bạn.
+MD,
+                'questions' => [
+                    [
+                        'content' => 'HTML là viết tắt của từ gì?',
+                        'options' => [
+                            ['content' => 'HyperText Markup Language',       'is_correct' => true],
+                            ['content' => 'HighText Machine Language',        'is_correct' => false],
+                            ['content' => 'HyperTransfer Markup Language',    'is_correct' => false],
+                            ['content' => 'HyperText Making Language',        'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Thẻ nào dùng để tạo liên kết trong HTML?',
+                        'options' => [
+                            ['content' => '<a>',    'is_correct' => true],
+                            ['content' => '<link>', 'is_correct' => false],
+                            ['content' => '<href>', 'is_correct' => false],
+                            ['content' => '<url>',  'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Thẻ tiêu đề lớn nhất trong HTML là thẻ nào?',
+                        'options' => [
+                            ['content' => '<h1>',     'is_correct' => true],
+                            ['content' => '<h6>',     'is_correct' => false],
+                            ['content' => '<header>', 'is_correct' => false],
+                            ['content' => '<title>',  'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Khai báo `<!DOCTYPE html>` có tác dụng gì?',
+                        'options' => [
+                            ['content' => 'Khai báo tài liệu sử dụng HTML5', 'is_correct' => true],
+                            ['content' => 'Đặt tiêu đề cho trang web',        'is_correct' => false],
+                            ['content' => 'Nhúng file CSS vào trang',          'is_correct' => false],
+                            ['content' => 'Tạo phần tử DOCTYPE cho CSS',       'is_correct' => false],
+                        ],
+                    ],
+                ],
+            ],
+
+            // Buổi 2
+            [
+                'title'          => 'Buổi 2: CSS & Định dạng giao diện',
+                'description'    => 'Học cách sử dụng CSS để tạo kiểu cho trang web — màu sắc, font chữ, khoảng cách và bố cục cơ bản.',
+                'resource_url'   => 'https://developer.mozilla.org/vi/docs/Learn/CSS/First_steps',
+                'resource_label' => 'MDN Web Docs — Bắt đầu với CSS',
+                'video_url'      => 'https://www.youtube.com/embed/1PnVor36_40',
+                'video_duration' => 5400,
+                'assignment_url' => 'https://forms.gle/placeholder-buoi-2',
+                'assignment_deadline' => now()->addDays(14),
+                'document'       => <<<'MD'
+## CSS là gì?
+
+**CSS** (Cascading Style Sheets) điều khiển **giao diện** của trang HTML — màu sắc, font, kích thước và bố cục.
+
+## 3 cách thêm CSS
+
+```html
+<!-- 1. Inline -->
+<p style="color: red;">Đỏ</p>
+
+<!-- 2. Internal (trong <head>) -->
+<style>p { color: blue; }</style>
+
+<!-- 3. External (khuyến nghị) -->
+<link rel="stylesheet" href="style.css" />
+```
+
+## Box Model
+
+Mọi phần tử HTML đều là một hộp gồm 4 lớp: **content → padding → border → margin**.
+
+## Selector thông dụng
+
+```css
+p      { color: gray; }        /* Thẻ */
+.card  { border-radius: 8px; } /* Class */
+#logo  { width: 120px; }       /* ID */
+```
+
+## Thực hành
+
+Tạo file `style.css` và trang trí trang giới thiệu bản thân từ buổi 1: thêm màu nền, căn chỉnh văn bản và định dạng danh sách kỹ năng dạng thẻ (badge).
+MD,
+                'questions' => [
+                    [
+                        'content' => 'CSS là viết tắt của từ gì?',
+                        'options' => [
+                            ['content' => 'Cascading Style Sheets', 'is_correct' => true],
+                            ['content' => 'Creative Style System',   'is_correct' => false],
+                            ['content' => 'Computer Style Sheets',   'is_correct' => false],
+                            ['content' => 'Colorful Style Sheets',   'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Thuộc tính CSS nào dùng để thay đổi màu chữ?',
+                        'options' => [
+                            ['content' => 'color',       'is_correct' => true],
+                            ['content' => 'text-color',  'is_correct' => false],
+                            ['content' => 'font-color',  'is_correct' => false],
+                            ['content' => 'foreground',  'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Selector nào có độ ưu tiên (specificity) cao nhất trong CSS?',
+                        'options' => [
+                            ['content' => 'Inline style (style="...")',  'is_correct' => true],
+                            ['content' => 'ID selector (#id)',            'is_correct' => false],
+                            ['content' => 'Class selector (.class)',      'is_correct' => false],
+                            ['content' => 'Tag selector (p, div)',        'is_correct' => false],
+                        ],
+                    ],
+                ],
+            ],
+
+            // Buổi 3
+            [
+                'title'          => 'Buổi 3: JavaScript Cơ Bản',
+                'description'    => 'Làm quen với JavaScript — biến, kiểu dữ liệu, hàm và câu lệnh điều kiện.',
+                'resource_url'   => 'https://javascript.info/first-steps',
+                'resource_label' => 'JavaScript.info — Bước đầu với JS',
+                'video_url'      => 'https://www.youtube.com/embed/W6NZfCO5SIk',
+                'video_duration' => 6000,
+                'assignment_url' => 'https://forms.gle/placeholder-buoi-3',
+                'assignment_deadline' => now()->addDays(21),
+                'document'       => <<<'MD'
+## JavaScript là gì?
+
+**JavaScript** là ngôn ngữ lập trình cho phép tạo nội dung động — phản hồi người dùng, cập nhật dữ liệu mà không cần tải lại trang.
+
+## Biến & Kiểu dữ liệu
+
+```js
+let ten    = 'An';     // string
+const tuoi = 20;       // number
+var active = true;     // boolean
+
+console.log(typeof ten); // "string"
+```
+
+## Hàm
+
+```js
+function chao(ten) {
+    return `Xin chào, ${ten}!`;
+}
+
+const binhPhuong = (n) => n * n;
+
+console.log(chao('An'));    // Xin chào, An!
+console.log(binhPhuong(5)); // 25
+```
+
+## Câu lệnh điều kiện
+
+```js
+const diem = 85;
+
+if (diem >= 90) {
+    console.log('Xuất sắc');
+} else if (diem >= 70) {
+    console.log('Khá');
+} else {
+    console.log('Trung bình');
+}
+```
+
+## Thực hành
+
+Viết hàm JavaScript kiểm tra một số có phải số nguyên tố không, rồi in ra tất cả số nguyên tố từ 1 đến 100.
+MD,
+                'questions' => [
+                    [
+                        'content' => 'Từ khoá nào dùng để khai báo hằng số trong JavaScript?',
+                        'options' => [
+                            ['content' => 'const', 'is_correct' => true],
+                            ['content' => 'let',   'is_correct' => false],
+                            ['content' => 'var',   'is_correct' => false],
+                            ['content' => 'fixed', 'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Kết quả của `typeof "hello"` là gì?',
+                        'options' => [
+                            ['content' => '"string"', 'is_correct' => true],
+                            ['content' => '"text"',   'is_correct' => false],
+                            ['content' => '"char"',   'is_correct' => false],
+                            ['content' => '"object"', 'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Cú pháp nào là arrow function hợp lệ?',
+                        'options' => [
+                            ['content' => 'const f = (x) => x * 2',          'is_correct' => true],
+                            ['content' => 'function f => (x) { x * 2 }',     'is_correct' => false],
+                            ['content' => 'const f = function => x * 2',      'is_correct' => false],
+                            ['content' => 'arrow f(x) { return x * 2 }',     'is_correct' => false],
+                        ],
+                    ],
+                ],
+            ],
+
+            // Buổi 4
+            [
+                'title'          => 'Buổi 4: DOM & Xử lý sự kiện',
+                'description'    => 'Học cách dùng JavaScript để thao tác với phần tử HTML (DOM) và phản hồi sự kiện từ người dùng.',
+                'resource_url'   => 'https://javascript.info/document',
+                'resource_label' => 'JavaScript.info — DOM & Tài liệu',
+                'video_url'      => 'https://www.youtube.com/embed/0ik6X4DJKCc',
+                'video_duration' => 5700,
+                'assignment_url' => 'https://forms.gle/placeholder-buoi-4',
+                'assignment_deadline' => now()->addDays(28),
+                'document'       => <<<'MD'
+## DOM là gì?
+
+**DOM** (Document Object Model) là cấu trúc dạng cây mà trình duyệt xây dựng từ HTML. JavaScript có thể đọc và thay đổi DOM để cập nhật giao diện theo thời gian thực.
+
+## Chọn phần tử
+
+```js
+const btn     = document.getElementById('myBtn');
+const cards   = document.querySelectorAll('.card');
+const heading = document.querySelector('h1');
+```
+
+## Thay đổi nội dung & kiểu
+
+```js
+heading.textContent = 'Tiêu đề mới';
+heading.style.color = 'red';
+btn.classList.add('active');
+```
+
+## Lắng nghe sự kiện
+
+```js
+btn.addEventListener('click', () => {
+    alert('Bạn đã bấm nút!');
+});
+
+document.addEventListener('keydown', (e) => {
+    console.log('Phím:', e.key);
+});
+```
+
+## Thực hành
+
+Xây dựng ứng dụng **To-do list** đơn giản: thêm việc cần làm, đánh dấu hoàn thành và xoá từng mục.
+MD,
+                'questions' => [
+                    [
+                        'content' => 'DOM là viết tắt của từ gì?',
+                        'options' => [
+                            ['content' => 'Document Object Model',   'is_correct' => true],
+                            ['content' => 'Data Object Management',   'is_correct' => false],
+                            ['content' => 'Dynamic Object Model',     'is_correct' => false],
+                            ['content' => 'Document Output Model',    'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Phương thức nào trả về phần tử đầu tiên khớp với CSS selector?',
+                        'options' => [
+                            ['content' => 'document.querySelector()',      'is_correct' => true],
+                            ['content' => 'document.getElementById()',     'is_correct' => false],
+                            ['content' => 'document.querySelectorAll()',   'is_correct' => false],
+                            ['content' => 'document.getElement()',         'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Phương thức nào dùng để lắng nghe sự kiện trên một phần tử?',
+                        'options' => [
+                            ['content' => 'addEventListener()', 'is_correct' => true],
+                            ['content' => 'onEvent()',          'is_correct' => false],
+                            ['content' => 'listenEvent()',      'is_correct' => false],
+                            ['content' => 'bindEvent()',        'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Thuộc tính nào dùng để đọc/ghi nội dung văn bản thuần của phần tử?',
+                        'options' => [
+                            ['content' => 'textContent', 'is_correct' => true],
+                            ['content' => 'innerHTML',   'is_correct' => false],
+                            ['content' => 'innerText',   'is_correct' => false],
+                            ['content' => 'nodeValue',   'is_correct' => false],
+                        ],
+                    ],
+                ],
+            ],
+
+            // Buổi 5
+            [
+                'title'          => 'Buổi 5: Responsive Design & Bootstrap',
+                'description'    => 'Xây dựng giao diện thích ứng với mọi kích thước màn hình bằng Flexbox, Grid và Bootstrap.',
+                'resource_url'   => 'https://getbootstrap.com/docs/5.3/getting-started/introduction/',
+                'resource_label' => 'Bootstrap 5 — Tài liệu chính thức',
+                'video_url'      => 'https://www.youtube.com/embed/4sosXZsdy-s',
+                'video_duration' => 6600,
+                'assignment_url' => 'https://forms.gle/placeholder-buoi-5',
+                'assignment_deadline' => now()->addDays(35),
+                'document'       => <<<'MD'
+## Responsive Design là gì?
+
+**Responsive Design** là kỹ thuật thiết kế giao diện tự điều chỉnh để hiển thị đẹp trên mọi thiết bị — từ điện thoại đến màn hình lớn.
+
+## CSS Flexbox
+
+```css
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+```
+
+## CSS Grid
+
+```css
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+```
+
+## Media Queries
+
+```css
+.card { width: 300px; }
+
+@media (max-width: 768px) {
+    .card { width: 100%; }
+}
+```
+
+## Bootstrap Grid
+
+```html
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">Cột 1</div>
+        <div class="col-md-4">Cột 2</div>
+        <div class="col-md-4">Cột 3</div>
+    </div>
+</div>
+```
+
+## Thực hành
+
+Chuyển đổi trang cá nhân từ buổi 1–2 thành responsive bằng Bootstrap: navbar, grid kỹ năng và footer đầy đủ.
+MD,
+                'questions' => [
+                    [
+                        'content' => 'Thuộc tính CSS nào kích hoạt Flexbox?',
+                        'options' => [
+                            ['content' => 'display: flex',    'is_correct' => true],
+                            ['content' => 'layout: flex',     'is_correct' => false],
+                            ['content' => 'position: flex',   'is_correct' => false],
+                            ['content' => 'flex: enable',     'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Trong Bootstrap 5, class nào tạo bố cục 2 cột bằng nhau trên màn hình md?',
+                        'options' => [
+                            ['content' => 'col-md-6',    'is_correct' => true],
+                            ['content' => 'col-md-2',    'is_correct' => false],
+                            ['content' => 'col-2',       'is_correct' => false],
+                            ['content' => 'col-md-half', 'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Media query nào áp dụng khi màn hình rộng tối đa 768px?',
+                        'options' => [
+                            ['content' => '@media (max-width: 768px)',   'is_correct' => true],
+                            ['content' => '@media (min-width: 768px)',   'is_correct' => false],
+                            ['content' => '@screen max(768px)',          'is_correct' => false],
+                            ['content' => '@responsive (768px)',         'is_correct' => false],
+                        ],
+                    ],
+                ],
+            ],
+
+            // Buổi 6
+            [
+                'title'          => 'Buổi 6: Đồ Án Cuối Khoá',
+                'description'    => 'Tổng hợp toàn bộ kiến thức để xây dựng hoàn chỉnh một trang Portfolio cá nhân responsive.',
+                'resource_url'   => 'https://github.com/topics/portfolio-template',
+                'resource_label' => 'GitHub — Portfolio Template tham khảo',
+                'video_url'      => 'https://www.youtube.com/embed/oYRda7UtuhA',
+                'video_duration' => 7200,
+                'assignment_url' => 'https://forms.gle/placeholder-buoi-6-doan',
+                'assignment_deadline' => now()->addDays(42),
+                'document'       => <<<'MD'
+## Đồ án cuối khoá — Trang Portfolio Cá Nhân
+
+Áp dụng **toàn bộ kiến thức** HTML, CSS, JavaScript và Bootstrap để xây dựng trang portfolio cá nhân hoàn chỉnh.
+
+## Yêu cầu tối thiểu
+
+**Bố cục:**
+- Navbar responsive (hamburger menu trên mobile)
+- Hero section với ảnh và giới thiệu ngắn
+- Section kỹ năng dạng grid
+- Section dự án (tối thiểu 2 project)
+- Footer với liên kết mạng xã hội
+
+**JavaScript:**
+- Smooth scroll khi bấm menu
+- Hiệu ứng xuất hiện khi cuộn trang
+- Form liên hệ có validation cơ bản
+
+**Responsive:** đẹp trên cả mobile (≤ 768px) và desktop (≥ 1024px).
+
+## Tiêu chí chấm điểm
+
+| Tiêu chí | Điểm |
+|---|---|
+| Cấu trúc HTML semantic | 20 |
+| CSS / Bootstrap — đẹp, responsive | 30 |
+| JavaScript hoạt động đúng | 30 |
+| Tính hoàn thiện & sáng tạo | 20 |
+
+## Nộp bài
+
+Nộp **link GitHub repository** (source code) và **link GitHub Pages** (live preview) qua form bên dưới.
+MD,
+                'questions' => [
+                    [
+                        'content' => 'Thẻ HTML semantic nào dùng để định nghĩa phần điều hướng?',
+                        'options' => [
+                            ['content' => '<nav>',                  'is_correct' => true],
+                            ['content' => '<div class="nav">',      'is_correct' => false],
+                            ['content' => '<menu>',                  'is_correct' => false],
+                            ['content' => '<navigation>',           'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Thuộc tính CSS nào tạo khoảng cách bên trong phần tử (giữa content và border)?',
+                        'options' => [
+                            ['content' => 'padding', 'is_correct' => true],
+                            ['content' => 'margin',  'is_correct' => false],
+                            ['content' => 'spacing', 'is_correct' => false],
+                            ['content' => 'gap',     'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Sự kiện JavaScript nào xảy ra khi người dùng cuộn trang?',
+                        'options' => [
+                            ['content' => 'scroll', 'is_correct' => true],
+                            ['content' => 'wheel',  'is_correct' => false],
+                            ['content' => 'move',   'is_correct' => false],
+                            ['content' => 'slide',  'is_correct' => false],
+                        ],
+                    ],
+                    [
+                        'content' => 'Lệnh Git nào dùng để đẩy code lên GitHub lần đầu tiên?',
+                        'options' => [
+                            ['content' => 'git push -u origin main', 'is_correct' => true],
+                            ['content' => 'git upload origin main',  'is_correct' => false],
+                            ['content' => 'git send origin main',    'is_correct' => false],
+                            ['content' => 'git publish main',        'is_correct' => false],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    }
+}
