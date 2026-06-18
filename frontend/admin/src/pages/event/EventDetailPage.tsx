@@ -3,20 +3,26 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
 import {
+	AlignLeft,
 	ArrowLeft,
+	Building2,
+	CalendarClock,
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
+	ClipboardCheck,
 	Edit,
 	Eye,
 	GripVertical,
 	ImageIcon,
 	Loader2,
+	MapPin,
 	MoreHorizontal,
 	ScanLine,
 	Search,
 	Star,
+	Ticket,
 	Trash2,
 	UploadCloud,
 	UserCheck,
@@ -103,6 +109,8 @@ export interface EventRegistrationRecord {
 
 const pageSizeOptions = [10, 20, 30, 50];
 
+const USER_SITE_URL = import.meta.env.VITE_USER_SITE_URL || "http://localhost:5174";
+
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
 	dateStyle: "medium",
 	timeStyle: "short",
@@ -112,6 +120,22 @@ function formatDate(value: string | null | undefined) {
 	if (!value) return "--";
 	const d = new Date(value);
 	return Number.isNaN(d.getTime()) ? "--" : dateFormatter.format(d);
+}
+
+// Định dạng gọn "15:00 15/07/2026" để gộp khoảng thời gian vào một ô
+function formatDateTimeShort(value: string | null | undefined) {
+	if (!value) return "--";
+	const d = new Date(value);
+	if (Number.isNaN(d.getTime())) return "--";
+	const time = d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+	return `${time} ${d.toLocaleDateString("vi-VN")}`;
+}
+
+function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
+	if (!start && !end) return "--";
+	if (!start) return formatDateTimeShort(end);
+	if (!end) return formatDateTimeShort(start);
+	return `${formatDateTimeShort(start)} → ${formatDateTimeShort(end)}`;
 }
 
 const REGISTRATION_STATUS_MAP: Record<RegistrationStatus, { label: string; className: string }> = {
@@ -136,11 +160,37 @@ const registrationFilterOptions: Array<{ value: RegistrationStatus | "all"; labe
 	{ value: "cancelled", label: "Đã hủy" },
 ];
 
-function InfoRow({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
+function InfoRow({
+	icon,
+	label,
+	value,
+	highlight,
+	className,
+}: {
+	icon?: React.ReactNode;
+	label: React.ReactNode;
+	value: React.ReactNode;
+	highlight?: boolean;
+	className?: string;
+}) {
 	return (
-		<div className='flex flex-col gap-1 rounded-lg border bg-muted/20 p-4'>
-			<p className='text-xs font-medium uppercase text-muted-foreground'>{label}</p>
-			<div className='text-sm font-medium break-words'>{value}</div>
+		<div
+			className={cn(
+				"flex flex-col gap-1 rounded-lg border p-4",
+				highlight ? "border-sky-500/30 bg-sky-500/10" : "bg-muted/20",
+				className,
+			)}>
+			<p
+				className={cn(
+					"flex items-center gap-1.5 text-xs font-medium uppercase",
+					highlight ? "text-sky-700" : "text-muted-foreground",
+				)}>
+				{icon}
+				{label}
+			</p>
+			<div className={cn("text-sm font-medium break-words", highlight && "text-sky-800")}>
+				{value}
+			</div>
 		</div>
 	);
 }
@@ -584,6 +634,15 @@ function EventDetailPage() {
 	const [isCheckInOpen, setIsCheckInOpen] = useState(false);
 	const [manualTarget, setManualTarget] = useState<EventRegistrationRecord | null>(null);
 	const [isManualSubmitting, setIsManualSubmitting] = useState(false);
+	// Mở trang sự kiện công khai (giao diện user), cuộn tới phản hồi của người được chọn
+	const openUserFeedback = useCallback(
+		(userId: number) => {
+			if (!event) return;
+			const url = `${USER_SITE_URL}/su-kien/${event.slug}?feedback_user=${userId}`;
+			window.open(url, "_blank", "noopener,noreferrer");
+		},
+		[event],
+	);
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
@@ -766,45 +825,69 @@ function EventDetailPage() {
 							</Button>
 						</div>
 					</CardHeader>
-					<CardContent className='grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-3'>
-						<InfoRow label='Thời gian bắt đầu' value={formatDate(event.start_at)} />
-						<InfoRow label='Thời gian kết thúc' value={formatDate(event.end_at)} />
-						<InfoRow label='Địa điểm' value={event.location || "--"} />
-						<InfoRow
-							label='Mở đăng ký'
-							value={
-								event.registration_start_at
-									? formatDate(event.registration_start_at)
-									: "Ngay khi đăng sự kiện"
-							}
-						/>
-						<InfoRow
-							label='Đóng đăng ký'
-							value={
-								event.registration_end_at
-									? formatDate(event.registration_end_at)
-									: "Đến khi sự kiện bắt đầu"
-							}
-						/>
-						<InfoRow
-							label='Ban tổ chức'
-							value={event.department?.name ?? "--"}
-						/>
-						<InfoRow
-							label='Người tạo'
-							value={event.creator?.full_name ?? "--"}
-						/>
-						<InfoRow
-							label='Đăng ký / Điểm danh'
-							value={`${event.registrations_count.toLocaleString("vi-VN")}${
-								event.max_attendees
-									? ` / ${event.max_attendees.toLocaleString("vi-VN")}`
-									: ""
-							} đăng ký · ${event.check_ins_count.toLocaleString("vi-VN")} check-in`}
-						/>
-						<InfoRow label='Mô tả' value={event.description || "--"} />
-						<InfoRow label='Ngày tạo' value={formatDate(event.created_at)} />
-						<InfoRow label='Ngày cập nhật' value={formatDate(event.updated_at)} />
+					<CardContent className='flex flex-col gap-4'>
+						{/* Thông tin cốt lõi */}
+						<div className='grid grid-cols-2 gap-3 sm:grid-cols-3'>
+							<InfoRow
+								icon={<CalendarClock className='h-3.5 w-3.5' />}
+								label='Thời gian diễn ra'
+								value={formatDateRange(event.start_at, event.end_at)}
+							/>
+							<InfoRow
+								icon={<MapPin className='h-3.5 w-3.5' />}
+								label='Địa điểm'
+								value={event.location || "--"}
+							/>
+							<InfoRow
+								icon={<Building2 className='h-3.5 w-3.5' />}
+								label='Ban tổ chức'
+								value={event.department?.name ?? "--"}
+							/>
+							<InfoRow
+								highlight
+								icon={<ClipboardCheck className='h-3.5 w-3.5' />}
+								label='Đăng ký / Điểm danh'
+								value={`${event.registrations_count.toLocaleString("vi-VN")}${
+									event.max_attendees
+										? ` / ${event.max_attendees.toLocaleString("vi-VN")}`
+										: ""
+								} đăng ký · ${event.check_ins_count.toLocaleString("vi-VN")} check-in`}
+							/>
+							<InfoRow
+								className='col-span-2 sm:col-span-2'
+								icon={<Ticket className='h-3.5 w-3.5' />}
+								label='Thời gian đăng ký'
+								value={`${
+									event.registration_start_at
+										? formatDateTimeShort(event.registration_start_at)
+										: "Ngay khi đăng"
+								} → ${
+									event.registration_end_at
+										? formatDateTimeShort(event.registration_end_at)
+										: "đến khi sự kiện bắt đầu"
+								}`}
+							/>
+						</div>
+
+						{/* Mô tả */}
+						<div className='rounded-lg border p-4'>
+							<p className='flex items-center gap-1.5 text-xs font-medium uppercase text-muted-foreground'>
+								<AlignLeft className='h-3.5 w-3.5' />
+								Mô tả
+							</p>
+							<p className='mt-1 whitespace-pre-line text-sm leading-relaxed'>
+								{event.description || "--"}
+							</p>
+						</div>
+
+						{/* Metadata phụ trợ */}
+						<p className='border-t pt-3 text-xs text-muted-foreground'>
+							Tạo bởi{" "}
+							<span className='font-medium text-foreground/80'>
+								{event.creator?.full_name ?? "--"}
+							</span>{" "}
+							· {formatDate(event.created_at)} &nbsp;·&nbsp; Cập nhật {formatDate(event.updated_at)}
+						</p>
 					</CardContent>
 				</Card>
 
@@ -817,7 +900,7 @@ function EventDetailPage() {
 						</TabsTrigger>
 						<TabsTrigger value='feedback'>
 							<Star className='h-4 w-4' />
-							Đánh giá
+							Phản hồi
 						</TabsTrigger>
 						<TabsTrigger value='gallery'>
 							<ImageIcon className='h-4 w-4' />
@@ -941,6 +1024,14 @@ function EventDetailPage() {
 															disabled={!registration.user}>
 															<Eye className='h-4 w-4' />
 															Xem hồ sơ
+														</DropdownMenuItem>
+														<DropdownMenuItem
+															disabled={!registration.user}
+															onClick={() =>
+																registration.user && openUserFeedback(registration.user.id)
+															}>
+															<Star className='h-4 w-4' />
+															Xem phản hồi
 														</DropdownMenuItem>
 														<DropdownMenuItem
 															disabled={!canCheckIn || registration.status !== "registered"}

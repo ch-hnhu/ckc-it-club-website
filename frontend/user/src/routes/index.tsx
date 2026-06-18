@@ -11,6 +11,10 @@ import BlogFeedPage from "@/pages/blog/BlogFeedPage";
 import BlogCreatePage from "@/pages/blog/BlogCreatePage";
 import BlogDetailPage from "@/pages/blog/BlogDetailPage";
 import BlogEditPage from "@/pages/blog/BlogEditPage";
+import LearningFeedPage from "@/pages/learning/LearningFeedPage";
+import CourseDetailPage from "@/pages/learning/CourseDetailPage";
+import LessonDetailPage from "@/pages/learning/LessonDetailPage";
+import VideoDetailPage from "@/pages/learning/VideoDetailPage";
 import EventsFeedPage from "@/pages/event/EventsFeedPage";
 import EventDetailPage from "@/pages/event/EventDetailPage";
 import LandingPage from "@/pages/LandingPage";
@@ -69,6 +73,22 @@ const router = createBrowserRouter([
 			{
 				path: "blog/:slug",
 				element: <BlogDetailPage />,
+			},
+			{
+				path: "khoa-hoc",
+				element: <LearningFeedPage />,
+			},
+			{
+				path: "khoa-hoc/:slug",
+				element: <CourseDetailPage />,
+			},
+			{
+				path: "khoa-hoc/:slug/:lessonSlug",
+				element: <LessonDetailPage />,
+			},
+			{
+				path: "khoa-hoc/:slug/:lessonSlug/:videoSlug",
+				element: <VideoDetailPage />,
 			},
 			{
 				path: "su-kien",

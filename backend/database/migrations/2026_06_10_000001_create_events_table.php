@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('description')->nullable();
             $table->longText('content')->nullable();
+            $table->string('feedback_form_url', 2048)->nullable();
             $table->text('thumbnail')->nullable();
             $table->dateTime('start_at');
             $table->dateTime('end_at');

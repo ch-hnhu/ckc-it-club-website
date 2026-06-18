@@ -51,6 +51,7 @@ class EventController extends BaseApiController
             'title' => 'required|string|max:255',
             'description' => 'nullable|string|max:2000',
             'content' => 'nullable|string',
+            'feedback_form_url' => 'nullable|url|max:2048',
             'start_at' => 'required|date',
             'end_at' => 'required|date|after:start_at',
             'registration_start_at' => 'nullable|date',
@@ -101,6 +102,7 @@ class EventController extends BaseApiController
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string|max:2000',
             'content' => 'nullable|string',
+            'feedback_form_url' => 'nullable|url|max:2048',
             'start_at' => 'sometimes|date',
             'end_at' => 'sometimes|date|after:start_at',
             'registration_start_at' => 'nullable|date',
@@ -417,6 +419,7 @@ class EventController extends BaseApiController
             'title' => $event->title,
             'slug' => $event->slug,
             'description' => $event->description,
+            'feedback_form_url' => $event->feedback_form_url,
             'thumbnail' => $event->thumbnail
                 ? Storage::disk('public')->url($event->thumbnail)
                 : null,
