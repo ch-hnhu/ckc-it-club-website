@@ -38,6 +38,7 @@ class DatabaseSeeder extends Seeder
             RankSeeder::class,
             PointRuleSeeder::class,
             QuestionTypeSeeder::class,
+            LearningCenterSeeder::class,
         ]);
     }
 }
