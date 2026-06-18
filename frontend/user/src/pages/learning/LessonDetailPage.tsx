@@ -31,12 +31,16 @@ const PANELS: PanelConfig[] = [
 
 // ─── Khối nội dung (1 trong 4 góc) ──────────────────────────────────────────────
 
-const ContentPanel: React.FC<{ config: PanelConfig; items: CourseContentItem[] }> = ({
-	config,
-	items,
-}) => {
+const ContentPanel: React.FC<{
+	config: PanelConfig;
+	items: CourseContentItem[];
+	/** Nếu có, mục có slug sẽ thành link `${linkBase}/${slug}` (vd video) */
+	linkBase?: string;
+}> = ({ config, items, linkBase }) => {
 	const Icon = config.icon;
 	const doneCount = items.filter((i) => i.completed).length;
+	const rowClass =
+		"flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-gray-50";
 
 	return (
 		<div className='flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111]'>
@@ -50,11 +54,9 @@ const ContentPanel: React.FC<{ config: PanelConfig; items: CourseContentItem[] }
 				</span>
 			</div>
 			<ul className='flex-1 p-2'>
-				{items.map((it) => (
-					<li key={it.id}>
-						<button
-							type='button'
-							className='flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-gray-50'>
+				{items.map((it) => {
+					const inner = (
+						<>
 							{it.completed ? (
 								<CheckCircle2 className='h-5 w-5 shrink-0 text-[var(--color-text-primary)]' />
 							) : (
@@ -64,9 +66,23 @@ const ContentPanel: React.FC<{ config: PanelConfig; items: CourseContentItem[] }
 							{it.meta && (
 								<span className='shrink-0 text-xs font-medium text-gray-400'>{it.meta}</span>
 							)}
-						</button>
-					</li>
-				))}
+						</>
+					);
+					const linkable = linkBase && it.slug;
+					return (
+						<li key={it.id}>
+							{linkable ? (
+								<Link to={`${linkBase}/${it.slug}`} className={rowClass}>
+									{inner}
+								</Link>
+							) : (
+								<button type='button' className={rowClass}>
+									{inner}
+								</button>
+							)}
+						</li>
+					);
+				})}
 			</ul>
 		</div>
 	);
@@ -74,22 +90,62 @@ const ContentPanel: React.FC<{ config: PanelConfig; items: CourseContentItem[] }
 
 // ─── Vòng tròn buổi học ở trung tâm ─────────────────────────────────────────────
 
-const CenterNode: React.FC<{ progress: number | null; order: number }> = ({ progress, order }) => (
-	<div className='flex h-40 w-40 items-center justify-center rounded-full border-2 border-black bg-white shadow-[4px_4px_0_#111] ring-4 ring-[var(--color-primary)]/30'>
-		<div className='flex h-[120px] w-[120px] flex-col items-center justify-center rounded-full border-2 border-black bg-[var(--color-primary)] text-center'>
-			<span className='font-heading text-[11px] font-extrabold uppercase tracking-wide text-black'>
-				Buổi {order}
-			</span>
-			{progress !== null ? (
-				<span className='font-heading text-2xl font-extrabold leading-none text-black'>
-					{progress}%
+const CenterNode: React.FC<{ progress: number | null; order: number }> = ({ progress, order }) => {
+	const pct = Math.max(0, Math.min(100, progress ?? 0));
+	const size = 176;
+	const stroke = 16;
+	const r = (size - stroke) / 2;
+	const circ = 2 * Math.PI * r;
+	const dash = (pct / 100) * circ;
+
+	return (
+		<div className='relative h-44 w-44'>
+			{/* Nền tròn + đổ bóng cứng (phong cách neo) */}
+			<div className='absolute inset-0 rounded-full border-2 border-black bg-white shadow-[5px_5px_0_#111]' />
+
+			{/* Vòng tiến độ: rãnh xám + cung xanh chạy theo % */}
+			<svg
+				viewBox={`0 0 ${size} ${size}`}
+				className='absolute inset-0 h-full w-full -rotate-90'>
+				<circle cx={size / 2} cy={size / 2} r={r} fill='none' stroke='#e5e7eb' strokeWidth={stroke} />
+				{pct > 0 && (
+					<circle
+						cx={size / 2}
+						cy={size / 2}
+						r={r}
+						fill='none'
+						stroke='var(--color-primary)'
+						strokeWidth={stroke}
+						strokeLinecap='round'
+						strokeDasharray={`${dash} ${circ}`}
+						className='transition-[stroke-dasharray] duration-700 ease-out'
+					/>
+				)}
+			</svg>
+
+			{/* Đĩa trung tâm */}
+			<div className='absolute inset-[28px] flex flex-col items-center justify-center rounded-full border-2 border-black bg-white text-center'>
+				<span className='font-heading text-[11px] font-extrabold uppercase tracking-wide text-gray-500'>
+					Buổi {order}
 				</span>
-			) : (
-				<GraduationCap className='mt-1 h-7 w-7 text-black' strokeWidth={2.5} />
-			)}
+				{progress !== null ? (
+					<>
+						<span className='font-heading text-3xl font-extrabold leading-none text-black'>
+							{pct}
+							<span className='text-lg'>%</span>
+						</span>
+						<span className='mt-0.5 text-[10px] font-bold text-gray-400'>hoàn thành</span>
+					</>
+				) : (
+					<>
+						<GraduationCap className='h-7 w-7 text-black' strokeWidth={2.5} />
+						<span className='mt-1 text-[10px] font-bold text-gray-400'>Bắt đầu</span>
+					</>
+				)}
+			</div>
 		</div>
-	</div>
-);
+	);
+};
 
 // ─── Skeleton ───────────────────────────────────────────────────────────────────
 
@@ -185,7 +241,16 @@ const LessonDetailPage: React.FC = () => {
 							<div className='relative'>
 								<div className='grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-x-72 md:gap-y-12'>
 									{PANELS.map((cfg) => (
-										<ContentPanel key={cfg.key} config={cfg} items={lesson[cfg.key]} />
+										<ContentPanel
+											key={cfg.key}
+											config={cfg}
+											items={lesson[cfg.key]}
+											linkBase={
+												cfg.key === "videos"
+													? `/khoa-hoc/${slug}/${lessonSlug}`
+													: undefined
+											}
+										/>
 									))}
 								</div>
 

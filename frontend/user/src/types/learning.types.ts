@@ -38,6 +38,8 @@ export type CourseContentType = "video" | "reference" | "exercise" | "quiz";
 export interface CourseContentItem {
 	id: number;
 	title: string;
+	/** Slug để điều hướng (vd video → trang xem video) */
+	slug?: string;
 	/** Thông tin phụ: thời lượng, số câu... vd "12 phút", "10 câu" */
 	meta?: string;
 	completed?: boolean;
@@ -100,6 +102,53 @@ export interface LessonDetail {
 	references: CourseContentItem[];
 	exercises: CourseContentItem[];
 	quizzes: CourseContentItem[];
+}
+
+/** Một chương (mốc thời gian) bên trong video */
+export interface VideoChapter {
+	/** Nhãn hiển thị, vd "03:20" */
+	time: string;
+	/** Số giây để tua tới */
+	seconds: number;
+	label: string;
+}
+
+/** Tài liệu đính kèm theo video */
+export interface VideoAttachment {
+	id: number;
+	title: string;
+	kind: "pdf" | "zip" | "link";
+}
+
+/** Một mục trong playlist video của buổi học */
+export interface VideoPlaylistItem {
+	id: number;
+	slug: string;
+	title: string;
+	duration: string;
+	completed: boolean;
+	current: boolean;
+}
+
+/** Trang xem video bài giảng */
+export interface VideoDetail {
+	id: number;
+	slug: string;
+	title: string;
+	/** URL nhúng (YouTube embed) hoặc file mp4 */
+	url: string;
+	duration: string;
+	xp: number;
+	completed: boolean;
+	course: { slug: string; title: string };
+	lesson: { slug: string; title: string; order: number };
+	playlist: VideoPlaylistItem[];
+	/** Video kế tiếp trong cùng buổi, null nếu là video cuối */
+	next_video: { slug: string; title: string } | null;
+	/** Buổi kế tiếp — chỉ có khi đang ở video cuối của buổi */
+	next_lesson: { slug: string; title: string } | null;
+	chapters: VideoChapter[];
+	attachments: VideoAttachment[];
 }
 
 export interface CourseListParams {

@@ -169,7 +169,8 @@ class BlogController extends BaseApiController
         $request->validate([
             'title'          => ['required', 'string', 'min:5', 'max:500'],
             'slug'           => ['nullable', 'string', 'max:500'],
-            'content'        => ['required', 'string'],
+            // Nháp được phép trống nội dung; khi đăng (không phải draft) thì bắt buộc.
+            'content'        => ['nullable', 'string', 'required_unless:status,draft'],
             'excerpt'        => ['nullable', 'string', 'max:1000'],
             'featured_image' => ['nullable', 'image', 'max:5120'],
             'tag_ids'        => ['nullable', 'array'],
@@ -192,17 +193,17 @@ class BlogController extends BaseApiController
 
         $isAdmin = $request->user()->hasRole(RolesEnum::adminRoles());
 
-        // Admin always publishes; user chooses draft or pending_review (default: pending_review)
-        $status = $isAdmin
-            ? 'published'
-            : ($request->input('status', 'pending_review') === 'draft' ? 'draft' : 'pending_review');
+        // Nháp luôn được tôn trọng (kể cả admin). Khi đăng: admin -> published, user -> pending_review.
+        $status = $request->input('status') === 'draft'
+            ? 'draft'
+            : ($isAdmin ? 'published' : 'pending_review');
 
         $blog = DB::transaction(function () use ($request, $slug, $coverImagePath, $status) {
             $blog = Blog::create([
                 'author_id'    => $request->user()->id,
                 'title'        => $request->input('title'),
                 'slug'         => $slug,
-                'content'      => $request->input('content'),
+                'content'      => $request->input('content', ''),
                 'excerpt'      => $request->input('excerpt'),
                 'cover_image'  => $coverImagePath,
                 'status'       => $status,

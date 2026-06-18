@@ -7,6 +7,7 @@ import type {
 	CourseLesson,
 	CourseListParams,
 	LessonDetail,
+	VideoDetail,
 } from "@/types/learning.types";
 
 // ─── DỮ LIỆU MẪU (tạm thời) ─────────────────────────────────────────────────────
@@ -256,6 +257,16 @@ function buildLessons(course: Course): CourseLesson[] {
 	});
 }
 
+/** Danh sách video của một buổi học (dùng chung cho getLesson & getVideo). */
+function buildLessonVideos(lesson: CourseLesson) {
+	const done = Boolean(lesson.completed);
+	return [
+		{ id: lesson.id + 1, slug: "video-1", title: "Giới thiệu buổi học", meta: "6 phút", duration: "6:00", completed: done },
+		{ id: lesson.id + 2, slug: "video-2", title: "Bài giảng chính #1", meta: "18 phút", duration: "18:00", completed: done },
+		{ id: lesson.id + 3, slug: "video-3", title: "Bài giảng chính #2", meta: "22 phút", duration: "22:00", completed: false },
+	];
+}
+
 function buildStats(course: Course): CourseDetail["stats"] {
 	const ratio = course.progress !== null ? course.progress / 100 : 0;
 	const exercisesTotal = 43;
@@ -356,11 +367,13 @@ export const learningService = {
 				idx < lessons.length - 1
 					? { slug: lessons[idx + 1].slug, title: lessons[idx + 1].title }
 					: null,
-			videos: [
-				item(lesson.id + 1, "Giới thiệu buổi học", "6 phút", done),
-				item(lesson.id + 2, "Bài giảng chính #1", "18 phút", done),
-				item(lesson.id + 3, "Bài giảng chính #2", "22 phút"),
-			],
+			videos: buildLessonVideos(lesson).map((v) => ({
+				id: v.id,
+				slug: v.slug,
+				title: v.title,
+				meta: v.meta,
+				completed: v.completed,
+			})),
 			references: [
 				item(lesson.id + 4, "Tài liệu tổng hợp (PDF)", "Đọc thêm", done),
 				item(lesson.id + 5, "Slide bài giảng", "Slide"),
@@ -374,6 +387,71 @@ export const learningService = {
 			quizzes: [
 				item(lesson.id + 10, "Quiz kiểm tra", "10 câu", done),
 				item(lesson.id + 11, "Bài kiểm tra tổng kết", "20 câu"),
+			],
+		};
+
+		return { success: true, message: "OK", data: detail };
+	},
+
+	getVideo: async (
+		courseSlug: string,
+		lessonSlug: string,
+		videoSlug: string,
+	): Promise<ApiResponse<VideoDetail>> => {
+		await delay();
+		const course = MOCK_COURSES.find((c) => c.slug === courseSlug);
+		if (!course) {
+			throw new Error("Không tìm thấy khóa học.");
+		}
+		const lessons = buildLessons(course);
+		const lessonIdx = lessons.findIndex((l) => l.slug === lessonSlug);
+		if (lessonIdx === -1) {
+			throw new Error("Không tìm thấy buổi học.");
+		}
+		const lesson = lessons[lessonIdx];
+		const videos = buildLessonVideos(lesson);
+		const vIdx = videos.findIndex((v) => v.slug === videoSlug);
+		if (vIdx === -1) {
+			throw new Error("Không tìm thấy video.");
+		}
+		const current = videos[vIdx];
+		const isLastVideo = vIdx === videos.length - 1;
+
+		const detail: VideoDetail = {
+			id: current.id,
+			slug: current.slug,
+			title: current.title,
+			// Video mẫu (YouTube embed) — thay bằng URL thật khi có backend
+			url: "https://www.youtube.com/embed/rfscVS0vtbw",
+			duration: current.duration,
+			xp: 30,
+			completed: current.completed,
+			course: { slug: course.slug, title: course.title },
+			lesson: { slug: lesson.slug, title: lesson.title, order: lesson.order },
+			playlist: videos.map((v) => ({
+				id: v.id,
+				slug: v.slug,
+				title: v.title,
+				duration: v.duration,
+				completed: v.completed,
+				current: v.slug === videoSlug,
+			})),
+			next_video: !isLastVideo
+				? { slug: videos[vIdx + 1].slug, title: videos[vIdx + 1].title }
+				: null,
+			next_lesson:
+				isLastVideo && lessonIdx < lessons.length - 1
+					? { slug: lessons[lessonIdx + 1].slug, title: lessons[lessonIdx + 1].title }
+					: null,
+			chapters: [
+				{ time: "00:00", seconds: 0, label: "Mở đầu" },
+				{ time: "03:20", seconds: 200, label: "Khái niệm chính" },
+				{ time: "09:45", seconds: 585, label: "Ví dụ thực hành" },
+				{ time: "15:10", seconds: 910, label: "Tổng kết" },
+			],
+			attachments: [
+				{ id: 1, title: "Slide bài giảng (PDF)", kind: "pdf" },
+				{ id: 2, title: "Code mẫu (ZIP)", kind: "zip" },
 			],
 		};
 
