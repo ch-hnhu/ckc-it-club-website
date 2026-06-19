@@ -28,23 +28,38 @@ class LearningCenterSeeder extends Seeder
             return;
         }
 
-        $tagIds   = $this->seedCourseTags($adminId);
-        $courseId = $this->seedCourse($adminId, $tagIds);
+        $tagMap   = $this->seedCourseTags($adminId);
+        $courseId = $this->seedCourse($adminId, $this->pickTags($tagMap, ['HTML & CSS', 'JavaScript', 'Web Development']));
 
         $this->seedLessons($courseId, $adminId, $multipleChoiceId);
+
+        $this->seedDemoCourses($adminId, $tagMap, $multipleChoiceId);
     }
 
     // ── Tags ────────────────────────────────────────────────────────────────
 
+    /**
+     * Seed bộ category khoá học, trả về map name => id để các khoá chọn tag theo tên.
+     *
+     * @return array<string,int>
+     */
     private function seedCourseTags(int $adminId): array
     {
         $tags = [
-            ['name' => 'HTML & CSS',       'description' => 'Ngôn ngữ đánh dấu và định dạng trang web.'],
-            ['name' => 'JavaScript',        'description' => 'Ngôn ngữ lập trình phía client.'],
-            ['name' => 'Web Development',   'description' => 'Phát triển ứng dụng web.'],
+            ['name' => 'HTML & CSS',     'description' => 'Ngôn ngữ đánh dấu và định dạng trang web.'],
+            ['name' => 'JavaScript',     'description' => 'Ngôn ngữ lập trình phía client.'],
+            ['name' => 'Web Development', 'description' => 'Phát triển ứng dụng web.'],
+            ['name' => 'Frontend',       'description' => 'Lập trình giao diện người dùng.'],
+            ['name' => 'Backend',        'description' => 'Lập trình phía máy chủ và API.'],
+            ['name' => 'Python',         'description' => 'Ngôn ngữ lập trình Python.'],
+            ['name' => 'React',          'description' => 'Thư viện xây dựng giao diện React.'],
+            ['name' => 'TypeScript',     'description' => 'JavaScript có kiểu tĩnh.'],
+            ['name' => 'UI/UX',          'description' => 'Thiết kế trải nghiệm và giao diện.'],
+            ['name' => 'Công cụ',        'description' => 'Công cụ lập trình: Git, terminal...'],
+            ['name' => 'Kỹ năng mềm',    'description' => 'Kỹ năng nghề nghiệp và làm việc nhóm.'],
         ];
 
-        $ids = [];
+        $map = [];
         foreach ($tags as $tag) {
             $slug = Str::slug($tag['name']);
             DB::table('tags')->updateOrInsert(
@@ -60,13 +75,25 @@ class LearningCenterSeeder extends Seeder
                     'updated_at'  => now(),
                 ]
             );
-            $ids[] = DB::table('tags')
+            $map[$tag['name']] = DB::table('tags')
                 ->where('model_type', TagModelType::COURSE->value)
                 ->where('slug', $slug)
                 ->value('id');
         }
 
-        return $ids;
+        return $map;
+    }
+
+    /**
+     * Lấy id của các tag theo tên từ map.
+     *
+     * @param  array<string,int>  $tagMap
+     * @param  string[]  $names
+     * @return int[]
+     */
+    private function pickTags(array $tagMap, array $names): array
+    {
+        return array_values(array_filter(array_map(fn (string $n) => $tagMap[$n] ?? null, $names)));
     }
 
     // ── Course ───────────────────────────────────────────────────────────────
@@ -167,6 +194,255 @@ class LearningCenterSeeder extends Seeder
                     ]);
                 }
             }
+        }
+    }
+
+    // ── Khoá demo (nhẹ) ───────────────────────────────────────────────────────
+
+    /**
+     * Seed thêm các khoá demo phủ đủ trạng thái vòng đời (đang nhận đăng ký,
+     * đã đóng đăng ký + có bài, sắp mở, đã kết thúc) và nhiều category để test bộ lọc.
+     *
+     * @param  array<string,int>  $tagMap
+     */
+    private function seedDemoCourses(int $adminId, array $tagMap, int $typeId): void
+    {
+        $now = now();
+        $userIds = DB::table('users')->orderBy('id')->pluck('id')->all();
+
+        $courses = [
+            [
+                'slug'        => 'python-nhap-mon',
+                'title'       => 'Python Nhập Môn',
+                'description' => 'Làm quen ngôn ngữ Python qua các ví dụ thực tế: biến, điều kiện, vòng lặp và hàm. Khoá nền tảng cho người mới bắt đầu lập trình.',
+                'thumbnail'   => 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=1200&q=70',
+                'level'       => CourseLevel::BEGINNER->value,
+                'tags'        => ['Python', 'Kỹ năng mềm'],
+                // Đang nhận đăng ký → nút "Đăng ký"
+                'enrollment_start'    => $now->copy()->subDays(5),
+                'enrollment_deadline' => $now->copy()->addDays(10),
+                'course_end'          => $now->copy()->addDays(45),
+                'max_offline_slots'   => 30,
+                'lessons'     => ['Cài đặt & Biến', 'Câu lệnh điều kiện', 'Vòng lặp', 'Hàm & Module'],
+                'enroll'      => 12,
+            ],
+            [
+                'slug'        => 'react-cho-nguoi-moi',
+                'title'       => 'React cho Người Mới',
+                'description' => 'Xây dựng ứng dụng web tương tác với React: component, props, state và hooks. Thực hành qua một dự án nhỏ xuyên suốt khoá học.',
+                'thumbnail'   => 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=1200&q=70',
+                'level'       => CourseLevel::INTERMEDIATE->value,
+                'tags'        => ['React', 'Frontend', 'JavaScript'],
+                // Đã đóng đăng ký + đang diễn ra → nút "Bắt đầu học"
+                'enrollment_start'    => $now->copy()->subDays(30),
+                'enrollment_deadline' => $now->copy()->subDays(10),
+                'course_end'          => $now->copy()->addDays(20),
+                'max_offline_slots'   => 25,
+                'lessons'     => ['JSX & Component', 'Props & State', 'Hooks cơ bản', 'Gọi API & Render danh sách'],
+                'enroll'      => 18,
+            ],
+            [
+                'slug'        => 'java-huong-doi-tuong',
+                'title'       => 'Lập trình Hướng Đối Tượng với Java',
+                'description' => 'Tư duy lập trình hướng đối tượng: lớp, đối tượng, kế thừa, đa hình và đóng gói thông qua ngôn ngữ Java.',
+                'thumbnail'   => 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=70',
+                'level'       => CourseLevel::INTERMEDIATE->value,
+                'tags'        => ['Backend'],
+                // Sắp mở đăng ký, chưa có bài học → nút "Quan tâm"
+                'enrollment_start'    => $now->copy()->addDays(7),
+                'enrollment_deadline' => $now->copy()->addDays(21),
+                'course_end'          => null,
+                'max_offline_slots'   => 40,
+                'lessons'     => [], // chưa có bài học
+                'enroll'      => 3,
+            ],
+            [
+                'slug'        => 'ui-ux-design-can-ban',
+                'title'       => 'UI/UX Design Căn Bản',
+                'description' => 'Nguyên tắc thiết kế giao diện và trải nghiệm người dùng: layout, màu sắc, typography và cách dựng prototype bằng Figma.',
+                'thumbnail'   => 'https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1200&q=70',
+                'level'       => CourseLevel::BEGINNER->value,
+                'tags'        => ['UI/UX'],
+                // Đã kết thúc → kho tự học
+                'enrollment_start'    => $now->copy()->subDays(60),
+                'enrollment_deadline' => $now->copy()->subDays(40),
+                'course_end'          => $now->copy()->subDays(5),
+                'max_offline_slots'   => null,
+                'lessons'     => ['Nguyên tắc thị giác', 'Màu sắc & Typography', 'Dựng prototype với Figma'],
+                'enroll'      => 9,
+            ],
+            [
+                'slug'        => 'git-github-teamwork',
+                'title'       => 'Git & GitHub cho Teamwork',
+                'description' => 'Quản lý mã nguồn chuyên nghiệp: commit, branch, merge, pull request và quy trình cộng tác nhóm trên GitHub.',
+                'thumbnail'   => 'https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=1200&q=70',
+                'level'       => CourseLevel::BEGINNER->value,
+                'tags'        => ['Công cụ'],
+                // Đang nhận đăng ký → nút "Đăng ký"
+                'enrollment_start'    => $now->copy()->subDays(2),
+                'enrollment_deadline' => $now->copy()->addDays(14),
+                'course_end'          => $now->copy()->addDays(40),
+                'max_offline_slots'   => 35,
+                'lessons'     => ['Git cơ bản', 'Branch & Merge', 'Pull Request & Cộng tác'],
+                'enroll'      => 15,
+            ],
+            [
+                'slug'        => 'typescript-thuc-chien',
+                'title'       => 'TypeScript Thực Chiến',
+                'description' => 'Viết JavaScript an toàn hơn với TypeScript: kiểu dữ liệu, interface, generic và tích hợp vào dự án React thực tế.',
+                'thumbnail'   => 'https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?auto=format&fit=crop&w=1200&q=70',
+                'level'       => CourseLevel::ADVANCED->value,
+                'tags'        => ['TypeScript', 'Frontend'],
+                // Đã đóng đăng ký + đang diễn ra → nút "Bắt đầu học"
+                'enrollment_start'    => $now->copy()->subDays(25),
+                'enrollment_deadline' => $now->copy()->subDays(8),
+                'course_end'          => $now->copy()->addDays(25),
+                'max_offline_slots'   => 20,
+                'lessons'     => ['Kiểu dữ liệu & Interface', 'Generic', 'TypeScript với React', 'Cấu hình dự án'],
+                'enroll'      => 7,
+            ],
+        ];
+
+        foreach ($courses as $c) {
+            if (DB::table('courses')->where('slug', $c['slug'])->exists()) {
+                continue;
+            }
+
+            $courseId = DB::table('courses')->insertGetId([
+                'title'               => $c['title'],
+                'slug'                => $c['slug'],
+                'description'         => $c['description'],
+                'thumbnail'           => $c['thumbnail'],
+                'level'               => $c['level'],
+                'status'              => CourseStatus::PUBLISHED->value,
+                'enrollment_start'    => $c['enrollment_start'],
+                'enrollment_deadline' => $c['enrollment_deadline'],
+                'course_end'          => $c['course_end'],
+                'max_offline_slots'   => $c['max_offline_slots'],
+                'created_by'          => $adminId,
+                'updated_by'          => $adminId,
+                'created_at'          => now(),
+                'updated_at'          => now(),
+            ]);
+
+            foreach ($this->pickTags($tagMap, $c['tags']) as $tagId) {
+                DB::table('course_tags')->insertOrIgnore([
+                    'course_id' => $courseId,
+                    'tag_id'    => $tagId,
+                ]);
+            }
+
+            foreach ($c['lessons'] as $i => $topic) {
+                // Thời lượng video xen kẽ 30–50 phút cho thực tế
+                $duration = (30 + ($i % 3) * 10) * 60;
+                $this->createSimpleLesson($courseId, $i + 1, $topic, $duration, $adminId, $typeId);
+            }
+
+            $this->seedEnrollments($courseId, $userIds, $c['enroll']);
+        }
+    }
+
+    /**
+     * Tạo một buổi học gọn (video + tài nguyên + bài tập + quiz 2 câu) cho khoá demo.
+     */
+    private function createSimpleLesson(int $courseId, int $order, string $topic, int $duration, int $adminId, int $typeId): void
+    {
+        $slug = Str::slug("buoi-{$order}-{$topic}");
+
+        if (DB::table('lessons')->where('course_id', $courseId)->where('slug', $slug)->exists()) {
+            return;
+        }
+
+        $lessonId = DB::table('lessons')->insertGetId([
+            'course_id'           => $courseId,
+            'title'               => "Buổi {$order}: {$topic}",
+            'slug'                => $slug,
+            'description'         => "Nội dung buổi học: {$topic}.",
+            'order'               => $order,
+            'status'              => CourseStatus::PUBLISHED->value,
+            'resource_url'        => 'https://developer.mozilla.org/vi/docs/Learn',
+            'resource_label'      => "Tài liệu tham khảo — {$topic}",
+            'video_url'           => 'https://www.youtube.com/embed/rfscVS0vtbw',
+            'video_duration'      => $duration,
+            'document'            => "## {$topic}\n\nNội dung lý thuyết của buổi học sẽ được cập nhật tại đây. Bao gồm khái niệm chính, ví dụ minh hoạ và bài thực hành.",
+            'assignment_url'      => 'https://forms.gle/placeholder-' . $slug,
+            'assignment_deadline' => now()->addDays($order * 7),
+            'created_by'          => $adminId,
+            'updated_by'          => $adminId,
+            'created_at'          => now(),
+            'updated_at'          => now(),
+        ]);
+
+        $quizId = DB::table('quizzes')->insertGetId([
+            'lesson_id'  => $lessonId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $questions = [
+            [
+                'content' => "Đâu là phát biểu đúng về \"{$topic}\"?",
+                'options' => [
+                    ['content' => 'Phát biểu đúng về chủ đề này', 'is_correct' => true],
+                    ['content' => 'Phát biểu sai thứ nhất',       'is_correct' => false],
+                    ['content' => 'Phát biểu sai thứ hai',        'is_correct' => false],
+                    ['content' => 'Phát biểu sai thứ ba',         'is_correct' => false],
+                ],
+            ],
+            [
+                'content' => "Mục tiêu chính khi học \"{$topic}\" là gì?",
+                'options' => [
+                    ['content' => 'Nắm vững và vận dụng được kiến thức', 'is_correct' => true],
+                    ['content' => 'Chỉ học thuộc lòng',                  'is_correct' => false],
+                    ['content' => 'Bỏ qua phần thực hành',               'is_correct' => false],
+                ],
+            ],
+        ];
+
+        foreach ($questions as $qOrder => $q) {
+            $questionId = DB::table('quiz_questions')->insertGetId([
+                'quiz_id'          => $quizId,
+                'question_type_id' => $typeId,
+                'content'          => $q['content'],
+                'image'            => null,
+                'order'            => $qOrder + 1,
+                'metadata'         => null,
+                'created_at'       => now(),
+                'updated_at'       => now(),
+            ]);
+
+            foreach ($q['options'] as $optOrder => $opt) {
+                DB::table('quiz_question_options')->insert([
+                    'question_id' => $questionId,
+                    'content'     => $opt['content'],
+                    'image'       => null,
+                    'is_correct'  => $opt['is_correct'],
+                    'order'       => $optOrder + 1,
+                    'metadata'    => null,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Ghi danh $count user đầu tiên vào khoá để enrolled_count khác 0 (demo).
+     *
+     * @param  int[]  $userIds
+     */
+    private function seedEnrollments(int $courseId, array $userIds, int $count): void
+    {
+        foreach (array_slice($userIds, 0, $count) as $i => $userId) {
+            DB::table('course_enrollments')->insertOrIgnore([
+                'user_id'    => $userId,
+                'course_id'  => $courseId,
+                // Xen kẽ offline/online cho đa dạng
+                'track'      => $i % 3 === 0 ? 'offline' : 'online',
+                'progress'   => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
     }
 
