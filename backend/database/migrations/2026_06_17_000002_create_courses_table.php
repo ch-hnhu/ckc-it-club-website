@@ -16,6 +16,12 @@ return new class extends Migration
             $table->string('thumbnail')->nullable();
             $table->enum('level', ['beginner', 'intermediate', 'advanced'])->default('beginner');
             $table->enum('status', ['draft', 'published'])->default('draft');
+            $table->timestamp('enrollment_start')->nullable();
+            $table->timestamp('enrollment_deadline')->nullable();
+            $table->timestamp('course_end')->nullable();
+            $table->unsignedSmallInteger('max_offline_slots')->nullable();
+            $table->unsignedTinyInteger('max_absent_allowed')->default(1);
+            $table->unsignedTinyInteger('quiz_pass_threshold')->default(80);
             $table->foreignId('created_by')->constrained('users');
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete();
@@ -23,6 +29,8 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index('status');
+            $table->index('enrollment_deadline');
+            $table->index('course_end');
             $table->index(['created_by', 'status']);
         });
     }

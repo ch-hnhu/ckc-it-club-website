@@ -20,9 +20,11 @@ return new class extends Migration
             $table->text('thumbnail')->nullable();
             $table->dateTime('start_at');
             $table->dateTime('end_at');
+            $table->timestamp('registration_start_at')->nullable();
+            $table->timestamp('registration_end_at')->nullable();
             $table->string('location')->nullable();
             $table->unsignedInteger('max_attendees')->nullable();
-            $table->boolean('is_registration_required')->default(true);
+            $table->boolean('is_members_only')->default(false);
             $table->enum('status', ['draft', 'published', 'ongoing', 'ended', 'cancelled'])->default('draft');
             $table->timestamps();
             $table->softDeletes();

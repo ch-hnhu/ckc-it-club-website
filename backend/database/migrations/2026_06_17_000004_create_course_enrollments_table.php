@@ -12,11 +12,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
-            $table->unsignedTinyInteger('progress')->default(0); // 0–100, cached
+            $table->enum('track', ['offline', 'online'])->default('online');
+            $table->unsignedTinyInteger('progress')->default(0);
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
 
             $table->unique(['user_id', 'course_id']);
+            $table->index(['course_id', 'track']);
             $table->index(['course_id', 'progress']);
         });
     }

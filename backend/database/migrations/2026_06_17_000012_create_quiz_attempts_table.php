@@ -13,9 +13,11 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('quiz_id')->constrained()->cascadeOnDelete();
             $table->decimal('score', 5, 2)->default(0); // % câu đúng (0–100)
-            $table->boolean('is_passed')->default(false); // score >= 80
+            $table->boolean('is_passed')->default(false); // true nếu score >= course.quiz_pass_threshold
             $table->timestamp('started_at');
             $table->timestamp('finished_at')->nullable();
+            // true nếu user làm quiz sau khi đã completed course; không tính vào cert / progress
+            $table->boolean('is_review')->default(false);
             $table->timestamps();
 
             $table->index(['user_id', 'quiz_id']);
