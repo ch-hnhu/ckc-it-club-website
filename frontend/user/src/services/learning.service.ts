@@ -2,7 +2,7 @@ import type { PaginatedResponse, ApiResponse } from "@/types/api.types";
 import type {
 	Course,
 	CourseCategory,
-	CourseContentItem,
+	CourseTrack,
 	CourseDetail,
 	CourseLesson,
 	CourseListParams,
@@ -294,13 +294,19 @@ function buildLessonVideos(lesson: CourseLesson) {
 
 function buildStats(course: Course): CourseDetail["stats"] {
 	const ratio = course.progress !== null ? course.progress / 100 : 0;
+	const attendanceTotal = LESSON_BLUEPRINT.length;
 	const exercisesTotal = 43;
+	const quizzesTotal = LESSON_BLUEPRINT.length;
 	const xpTotal = 685;
 	return {
+		attendance_done: Math.round(attendanceTotal * ratio),
+		attendance_total: attendanceTotal,
 		exercises_done: Math.round(exercisesTotal * ratio),
 		exercises_total: exercisesTotal,
 		projects_done: ratio >= 0.5 ? 1 : 0,
 		projects_total: 2,
+		quizzes_done: Math.round(quizzesTotal * ratio),
+		quizzes_total: quizzesTotal,
 		xp_earned: Math.round(xpTotal * ratio),
 		xp_total: xpTotal,
 		badges_earned: Math.floor(LESSON_BLUEPRINT.length * ratio),
@@ -341,6 +347,8 @@ export const learningService = {
 		if (!course) {
 			throw new Error("Không tìm thấy khóa học.");
 		}
+		const enrollmentTrack: CourseTrack =
+			course.slug === "laravel-xay-dung-api" ? "offline" : "online";
 
 		const detail: CourseDetail = {
 			...course,
@@ -348,6 +356,7 @@ export const learningService = {
 				`${course.excerpt ?? ""} Khóa học được thiết kế cho thành viên CLB với lộ trình rõ ràng: ` +
 				"xem video bài giảng, đọc tài liệu tham khảo, luyện bài tập thực hành và kiểm tra kiến thức qua quiz. " +
 				"Hoàn thành đầy đủ nội dung để nhận điểm và mở chứng chỉ nội bộ.",
+			enrollment_track: enrollmentTrack,
 			lessons: buildLessons(course),
 			stats: buildStats(course),
 		};

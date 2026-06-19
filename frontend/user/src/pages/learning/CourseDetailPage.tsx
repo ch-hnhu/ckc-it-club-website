@@ -3,12 +3,13 @@ import {
 	ArrowLeft,
 	Award,
 	BarChart3,
+	CalendarCheck,
 	Check,
 	ChevronRight,
 	Clock,
 	Dumbbell,
-	FolderGit2,
 	GraduationCap,
+	ListChecks,
 	Lock,
 	MessagesSquare,
 	Sparkles,
@@ -22,6 +23,7 @@ import type {
 	CourseLesson,
 	CourseLevel,
 	CourseProgressStats,
+	CourseTrack,
 } from "@/types/learning.types";
 
 const LEVEL_LABEL: Record<CourseLevel, string> = {
@@ -81,11 +83,13 @@ const LessonRow: React.FC<{ courseSlug: string; lesson: CourseLesson }> = ({
 const MiniProgress: React.FC<{
 	icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 	label: string;
-	done: number;
-	total: number;
+	done?: number | null;
+	total?: number | null;
 	accent: string;
 }> = ({ icon: Icon, label, done, total, accent }) => {
-	const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+	const safeDone = done ?? 0;
+	const safeTotal = total ?? 0;
+	const pct = safeTotal > 0 ? Math.min(100, Math.round((safeDone / safeTotal) * 100)) : 0;
 	return (
 		<div className='flex items-center gap-3'>
 			<span
@@ -96,7 +100,7 @@ const MiniProgress: React.FC<{
 				<div className='flex items-center justify-between'>
 					<span className='font-heading text-sm font-extrabold text-black'>{label}</span>
 					<span className='font-heading text-xs font-bold text-gray-500'>
-						{done} / {total}
+						{safeDone} / {safeTotal}
 					</span>
 				</div>
 				<div className='mt-1.5 h-2 w-full overflow-hidden rounded-full border-2 border-black bg-white'>
@@ -122,99 +126,124 @@ const SidebarCard: React.FC<{ children: React.ReactNode; className?: string }> =
 	</div>
 );
 
-const Sidebar: React.FC<{ stats: CourseProgressStats; user: AuthUser | null }> = ({
-	stats,
-	user,
-}) => (
-	<div className='space-y-5'>
-		{/* Hồ sơ học viên */}
-		<SidebarCard className='flex items-center gap-3'>
-			<span className='flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-black bg-[var(--color-pastel-green)]'>
-				{user?.picture ? (
-					<img src={user.picture} alt='' className='h-full w-full object-cover' />
-				) : (
-					<GraduationCap className='h-6 w-6 text-black' strokeWidth={2.5} />
+const Sidebar: React.FC<{
+	canClaimCertificate: boolean;
+	stats: CourseProgressStats;
+	track: CourseTrack | null;
+	user: AuthUser | null;
+}> = ({ canClaimCertificate, stats, track, user }) => {
+	const trackLabel = track === "offline" ? "Loại khoá học: Offline" : "Loại khoá học: Online";
+	const progressItems =
+		track === "offline"
+			? [
+					{
+						icon: CalendarCheck,
+						label: "Điểm danh",
+						done: stats.attendance_done,
+						total: stats.attendance_total,
+						accent: "bg-[var(--color-pastel-green)]",
+					},
+					{
+						icon: Dumbbell,
+						label: "Bài thực hành",
+						done: stats.exercises_done,
+						total: stats.exercises_total,
+						accent: "bg-[var(--color-pastel-blue)]",
+					},
+					{
+						icon: ListChecks,
+						label: "Quiz",
+						done: stats.quizzes_done,
+						total: stats.quizzes_total,
+						accent: "bg-[var(--color-pastel-pink)]",
+					},
+					{
+						icon: Sparkles,
+						label: "Điểm XP",
+						done: stats.xp_earned,
+						total: stats.xp_total,
+						accent: "bg-[var(--color-pastel-yellow)]",
+					},
+				]
+			: [
+					{
+						icon: ListChecks,
+						label: "Quiz",
+						done: stats.quizzes_done,
+						total: stats.quizzes_total,
+						accent: "bg-[var(--color-pastel-pink)]",
+					},
+					{
+						icon: Sparkles,
+						label: "Điểm XP",
+						done: stats.xp_earned,
+						total: stats.xp_total,
+						accent: "bg-[var(--color-pastel-yellow)]",
+					},
+				];
+
+	return (
+		<div className='space-y-5'>
+			{/* Hồ sơ học viên */}
+			<SidebarCard>
+				<div className='flex items-center gap-3'>
+					<span className='flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-black bg-[var(--color-pastel-green)]'>
+						{user?.picture ? (
+							<img src={user.picture} alt='' className='h-full w-full object-cover' />
+						) : (
+							<GraduationCap className='h-6 w-6 text-black' strokeWidth={2.5} />
+						)}
+					</span>
+					<div className='min-w-0'>
+						<p className='truncate font-heading text-base font-extrabold text-black'>
+							{user?.name ?? user?.username ?? "Học viên CLB"}
+						</p>
+						<p className='text-xs font-medium text-gray-500'>{trackLabel}</p>
+					</div>
+				</div>
+				{canClaimCertificate && (
+					<button
+						type='button'
+						className='mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-3 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						<Award className='h-4 w-4' strokeWidth={2.5} />
+						Nhận chứng chỉ
+					</button>
 				)}
-			</span>
-			<div className='min-w-0'>
-				<p className='truncate font-heading text-base font-extrabold text-black'>
-					{user?.name ?? user?.username ?? "Học viên CLB"}
-				</p>
-				<p className='text-xs font-medium text-gray-500'>Thành viên</p>
-			</div>
-		</SidebarCard>
+			</SidebarCard>
 
-		{/* Tiến độ khóa học */}
-		<SidebarCard>
-			<h3 className='mb-4 font-heading text-lg font-extrabold text-black'>Tiến độ khóa học</h3>
-			<div className='space-y-4'>
-				<MiniProgress
-					icon={Dumbbell}
-					label='Bài tập'
-					done={stats.exercises_done}
-					total={stats.exercises_total}
-					accent='bg-[var(--color-pastel-blue)]'
-				/>
-				<MiniProgress
-					icon={FolderGit2}
-					label='Dự án'
-					done={stats.projects_done}
-					total={stats.projects_total}
-					accent='bg-[var(--color-pastel-pink)]'
-				/>
-				<MiniProgress
-					icon={Sparkles}
-					label='Điểm XP'
-					done={stats.xp_earned}
-					total={stats.xp_total}
-					accent='bg-[var(--color-pastel-yellow)]'
-				/>
-			</div>
-		</SidebarCard>
+			{/* Tiến độ khóa học */}
+			<SidebarCard>
+				<h3 className='mb-4 font-heading text-lg font-extrabold text-black'>
+					Tiến độ khóa học
+				</h3>
+				<div className='space-y-4'>
+					{progressItems.map((item) => (
+						<MiniProgress
+							key={item.label}
+							icon={item.icon}
+							label={item.label}
+							done={item.done}
+							total={item.total}
+							accent={item.accent}
+						/>
+					))}
+				</div>
+			</SidebarCard>
 
-		{/* Huy hiệu */}
-		<SidebarCard>
-			<div className='mb-3 flex items-center justify-between'>
-				<h3 className='font-heading text-lg font-extrabold text-black'>Huy hiệu</h3>
-				<span className='font-heading text-xs font-bold text-gray-500'>
-					{stats.badges_earned} / {stats.badges_total}
-				</span>
-			</div>
-			<p className='mb-4 text-xs text-gray-500'>
-				Hoàn thành mỗi buổi học để nhận một huy hiệu — sưu tầm tất cả nhé!
-			</p>
-			<div className='grid grid-cols-4 gap-2'>
-				{Array.from({ length: stats.badges_total }).map((_, i) => {
-					const earned = i < stats.badges_earned;
-					return (
-						<span
-							key={i}
-							className={`flex aspect-square items-center justify-center rounded-lg border-2 border-black ${
-								earned ? "bg-[var(--color-pastel-amber)]" : "bg-gray-100"
-							}`}>
-							<Award
-								className={`h-5 w-5 ${earned ? "text-black" : "text-gray-300"}`}
-								strokeWidth={2.5}
-							/>
-						</span>
-					);
-				})}
-			</div>
-		</SidebarCard>
-
-		{/* CTA cộng đồng */}
-		<SidebarCard className='bg-[var(--color-pastel-purple)]'>
-			<h3 className='font-heading text-lg font-extrabold text-black'>Cần trợ giúp?</h3>
-			<p className='mt-1 text-sm text-gray-600'>Đặt câu hỏi trong cộng đồng CLB.</p>
-			<Link
-				to='/cong-dong'
-				className='mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-				<MessagesSquare className='h-4 w-4' strokeWidth={2.5} />
-				Đến cộng đồng
-			</Link>
-		</SidebarCard>
-	</div>
-);
+			{/* CTA cộng đồng */}
+			<SidebarCard className='bg-[var(--color-pastel-purple)]'>
+				<h3 className='font-heading text-lg font-extrabold text-black'>Cần trợ giúp?</h3>
+				<p className='mt-1 text-sm text-gray-600'>Đặt câu hỏi trong cộng đồng CLB.</p>
+				<Link
+					to='/cong-dong'
+					className='mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+					<MessagesSquare className='h-4 w-4' strokeWidth={2.5} />
+					Đến cộng đồng
+				</Link>
+			</SidebarCard>
+		</div>
+	);
+};
 
 // ─── Skeleton ───────────────────────────────────────────────────────────────────
 
@@ -272,6 +301,7 @@ const CourseDetailPage: React.FC = () => {
 
 	// Buổi học để tiếp tục (buổi chưa hoàn thành đầu tiên)
 	const resumeLesson = course?.lessons.find((l) => !l.completed) ?? course?.lessons[0];
+	const canClaimCertificate = (course?.progress ?? 0) >= 100;
 
 	return (
 		<div className='w-full min-h-screen pb-16 pt-20'>
@@ -288,8 +318,12 @@ const CourseDetailPage: React.FC = () => {
 					<DetailSkeleton />
 				) : error || !course ? (
 					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center shadow-[4px_4px_0_#111]'>
-						<p className='font-heading text-xl font-extrabold text-black'>Có lỗi xảy ra</p>
-						<p className='mt-2 text-sm text-gray-600'>{error ?? "Không tải được khóa học."}</p>
+						<p className='font-heading text-xl font-extrabold text-black'>
+							Có lỗi xảy ra
+						</p>
+						<p className='mt-2 text-sm text-gray-600'>
+							{error ?? "Không tải được khóa học."}
+						</p>
 						<Link
 							to='/khoa-hoc'
 							className='mt-5 inline-flex items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
@@ -375,7 +409,12 @@ const CourseDetailPage: React.FC = () => {
 
 							{/* Sidebar — canh đỉnh thẻ đầu tiên ngang với danh sách buổi (bù chiều cao tiêu đề) */}
 							<aside className='lg:sticky lg:top-24 lg:self-start lg:pt-[calc(2rem+1rem)]'>
-								<Sidebar stats={course.stats} user={user} />
+								<Sidebar
+									canClaimCertificate={canClaimCertificate}
+									stats={course.stats}
+									track={course.enrollment_track}
+									user={user}
+								/>
 							</aside>
 						</div>
 					</div>

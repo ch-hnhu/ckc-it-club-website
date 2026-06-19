@@ -1,4 +1,5 @@
 export type CourseLevel = "beginner" | "intermediate" | "advanced";
+export type CourseTrack = "offline" | "online";
 
 export interface CourseInstructor {
 	id: number;
@@ -67,10 +68,14 @@ export interface CourseLesson {
 
 /** Thống kê tiến độ hiển thị ở sidebar trang tổng quan khóa học */
 export interface CourseProgressStats {
+	attendance_done: number;
+	attendance_total: number;
 	exercises_done: number;
 	exercises_total: number;
 	projects_done: number;
 	projects_total: number;
+	quizzes_done: number;
+	quizzes_total: number;
 	xp_earned: number;
 	xp_total: number;
 	badges_earned: number;
@@ -80,6 +85,8 @@ export interface CourseProgressStats {
 /** Trang tổng quan khóa học: thông tin chung + danh sách buổi học + tiến độ */
 export interface CourseDetail extends Course {
 	description: string;
+	/** Track học của user hiện tại trong khóa này */
+	enrollment_track: CourseTrack | null;
 	lessons: CourseLesson[];
 	stats: CourseProgressStats;
 }
