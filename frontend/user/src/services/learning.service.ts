@@ -228,7 +228,11 @@ const LESSON_BLUEPRINT: { title: string; summary: string; clubOnly?: boolean }[]
 	{ title: "Cấu trúc & Logic", summary: "Điều kiện, rẽ nhánh và cách tư duy.", clubOnly: true },
 	{ title: "Thực hành nâng cao", summary: "Vòng lặp và xử lý dữ liệu.", clubOnly: true },
 	{ title: "Dự án Checkpoint", summary: "Vận dụng kiến thức vào một dự án nhỏ.", clubOnly: true },
-	{ title: "Tổng kết & Dự án cuối", summary: "Hoàn thiện và nhận chứng chỉ nội bộ.", clubOnly: true },
+	{
+		title: "Tổng kết & Dự án cuối",
+		summary: "Hoàn thiện và nhận chứng chỉ nội bộ.",
+		clubOnly: true,
+	},
 ];
 
 /** Sinh danh sách buổi học cho một khóa học dựa trên tiến độ hiện tại. */
@@ -261,9 +265,30 @@ function buildLessons(course: Course): CourseLesson[] {
 function buildLessonVideos(lesson: CourseLesson) {
 	const done = Boolean(lesson.completed);
 	return [
-		{ id: lesson.id + 1, slug: "video-1", title: "Giới thiệu buổi học", meta: "6 phút", duration: "6:00", completed: done },
-		{ id: lesson.id + 2, slug: "video-2", title: "Bài giảng chính #1", meta: "18 phút", duration: "18:00", completed: done },
-		{ id: lesson.id + 3, slug: "video-3", title: "Bài giảng chính #2", meta: "22 phút", duration: "22:00", completed: false },
+		{
+			id: lesson.id + 1,
+			slug: "video-1",
+			title: "Giới thiệu buổi học",
+			meta: "6 phút",
+			duration: "6:00",
+			completed: done,
+		},
+		{
+			id: lesson.id + 2,
+			slug: "video-2",
+			title: "Bài giảng chính #1",
+			meta: "18 phút",
+			duration: "18:00",
+			completed: done,
+		},
+		{
+			id: lesson.id + 3,
+			slug: "video-3",
+			title: "Bài giảng chính #2",
+			meta: "22 phút",
+			duration: "22:00",
+			completed: false,
+		},
 	];
 }
 
@@ -346,14 +371,8 @@ export const learningService = {
 		}
 		const lesson = lessons[idx];
 
-		const item = (
-			id: number,
-			title: string,
-			meta: string,
-			completed = false,
-		): CourseContentItem => ({ id, title, meta, completed });
-
 		const done = Boolean(lesson.completed);
+		const firstVideo = buildLessonVideos(lesson)[0];
 		const detail: LessonDetail = {
 			id: lesson.id,
 			slug: lesson.slug,
@@ -367,27 +386,34 @@ export const learningService = {
 				idx < lessons.length - 1
 					? { slug: lessons[idx + 1].slug, title: lessons[idx + 1].title }
 					: null,
-			videos: buildLessonVideos(lesson).map((v) => ({
-				id: v.id,
-				slug: v.slug,
-				title: v.title,
-				meta: v.meta,
-				completed: v.completed,
-			})),
-			references: [
-				item(lesson.id + 4, "Tài liệu tổng hợp (PDF)", "Đọc thêm", done),
-				item(lesson.id + 5, "Slide bài giảng", "Slide"),
-				item(lesson.id + 6, "Bài viết chuyên sâu", "Liên kết"),
-			],
-			exercises: [
-				item(lesson.id + 7, "Bài tập thực hành #1", "Nộp bài", done),
-				item(lesson.id + 8, "Bài tập thực hành #2", "Nộp bài"),
-				item(lesson.id + 9, "Dự án nhỏ cuối buổi", "Dự án"),
-			],
-			quizzes: [
-				item(lesson.id + 10, "Quiz kiểm tra", "10 câu", done),
-				item(lesson.id + 11, "Bài kiểm tra tổng kết", "20 câu"),
-			],
+			video: {
+				id: firstVideo.id,
+				slug: firstVideo.slug,
+				title: firstVideo.title,
+				meta: firstVideo.meta,
+				completed: firstVideo.completed,
+			},
+			reference: {
+				id: lesson.id + 4,
+				title: "Tài nguyên của buổi " + lesson.order,
+				meta: "Google Drive",
+				url: "",
+				completed: done,
+			},
+			exercise: {
+				id: lesson.id + 5,
+				title: "Bài tập thực hành buổi " + lesson.order,
+				meta: "Google Forms",
+				url: "https://forms.google.com",
+				completed: false,
+			},
+			quiz: {
+				id: lesson.id + 6,
+				slug: "quiz-1",
+				title: "Quiz kiểm tra buổi " + lesson.order,
+				meta: "10 câu hỏi",
+				completed: done,
+			},
 		};
 
 		return { success: true, message: "OK", data: detail };

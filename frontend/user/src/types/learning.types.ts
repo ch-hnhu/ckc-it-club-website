@@ -43,6 +43,8 @@ export interface CourseContentItem {
 	/** Thông tin phụ: thời lượng, số câu... vd "12 phút", "10 câu" */
 	meta?: string;
 	completed?: boolean;
+	/** URL ngoài (Google Drive, Google Forms...) */
+	url?: string;
 }
 
 /** Một buổi học (chương) trong khóa học */
@@ -82,7 +84,7 @@ export interface CourseDetail extends Course {
 	stats: CourseProgressStats;
 }
 
-/** Chi tiết một buổi học: hub nội dung (video, tham khảo, bài tập, quiz) */
+/** Chi tiết một buổi học: mỗi phần chỉ có đúng 1 nội dung */
 export interface LessonDetail {
 	id: number;
 	slug: string;
@@ -98,10 +100,14 @@ export interface LessonDetail {
 	};
 	prev: { slug: string; title: string } | null;
 	next: { slug: string; title: string } | null;
-	videos: CourseContentItem[];
-	references: CourseContentItem[];
-	exercises: CourseContentItem[];
-	quizzes: CourseContentItem[];
+	/** 1 video bài giảng */
+	video: CourseContentItem | null;
+	/** 1 link tài nguyên (Google Drive) */
+	reference: CourseContentItem | null;
+	/** 1 link nộp bài (Google Forms) */
+	exercise: CourseContentItem | null;
+	/** 1 quiz kiểm tra */
+	quiz: CourseContentItem | null;
 }
 
 /** Một chương (mốc thời gian) bên trong video */
