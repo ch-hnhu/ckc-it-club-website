@@ -64,6 +64,14 @@ export interface CourseLesson {
 	completed?: boolean;
 	/** Tổng số mục nội dung trong buổi (video + bài tập + quiz...) */
 	items_count?: number;
+	/** Thời gian bắt đầu buổi học offline */
+	session_start?: string | null;
+	/** Thời gian kết thúc buổi học offline — dùng để tính QR còn hợp lệ không */
+	session_end?: string | null;
+	/** Vé QR của user cho buổi này (chỉ có với track offline, null = chưa đăng ký tham gia) */
+	qr_ticket?: { token: string; used_at: string | null } | null;
+	/** Đã được điểm danh (qr hoặc admin thủ công) */
+	is_attended?: boolean;
 }
 
 /** Thống kê tiến độ hiển thị ở sidebar trang tổng quan khóa học */
@@ -87,6 +95,14 @@ export interface CourseDetail extends Course {
 	description: string;
 	/** Track học của user hiện tại trong khóa này */
 	enrollment_track: CourseTrack | null;
+	/** Ngày mở đăng ký học offline */
+	enrollment_start: string | null;
+	/** Hạn cuối đăng ký học offline — sau mốc này chỉ còn học online */
+	enrollment_deadline: string | null;
+	/** Khoá học kết thúc hoàn toàn — sau mốc này content thành kho tự học */
+	course_end: string | null;
+	/** User đang quan tâm khoá học này (chưa đăng ký, chưa có lesson) */
+	is_interested: boolean;
 	lessons: CourseLesson[];
 	stats: CourseProgressStats;
 }
@@ -98,6 +114,8 @@ export interface LessonDetail {
 	order: number;
 	title: string;
 	summary?: string | null;
+	/** Thời gian bắt đầu buổi học (offline) — dùng để kiểm tra chưa diễn ra */
+	session_start?: string | null;
 	/** Tiến độ riêng của buổi học (0-100), null nếu chưa bắt đầu */
 	progress: number | null;
 	course: {

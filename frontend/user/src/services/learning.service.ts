@@ -47,7 +47,7 @@ const MOCK_COURSES: Course[] = [
 		enrolled_count: 132,
 		categories: [MOCK_CATEGORIES[0]],
 		is_featured: true,
-		progress: 35,
+		progress: null,
 		created_at: "2026-06-01T08:00:00Z",
 		updated_at: "2026-06-10T08:00:00Z",
 	},
@@ -220,8 +220,17 @@ function paginate(items: Course[], page: number, perPage: number): PaginatedResp
 const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ─── Buổi học (lessons) ──────────────────────────────────────────────────────────
-// Bản thiết kế các buổi học dùng chung cho mọi khóa học mẫu. Buổi đầu mở tự do,
-// các buổi sau gắn nhãn "CLB" (chỉ dành cho thành viên).
+
+// Session dates cho khoá laravel: buổi 1-3 đã qua, buổi 4 sắp tới (không lock nhưng panel "chưa diễn ra"), 5-6 locked
+const LARAVEL_SESSIONS = [
+	"2026-06-01T08:00:00Z",
+	"2026-06-08T08:00:00Z",
+	"2026-06-15T08:00:00Z",
+	"2026-06-22T08:00:00Z", // buổi gần nhất chưa tới — mở để click, nhưng hiện panel "chưa diễn ra"
+	"2026-06-29T08:00:00Z", // locked (frontend)
+	"2026-07-06T08:00:00Z", // locked (frontend)
+];
+
 const LESSON_BLUEPRINT: { title: string; summary: string; clubOnly?: boolean }[] = [
 	{ title: "Giới thiệu & Cài đặt", summary: "Làm quen khóa học và chuẩn bị môi trường." },
 	{ title: "Kiến thức nền tảng", summary: "Các khái niệm cơ bản đầu tiên." },
@@ -235,9 +244,8 @@ const LESSON_BLUEPRINT: { title: string; summary: string; clubOnly?: boolean }[]
 	},
 ];
 
-/** Sinh danh sách buổi học cho một khóa học dựa trên tiến độ hiện tại. */
-function buildLessons(course: Course): CourseLesson[] {
-	// Số buổi đã hoàn thành suy ra từ tiến độ (%) của khóa học
+/** Sinh danh sách buổi học; sessionStarts truyền vào để gán session_start/end cho từng buổi. */
+function buildLessons(course: Course, sessionStarts?: string[]): CourseLesson[] {
 	const doneCount =
 		course.progress !== null
 			? Math.round((course.progress / 100) * LESSON_BLUEPRINT.length)
@@ -246,6 +254,7 @@ function buildLessons(course: Course): CourseLesson[] {
 	return LESSON_BLUEPRINT.map((bp, idx) => {
 		const order = idx + 1;
 		const completed = idx < doneCount;
+		const start = sessionStarts?.[idx] ?? null;
 		return {
 			id: course.id * 100 + order,
 			slug: `buoi-${order}`,
@@ -253,10 +262,14 @@ function buildLessons(course: Course): CourseLesson[] {
 			title: bp.title,
 			summary: bp.summary,
 			club_only: bp.clubOnly,
-			// Khóa lại buổi tiếp theo ngay sau buổi đã hoàn thành cuối cùng nếu là CLB
 			is_locked: false,
 			completed,
 			items_count: 10,
+			session_start: start,
+			// session_end = session_start + 3 giờ
+			session_end: start
+				? new Date(new Date(start).getTime() + 3 * 60 * 60 * 1000).toISOString()
+				: null,
 		};
 	});
 }
@@ -314,6 +327,71 @@ function buildStats(course: Course): CourseDetail["stats"] {
 	};
 }
 
+// ── Cấu hình enrollment cho từng khoá — demo 4 trạng thái nút CTA ───────────────
+//
+//  nhap-mon-lap-trinh-web         → upcoming        → nút "Quan tâm"
+//  javascript-tu-co-ban-den-nang-cao → enrollment_open → nút "Đăng ký"
+//  react-cho-nguoi-moi            → closed + có lesson → nút "Bắt đầu học"
+//  git-va-github-cho-team         → closed + chưa có lesson → nút "Quan tâm"
+//  laravel-xay-dung-api           → enrolled offline + lesson locking theo session_start
+
+type CourseConfig = {
+	enrollment_track: CourseTrack | null;
+	enrollment_start: string | null;
+	enrollment_deadline: string | null;
+	course_end: string | null;
+	is_interested: boolean;
+	emptyLessons?: boolean;
+};
+
+const COURSE_CONFIGS: Record<string, CourseConfig> = {
+	"nhap-mon-lap-trinh-web": {
+		enrollment_track: null,
+		enrollment_start: "2026-07-01T00:00:00Z",
+		enrollment_deadline: "2026-07-15T00:00:00Z",
+		course_end: null,
+		is_interested: true,
+		emptyLessons: true,
+	},
+	"javascript-tu-co-ban-den-nang-cao": {
+		enrollment_track: null,
+		enrollment_start: "2026-06-10T00:00:00Z",
+		enrollment_deadline: "2026-06-28T00:00:00Z",
+		course_end: null,
+		is_interested: false,
+	},
+	"react-cho-nguoi-moi": {
+		enrollment_track: null,
+		enrollment_start: "2026-05-15T00:00:00Z",
+		enrollment_deadline: "2026-06-01T00:00:00Z",
+		course_end: null,
+		is_interested: false,
+	},
+	"git-va-github-cho-team": {
+		enrollment_track: null,
+		enrollment_start: "2026-05-05T00:00:00Z",
+		enrollment_deadline: "2026-05-20T00:00:00Z",
+		course_end: null,
+		is_interested: false,
+		emptyLessons: true, // đóng đăng ký nhưng chưa có bài học
+	},
+	"laravel-xay-dung-api": {
+		enrollment_track: "offline",
+		enrollment_start: "2026-05-01T00:00:00Z",
+		enrollment_deadline: "2026-06-01T00:00:00Z",
+		course_end: null,
+		is_interested: false,
+	},
+};
+
+const DEFAULT_CONFIG: CourseConfig = {
+	enrollment_track: null,
+	enrollment_start: null,
+	enrollment_deadline: null,
+	course_end: null,
+	is_interested: false,
+};
+
 export const learningService = {
 	getCourses: async (params?: CourseListParams): Promise<PaginatedResponse<Course>> => {
 		await delay();
@@ -347,8 +425,10 @@ export const learningService = {
 		if (!course) {
 			throw new Error("Không tìm thấy khóa học.");
 		}
-		const enrollmentTrack: CourseTrack =
-			course.slug === "laravel-xay-dung-api" ? "offline" : "online";
+
+		const config = COURSE_CONFIGS[slug] ?? DEFAULT_CONFIG;
+		const sessions = slug === "laravel-xay-dung-api" ? LARAVEL_SESSIONS : undefined;
+		const lessons = config.emptyLessons ? [] : buildLessons(course, sessions);
 
 		const detail: CourseDetail = {
 			...course,
@@ -356,8 +436,12 @@ export const learningService = {
 				`${course.excerpt ?? ""} Khóa học được thiết kế cho thành viên CLB với lộ trình rõ ràng: ` +
 				"xem video bài giảng, đọc tài liệu tham khảo, luyện bài tập thực hành và kiểm tra kiến thức qua quiz. " +
 				"Hoàn thành đầy đủ nội dung để nhận điểm và mở chứng chỉ nội bộ.",
-			enrollment_track: enrollmentTrack,
-			lessons: buildLessons(course),
+			enrollment_track: config.enrollment_track,
+			enrollment_start: config.enrollment_start,
+			enrollment_deadline: config.enrollment_deadline,
+			course_end: config.course_end,
+			is_interested: config.is_interested,
+			lessons,
 			stats: buildStats(course),
 		};
 
@@ -373,7 +457,8 @@ export const learningService = {
 		if (!course) {
 			throw new Error("Không tìm thấy khóa học.");
 		}
-		const lessons = buildLessons(course);
+		const sessions = courseSlug === "laravel-xay-dung-api" ? LARAVEL_SESSIONS : undefined;
+		const lessons = buildLessons(course, sessions);
 		const idx = lessons.findIndex((l) => l.slug === lessonSlug);
 		if (idx === -1) {
 			throw new Error("Không tìm thấy buổi học.");
@@ -388,6 +473,7 @@ export const learningService = {
 			order: lesson.order,
 			title: lesson.title,
 			summary: lesson.summary,
+			session_start: lesson.session_start ?? null,
 			progress: done ? 100 : lesson.order === idx + 1 && idx === 0 ? 30 : null,
 			course: { slug: course.slug, title: course.title, level: course.level },
 			prev: idx > 0 ? { slug: lessons[idx - 1].slug, title: lessons[idx - 1].title } : null,
@@ -438,7 +524,8 @@ export const learningService = {
 		if (!course) {
 			throw new Error("Không tìm thấy khóa học.");
 		}
-		const lessons = buildLessons(course);
+		const sessions = courseSlug === "laravel-xay-dung-api" ? LARAVEL_SESSIONS : undefined;
+		const lessons = buildLessons(course, sessions);
 		const lessonIdx = lessons.findIndex((l) => l.slug === lessonSlug);
 		if (lessonIdx === -1) {
 			throw new Error("Không tìm thấy buổi học.");

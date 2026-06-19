@@ -33,7 +33,7 @@ const LevelPill: React.FC<{ level: CourseLevel }> = ({ level }) => (
 
 // Card light theme giống blog card: nền trắng, viền đen, shadow cứng, hover dịch nhẹ
 const CARD_BASE =
-	"group relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111] transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none";
+	"group relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-black bg-white";
 
 export const CourseCard: React.FC<CourseCardProps> = ({ course, featured = false, linkTo }) => {
 	const detailUrl = linkTo ?? `/khoa-hoc/${course.slug}`;

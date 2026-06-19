@@ -5,6 +5,7 @@ import {
 	BookMarked,
 	ChevronLeft,
 	ChevronRight,
+	Clock,
 	Code2,
 	ExternalLink,
 	GraduationCap,
@@ -281,82 +282,105 @@ const LessonDetailPage: React.FC = () => {
 							)}
 						</div>
 
-						{/* Hub nội dung */}
-						<div>
-							<h2 className='mb-6 text-center font-heading text-3xl font-extrabold leading-tight text-black md:text-4xl'>
-								Nội dung buổi học
-							</h2>
-
-							{/* Center node — trên mobile hiện phía trên */}
-							<div className='mb-8 flex justify-center md:hidden'>
-								<CenterNode progress={lesson.progress} order={lesson.order} />
+						{/* Panel buổi học chưa diễn ra */}
+						{lesson.session_start && new Date(lesson.session_start) > new Date() ? (
+							<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center'>
+								<span className='inline-flex h-14 w-14 items-center justify-center rounded-full bg-gray-300'>
+									<Clock className='h-7 w-7 text-white' strokeWidth={3} />
+								</span>
+								<p className='mt-4 font-heading text-base font-extrabold text-black'>
+									Buổi học chưa diễn ra
+								</p>
+								<p className='mt-1 text-sm text-gray-500'>
+									Vui lòng quay lại sau vào ngày{" "}
+									{new Date(lesson.session_start).toLocaleDateString("vi-VN", {
+										weekday: "long",
+										day: "2-digit",
+										month: "2-digit",
+										year: "numeric",
+									})}
+								</p>
 							</div>
+						) : (
+							<>
+								{/* Hub nội dung */}
+								<div>
+									<h2 className='mb-6 text-center font-heading text-3xl font-extrabold leading-tight text-black md:text-4xl'>
+										Nội dung buổi học
+									</h2>
 
-							<div className='relative'>
-								<div className='grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-x-72 md:gap-y-12'>
-									{ACTIONS.map((action) => (
-										<ActionCard
-											key={action.key}
-											config={action}
-											item={lesson[action.key]}
-											internalTo={
-												action.key === "video" && lesson.video?.slug
-													? `/khoa-hoc/${slug}/${lessonSlug}/${lesson.video.slug}`
-													: action.key === "quiz" && lesson.quiz?.slug
-														? `/khoa-hoc/${slug}/${lessonSlug}/quiz/${lesson.quiz.slug}`
-														: undefined
-											}
-										/>
-									))}
+									{/* Center node — trên mobile hiện phía trên */}
+									<div className='mb-8 flex justify-center md:hidden'>
+										<CenterNode progress={lesson.progress} order={lesson.order} />
+									</div>
+
+									<div className='relative'>
+										<div className='grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-x-72 md:gap-y-12'>
+											{ACTIONS.map((action) => (
+												<ActionCard
+													key={action.key}
+													config={action}
+													item={lesson[action.key]}
+													internalTo={
+														action.key === "video" && lesson.video?.slug
+															? `/khoa-hoc/${slug}/${lessonSlug}/${lesson.video.slug}`
+															: action.key === "quiz" && lesson.quiz?.slug
+																? `/khoa-hoc/${slug}/${lessonSlug}/quiz/${lesson.quiz.slug}`
+																: undefined
+													}
+												/>
+											))}
+										</div>
+
+										{/* Center node — chồng lên giữa trên desktop */}
+										<div className='pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block'>
+											<CenterNode progress={lesson.progress} order={lesson.order} />
+										</div>
+									</div>
 								</div>
 
-								{/* Center node — chồng lên giữa trên desktop */}
-								<div className='pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block'>
-									<CenterNode progress={lesson.progress} order={lesson.order} />
+								{/* Điều hướng buổi trước / sau */}
+								<div className='flex flex-col gap-4 border-t-2 border-dashed border-gray-300 pt-6 sm:flex-row sm:justify-between'>
+									{lesson.prev ? (
+										<Link
+											to={`/khoa-hoc/${slug}/${lesson.prev.slug}`}
+											className='group inline-flex max-w-full items-center gap-3 rounded-xl border-2 border-black bg-white px-4 py-3 shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+											<ChevronLeft className='h-5 w-5 shrink-0' />
+											<span className='min-w-0'>
+												<span className='block text-[11px] font-bold uppercase tracking-wide text-gray-400'>
+													Buổi trước
+												</span>
+												<span className='block truncate font-heading text-sm font-extrabold text-black'>
+													{lesson.prev.title}
+												</span>
+											</span>
+										</Link>
+									) : (
+										<span />
+									)}
+									{lesson.next && (
+										<Link
+											to={`/khoa-hoc/${slug}/${lesson.next.slug}`}
+											className='group inline-flex max-w-full items-center gap-3 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-3 text-right shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:ml-auto'>
+											<span className='min-w-0'>
+												<span className='block text-[11px] font-bold uppercase tracking-wide text-black/60'>
+													Buổi tiếp theo
+												</span>
+												<span className='block truncate font-heading text-sm font-extrabold text-black'>
+													{lesson.next.title}
+												</span>
+											</span>
+											<ChevronRight className='h-5 w-5 shrink-0' />
+										</Link>
+									)}
 								</div>
-							</div>
-						</div>
-
-						{/* Điều hướng buổi trước / sau */}
-						<div className='flex flex-col gap-4 border-t-2 border-dashed border-gray-300 pt-6 sm:flex-row sm:justify-between'>
-							{lesson.prev ? (
-								<Link
-									to={`/khoa-hoc/${slug}/${lesson.prev.slug}`}
-									className='group inline-flex max-w-full items-center gap-3 rounded-xl border-2 border-black bg-white px-4 py-3 shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-									<ChevronLeft className='h-5 w-5 shrink-0' />
-									<span className='min-w-0'>
-										<span className='block text-[11px] font-bold uppercase tracking-wide text-gray-400'>
-											Buổi trước
-										</span>
-										<span className='block truncate font-heading text-sm font-extrabold text-black'>
-											{lesson.prev.title}
-										</span>
-									</span>
-								</Link>
-							) : (
-								<span />
-							)}
-							{lesson.next && (
-								<Link
-									to={`/khoa-hoc/${slug}/${lesson.next.slug}`}
-									className='group inline-flex max-w-full items-center gap-3 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-3 text-right shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:ml-auto'>
-									<span className='min-w-0'>
-										<span className='block text-[11px] font-bold uppercase tracking-wide text-black/60'>
-											Buổi tiếp theo
-										</span>
-										<span className='block truncate font-heading text-sm font-extrabold text-black'>
-											{lesson.next.title}
-										</span>
-									</span>
-									<ChevronRight className='h-5 w-5 shrink-0' />
-								</Link>
-							)}
-						</div>
-					</div>
-				)}
-			</div>
+							</>
+						)}
+				</div>
+			)}
 		</div>
-	);
+	</div>
+);
 };
 
 export default LessonDetailPage;
