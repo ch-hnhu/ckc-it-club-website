@@ -135,51 +135,26 @@ export interface LessonDetail {
 	quiz: CourseContentItem | null;
 }
 
-/** Một chương (mốc thời gian) bên trong video */
-export interface VideoChapter {
-	/** Nhãn hiển thị, vd "03:20" */
-	time: string;
-	/** Số giây để tua tới */
-	seconds: number;
-	label: string;
-}
-
-/** Tài liệu đính kèm theo video */
-export interface VideoAttachment {
-	id: number;
-	title: string;
-	kind: "pdf" | "zip" | "link";
-}
-
-/** Một mục trong playlist video của buổi học */
-export interface VideoPlaylistItem {
-	id: number;
-	slug: string;
-	title: string;
-	duration: string;
-	completed: boolean;
-	current: boolean;
-}
-
-/** Trang xem video bài giảng */
+/** Trang xem video bài giảng: tài liệu (markdown) bên trái + video 2 tab bên phải */
 export interface VideoDetail {
 	id: number;
 	slug: string;
 	title: string;
-	/** URL nhúng (YouTube embed) hoặc file mp4 */
-	url: string;
+	/** Tài liệu markdown của buổi học (cột trái) */
+	document: string | null;
+	/** Video bài giảng chính thức (mentor quay lại) — tab ưu tiên */
+	lecture_url: string | null;
+	/** Video bản ghi livestream — chỉ hiện tab khi có */
+	live_url: string | null;
 	duration: string;
 	xp: number;
 	completed: boolean;
 	course: { slug: string; title: string };
 	lesson: { slug: string; title: string; order: number };
-	playlist: VideoPlaylistItem[];
-	/** Video kế tiếp trong cùng buổi, null nếu là video cuối */
-	next_video: { slug: string; title: string } | null;
-	/** Buổi kế tiếp — chỉ có khi đang ở video cuối của buổi */
+	/** Buổi trước (điều hướng) */
+	prev_lesson: { slug: string; title: string } | null;
+	/** Buổi kế tiếp (điều hướng) */
 	next_lesson: { slug: string; title: string } | null;
-	chapters: VideoChapter[];
-	attachments: VideoAttachment[];
 }
 
 export interface CourseListParams {

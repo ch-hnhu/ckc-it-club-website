@@ -210,32 +210,25 @@ class CourseController extends BaseApiController
 
         $userId = auth('sanctum')->id();
         $completed = ($this->sectionCompletionMap($lesson, $userId)['video'] ?? false);
+        $prev = $idx > 0 ? $lessons[$idx - 1] : null;
         $next = $idx < $lessons->count() - 1 ? $lessons[$idx + 1] : null;
-
-        $item = [
-            'id' => $lesson->id,
-            'slug' => 'video',
-            'title' => 'Bài giảng: ' . $lesson->title,
-            'duration' => $this->formatDurationClock($lesson->video_duration),
-            'completed' => $completed,
-            'current' => true,
-        ];
 
         $data = [
             'id' => $lesson->id,
             'slug' => 'video',
             'title' => 'Bài giảng: ' . $lesson->title,
-            'url' => $videoUrl,
+            // Tài liệu markdown hiển thị ở cột trái
+            'document' => $lesson->document,
+            // 2 nguồn video: bản chính thức (ưu tiên) và bản ghi livestream (fallback / tab phụ)
+            'lecture_url' => $lesson->video_url,
+            'live_url' => $lesson->live_url,
             'duration' => $this->formatDurationClock($lesson->video_duration),
             'xp' => 0, // TODO(G2): tích hợp gamification
             'completed' => $completed,
             'course' => ['slug' => $course->slug, 'title' => $course->title],
             'lesson' => ['slug' => $lesson->slug, 'title' => $lesson->title, 'order' => $lesson->order],
-            'playlist' => [$item],
-            'next_video' => null,
+            'prev_lesson' => $prev ? ['slug' => $prev->slug, 'title' => $prev->title] : null,
             'next_lesson' => $next ? ['slug' => $next->slug, 'title' => $next->title] : null,
-            'chapters' => [],
-            'attachments' => [],
         ];
 
         return $this->successResponse(true, $data, 'Lấy thông tin video thành công.');

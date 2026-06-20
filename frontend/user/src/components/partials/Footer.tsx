@@ -1,6 +1,6 @@
 import React from "react";
 import { Facebook, Github, Youtube, Instagram, Mail, MapPin, Code2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const FOOTER_NAV_LINKS = {
 	"Khám phá": [
@@ -33,11 +33,16 @@ const SOCIALS = [
 ];
 
 const Footer: React.FC = () => {
+	const { pathname } = useLocation();
+	const isLectureVideoPage = /^\/khoa-hoc\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname);
+	const footerContainerClass = isLectureVideoPage ? "mx-0 max-w-none" : "";
+	const footerPaddingX = isLectureVideoPage ? "px-4 md:px-6 lg:px-8" : "px-6";
+
 	return (
 		<footer className='bg-black text-white border-t-2 border-black'>
-			<div className='neo-container'>
+			<div className={`neo-container ${footerContainerClass}`}>
 				{/* Main footer content */}
-				<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 py-16 px-6'>
+				<div className={`grid grid-cols-1 gap-10 py-16 md:grid-cols-2 lg:grid-cols-4 ${footerPaddingX}`}>
 					{/* Brand column */}
 					<div className='space-y-5'>
 						{/* Logo */}
@@ -143,7 +148,7 @@ const Footer: React.FC = () => {
 				</div>
 
 				{/* Bottom bar */}
-				<div className='border-t border-white/10 py-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-4'>
+				<div className={`flex flex-col items-center justify-between gap-4 border-t border-white/10 py-6 sm:flex-row ${footerPaddingX}`}>
 					<p className='text-sm text-gray-500'>
 						© {new Date().getFullYear()} CKC IT CLUB — Trường Cao đẳng Kỹ thuật Cao
 						Thắng. All rights reserved.

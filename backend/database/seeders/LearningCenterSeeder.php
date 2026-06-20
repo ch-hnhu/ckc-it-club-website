@@ -364,6 +364,8 @@ class LearningCenterSeeder extends Seeder
             'resource_label'      => "Tài liệu tham khảo — {$topic}",
             'video_url'           => 'https://www.youtube.com/embed/rfscVS0vtbw',
             'video_duration'      => $duration,
+            // Buổi lẻ có thêm bản ghi livestream để demo 2 tab; buổi chẵn chỉ có video bài giảng (ẩn tab)
+            'live_url'            => $order % 2 === 1 ? 'https://www.youtube.com/embed/_uQrJ0TkZlc' : null,
             'document'            => "## {$topic}\n\nNội dung lý thuyết của buổi học sẽ được cập nhật tại đây. Bao gồm khái niệm chính, ví dụ minh hoạ và bài thực hành.",
             'assignment_url'      => 'https://forms.gle/placeholder-' . $slug,
             'assignment_deadline' => now()->addDays($order * 7),
