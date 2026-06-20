@@ -48,6 +48,8 @@ import EventListPage from "@/pages/event/EventListPage";
 import EventCreatePage from "@/pages/event/EventCreatePage";
 import EventEditPage from "@/pages/event/EventEditPage";
 import EventDetailPage from "@/pages/event/EventDetailPage";
+import CourseListPage from "@/pages/learning/CourseListPage";
+import CourseDetailPage from "@/pages/learning/CourseDetailPage";
 import PointRulesPage from "@/pages/gamification/PointRulesPage";
 import RanksPage from "@/pages/gamification/RanksPage";
 import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
@@ -416,6 +418,22 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission="community.reports.view">
 						<BlogReportListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "courses",
+				element: (
+					<PermissionRoute permission='courses.view'>
+						<CourseListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "courses/:slug",
+				element: (
+					<PermissionRoute permission='courses.view'>
+						<CourseDetailPage />
 					</PermissionRoute>
 				),
 			},

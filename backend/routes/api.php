@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
+use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\RankController;
@@ -468,6 +469,12 @@ Route::prefix('v1')->group(function () {
             Route::patch('skills/{skill}', [SkillController::class, 'update']);
             Route::patch('skills/{skill}/toggle-status', [SkillController::class, 'toggleStatus']);
             Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
+        });
+
+        // courses (admin) — Trung tâm đào tạo
+        Route::middleware('permission:courses.view')->group(function () {
+            Route::get('courses', [AdminCourseController::class, 'index']);
+            Route::get('courses/{course}', [AdminCourseController::class, 'show']);
         });
 
         // events (admin)

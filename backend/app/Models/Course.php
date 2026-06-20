@@ -71,6 +71,11 @@ class Course extends Model
         return $this->hasMany(CourseEnrollment::class);
     }
 
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(CourseCertificate::class);
+    }
+
     /**
      * Bản ghi ghi danh của một user trong khoá học (nếu có).
      */
