@@ -1,0 +1,925 @@
+import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import {
+	ArrowLeft,
+	Check,
+	CheckCircle2,
+	ChevronDown,
+	ChevronUp,
+	CircleDot,
+	CircleX,
+	Copy,
+	Eye,
+	FileQuestion,
+	Lightbulb,
+	ImagePlus,
+	ListChecks,
+	ListOrdered,
+	Link2,
+	Plus,
+	Save,
+	Send,
+	TextCursorInput,
+	Trash2,
+	X,
+} from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { cn } from "@/lib/utils";
+
+type QuizQuestionType =
+	| "multiple_choice"
+	| "multiple_select"
+	| "fill_blank"
+	| "true_false"
+	| "matching"
+	| "ordering";
+
+type PersistedQuestionType = Exclude<QuizQuestionType, "true_false">;
+
+type QuestionOptionMetadata = {
+	side?: "left" | "right";
+	pairId?: string;
+	correctPosition?: number;
+};
+
+type QuizOption = {
+	id: string;
+	content: string;
+	isCorrect: boolean;
+	image: string | null;
+	metadata?: QuestionOptionMetadata;
+};
+
+type QuizQuestion = {
+	id: string;
+	type: QuizQuestionType;
+	persistedType: PersistedQuestionType;
+	content: string;
+	explanation: string;
+	image: string | null;
+	options: QuizOption[];
+};
+
+const questionTypeOptions: Array<{
+	type: QuizQuestionType;
+	label: string;
+	description: string;
+}> = [
+	{
+		type: "multiple_choice",
+		label: "Chọn một đáp án",
+		description: "Học viên chọn một phương án đúng.",
+	},
+	{
+		type: "multiple_select",
+		label: "Chọn nhiều đáp án",
+		description: "Có thể có nhiều phương án đúng.",
+	},
+	{
+		type: "true_false",
+		label: "Đúng / Sai",
+		description: "Một nhận định với hai lựa chọn cố định.",
+	},
+	{
+		type: "fill_blank",
+		label: "Điền đáp án ngắn",
+		description: "Học viên nhập câu trả lời ngắn.",
+	},
+	{
+		type: "matching",
+		label: "Ghép đôi",
+		description: "Nối mỗi mục với cặp phù hợp.",
+	},
+	{
+		type: "ordering",
+		label: "Sắp xếp",
+		description: "Đặt các mục theo đúng trình tự.",
+	},
+];
+
+let nextQuestionId = 2;
+let nextOptionId = 4;
+let nextPairId = 1;
+
+function createId(prefix: "question" | "option") {
+	if (prefix === "question") {
+		return `question-${nextQuestionId++}`;
+	}
+
+	return `option-${nextOptionId++}`;
+}
+
+function createOptions(type: QuizQuestionType): QuizOption[] {
+	if (type === "true_false") {
+		return [
+			{ id: createId("option"), content: "Đúng", isCorrect: true, image: null },
+			{ id: createId("option"), content: "Sai", isCorrect: false, image: null },
+		];
+	}
+
+	if (type === "fill_blank") {
+		return [{ id: createId("option"), content: "", isCorrect: true, image: null }];
+	}
+
+	if (type === "matching") return createMatchingPair();
+
+	if (type === "ordering") {
+		return [
+			{ id: createId("option"), content: "", isCorrect: false, image: null, metadata: { correctPosition: 1 } },
+			{ id: createId("option"), content: "", isCorrect: false, image: null, metadata: { correctPosition: 2 } },
+		];
+	}
+
+	return [
+		{ id: createId("option"), content: "", isCorrect: true, image: null },
+		{ id: createId("option"), content: "", isCorrect: false, image: null },
+	];
+}
+
+function createMatchingPair(): QuizOption[] {
+	const pairId = `pair-${nextPairId++}`;
+	return [
+		{ id: createId("option"), content: "", isCorrect: false, image: null, metadata: { side: "left", pairId } },
+		{ id: createId("option"), content: "", isCorrect: false, image: null, metadata: { side: "right", pairId } },
+	];
+}
+
+function createQuestion(type: QuizQuestionType = "multiple_choice"): QuizQuestion {
+	return {
+		id: createId("question"),
+		type,
+		persistedType: getPersistedQuestionType(type),
+		content: "",
+		explanation: "",
+		image: null,
+		options: createOptions(type),
+	};
+}
+
+const initialQuestions: QuizQuestion[] = [
+	{
+		id: "question-1",
+		type: "multiple_choice",
+		persistedType: "multiple_choice",
+		content: "HTML là viết tắt của cụm từ nào?",
+		explanation:
+			"HTML là ngôn ngữ đánh dấu dùng để mô tả cấu trúc nội dung của một trang web.",
+		image: null,
+		options: [
+			{ id: "option-1", content: "HyperText Markup Language", isCorrect: true, image: null },
+			{ id: "option-2", content: "HighText Machine Language", isCorrect: false, image: null },
+			{ id: "option-3", content: "HyperTransfer Markup Language", isCorrect: false, image: null },
+		],
+	},
+];
+
+function getPersistedQuestionType(type: QuizQuestionType): PersistedQuestionType {
+	// Đúng/Sai là preset UI của multiple_choice, không cần thêm question_type riêng trong DB.
+	return type === "true_false" ? "multiple_choice" : type;
+}
+
+function getQuestionTypeLabel(type: QuizQuestionType) {
+	return questionTypeOptions.find((item) => item.type === type)?.label ?? "Câu hỏi";
+}
+
+function QuestionTypeIcon({ type, className }: { type: QuizQuestionType; className?: string }) {
+	if (type === "multiple_select") return <ListChecks className={className} />;
+	if (type === "true_false") return <CheckCircle2 className={className} />;
+	if (type === "fill_blank") return <TextCursorInput className={className} />;
+	if (type === "matching") return <Link2 className={className} />;
+	if (type === "ordering") return <ListOrdered className={className} />;
+	return <CircleDot className={className} />;
+}
+
+function isChoiceQuestion(type: QuizQuestionType) {
+	return type === "multiple_choice" || type === "multiple_select" || type === "true_false";
+}
+
+function requiredOptions(type: QuizQuestionType) {
+	return type === "fill_blank" ? 1 : 2;
+}
+
+function QuizCreatePage() {
+	const navigate = useNavigate();
+	const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
+
+	useBreadcrumb([
+		{ title: "Dashboard", link: "/" },
+		{ title: "Learning Center" },
+		{ title: "Tạo quiz" },
+	]);
+
+	const [questions, setQuestions] = useState<QuizQuestion[]>(initialQuestions);
+	const [activeQuestionId, setActiveQuestionId] = useState(initialQuestions[0].id);
+	const [newQuestionType, setNewQuestionType] = useState<QuizQuestionType>("multiple_choice");
+	const [previewAnswer, setPreviewAnswer] = useState<string[]>([]);
+	const [previewTextAnswer, setPreviewTextAnswer] = useState("");
+	const [previewChecked, setPreviewChecked] = useState(false);
+	const [imageTarget, setImageTarget] = useState<{ questionId: string; optionId?: string } | null>(null);
+	const imageInputRef = useRef<HTMLInputElement>(null);
+
+	const activeQuestionIndex = questions.findIndex((question) => question.id === activeQuestionId);
+	const activeQuestion = questions[activeQuestionIndex] ?? questions[0];
+	const courseReference = courseId ? `Khóa học #${courseId}` : "Khóa học chưa xác định";
+	const lessonReference = lessonId ? `Lesson #${lessonId}` : "Lesson chưa xác định";
+
+	const previewIsCorrect = useMemo(() => {
+		if (!activeQuestion) return false;
+
+		if (activeQuestion.type === "fill_blank") {
+			const normalizedAnswer = previewTextAnswer.trim().toLocaleLowerCase();
+			return activeQuestion.options.some(
+				(option) => option.content.trim().toLocaleLowerCase() === normalizedAnswer,
+			);
+		}
+
+		const correctOptionIds = activeQuestion.options
+			.filter((option) => option.isCorrect)
+			.map((option) => option.id);
+
+		return (
+			correctOptionIds.length > 0 &&
+			correctOptionIds.length === previewAnswer.length &&
+			correctOptionIds.every((optionId) => previewAnswer.includes(optionId))
+		);
+	}, [activeQuestion, previewAnswer, previewTextAnswer]);
+
+	const hasPreviewAnswer = activeQuestion?.type === "fill_blank"
+		? Boolean(previewTextAnswer.trim())
+		: previewAnswer.length > 0;
+
+	const resetPreview = () => {
+		setPreviewAnswer([]);
+		setPreviewTextAnswer("");
+		setPreviewChecked(false);
+	};
+
+	const selectQuestion = (questionId: string) => {
+		setActiveQuestionId(questionId);
+		resetPreview();
+	};
+
+	const updateQuestion = (questionId: string, changes: Partial<QuizQuestion>) => {
+		setQuestions((current) =>
+			current.map((question) =>
+				question.id === questionId ? { ...question, ...changes } : question,
+			),
+		);
+	};
+
+	const changeQuestionType = (type: QuizQuestionType) => {
+		if (!activeQuestion) return;
+		updateQuestion(activeQuestion.id, { type, persistedType: getPersistedQuestionType(type), options: createOptions(type) });
+		resetPreview();
+	};
+
+	const updateOption = (optionId: string, content: string) => {
+		if (!activeQuestion) return;
+		updateQuestion(activeQuestion.id, {
+			options: activeQuestion.options.map((option) =>
+				option.id === optionId ? { ...option, content } : option,
+			),
+		});
+	};
+
+	const openImagePicker = (questionId: string, optionId?: string) => {
+		setImageTarget({ questionId, optionId });
+		if (imageInputRef.current) {
+			imageInputRef.current.value = "";
+			imageInputRef.current.click();
+		}
+	};
+
+	const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		if (!file || !imageTarget) return;
+		const image = URL.createObjectURL(file);
+		if (imageTarget.optionId) {
+			const question = questions.find((item) => item.id === imageTarget.questionId);
+			if (!question) return;
+			updateQuestion(question.id, {
+				options: question.options.map((option) =>
+					option.id === imageTarget.optionId ? { ...option, image } : option,
+				),
+			});
+		} else {
+			updateQuestion(imageTarget.questionId, { image });
+		}
+		setImageTarget(null);
+	};
+
+	const removeImage = (questionId: string, optionId?: string) => {
+		const question = questions.find((item) => item.id === questionId);
+		if (!question) return;
+		if (optionId) {
+			updateQuestion(question.id, {
+				options: question.options.map((option) =>
+					option.id === optionId ? { ...option, image: null } : option,
+				),
+			});
+			return;
+		}
+		updateQuestion(question.id, { image: null });
+	};
+
+	const removeMatchingPair = (pairId: string) => {
+		if (!activeQuestion) return;
+		const pairs = new Set(activeQuestion.options.map((option) => option.metadata?.pairId));
+		if (pairs.size <= 1) return;
+		updateQuestion(activeQuestion.id, {
+			options: activeQuestion.options.filter((option) => option.metadata?.pairId !== pairId),
+		});
+	};
+
+	const moveOption = (optionId: string, direction: -1 | 1) => {
+		if (!activeQuestion) return;
+		const optionIndex = activeQuestion.options.findIndex((option) => option.id === optionId);
+		const nextIndex = optionIndex + direction;
+		if (optionIndex < 0 || nextIndex < 0 || nextIndex >= activeQuestion.options.length) return;
+		const reordered = [...activeQuestion.options];
+		const [moved] = reordered.splice(optionIndex, 1);
+		reordered.splice(nextIndex, 0, moved);
+		updateQuestion(activeQuestion.id, {
+			options: reordered.map((option, index) => ({
+				...option,
+				metadata: { ...option.metadata, correctPosition: index + 1 },
+			})),
+		});
+	};
+
+	const toggleCorrectOption = (optionId: string, checked: boolean) => {
+		if (!activeQuestion) return;
+		const isMultipleChoice = activeQuestion.type === "multiple_select";
+		updateQuestion(activeQuestion.id, {
+			options: activeQuestion.options.map((option) => ({
+				...option,
+				isCorrect: isMultipleChoice ? (option.id === optionId ? checked : option.isCorrect) : option.id === optionId,
+			})),
+		});
+	};
+
+	const addOption = () => {
+		if (!activeQuestion) return;
+		updateQuestion(activeQuestion.id, {
+			options: activeQuestion.type === "matching"
+				? [...activeQuestion.options, ...createMatchingPair()]
+				: [...activeQuestion.options, {
+					id: createId("option"),
+					content: "",
+					isCorrect: false,
+					image: null,
+					metadata: activeQuestion.type === "ordering" ? { correctPosition: activeQuestion.options.length + 1 } : undefined,
+				}],
+		});
+	};
+
+	const removeOption = (optionId: string) => {
+		if (!activeQuestion || activeQuestion.options.length <= requiredOptions(activeQuestion.type)) return;
+		updateQuestion(activeQuestion.id, {
+			options: activeQuestion.options
+				.filter((option) => option.id !== optionId)
+				.map((option, index) => activeQuestion.type === "ordering"
+					? { ...option, metadata: { ...option.metadata, correctPosition: index + 1 } }
+					: option),
+		});
+	};
+
+	const addQuestion = (type: QuizQuestionType) => {
+		const question = createQuestion(type);
+		setQuestions((current) => [...current, question]);
+		selectQuestion(question.id);
+	};
+
+	const deleteActiveQuestion = () => {
+		if (!activeQuestion || questions.length === 1) return;
+		const nextIndex = Math.max(0, activeQuestionIndex - 1);
+		const nextQuestion = questions.filter((question) => question.id !== activeQuestion.id)[nextIndex];
+		setQuestions((current) => current.filter((question) => question.id !== activeQuestion.id));
+		selectQuestion(nextQuestion.id);
+	};
+
+	const moveQuestion = (direction: -1 | 1) => {
+		if (activeQuestionIndex < 0) return;
+		const nextIndex = activeQuestionIndex + direction;
+		if (nextIndex < 0 || nextIndex >= questions.length) return;
+
+		setQuestions((current) => {
+			const reordered = [...current];
+			const [movedQuestion] = reordered.splice(activeQuestionIndex, 1);
+			reordered.splice(nextIndex, 0, movedQuestion);
+			return reordered;
+		});
+	};
+
+	const selectPreviewOption = (optionId: string) => {
+		if (!activeQuestion) return;
+		setPreviewChecked(false);
+		if (activeQuestion.type === "multiple_select") {
+			setPreviewAnswer((current) =>
+				current.includes(optionId)
+					? current.filter((selectedOptionId) => selectedOptionId !== optionId)
+					: [...current, optionId],
+			);
+			return;
+		}
+
+		setPreviewAnswer([optionId]);
+	};
+
+	const handlePreviewTextAnswer = (event: ChangeEvent<HTMLInputElement>) => {
+		setPreviewChecked(false);
+		setPreviewTextAnswer(event.target.value);
+	};
+
+	const saveDraft = () => {
+		toast.success("Đã lưu bản nháp trong phiên làm việc.", { position: "top-right" });
+	};
+
+	const publishQuiz = () => {
+		const hasInvalidQuestion = questions.some((question) => {
+			if (!question.content.trim()) return true;
+			if (question.type === "fill_blank") {
+				return !question.options.some((option) => option.content.trim());
+			}
+			if (question.type === "matching" || question.type === "ordering") {
+				return question.options.some((option) => !option.content.trim());
+			}
+
+			return (
+				question.options.some((option) => !option.content.trim()) ||
+				!question.options.some((option) => option.isCorrect)
+			);
+		});
+
+		if (hasInvalidQuestion) {
+			toast.error("Hãy hoàn thiện nội dung và đáp án đúng cho tất cả câu hỏi.", {
+				position: "top-right",
+			});
+			return;
+		}
+
+		toast.success("Quiz đã sẵn sàng để xuất bản khi API tạo quiz được kết nối.", {
+			position: "top-right",
+		});
+	};
+
+	if (!activeQuestion) return null;
+
+	return (
+		<div className='min-h-full bg-muted/30'>
+			<input ref={imageInputRef} type='file' accept='image/*' className='hidden' onChange={handleImageChange} />
+			<div className='mx-auto flex w-full max-w-[1600px] flex-col gap-5 p-4 md:p-6 lg:p-8'>
+				<header className='flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-center xl:justify-between'>
+					<div className='flex min-w-0 items-start gap-3'>
+						<Button
+							type='button'
+							variant='outline'
+							size='icon'
+							aria-label='Quay lại trang trước'
+							onClick={() => navigate(-1)}>
+							<ArrowLeft />
+						</Button>
+						<div className='min-w-0'>
+							<div className='mb-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
+								<span>{courseReference}</span>
+								<span aria-hidden='true'>/</span>
+								<span>{lessonReference}</span>
+							</div>
+							<h1 className='text-2xl font-semibold tracking-tight md:text-3xl'>Tạo quiz cho lesson</h1>
+							<p className='mt-1 text-sm text-muted-foreground'>
+								Thiết kế từng câu hỏi, sau đó xem ngay trải nghiệm của học viên.
+							</p>
+						</div>
+					</div>
+
+					<div className='flex flex-wrap items-center gap-2'>
+						<Button type='button' variant='outline' onClick={saveDraft}>
+							<Save />
+							Lưu bản nháp
+						</Button>
+						<Button type='button' onClick={publishQuiz}>
+							<Send />
+							Xuất bản quiz
+						</Button>
+					</div>
+				</header>
+
+				<div className='space-y-6'>
+					<div className='grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]'>
+					<aside className='relative'>
+						<Card className='absolute inset-0 flex flex-col'>
+							<CardHeader className='shrink-0 gap-3'>
+								<div className='flex items-center justify-between gap-3'>
+									<div>
+										<CardTitle className='text-base'>Câu hỏi</CardTitle>
+										<CardDescription>{questions.length} câu trong quiz</CardDescription>
+									</div>
+									<Badge variant='secondary' className='rounded-full'>{questions.length}</Badge>
+								</div>
+								<div className='flex gap-2'>
+									<Select
+										value={newQuestionType}
+										onValueChange={(value) => setNewQuestionType(value as QuizQuestionType)}>
+										<SelectTrigger className='min-w-0 flex-1'>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{questionTypeOptions.map((item) => (
+												<SelectItem key={item.type} value={item.type}>
+													{item.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<Button type='button' size='icon' aria-label='Thêm câu hỏi' onClick={() => addQuestion(newQuestionType)}>
+										<Plus />
+									</Button>
+								</div>
+							</CardHeader>
+							<CardContent className='min-h-0 flex-1 space-y-2 overflow-y-auto'>
+								{questions.map((question, index) => {
+									const isActive = question.id === activeQuestion.id;
+									return (
+										<button
+											key={question.id}
+											type='button'
+											onClick={() => selectQuestion(question.id)}
+											className={cn(
+												"flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors",
+												isActive ? "border-primary bg-primary/5 shadow-sm" : "hover:bg-muted/60",
+											)}>
+											<span className={cn(
+												"flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+												isActive ? "border-primary bg-primary text-primary-foreground" : "bg-background",
+											)}>
+												{index + 1}
+											</span>
+											<div className='min-w-0 flex-1'>
+												<p className='truncate text-sm font-medium'>
+													{question.content.trim() || "Câu hỏi chưa có nội dung"}
+												</p>
+												<div className='mt-1 flex items-center gap-1.5 text-xs text-muted-foreground'>
+													<QuestionTypeIcon type={question.type} className='size-3.5' />
+													{getQuestionTypeLabel(question.type)}
+												</div>
+											</div>
+										</button>
+									);
+								})}
+							</CardContent>
+						</Card>
+					</aside>
+
+					<section className='min-w-0 space-y-5'>
+						<Card className='overflow-hidden'>
+							<div className='flex flex-col gap-3 border-b bg-muted/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between'>
+								<div className='flex items-center gap-3'>
+									<span className='flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
+										<FileQuestion className='size-4' />
+									</span>
+									<div>
+										<p className='text-sm font-semibold'>Câu {activeQuestionIndex + 1}</p>
+										<p className='text-xs text-muted-foreground'>Tự lưu trong phiên làm việc</p>
+									</div>
+								</div>
+								<div className='flex items-center gap-1'>
+									<Button
+										type='button'
+										variant='ghost'
+										size='icon-sm'
+										aria-label='Di chuyển câu hỏi lên'
+										disabled={activeQuestionIndex === 0}
+										onClick={() => moveQuestion(-1)}>
+										<ChevronUp />
+									</Button>
+									<Button
+										type='button'
+										variant='ghost'
+										size='icon-sm'
+										aria-label='Di chuyển câu hỏi xuống'
+										disabled={activeQuestionIndex === questions.length - 1}
+										onClick={() => moveQuestion(1)}>
+										<ChevronDown />
+									</Button>
+									<Button
+										type='button'
+										variant='ghost'
+										size='icon-sm'
+										aria-label='Xoá câu hỏi'
+										disabled={questions.length === 1}
+										onClick={deleteActiveQuestion}>
+										<Trash2 className='text-destructive' />
+									</Button>
+								</div>
+							</div>
+
+							<CardContent className='space-y-7 pt-6'>
+								<div className='space-y-3'>
+									<Label>Loại câu hỏi</Label>
+									<div className='grid gap-2 sm:grid-cols-2'>
+										{questionTypeOptions.map((item) => {
+											const isSelected = activeQuestion.type === item.type;
+											return (
+												<button
+													key={item.type}
+													type='button'
+													aria-pressed={isSelected}
+													onClick={() => changeQuestionType(item.type)}
+													className={cn(
+														"flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+														isSelected ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/50",
+													)}>
+													<span className={cn(
+														"mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md",
+														isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+													)}>
+														<QuestionTypeIcon type={item.type} className='size-4' />
+													</span>
+													<span>
+														<span className='block text-sm font-medium'>{item.label}</span>
+														<span className='mt-0.5 block text-xs leading-5 text-muted-foreground'>{item.description}</span>
+													</span>
+												</button>
+											);
+										})}
+									</div>
+								</div>
+
+								<div className='space-y-2'>
+									<div className='flex items-center justify-between gap-3'>
+										<Label htmlFor='question-content'>Nội dung câu hỏi</Label>
+										<Button type='button' variant='outline' size='sm' onClick={() => openImagePicker(activeQuestion.id)}>
+											<ImagePlus />
+											{activeQuestion.image ? "Đổi ảnh" : "Thêm ảnh"}
+										</Button>
+									</div>
+									<Textarea
+										id='question-content'
+										value={activeQuestion.content}
+										onChange={(event) => updateQuestion(activeQuestion.id, { content: event.target.value })}
+										placeholder='Ví dụ: Thẻ HTML nào dùng để tạo tiêu đề lớn nhất?'
+										className='min-h-28 resize-y text-base'
+									/>
+									{activeQuestion.image && (
+										<div className='relative overflow-hidden rounded-lg border bg-muted'>
+											<img src={activeQuestion.image} alt='Ảnh minh hoạ câu hỏi' className='max-h-72 w-full object-contain' />
+											<Button type='button' variant='secondary' size='icon-xs' className='absolute right-2 top-2' aria-label='Xoá ảnh câu hỏi' onClick={() => removeImage(activeQuestion.id)}>
+												<X />
+											</Button>
+										</div>
+									)}
+								</div>
+
+								<div className='space-y-3'>
+									<div className='flex flex-wrap items-center justify-between gap-2'>
+										<div>
+											<Label>{activeQuestion.type === "fill_blank" ? "Đáp án chấp nhận" : activeQuestion.type === "matching" ? "Các cặp cần ghép" : activeQuestion.type === "ordering" ? "Thứ tự đúng" : "Các phương án trả lời"}</Label>
+											<p className='mt-1 text-xs text-muted-foreground'>
+												{activeQuestion.type === "multiple_select"
+													? "Đánh dấu tất cả phương án đúng."
+													: activeQuestion.type === "fill_blank"
+														? "Mỗi dòng là một đáp án được chấp nhận."
+														: activeQuestion.type === "matching"
+															? "Mỗi hàng là một cặp đáp án đúng."
+															: activeQuestion.type === "ordering"
+																? "Sắp xếp các mục theo trình tự đúng từ trên xuống."
+														: "Chọn đúng một phương án."}
+											</p>
+										</div>
+									</div>
+
+									<div className='space-y-2'>
+										{activeQuestion.type === "matching" ? (
+											activeQuestion.options.filter((option) => option.metadata?.side === "left").map((leftOption, index) => {
+												const rightOption = activeQuestion.options.find((option) => option.metadata?.pairId === leftOption.metadata?.pairId && option.metadata?.side === "right");
+												return (
+													<div key={leftOption.id} className='grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-center'>
+														<Input value={leftOption.content} onChange={(event) => updateOption(leftOption.id, event.target.value)} placeholder={`Mục trái ${index + 1}`} />
+														<Link2 className='mx-auto size-4 text-muted-foreground' />
+														<Input value={rightOption?.content ?? ""} onChange={(event) => rightOption && updateOption(rightOption.id, event.target.value)} placeholder={`Mục phải ${index + 1}`} />
+														<Button type='button' variant='ghost' size='icon-xs' aria-label={`Xoá cặp ${index + 1}`} onClick={() => leftOption.metadata?.pairId && removeMatchingPair(leftOption.metadata.pairId)}><X /></Button>
+													</div>
+												);
+											})
+										) : activeQuestion.type === "ordering" ? (
+											activeQuestion.options.map((option, index) => (
+												<div key={option.id} className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
+													<span className='flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold'>{index + 1}</span>
+													<Input value={option.content} onChange={(event) => updateOption(option.id, event.target.value)} placeholder={`Mục thứ ${index + 1}`} className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0' />
+													<Button type='button' variant='ghost' size='icon-xs' aria-label='Di chuyển lên' disabled={index === 0} onClick={() => moveOption(option.id, -1)}><ChevronUp /></Button>
+													<Button type='button' variant='ghost' size='icon-xs' aria-label='Di chuyển xuống' disabled={index === activeQuestion.options.length - 1} onClick={() => moveOption(option.id, 1)}><ChevronDown /></Button>
+													<Button type='button' variant='ghost' size='icon-xs' aria-label={`Xoá mục ${index + 1}`} disabled={activeQuestion.options.length <= 2} onClick={() => removeOption(option.id)}><X /></Button>
+												</div>
+											))
+										) : activeQuestion.options.map((option, index) => {
+											const allowRemove = activeQuestion.type !== "true_false" && activeQuestion.options.length > requiredOptions(activeQuestion.type);
+											const isChoice = isChoiceQuestion(activeQuestion.type);
+											return (
+												<div key={option.id} className='flex items-center gap-3 rounded-lg border bg-card p-2.5'>
+													{activeQuestion.type === "multiple_select" ? (
+														<Checkbox
+															id={`correct-${option.id}`}
+															checked={option.isCorrect}
+															onCheckedChange={(checked) => toggleCorrectOption(option.id, checked === true)}
+															aria-label={`Đánh dấu phương án ${index + 1} là đúng`}
+														/>
+													) : isChoice ? (
+														<button
+															type='button'
+															aria-label={`Chọn phương án ${index + 1} là đáp án đúng`}
+															onClick={() => toggleCorrectOption(option.id, true)}
+															className={cn(
+																"flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+																option.isCorrect ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background",
+															)}>
+															{option.isCorrect && <Check className='size-3.5 stroke-[3]' />}
+														</button>
+													) : (
+														<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700'>
+															<Check className='size-3.5 stroke-[3]' />
+														</span>
+													)}
+													<Input
+														value={option.content}
+														onChange={(event) => updateOption(option.id, event.target.value)}
+														placeholder={activeQuestion.type === "fill_blank" ? "Nhập đáp án đúng" : `Phương án ${index + 1}`}
+														className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+													/>
+													<Button type='button' variant='ghost' size='icon-xs' aria-label={`Thêm ảnh cho phương án ${index + 1}`} onClick={() => openImagePicker(activeQuestion.id, option.id)}><ImagePlus /></Button>
+													{allowRemove && (
+														<Button
+															type='button'
+															variant='ghost'
+															size='icon-xs'
+															aria-label={`Xoá phương án ${index + 1}`}
+															onClick={() => removeOption(option.id)}>
+															<X className='text-muted-foreground' />
+														</Button>
+													)}
+												</div>
+											);
+										})}
+									</div>
+
+									{activeQuestion.type !== "true_false" && (
+										<Button type='button' variant='outline' size='sm' onClick={addOption}>
+											<Plus />
+											{activeQuestion.type === "fill_blank" ? "Thêm đáp án chấp nhận" : activeQuestion.type === "matching" ? "Thêm cặp" : activeQuestion.type === "ordering" ? "Thêm mục" : "Thêm phương án"}
+										</Button>
+									)}
+								</div>
+
+								<div className='rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20'>
+									<div className='flex gap-3'>
+										<Lightbulb className='mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-300' />
+										<div className='min-w-0 flex-1 space-y-2'>
+											<Label htmlFor='question-explanation' className='text-amber-950 dark:text-amber-100'>
+												Giải thích sau khi trả lời
+											</Label>
+											<Textarea
+												id='question-explanation'
+												value={activeQuestion.explanation}
+												onChange={(event) => updateQuestion(activeQuestion.id, { explanation: event.target.value })}
+												placeholder='Giải thích vì sao đáp án này đúng để học viên hiểu bài hơn.'
+												className='min-h-24 resize-y border-amber-200 bg-background/80 dark:border-amber-900'
+											/>
+										</div>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					</section>
+					</div>
+
+					<aside className='space-y-5'>
+						<Card className='overflow-hidden'>
+							<CardHeader className='border-b bg-muted/30'>
+								<div className='flex items-center justify-between gap-3'>
+									<div>
+										<CardTitle className='flex items-center gap-2 text-base'>
+											<Eye className='size-4' />
+											Xem trước học viên
+										</CardTitle>
+										<CardDescription>Trải nghiệm một câu hỏi mỗi lần.</CardDescription>
+									</div>
+									<Badge variant='secondary' className='rounded-full'>Live</Badge>
+								</div>
+							</CardHeader>
+							<CardContent className='space-y-5 pt-5'>
+								<div>
+									<div className='mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground'>
+										<span>Câu {activeQuestionIndex + 1} / {questions.length}</span>
+										<span>Chấm theo tỷ lệ câu đúng</span>
+									</div>
+									<Progress value={((activeQuestionIndex + 1) / questions.length) * 100} className='h-2.5' />
+								</div>
+
+								<div className='rounded-2xl border-2 border-emerald-500/70 bg-emerald-50/50 p-4 dark:bg-emerald-950/20'>
+									<div className='mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300'>
+										<span className='flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white'>
+											<FileQuestion className='size-3.5' />
+										</span>
+										Quiz của lesson
+									</div>
+									<h2 className='text-lg font-semibold leading-7'>
+										{activeQuestion.content.trim() || "Nội dung câu hỏi sẽ xuất hiện ở đây"}
+									</h2>
+
+									{activeQuestion.image && <img src={activeQuestion.image} alt='' className='mt-4 max-h-44 w-full rounded-xl object-contain' />}
+									{activeQuestion.type === "fill_blank" ? (
+										<Input
+											value={previewTextAnswer}
+											onChange={handlePreviewTextAnswer}
+											placeholder='Nhập câu trả lời của bạn'
+											className='mt-5 bg-background'
+										/>
+									) : (
+										<div className='mt-5 space-y-2.5'>
+											{activeQuestion.options.map((option, index) => {
+												const isSelected = previewAnswer.includes(option.id);
+												const showCorrect = previewChecked && option.isCorrect;
+												const showIncorrect = previewChecked && isSelected && !option.isCorrect;
+												return (
+													<button
+														key={option.id}
+														type='button'
+														onClick={() => selectPreviewOption(option.id)}
+														disabled={previewChecked}
+														className={cn(
+															"flex w-full items-center gap-3 rounded-xl border-2 px-3 py-3 text-left text-sm font-medium transition-colors disabled:cursor-default",
+															showCorrect && "border-emerald-600 bg-emerald-100 text-emerald-950",
+															showIncorrect && "border-rose-500 bg-rose-100 text-rose-950",
+															!showCorrect && !showIncorrect && isSelected && "border-emerald-500 bg-white",
+															!showCorrect && !showIncorrect && !isSelected && "border-emerald-200 bg-white hover:border-emerald-400",
+														)}>
+														<span className={cn(
+															"flex size-6 shrink-0 items-center justify-center border-2 text-xs font-semibold",
+															activeQuestion.type === "multiple_select" ? "rounded-md" : "rounded-full",
+															showCorrect ? "border-emerald-600 bg-emerald-600 text-white" : showIncorrect ? "border-rose-500 bg-rose-500 text-white" : isSelected ? "border-emerald-500 bg-emerald-500 text-white" : "border-emerald-200 bg-white text-emerald-700",
+														)}>
+															{showCorrect ? <Check className='size-3.5 stroke-[3]' /> : showIncorrect ? <X className='size-3.5 stroke-[3]' /> : String.fromCharCode(65 + index)}
+														</span>
+														<span className='min-w-0 flex-1'>
+															{option.content || `Phương án ${index + 1}`}
+															{option.image && <img src={option.image} alt='' className='mt-2 max-h-24 rounded-md object-contain' />}
+														</span>
+													</button>
+												);
+											})}
+										</div>
+									)}
+
+									{previewChecked && (
+										<div className={cn(
+											"mt-5 rounded-xl border p-3.5",
+											previewIsCorrect
+												? "border-emerald-300 bg-emerald-100/80 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100"
+												: "border-rose-300 bg-rose-100/80 text-rose-950 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-100",
+										)}>
+											<div className='flex gap-2.5'>
+												{previewIsCorrect ? <CheckCircle2 className='mt-0.5 size-5 shrink-0' /> : <CircleX className='mt-0.5 size-5 shrink-0' />}
+												<div>
+													<p className='font-semibold'>{previewIsCorrect ? "Chính xác!" : "Chưa chính xác"}</p>
+													<p className='mt-1 text-xs leading-5 opacity-90'>
+														{activeQuestion.explanation.trim() || "Thêm giải thích để học viên hiểu rõ đáp án."}
+													</p>
+												</div>
+											</div>
+										</div>
+									)}
+								</div>
+
+								{previewChecked ? (
+									<Button type='button' variant='outline' className='w-full' onClick={resetPreview}>
+										<Copy />
+										Làm lại câu này
+									</Button>
+								) : (
+									<Button
+										type='button'
+										className='w-full bg-emerald-600 text-white hover:bg-emerald-700'
+										disabled={!hasPreviewAnswer}
+										onClick={() => setPreviewChecked(true)}>
+										Kiểm tra đáp án
+									</Button>
+								)}
+							</CardContent>
+						</Card>
+					</aside>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+export default QuizCreatePage;

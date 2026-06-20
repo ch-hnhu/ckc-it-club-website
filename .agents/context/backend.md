@@ -244,6 +244,9 @@
 - one application per applicant in current seeded/dev usage.
 - applicant is stored in `created_by`.
 - admin/editor is typically stored in `updated_by`.
+- `quizzes`, `quiz_questions`, and `quiz_question_options`
+- one quiz belongs to exactly one lesson (`quizzes.lesson_id` is unique); questions reference a seeded `question_types` record and options support optional images plus type-specific metadata.
+- `quiz_questions.explanation` stores the immediate post-answer explanation shown to the learner. Quiz attempt scoring remains a percentage of correctly answered questions; there is no per-question point weight.
 - `application_questions`
 - recruitment form question definitions.
 - fields include `type`, `is_required`, `order_index`, `is_active`.
