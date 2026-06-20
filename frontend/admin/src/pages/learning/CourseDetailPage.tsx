@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { isAxiosError } from "axios";
 import {
@@ -11,13 +11,25 @@ import {
 	GraduationCap,
 	ImageIcon,
 	ListChecks,
+	MoreHorizontal,
 	Pencil,
 	PlayCircle,
 	Plus,
 	ScanLine,
+	Trash2,
 	Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,9 +69,8 @@ import type {
 	AdminCourseDetail,
 	EnrollmentTrack,
 } from "@/pages/learning/course-detail-mock";
-import LessonCheckInDialog, {
-	type CheckInStudent,
-} from "@/pages/learning/LessonCheckInDialog";
+import LessonCheckInDialog from "@/pages/learning/LessonCheckInDialog";
+import LessonFormDialog from "@/pages/learning/LessonFormDialog";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -152,6 +163,12 @@ function CourseDetailPage() {
 	const [checkInLesson, setCheckInLesson] = useState<AdminCourseDetail["lessons"][number] | null>(
 		null,
 	);
+	const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
+	const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
+	const [deletingLesson, setDeletingLesson] = useState<AdminCourseDetail["lessons"][number] | null>(
+		null,
+	);
+	const [isDeletingLesson, setIsDeletingLesson] = useState(false);
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
@@ -159,34 +176,30 @@ function CourseDetailPage() {
 		{ title: course?.title ?? "Chi tiết khóa học" },
 	]);
 
-	useEffect(() => {
-		let cancelled = false;
-		setLoading(true);
-		setNotFound(false);
-
-		courseService
-			.getCourse(slug)
-			.then((res) => {
-				if (cancelled) return;
+	const loadCourse = useCallback(
+		async (opts?: { silent?: boolean }) => {
+			if (!opts?.silent) setLoading(true);
+			try {
+				const res = await courseService.getCourse(slug);
 				setCourse(res.data);
-			})
-			.catch((err) => {
-				if (cancelled) return;
+				setNotFound(false);
+			} catch (err) {
 				if (isAxiosError(err) && err.response?.status === 404) {
 					setNotFound(true);
 				} else {
 					toast.error("Không thể tải thông tin khóa học.");
 					setNotFound(true);
 				}
-			})
-			.finally(() => {
-				if (!cancelled) setLoading(false);
-			});
+			} finally {
+				if (!opts?.silent) setLoading(false);
+			}
+		},
+		[slug],
+	);
 
-		return () => {
-			cancelled = true;
-		};
-	}, [slug]);
+	useEffect(() => {
+		void loadCourse();
+	}, [loadCourse]);
 
 	const filteredEnrollments = useMemo(() => {
 		if (!course) return [];
@@ -199,42 +212,33 @@ function CourseDetailPage() {
 		return course.lessons.filter((l) => l.session_start);
 	}, [course]);
 
-	const offlineStudents = useMemo<CheckInStudent[]>(() => {
-		if (!course) return [];
-		return course.enrollments
-			.filter((e) => e.track === "offline")
-			.map((e) => ({
-				id: e.user.id,
-				full_name: e.user.full_name,
-				email: e.user.email,
-				avatar: e.user.avatar,
-			}));
-	}, [course]);
-
 	const lessonsPg = useClientPagination(course?.lessons ?? []);
 	const studentsPg = useClientPagination(filteredEnrollments);
 	const certificatesPg = useClientPagination(course?.certificates ?? []);
 
-	// Mock: cộng dồn số đã điểm danh của buổi (chặn trên = số học viên offline)
-	const handleCheckedIn = (lessonId: number, student: CheckInStudent) => {
-		setCourse((prev) => {
-			if (!prev) return prev;
-			return {
-				...prev,
-				lessons: prev.lessons.map((l) =>
-					l.id === lessonId
-						? {
-								...l,
-								attendances_count: Math.min(
-									l.attendances_count + 1,
-									prev.offline_enrollments_count,
-								),
-						  }
-						: l,
-				),
-			};
-		});
-		toast.success(`Đã điểm danh ${student.full_name}.`, { position: "top-right" });
+	const openCreateLesson = () => {
+		setEditingLessonId(null);
+		setLessonDialogOpen(true);
+	};
+
+	const openEditLesson = (id: number) => {
+		setEditingLessonId(id);
+		setLessonDialogOpen(true);
+	};
+
+	const handleDeleteLesson = async () => {
+		if (!deletingLesson) return;
+		setIsDeletingLesson(true);
+		try {
+			await courseService.deleteLesson(slug, deletingLesson.id);
+			toast.success("Đã xóa buổi học.", { position: "top-right" });
+			setDeletingLesson(null);
+			await loadCourse({ silent: true });
+		} catch {
+			toast.error("Không thể xóa buổi học.", { position: "top-right" });
+		} finally {
+			setIsDeletingLesson(false);
+		}
 	};
 
 	if (loading) {
@@ -303,11 +307,12 @@ function CourseDetailPage() {
 							{statusBadge(course.status)}
 							{levelBadge(course.level)}
 							{course.categories.map((c) => (
-								<span
+								<Badge
 									key={c.id}
-									className='rounded-full border px-2 py-0.5 text-xs text-muted-foreground'>
+									variant='outline'
+									className='rounded-full px-3 py-1 font-normal text-muted-foreground'>
 									{c.name}
-								</span>
+								</Badge>
 							))}
 						</div>
 						<h2 className='text-2xl font-semibold tracking-tight'>{course.title}</h2>
@@ -410,7 +415,7 @@ function CourseDetailPage() {
 					{/* ─── Buổi học ─── */}
 					<TabsContent value='lessons' className='mt-4'>
 						<div className='mb-3 flex items-center justify-end'>
-							<Button size='sm' className='h-8'>
+							<Button size='sm' className='h-8' onClick={openCreateLesson}>
 								<Plus className='h-4 w-4' />
 								Thêm buổi học
 							</Button>
@@ -425,6 +430,7 @@ function CourseDetailPage() {
 										<TableHead className='w-[180px]'>Nội dung</TableHead>
 										<TableHead className='w-[180px]'>Điểm danh</TableHead>
 										<TableHead className='w-[120px]'>Trạng thái</TableHead>
+										<TableHead className='w-[52px]' />
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -482,12 +488,35 @@ function CourseDetailPage() {
 													)}
 												</TableCell>
 												<TableCell>{statusBadge(lesson.status)}</TableCell>
+											<TableCell>
+												<DropdownMenu>
+													<DropdownMenuTrigger asChild>
+														<Button
+															variant='ghost'
+															className='h-8 w-8 p-0 data-[state=open]:bg-muted'>
+															<MoreHorizontal className='h-4 w-4' />
+														</Button>
+													</DropdownMenuTrigger>
+													<DropdownMenuContent align='end' className='w-[160px]'>
+														<DropdownMenuItem onClick={() => openEditLesson(lesson.id)}>
+															<Pencil className='h-4 w-4' />
+															Sửa
+														</DropdownMenuItem>
+														<DropdownMenuItem
+															className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+															onClick={() => setDeletingLesson(lesson)}>
+															<Trash2 className='h-4 w-4 text-destructive' />
+															Xóa
+														</DropdownMenuItem>
+													</DropdownMenuContent>
+												</DropdownMenu>
+											</TableCell>
 											</TableRow>
 										))
 									) : (
 										<TableRow>
 											<TableCell
-												colSpan={6}
+												colSpan={7}
 												className='h-32 text-center text-muted-foreground'>
 												Khóa học chưa có buổi học nào. Nhấn "Thêm buổi học" để bắt đầu.
 											</TableCell>
@@ -496,7 +525,7 @@ function CourseDetailPage() {
 								</TableBody>
 								{course.lessons.length > 0 && (
 									<TablePaginationFooter
-										colSpan={6}
+										colSpan={7}
 										shown={lessonsPg.pageItems.length}
 										total={lessonsPg.total}
 										noun='buổi học'
@@ -528,7 +557,7 @@ function CourseDetailPage() {
 								</Button>
 							))}
 							<div className='ml-auto flex items-center gap-3'>
-								{trackFilter === "offline" && offlineStudents.length > 0 && (
+								{trackFilter === "offline" && course.offline_enrollments_count > 0 && (
 									<DropdownMenu>
 										<DropdownMenuTrigger asChild>
 											<Button size='sm' className='h-8'>
@@ -724,10 +753,45 @@ function CourseDetailPage() {
 			<LessonCheckInDialog
 				open={checkInLesson !== null}
 				onOpenChange={(o) => !o && setCheckInLesson(null)}
+				courseSlug={course.slug}
 				lesson={checkInLesson}
-				students={offlineStudents}
-				onCheckedIn={handleCheckedIn}
+				onCheckedIn={() => void loadCourse({ silent: true })}
 			/>
+
+			<LessonFormDialog
+				open={lessonDialogOpen}
+				onOpenChange={setLessonDialogOpen}
+				courseSlug={course.slug}
+				lessonId={editingLessonId}
+				onSaved={() => void loadCourse({ silent: true })}
+			/>
+
+			<AlertDialog
+				open={deletingLesson !== null}
+				onOpenChange={(o) => !o && setDeletingLesson(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa buổi học?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{deletingLesson
+								? `Bạn có chắc muốn xóa "Buổi ${deletingLesson.order}: ${deletingLesson.title}"? Tiến độ và điểm danh liên quan sẽ không còn truy cập được.`
+								: ""}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isDeletingLesson}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(e) => {
+								e.preventDefault();
+								void handleDeleteLesson();
+							}}
+							disabled={isDeletingLesson}
+							className='bg-destructive text-white hover:bg-destructive/90'>
+							{isDeletingLesson ? "Đang xóa..." : "Xóa buổi học"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

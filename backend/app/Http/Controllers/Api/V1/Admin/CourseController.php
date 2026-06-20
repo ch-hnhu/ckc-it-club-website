@@ -66,6 +66,8 @@ class CourseController extends BaseApiController
      */
     public function store(Request $request): JsonResponse
     {
+        $this->nullifyEmpty($request);
+
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string|max:5000',
@@ -81,6 +83,11 @@ class CourseController extends BaseApiController
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:tags,id',
         ]);
+
+        // Không mở lớp offline → khoá chỉ online
+        if ($request->has('has_offline') && ! $request->boolean('has_offline')) {
+            $data['max_offline_slots'] = null;
+        }
 
         $thumbnailPath = null;
         if ($request->hasFile('thumbnail')) {
@@ -121,6 +128,137 @@ class CourseController extends BaseApiController
             ]);
 
         return $this->createdResponse($this->transformCourse($course), 'Tạo khóa học thành công.');
+    }
+
+    /**
+     * Cập nhật khoá học. Gọi qua POST + _method=PUT (multipart) khi có thumbnail.
+     */
+    public function update(Request $request, Course $course): JsonResponse
+    {
+        $this->nullifyEmpty($request);
+
+        $data = $request->validate([
+            'title' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'level' => 'sometimes|required|in:beginner,intermediate,advanced',
+            'status' => 'sometimes|required|in:draft,published',
+            'enrollment_start' => 'nullable|date',
+            'enrollment_deadline' => 'nullable|date|after_or_equal:enrollment_start',
+            'course_end' => 'nullable|date|after_or_equal:enrollment_deadline',
+            'max_offline_slots' => 'nullable|integer|min:1|max:1000',
+            'max_absent_allowed' => 'nullable|integer|min:0|max:50',
+            'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
+            'thumbnail' => 'nullable|image|max:5120',
+            'tag_ids' => 'nullable|array',
+            'tag_ids.*' => 'integer|exists:tags,id',
+        ]);
+
+        // Thumbnail: thay mới / gỡ bỏ / giữ nguyên
+        if ($request->hasFile('thumbnail')) {
+            if ($course->thumbnail) {
+                Storage::disk('public')->delete($course->thumbnail);
+            }
+            $data['thumbnail'] = $request->file('thumbnail')->store('course-thumbnails', 'public');
+        } elseif ($request->boolean('remove_thumbnail')) {
+            if ($course->thumbnail) {
+                Storage::disk('public')->delete($course->thumbnail);
+            }
+            $data['thumbnail'] = null;
+        } else {
+            unset($data['thumbnail']);
+        }
+
+        // Không mở lớp offline → khoá chỉ online
+        if ($request->has('has_offline') && ! $request->boolean('has_offline')) {
+            $data['max_offline_slots'] = null;
+        }
+
+        $tagIds = $data['tag_ids'] ?? null;
+        unset($data['tag_ids']);
+
+        DB::transaction(function () use ($course, $data, $tagIds, $request) {
+            $course->update([...$data, 'updated_by' => $request->user()->id]);
+
+            if ($request->has('tag_ids') || $tagIds !== null) {
+                $course->tags()->sync($tagIds ?? []);
+            }
+        });
+
+        $course->refresh()
+            ->load(['creator:id,full_name,avatar', 'tags:id,name'])
+            ->loadCount([
+                'lessons as lessons_count',
+                'enrollments as enrollments_count',
+                'enrollments as offline_enrollments_count' => fn ($q) => $q->where('track', 'offline'),
+                'enrollments as online_enrollments_count' => fn ($q) => $q->where('track', 'online'),
+                'certificates as certificates_count',
+            ]);
+
+        return $this->successResponse(true, $this->transformCourse($course), 'Cập nhật khóa học thành công.');
+    }
+
+    /**
+     * Xoá mềm khoá học (chuyển vào thùng rác).
+     */
+    public function destroy(Request $request, Course $course): JsonResponse
+    {
+        $course->deleted_by = $request->user()->id;
+        $course->save();
+        $course->delete();
+
+        return $this->successResponse(true, null, 'Đã xóa khóa học.');
+    }
+
+    /**
+     * Danh sách khoá học trong thùng rác (đã xoá mềm).
+     */
+    public function trash(Request $request): JsonResponse
+    {
+        $perPage = min((int) $request->query('per_page', 10), 50);
+        $search = $request->query('search');
+
+        $courses = Course::onlyTrashed()
+            ->with(['creator:id,full_name,avatar', 'tags:id,name'])
+            ->withCount($this->courseCounts())
+            ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
+            ->orderByDesc('deleted_at')
+            ->paginate($perPage);
+
+        $courses->getCollection()->transform(fn (Course $c) => $this->transformCourse($c));
+
+        return $this->paginatedResponse($courses, ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Khôi phục khoá học từ thùng rác.
+     */
+    public function restore(int $id): JsonResponse
+    {
+        $course = Course::onlyTrashed()->findOrFail($id);
+        $course->restore();
+        $course->deleted_by = null;
+        $course->save();
+
+        $course->load(['creator:id,full_name,avatar', 'tags:id,name'])
+            ->loadCount($this->courseCounts());
+
+        return $this->successResponse(true, $this->transformCourse($course), 'Khôi phục khóa học thành công.');
+    }
+
+    /**
+     * Xoá vĩnh viễn khoá học.
+     */
+    public function forceDelete(int $id): JsonResponse
+    {
+        $course = Course::onlyTrashed()->findOrFail($id);
+
+        if ($course->thumbnail) {
+            Storage::disk('public')->delete($course->thumbnail);
+        }
+
+        $course->forceDelete();
+
+        return $this->successResponse(true, null, 'Xóa vĩnh viễn khóa học thành công.');
     }
 
     /**
@@ -258,7 +396,38 @@ class CourseController extends BaseApiController
             'certificates_count' => (int) ($course->certificates_count ?? 0),
             'created_at' => $course->created_at?->toIso8601String(),
             'updated_at' => $course->updated_at?->toIso8601String(),
+            'deleted_at' => $course->deleted_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Định nghĩa các count tổng hợp dùng chung cho withCount/loadCount.
+     *
+     * @return array<int|string,mixed>
+     */
+    private function courseCounts(): array
+    {
+        return [
+            'lessons as lessons_count',
+            'enrollments as enrollments_count',
+            'enrollments as offline_enrollments_count' => fn ($q) => $q->where('track', 'offline'),
+            'enrollments as online_enrollments_count' => fn ($q) => $q->where('track', 'online'),
+            'certificates as certificates_count',
+        ];
+    }
+
+    /**
+     * Chuyển chuỗi rỗng "" thành null cho các field nullable (cho phép xóa khi sửa).
+     */
+    private function nullifyEmpty(Request $request): void
+    {
+        $fields = ['description', 'enrollment_start', 'enrollment_deadline', 'course_end'];
+
+        $request->merge(
+            collect($request->only($fields))
+                ->map(fn ($v) => $v === '' ? null : $v)
+                ->all()
+        );
     }
 
     /**

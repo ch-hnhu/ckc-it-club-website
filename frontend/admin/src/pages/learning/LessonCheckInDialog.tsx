@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import axios from "axios";
 import { CheckCircle2, Loader2, ScanLine, XCircle } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +12,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import courseService, { type CheckInStudentDTO } from "@/services/course.service";
+import type { ApiErrorResponse } from "@/types/api.types";
 import type { CourseLessonRow } from "@/pages/learning/course-detail-mock";
 
 // UI-first mock: tái dùng đúng pattern QR của Event (EventCheckInDialog).
@@ -25,15 +28,8 @@ const timeFormatter = new Intl.DateTimeFormat("vi-VN", {
 	second: "2-digit",
 });
 
-export interface CheckInStudent {
-	id: number;
-	full_name: string;
-	email: string;
-	avatar: string | null;
-}
-
 type ScanResult =
-	| { type: "success"; student: CheckInStudent; at: Date }
+	| { type: "success"; student: CheckInStudentDTO; already: boolean; at: Date }
 	| { type: "error"; message: string; at: Date };
 
 // Tách riêng để effect khởi tạo camera chỉ chạy sau khi div của scanner
@@ -128,18 +124,17 @@ function QrScannerRegion({ onDecoded }: { onDecoded: (token: string) => void }) 
 interface LessonCheckInDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	courseSlug: string;
 	lesson: CourseLessonRow | null;
-	/** Danh sách học viên track offline của khóa */
-	students: CheckInStudent[];
-	/** Gọi mỗi khi điểm danh thành công một học viên cho buổi này */
-	onCheckedIn: (lessonId: number, student: CheckInStudent) => void;
+	/** Gọi sau mỗi lần điểm danh thành công để parent refetch số liệu */
+	onCheckedIn: () => void;
 }
 
 function LessonCheckInDialog({
 	open,
 	onOpenChange,
+	courseSlug,
 	lesson,
-	students,
 	onCheckedIn,
 }: LessonCheckInDialogProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -148,15 +143,12 @@ function LessonCheckInDialog({
 
 	const busyRef = useRef(false);
 	const lastTokenRef = useRef<{ token: string; at: number } | null>(null);
-	// Con trỏ mock: bắt đầu từ số đã điểm danh sẵn của buổi, mỗi lần quét tiến 1 học viên
-	const cursorRef = useRef(0);
 
 	useEffect(() => {
 		if (!open) return;
 		setLastResult(null);
 		setSessionCount(0);
 		lastTokenRef.current = null;
-		cursorRef.current = lesson?.attendances_count ?? 0;
 	}, [open, lesson]);
 
 	const handleDecoded = useCallback(
@@ -172,27 +164,28 @@ function LessonCheckInDialog({
 			lastTokenRef.current = { token, at: Date.now() };
 			setIsSubmitting(true);
 
-			// Giả lập gọi API điểm danh
-			await new Promise((r) => setTimeout(r, 400));
-
-			const next = students[cursorRef.current];
-			if (!next) {
+			try {
+				const res = await courseService.checkInLesson(courseSlug, lesson.id, token);
 				setLastResult({
-					type: "error",
-					message: "Tất cả học viên offline đã được điểm danh cho buổi này.",
+					type: "success",
+					student: res.data.student,
+					already: res.data.already,
 					at: new Date(),
 				});
-			} else {
-				cursorRef.current += 1;
-				setSessionCount((c) => c + 1);
-				setLastResult({ type: "success", student: next, at: new Date() });
-				onCheckedIn(lesson.id, next);
+				if (!res.data.already) setSessionCount((c) => c + 1);
+				onCheckedIn();
+			} catch (err) {
+				const message =
+					axios.isAxiosError(err) && (err.response?.data as ApiErrorResponse | undefined)?.message
+						? String((err.response?.data as ApiErrorResponse).message)
+						: "Không thể điểm danh. Vui lòng thử lại.";
+				setLastResult({ type: "error", message, at: new Date() });
+			} finally {
+				busyRef.current = false;
+				setIsSubmitting(false);
 			}
-
-			busyRef.current = false;
-			setIsSubmitting(false);
 		},
-		[lesson, students, onCheckedIn],
+		[courseSlug, lesson, onCheckedIn],
 	);
 
 	return (
@@ -230,15 +223,15 @@ function LessonCheckInDialog({
 								<Avatar className='h-9 w-9 shrink-0'>
 									<AvatarImage src={lastResult.student.avatar ?? undefined} />
 									<AvatarFallback>
-										{lastResult.student.full_name.charAt(0).toUpperCase()}
+										{(lastResult.student.full_name ?? "?").charAt(0).toUpperCase()}
 									</AvatarFallback>
 								</Avatar>
 								<div className='min-w-0 flex-1'>
 									<p className='truncate text-sm font-medium'>
-										{lastResult.student.full_name}
+										{lastResult.student.full_name ?? "Ẩn danh"}
 									</p>
 									<p className='truncate text-xs text-muted-foreground'>
-										{lastResult.student.email}
+										{lastResult.already ? "Đã điểm danh trước đó" : lastResult.student.email}
 									</p>
 								</div>
 							</div>

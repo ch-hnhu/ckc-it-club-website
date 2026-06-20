@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { ArrowLeft, CalendarClock, ImageIcon, ListChecks, Loader2, Save, UploadCloud, X } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,22 +71,34 @@ function slugify(text: string): string {
 		.replace(/-+/g, "-");
 }
 
+/** ISO8601 → giá trị input datetime-local (giờ địa phương) */
+function toLocalInput(iso: string | null): string {
+	if (!iso) return "";
+	const d = new Date(iso);
+	if (Number.isNaN(d.getTime())) return "";
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 function CourseFormPage() {
+	const navigate = useNavigate();
+	const { slug: slugParam } = useParams();
+	const isEdit = Boolean(slugParam);
+
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
 		{ title: "Khóa học", link: "/courses" },
-		{ title: "Thêm khóa học" },
+		{ title: isEdit ? "Sửa khóa học" : "Thêm khóa học" },
 	]);
-
-	const navigate = useNavigate();
 
 	const [form, setForm] = useState<FormState>(getInitialForm);
 	const [slug, setSlug] = useState("");
 	const [hasOffline, setHasOffline] = useState(true);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 	const [submitting, setSubmitting] = useState(false);
+	const [loading, setLoading] = useState(isEdit);
 
 	// Categories (tags)
 	const [categories, setCategories] = useState<CourseCategoryOption[]>([]);
@@ -95,9 +107,14 @@ function CourseFormPage() {
 
 	// Thumbnail
 	const [imageFile, setImageFile] = useState<File | null>(null);
-	const [imagePreview, setImagePreview] = useState<string | null>(null);
+	const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
+	const [existingThumbnail, setExistingThumbnail] = useState<string | null>(null);
+	const [removeThumbnail, setRemoveThumbnail] = useState(false);
 	const imageInputRef = useRef<HTMLInputElement>(null);
 
+	const previewUrl = newImageUrl ?? (removeThumbnail ? null : existingThumbnail);
+
+	// ── Load categories ──
 	useEffect(() => {
 		courseService
 			.getCategories()
@@ -106,13 +123,60 @@ function CourseFormPage() {
 			.finally(() => setCategoriesLoading(false));
 	}, []);
 
+	// ── Load khóa học khi sửa ──
+	useEffect(() => {
+		if (!isEdit || !slugParam) return;
+		let cancelled = false;
+		setLoading(true);
+
+		courseService
+			.getCourse(slugParam)
+			.then((res) => {
+				if (cancelled) return;
+				const c = res.data;
+				setForm({
+					title: c.title,
+					description: c.description ?? "",
+					level: c.level,
+					status: c.status,
+					enrollment_start: toLocalInput(c.enrollment_start),
+					enrollment_deadline: toLocalInput(c.enrollment_deadline),
+					course_end: toLocalInput(c.course_end),
+					max_offline_slots: c.max_offline_slots != null ? String(c.max_offline_slots) : "30",
+					max_absent_allowed: String(c.max_absent_allowed),
+					quiz_pass_threshold: String(c.quiz_pass_threshold),
+				});
+				setSlug(c.slug);
+				setHasOffline(c.max_offline_slots != null);
+				setSelectedTags(c.categories.map((cat) => cat.id));
+				setExistingThumbnail(c.thumbnail);
+			})
+			.catch((err) => {
+				if (cancelled) return;
+				if (axios.isAxiosError(err) && err.response?.status === 404) {
+					toast.error("Không tìm thấy khóa học.");
+					navigate("/courses");
+				} else {
+					toast.error("Không thể tải khóa học.");
+				}
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [isEdit, slugParam, navigate]);
+
+	// ── New image preview ──
 	useEffect(() => {
 		if (!imageFile) {
-			setImagePreview(null);
+			setNewImageUrl(null);
 			return;
 		}
 		const url = URL.createObjectURL(imageFile);
-		setImagePreview(url);
+		setNewImageUrl(url);
 		return () => URL.revokeObjectURL(url);
 	}, [imageFile]);
 
@@ -124,7 +188,7 @@ function CourseFormPage() {
 
 	const handleTitleChange = (val: string) => {
 		setField("title", val);
-		setSlug(slugify(val));
+		if (!isEdit) setSlug(slugify(val));
 	};
 
 	const toggleTag = (id: number) =>
@@ -136,9 +200,19 @@ function CourseFormPage() {
 		imageInputRef.current.click();
 	};
 
+	const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0] ?? null;
+		setImageFile(file);
+		if (file) setRemoveThumbnail(false);
+	};
+
 	const removeImage = (event: React.MouseEvent) => {
 		event.stopPropagation();
-		setImageFile(null);
+		if (imageFile) {
+			setImageFile(null);
+		} else if (existingThumbnail) {
+			setRemoveThumbnail(true);
+		}
 	};
 
 	// ── Validation ──
@@ -165,21 +239,27 @@ function CourseFormPage() {
 			fd.append("title", form.title.trim());
 			fd.append("level", form.level);
 			fd.append("status", form.status);
-			if (form.description.trim()) fd.append("description", form.description.trim());
-			if (form.enrollment_start) fd.append("enrollment_start", form.enrollment_start);
-			if (form.enrollment_deadline) fd.append("enrollment_deadline", form.enrollment_deadline);
-			if (form.course_end) fd.append("course_end", form.course_end);
-			// Mở lớp offline → gửi slot; ngược lại khóa chỉ online (slot = null)
+			fd.append("description", form.description.trim());
+			fd.append("enrollment_start", form.enrollment_start);
+			fd.append("enrollment_deadline", form.enrollment_deadline);
+			fd.append("course_end", form.course_end);
+			fd.append("quiz_pass_threshold", form.quiz_pass_threshold);
+			fd.append("has_offline", hasOffline ? "1" : "0");
 			if (hasOffline) {
 				fd.append("max_offline_slots", form.max_offline_slots);
 				fd.append("max_absent_allowed", form.max_absent_allowed);
 			}
-			fd.append("quiz_pass_threshold", form.quiz_pass_threshold);
 			selectedTags.forEach((id) => fd.append("tag_ids[]", String(id)));
 			if (imageFile) fd.append("thumbnail", imageFile);
+			else if (isEdit && removeThumbnail) fd.append("remove_thumbnail", "1");
 
-			const res = await courseService.createCourse(fd);
-			toast.success("Tạo khóa học thành công.", { position: "top-right" });
+			const res = isEdit
+				? await courseService.updateCourse(slugParam!, fd)
+				: await courseService.createCourse(fd);
+
+			toast.success(isEdit ? "Cập nhật khóa học thành công." : "Tạo khóa học thành công.", {
+				position: "top-right",
+			});
 			navigate(`/courses/${res.data.slug}`);
 		} catch (err) {
 			if (axios.isAxiosError(err)) {
@@ -202,10 +282,18 @@ function CourseFormPage() {
 		}
 	};
 
+	if (loading) {
+		return (
+			<div className='flex h-64 items-center justify-center'>
+				<Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+			</div>
+		);
+	}
+
 	return (
 		<div className='flex flex-col gap-6 p-4 md:p-6 lg:p-8'>
 			<Button asChild variant='outline' className='w-fit'>
-				<Link to='/courses'>
+				<Link to={isEdit ? `/courses/${slugParam}` : "/courses"}>
 					<ArrowLeft className='h-4 w-4' />
 					Quay lại
 				</Link>
@@ -394,7 +482,7 @@ function CourseFormPage() {
 									type='file'
 									accept='image/*'
 									className='sr-only'
-									onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+									onChange={handleImageChange}
 								/>
 								<div
 									role='button'
@@ -407,19 +495,19 @@ function CourseFormPage() {
 									}}
 									aria-label='Tải ảnh đại diện'
 									className='group relative flex min-h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 px-6 py-8 text-center transition hover:border-muted-foreground/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring'>
-									{imagePreview ? (
+									{previewUrl ? (
 										<div className='w-full space-y-3'>
 											<div className='mx-auto max-w-sm overflow-hidden rounded-lg border bg-background shadow-sm'>
 												<div className='relative aspect-video w-full bg-muted'>
 													<img
-														src={imagePreview}
+														src={previewUrl}
 														alt='Preview'
 														className='h-full w-full object-cover'
 													/>
 												</div>
 												<div className='flex items-center justify-between border-t px-3 py-2'>
 													<p className='truncate text-xs text-muted-foreground'>
-														{imageFile?.name}
+														{imageFile?.name ?? "Ảnh hiện tại"}
 													</p>
 													<button
 														type='button'
@@ -558,13 +646,17 @@ function CourseFormPage() {
 									) : (
 										<Save className='h-4 w-4' />
 									)}
-									{submitting ? "Đang lưu..." : "Lưu khóa học"}
+									{submitting
+										? "Đang lưu..."
+										: isEdit
+											? "Lưu thay đổi"
+											: "Lưu khóa học"}
 								</Button>
 								<Button
 									type='button'
 									variant='outline'
 									className='w-full'
-									onClick={() => navigate("/courses")}
+									onClick={() => navigate(isEdit ? `/courses/${slugParam}` : "/courses")}
 									disabled={submitting}>
 									Hủy
 								</Button>

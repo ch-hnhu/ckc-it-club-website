@@ -212,12 +212,11 @@ function CourseListPage() {
 		if (!deleteTarget) return;
 		setIsDeleting(true);
 		try {
-			// TODO: thay bằng courseService.deleteCourse khi có Admin\CourseController
-			await new Promise((r) => setTimeout(r, 300));
-			setDeleteTarget(null);
+			await courseService.deleteCourse(deleteTarget.slug);
 			toggleOne(deleteTarget.id, false);
+			setDeleteTarget(null);
 			setReloadToken((p) => p + 1);
-			toast.success("Đã xóa khóa học.");
+			toast.success("Đã chuyển khóa học vào thùng rác.");
 		} catch {
 			toast.error("Không thể xóa khóa học. Vui lòng thử lại.");
 		} finally {
@@ -227,10 +226,11 @@ function CourseListPage() {
 
 	const handleBulkDelete = async () => {
 		if (selectedIds.length === 0) return;
+		const targets = courses.filter((c) => selectedIds.includes(c.id));
 		setBulkDeleting(true);
 		try {
-			await new Promise((r) => setTimeout(r, 400));
-			toast.success(`Đã xóa ${selectedIds.length} khóa học.`);
+			await Promise.all(targets.map((c) => courseService.deleteCourse(c.slug)));
+			toast.success(`Đã chuyển ${targets.length} khóa học vào thùng rác.`);
 			setBulkDeleteOpen(false);
 			toggleAll(false);
 			setReloadToken((p) => p + 1);

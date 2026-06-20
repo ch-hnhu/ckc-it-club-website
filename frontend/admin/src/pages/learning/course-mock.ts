@@ -45,6 +45,8 @@ export interface AdminCourse {
 	certificates_count: number;
 	created_at: string;
 	updated_at: string;
+	/** Có giá trị khi khóa nằm trong thùng rác */
+	deleted_at?: string | null;
 }
 
 export type CourseSortKey =

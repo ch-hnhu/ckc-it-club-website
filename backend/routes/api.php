@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactControlle
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
+use App\Http\Controllers\Api\V1\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\RankController;
@@ -474,10 +475,22 @@ Route::prefix('v1')->group(function () {
         // courses (admin) — Trung tâm đào tạo
         Route::middleware('permission:courses.view')->group(function () {
             Route::get('courses', [AdminCourseController::class, 'index']);
+            Route::get('courses/trash', [AdminCourseController::class, 'trash']);
             Route::get('courses/{course}', [AdminCourseController::class, 'show']);
+            Route::get('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'show']);
         });
         Route::middleware('permission:courses.manage')->group(function () {
             Route::post('courses', [AdminCourseController::class, 'store']);
+            Route::patch('courses/trash/{id}/restore', [AdminCourseController::class, 'restore']);
+            Route::delete('courses/trash/{id}/force', [AdminCourseController::class, 'forceDelete']);
+            Route::put('courses/{course}', [AdminCourseController::class, 'update']);
+            Route::patch('courses/{course}', [AdminCourseController::class, 'update']);
+            Route::delete('courses/{course}', [AdminCourseController::class, 'destroy']);
+            Route::post('courses/{course}/lessons', [AdminLessonController::class, 'store']);
+            Route::put('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
+            Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
+            Route::delete('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'destroy']);
+            Route::post('courses/{course}/lessons/{lesson}/check-in', [AdminLessonController::class, 'checkIn']);
         });
 
         // events (admin)
