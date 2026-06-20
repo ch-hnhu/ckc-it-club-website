@@ -54,6 +54,7 @@ import CourseDetailPage from "@/pages/learning/CourseDetailPage";
 import PointRulesPage from "@/pages/gamification/PointRulesPage";
 import RanksPage from "@/pages/gamification/RanksPage";
 import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
+import QuizCreatePage from "@/pages/learning/QuizCreatePage";
 
 const router = createBrowserRouter([
 	{
@@ -288,6 +289,11 @@ const router = createBrowserRouter([
 			{
 				path: "notifications",
 				element: <NotificationsPage />,
+			},
+			{
+				// UI-only route: Learning Center permissions/API will be added together with course management.
+				path: "learning/courses/:courseId/lessons/:lessonId/quiz/create",
+				element: <QuizCreatePage />,
 			},
 			{
 				path: "events",

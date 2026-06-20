@@ -102,6 +102,8 @@
 - personal admin notification list with infinite scroll, read/unread state, and mark-as-read actions
 - `/community/notifications`
 - system notification log/admin stats page gated by `community.notifications.send`
+- `/learning/courses/:courseId/lessons/:lessonId/quiz/create`
+- UI-only quiz composer for a lesson. It is authenticated through the main admin shell but deliberately has no `PermissionRoute`, sidebar entry, service, or persistence yet because Learning Center admin permissions and API contracts have not been implemented. It follows the fixed Duolingo-like flow: one question at a time and immediate answer/explanation feedback; the course owns the pass threshold.
 
 ## Important Reality Checks
 
@@ -362,6 +364,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-19`: Added the UI-only lesson quiz composer at `/learning/courses/:courseId/lessons/:lessonId/quiz/create`. It supports the five persisted question types plus a true/false authoring template, optional question/option images, correct-answer selection, immediate-feedback explanations, reorder/delete, and an interactive learner preview; persistence, a Learning Center service, sidebar navigation, and permissions remain intentionally deferred.
 - `2026-06-14`: Admin event status actions now use the backend-synced status returned by the API, so badges reflect time-based transitions after schedule/status changes.
 - `2026-06-14`: Admin event list now displays event start and end times in separate sortable `Bắt đầu` and `Kết thúc` columns instead of a combined time column.
 - `2026-06-13`: Admin event QR check-in scanner now creates a fresh scan region per mount and clears/stops stale `html5-qrcode` instances to prevent duplicated camera previews in React StrictMode.
