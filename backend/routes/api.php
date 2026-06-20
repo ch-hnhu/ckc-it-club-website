@@ -476,6 +476,9 @@ Route::prefix('v1')->group(function () {
             Route::get('courses', [AdminCourseController::class, 'index']);
             Route::get('courses/{course}', [AdminCourseController::class, 'show']);
         });
+        Route::middleware('permission:courses.manage')->group(function () {
+            Route::post('courses', [AdminCourseController::class, 'store']);
+        });
 
         // events (admin)
         Route::middleware('permission:events.view')->group(function () {

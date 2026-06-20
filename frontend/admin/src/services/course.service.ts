@@ -3,6 +3,12 @@ import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type { AdminCourse, CourseListParams } from "@/pages/learning/course-mock";
 import type { AdminCourseDetail } from "@/pages/learning/course-detail-mock";
 
+export interface CourseCategoryOption {
+	id: number;
+	name: string;
+	color: string | null;
+}
+
 const courseService = {
 	/**
 	 * Danh sách khóa học (admin). Bỏ qua các tham số rỗng / "all" để URL gọn
@@ -27,6 +33,16 @@ const courseService = {
 	/** Chi tiết khóa học (admin): khóa + buổi học + học viên theo track + chứng chỉ. */
 	async getCourse(slug: string): Promise<ApiResponse<AdminCourseDetail>> {
 		return api.get(`/courses/${slug}`);
+	},
+
+	/** Tạo khóa học mới (multipart vì có thumbnail). */
+	async createCourse(payload: FormData): Promise<ApiResponse<AdminCourse>> {
+		return api.post("/courses", payload);
+	},
+
+	/** Danh mục (tag) khóa học để chọn khi tạo/sửa — dùng endpoint công khai. */
+	async getCategories(): Promise<ApiResponse<CourseCategoryOption[]>> {
+		return api.get("/learning/categories");
 	},
 };
 

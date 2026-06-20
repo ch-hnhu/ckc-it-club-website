@@ -12,7 +12,9 @@ use App\Models\LessonAttendance;
 use App\Models\Tag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CourseController extends BaseApiController
 {
@@ -56,6 +58,69 @@ class CourseController extends BaseApiController
         $courses->getCollection()->transform(fn (Course $c) => $this->transformCourse($c));
 
         return $this->paginatedResponse($courses, ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Tạo khoá học mới. Mô hình song song: không mở lớp offline thì
+     * max_offline_slots = null (khoá chỉ online).
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'level' => 'required|in:beginner,intermediate,advanced',
+            'status' => 'nullable|in:draft,published',
+            'enrollment_start' => 'nullable|date',
+            'enrollment_deadline' => 'nullable|date|after_or_equal:enrollment_start',
+            'course_end' => 'nullable|date|after_or_equal:enrollment_deadline',
+            'max_offline_slots' => 'nullable|integer|min:1|max:1000',
+            'max_absent_allowed' => 'nullable|integer|min:0|max:50',
+            'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
+            'thumbnail' => 'nullable|image|max:5120',
+            'tag_ids' => 'nullable|array',
+            'tag_ids.*' => 'integer|exists:tags,id',
+        ]);
+
+        $thumbnailPath = null;
+        if ($request->hasFile('thumbnail')) {
+            $thumbnailPath = $request->file('thumbnail')->store('course-thumbnails', 'public');
+        }
+
+        $course = DB::transaction(function () use ($data, $thumbnailPath, $request) {
+            $course = Course::create([
+                'title' => $data['title'],
+                'slug' => $this->generateUniqueSlug($data['title']),
+                'description' => $data['description'] ?? null,
+                'thumbnail' => $thumbnailPath,
+                'level' => $data['level'],
+                'status' => $data['status'] ?? 'draft',
+                'enrollment_start' => $data['enrollment_start'] ?? null,
+                'enrollment_deadline' => $data['enrollment_deadline'] ?? null,
+                'course_end' => $data['course_end'] ?? null,
+                'max_offline_slots' => $data['max_offline_slots'] ?? null,
+                'max_absent_allowed' => $data['max_absent_allowed'] ?? 1,
+                'quiz_pass_threshold' => $data['quiz_pass_threshold'] ?? 80,
+                'created_by' => $request->user()->id,
+            ]);
+
+            if (! empty($data['tag_ids'])) {
+                $course->tags()->sync($data['tag_ids']);
+            }
+
+            return $course;
+        });
+
+        $course->load(['creator:id,full_name,avatar', 'tags:id,name'])
+            ->loadCount([
+                'lessons as lessons_count',
+                'enrollments as enrollments_count',
+                'enrollments as offline_enrollments_count' => fn ($q) => $q->where('track', 'offline'),
+                'enrollments as online_enrollments_count' => fn ($q) => $q->where('track', 'online'),
+                'certificates as certificates_count',
+            ]);
+
+        return $this->createdResponse($this->transformCourse($course), 'Tạo khóa học thành công.');
     }
 
     /**
@@ -194,6 +259,22 @@ class CourseController extends BaseApiController
             'created_at' => $course->created_at?->toIso8601String(),
             'updated_at' => $course->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Sinh slug duy nhất từ tiêu đề khoá học.
+     */
+    private function generateUniqueSlug(string $title): string
+    {
+        $base = Str::slug($title) ?: 'khoa-hoc';
+        $slug = $base;
+        $i = 1;
+
+        while (Course::where('slug', $slug)->exists()) {
+            $slug = $base . '-' . (++$i);
+        }
+
+        return $slug;
     }
 
     /**
