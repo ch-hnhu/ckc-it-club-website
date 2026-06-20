@@ -130,6 +130,7 @@ class CourseController extends BaseApiController
         $lesson = $lessons[$idx];
         $lesson->load('quiz.questions');
         $userId = auth('sanctum')->id();
+        $enrollment = $course->enrollmentFor($userId);
 
         $progress = $this->lessonProgressPercent($lesson, $userId);
         $sections = $this->sectionCompletionMap($lesson, $userId);
@@ -148,6 +149,7 @@ class CourseController extends BaseApiController
             'summary' => $lesson->description,
             'session_start' => $lesson->session_start?->toIso8601String(),
             'progress' => $progress,
+            'enrollment_track' => $enrollment?->track,
             'course' => [
                 'slug' => $course->slug,
                 'title' => $course->title,

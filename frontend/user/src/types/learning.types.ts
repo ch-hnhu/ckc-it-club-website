@@ -118,6 +118,8 @@ export interface LessonDetail {
 	session_start?: string | null;
 	/** Tiến độ riêng của buổi học (0-100), null nếu chưa bắt đầu */
 	progress: number | null;
+	/** Track học của user hiện tại trong khóa này (null nếu chưa ghi danh) */
+	enrollment_track: CourseTrack | null;
 	course: {
 		slug: string;
 		title: string;
