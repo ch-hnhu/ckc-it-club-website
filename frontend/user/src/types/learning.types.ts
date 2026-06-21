@@ -1,4 +1,5 @@
 export type CourseLevel = "beginner" | "intermediate" | "advanced";
+export type CourseTrack = "offline" | "online";
 
 export interface CourseInstructor {
 	id: number;
@@ -43,6 +44,8 @@ export interface CourseContentItem {
 	/** Thông tin phụ: thời lượng, số câu... vd "12 phút", "10 câu" */
 	meta?: string;
 	completed?: boolean;
+	/** URL ngoài (Google Drive, Google Forms...) */
+	url?: string;
 }
 
 /** Một buổi học (chương) trong khóa học */
@@ -61,14 +64,26 @@ export interface CourseLesson {
 	completed?: boolean;
 	/** Tổng số mục nội dung trong buổi (video + bài tập + quiz...) */
 	items_count?: number;
+	/** Thời gian bắt đầu buổi học offline */
+	session_start?: string | null;
+	/** Thời gian kết thúc buổi học offline — dùng để tính QR còn hợp lệ không */
+	session_end?: string | null;
+	/** Vé QR của user cho buổi này (chỉ có với track offline, null = chưa đăng ký tham gia) */
+	qr_ticket?: { token: string; used_at: string | null } | null;
+	/** Đã được điểm danh (qr hoặc admin thủ công) */
+	is_attended?: boolean;
 }
 
 /** Thống kê tiến độ hiển thị ở sidebar trang tổng quan khóa học */
 export interface CourseProgressStats {
+	attendance_done: number;
+	attendance_total: number;
 	exercises_done: number;
 	exercises_total: number;
 	projects_done: number;
 	projects_total: number;
+	quizzes_done: number;
+	quizzes_total: number;
 	xp_earned: number;
 	xp_total: number;
 	badges_earned: number;
@@ -78,19 +93,33 @@ export interface CourseProgressStats {
 /** Trang tổng quan khóa học: thông tin chung + danh sách buổi học + tiến độ */
 export interface CourseDetail extends Course {
 	description: string;
+	/** Track học của user hiện tại trong khóa này */
+	enrollment_track: CourseTrack | null;
+	/** Ngày mở đăng ký học offline */
+	enrollment_start: string | null;
+	/** Hạn cuối đăng ký học offline — sau mốc này chỉ còn học online */
+	enrollment_deadline: string | null;
+	/** Khoá học kết thúc hoàn toàn — sau mốc này content thành kho tự học */
+	course_end: string | null;
+	/** User đang quan tâm khoá học này (chưa đăng ký, chưa có lesson) */
+	is_interested: boolean;
 	lessons: CourseLesson[];
 	stats: CourseProgressStats;
 }
 
-/** Chi tiết một buổi học: hub nội dung (video, tham khảo, bài tập, quiz) */
+/** Chi tiết một buổi học: mỗi phần chỉ có đúng 1 nội dung */
 export interface LessonDetail {
 	id: number;
 	slug: string;
 	order: number;
 	title: string;
 	summary?: string | null;
+	/** Thời gian bắt đầu buổi học (offline) — dùng để kiểm tra chưa diễn ra */
+	session_start?: string | null;
 	/** Tiến độ riêng của buổi học (0-100), null nếu chưa bắt đầu */
 	progress: number | null;
+	/** Track học của user hiện tại trong khóa này (null nếu chưa ghi danh) */
+	enrollment_track: CourseTrack | null;
 	course: {
 		slug: string;
 		title: string;
@@ -98,57 +127,36 @@ export interface LessonDetail {
 	};
 	prev: { slug: string; title: string } | null;
 	next: { slug: string; title: string } | null;
-	videos: CourseContentItem[];
-	references: CourseContentItem[];
-	exercises: CourseContentItem[];
-	quizzes: CourseContentItem[];
+	/** 1 video bài giảng */
+	video: CourseContentItem | null;
+	/** 1 link tài nguyên (Google Drive) */
+	reference: CourseContentItem | null;
+	/** 1 link nộp bài (Google Forms) */
+	exercise: CourseContentItem | null;
+	/** 1 quiz kiểm tra */
+	quiz: CourseContentItem | null;
 }
 
-/** Một chương (mốc thời gian) bên trong video */
-export interface VideoChapter {
-	/** Nhãn hiển thị, vd "03:20" */
-	time: string;
-	/** Số giây để tua tới */
-	seconds: number;
-	label: string;
-}
-
-/** Tài liệu đính kèm theo video */
-export interface VideoAttachment {
-	id: number;
-	title: string;
-	kind: "pdf" | "zip" | "link";
-}
-
-/** Một mục trong playlist video của buổi học */
-export interface VideoPlaylistItem {
-	id: number;
-	slug: string;
-	title: string;
-	duration: string;
-	completed: boolean;
-	current: boolean;
-}
-
-/** Trang xem video bài giảng */
+/** Trang xem video bài giảng: tài liệu (markdown) bên trái + video 2 tab bên phải */
 export interface VideoDetail {
 	id: number;
 	slug: string;
 	title: string;
-	/** URL nhúng (YouTube embed) hoặc file mp4 */
-	url: string;
+	/** Tài liệu markdown của buổi học (cột trái) */
+	document: string | null;
+	/** Video bài giảng chính thức (mentor quay lại) — tab ưu tiên */
+	lecture_url: string | null;
+	/** Video bản ghi livestream — chỉ hiện tab khi có */
+	live_url: string | null;
 	duration: string;
 	xp: number;
 	completed: boolean;
 	course: { slug: string; title: string };
 	lesson: { slug: string; title: string; order: number };
-	playlist: VideoPlaylistItem[];
-	/** Video kế tiếp trong cùng buổi, null nếu là video cuối */
-	next_video: { slug: string; title: string } | null;
-	/** Buổi kế tiếp — chỉ có khi đang ở video cuối của buổi */
+	/** Buổi trước (điều hướng) */
+	prev_lesson: { slug: string; title: string } | null;
+	/** Buổi kế tiếp (điều hướng) */
 	next_lesson: { slug: string; title: string } | null;
-	chapters: VideoChapter[];
-	attachments: VideoAttachment[];
 }
 
 export interface CourseListParams {

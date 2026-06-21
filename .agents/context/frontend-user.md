@@ -50,9 +50,10 @@
 - outlet content
 - footer
 - back-to-top control
+- lesson video pages (`/khoa-hoc/:slug/:lessonSlug/:videoSlug`) use an app-like split layout: fixed navbar with logo plus breadcrumb instead of the normal nav tabs; the breadcrumb shows the backend lesson title and `Video`, then two full-height main panes for lesson material and video, a fixed bottom learning navigation bar, and no global site footer/back-to-top control
 - `/cong-dong` is a dense community layout exception:
 - footer is hidden
-- navbar uses a full-width container, reduced horizontal padding, and a two-group `justify-between` layout for nav/profile alignment
+- navbar and footer use the standard centered container; only lesson video pages (`/khoa-hoc/:slug/:lessonSlug/:videoSlug`) stretch them full-width for the lecture viewing layout
 - community content fills the available desktop width up to a 76rem cap with reduced feed-side padding, and its right rail uses a custom `70rem` breakpoint so it remains visible below Tailwind `xl`
 - on mobile/tablet below `lg`, the community page shows a sticky community sub-header and turns the left sidebar into an overlay drawer
 - community channels are fetched in `CommunityPage` from public `GET /community/channels` through `communityService`; the page keeps a seeded local fallback list if the request fails.
@@ -218,6 +219,7 @@
 - Public and authenticated profile responses include gamification summary fields `total_points` and `current_rank` for the profile sidebar panel.
 - `/diem-cua-toi` loads point history from `/gamification/me/history` in pages of 5 entries and appends the next page through a “Tải thêm” button until the paginated response has no more pages.
 - The community leaderboard right rail links to the seeded blog slug `gioi-thieu-bang-xep-hang`; its teaser card fetches the blog detail to show cover image, title, reading time, and published date.
+- Learning course detail reads `enrollment_track` (`offline` or `online`) from the course detail contract. The progress sidebar renders offline track metrics as Điểm danh, Bài thực hành, Quiz, and Điểm XP; online track metrics render only Quiz and Điểm XP. The learner card displays the track label and shows the certificate claim CTA only when `progress >= 100`.
 
 ## Environment Variables
 

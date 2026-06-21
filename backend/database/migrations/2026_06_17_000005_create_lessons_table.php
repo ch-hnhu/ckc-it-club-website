@@ -16,6 +16,9 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->unsignedSmallInteger('order')->default(0);
             $table->enum('status', ['draft', 'published'])->default('draft');
+            // Lịch buổi học offline - session_end dùng để tính QR còn hợp lệ không
+            $table->dateTime('session_start')->nullable();
+            $table->dateTime('session_end')->nullable();
 
             // Phần 1: Tài nguyên
             $table->string('resource_url')->nullable();
@@ -24,6 +27,8 @@ return new class extends Migration
             // Phần 2: Bài giảng (video nhúng) — tính vào progress
             $table->string('video_url')->nullable();
             $table->unsignedInteger('video_duration')->nullable(); // giây
+            // YouTube live - fallback cho video_url khi mentor chưa up video bài giảng chính thức
+            $table->string('live_url')->nullable();
 
             // Phần 3: Tài liệu (markdown)
             $table->longText('document')->nullable();
