@@ -109,7 +109,7 @@ const questionTypeOptions: Array<{
 	{
 		type: "word_bank_fill_blank",
 		label: "Chọn từ điền vào chỗ trống",
-		description: 'Học viên chọn từ trong bank để điền vào ___.',
+		description: "Học viên chọn từ trong bank để điền vào ___.",
 	},
 	{
 		type: "matching",
@@ -160,8 +160,20 @@ function createOptions(type: QuizQuestionType): QuizOption[] {
 
 	if (type === "word_order") {
 		return [
-			{ id: createId("option"), content: "", isCorrect: true, image: null, metadata: { slot_index: 0 } },
-			{ id: createId("option"), content: "", isCorrect: true, image: null, metadata: { slot_index: 1 } },
+			{
+				id: createId("option"),
+				content: "",
+				isCorrect: true,
+				image: null,
+				metadata: { slot_index: 0 },
+			},
+			{
+				id: createId("option"),
+				content: "",
+				isCorrect: true,
+				image: null,
+				metadata: { slot_index: 1 },
+			},
 			{ id: createId("option"), content: "", isCorrect: false, image: null },
 			{ id: createId("option"), content: "", isCorrect: false, image: null },
 		];
@@ -330,7 +342,9 @@ function QuizCreatePage() {
 			activeQuestion?.type === "word_bank_fill_blank"
 				? activeQuestion.options
 						.filter((o) => o.isCorrect)
-						.sort((a, b) => (a.metadata?.slot_index ?? 0) - (b.metadata?.slot_index ?? 0))
+						.sort(
+							(a, b) => (a.metadata?.slot_index ?? 0) - (b.metadata?.slot_index ?? 0),
+						)
 				: [],
 		[activeQuestion?.type, activeQuestion?.options],
 	);
@@ -358,7 +372,9 @@ function QuizCreatePage() {
 			activeQuestion?.type === "word_order"
 				? activeQuestion.options
 						.filter((o) => o.isCorrect)
-						.sort((a, b) => (a.metadata?.slot_index ?? 0) - (b.metadata?.slot_index ?? 0))
+						.sort(
+							(a, b) => (a.metadata?.slot_index ?? 0) - (b.metadata?.slot_index ?? 0),
+						)
 				: [],
 		[activeQuestion?.type, activeQuestion?.options],
 	);
@@ -461,9 +477,9 @@ function QuizCreatePage() {
 		() =>
 			activeQuestion?.type === "matching"
 				? activeQuestion.options
-					.filter((o) => o.metadata?.side === "left")
-					.map((o) => o.id)
-					.sort(() => Math.random() - 0.5)
+						.filter((o) => o.metadata?.side === "left")
+						.map((o) => o.id)
+						.sort(() => Math.random() - 0.5)
 				: [],
 		// re-shuffle on question/type change or when pairs are added/removed
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -474,9 +490,9 @@ function QuizCreatePage() {
 		() =>
 			activeQuestion?.type === "matching"
 				? activeQuestion.options
-					.filter((o) => o.metadata?.side === "right")
-					.map((o) => o.id)
-					.sort(() => Math.random() - 0.5)
+						.filter((o) => o.metadata?.side === "right")
+						.map((o) => o.id)
+						.sort(() => Math.random() - 0.5)
 				: [],
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[activeQuestion?.id, activeQuestion?.type, activeQuestion?.options.length],
@@ -600,7 +616,11 @@ function QuizCreatePage() {
 		);
 	};
 
-	const syncWordBankBlanks = (questionId: string, content: string, currentOptions: QuizOption[]) => {
+	const syncWordBankBlanks = (
+		questionId: string,
+		content: string,
+		currentOptions: QuizOption[],
+	) => {
 		const blankCount = (content.match(/___/g) || []).length;
 		const correctOptions = currentOptions
 			.filter((o) => o.isCorrect)
@@ -695,22 +715,6 @@ function QuizCreatePage() {
 		if (pairs.size <= 1) return;
 		updateQuestion(activeQuestion.id, {
 			options: activeQuestion.options.filter((option) => option.metadata?.pairId !== pairId),
-		});
-	};
-
-	const moveOption = (optionId: string, direction: -1 | 1) => {
-		if (!activeQuestion) return;
-		const optionIndex = activeQuestion.options.findIndex((option) => option.id === optionId);
-		const nextIndex = optionIndex + direction;
-		if (optionIndex < 0 || nextIndex < 0 || nextIndex >= activeQuestion.options.length) return;
-		const reordered = [...activeQuestion.options];
-		const [moved] = reordered.splice(optionIndex, 1);
-		reordered.splice(nextIndex, 0, moved);
-		updateQuestion(activeQuestion.id, {
-			options: reordered.map((option, index) => ({
-				...option,
-				metadata: { ...option.metadata, correctPosition: index + 1 },
-			})),
 		});
 	};
 
@@ -912,9 +916,7 @@ function QuizCreatePage() {
 
 	// Derived values for word bank preview rendering
 	const wordBankSentenceParts =
-		activeQuestion.type === "word_bank_fill_blank"
-			? activeQuestion.content.split("___")
-			: [];
+		activeQuestion.type === "word_bank_fill_blank" ? activeQuestion.content.split("___") : [];
 
 	return (
 		<div className='min-h-full bg-muted/30'>
@@ -1151,7 +1153,8 @@ function QuizCreatePage() {
 												{(isChoiceQuestion(activeQuestion.type) ||
 													activeQuestion.type === "fill_blank" ||
 													activeQuestion.type === "ordering" ||
-													activeQuestion.type === "word_bank_fill_blank" ||
+													activeQuestion.type ===
+														"word_bank_fill_blank" ||
 													activeQuestion.type === "word_order") && (
 													<Button
 														type='button'
@@ -1243,13 +1246,15 @@ function QuizCreatePage() {
 												<Label>
 													{activeQuestion.type === "fill_blank"
 														? "Đáp án chấp nhận"
-														: activeQuestion.type === "word_bank_fill_blank"
+														: activeQuestion.type ===
+															  "word_bank_fill_blank"
 															? "Word bank"
 															: activeQuestion.type === "word_order"
 																? "Các từ cần sắp xếp"
 																: activeQuestion.type === "matching"
 																	? "Các cặp cần ghép"
-																	: activeQuestion.type === "ordering"
+																	: activeQuestion.type ===
+																		  "ordering"
 																		? "Thứ tự đúng"
 																		: "Các phương án trả lời"}
 												</Label>
@@ -1258,13 +1263,17 @@ function QuizCreatePage() {
 														? "Đánh dấu tất cả phương án đúng."
 														: activeQuestion.type === "fill_blank"
 															? "Mỗi dòng là một đáp án được chấp nhận."
-															: activeQuestion.type === "word_bank_fill_blank"
+															: activeQuestion.type ===
+																  "word_bank_fill_blank"
 																? "Nhập đáp án đúng cho từng chỗ trống, rồi thêm từ nhiễu."
-																: activeQuestion.type === "word_order"
+																: activeQuestion.type ===
+																	  "word_order"
 																	? "Nhập các từ đúng theo thứ tự, rồi thêm từ nhiễu."
-																	: activeQuestion.type === "matching"
+																	: activeQuestion.type ===
+																		  "matching"
 																		? "Mỗi hàng là một cặp đáp án đúng."
-																		: activeQuestion.type === "ordering"
+																		: activeQuestion.type ===
+																			  "ordering"
 																			? "Sắp xếp các mục theo trình tự đúng từ trên xuống."
 																			: "Chọn đúng một phương án."}
 												</p>
@@ -1368,102 +1377,115 @@ function QuizCreatePage() {
 												</Button>
 											</div>
 										) : activeQuestion.type === "word_order" ? (
-										/* ── word_order options editor ── */
-										<div className='space-y-4'>
-											{/* Correct words in order */}
-											<div className='space-y-2'>
-												<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
-													Từ đúng (theo thứ tự)
-												</p>
-												{wordOrderCorrectOptions.map((opt, idx) => (
-													<div
-														key={opt.id}
-														className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
-														<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-xs font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'>
-															{idx + 1}
-														</span>
-														<Input
-															value={opt.content}
-															onChange={(event) =>
-																updateOption(opt.id, event.target.value)
-															}
-															placeholder={`Từ thứ ${idx + 1}`}
-															className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
-														/>
-														<Button
-															type='button'
-															variant='ghost'
-															size='icon-xs'
-															aria-label={`Xoá từ thứ ${idx + 1}`}
-															disabled={wordOrderCorrectOptions.length <= 2}
-															onClick={() =>
-																removeWordOrderCorrectOption(opt.id)
-															}>
-															<X className='text-muted-foreground' />
-														</Button>
-													</div>
-												))}
+											/* ── word_order options editor ── */
+											<div className='space-y-4'>
+												{/* Correct words in order */}
+												<div className='space-y-2'>
+													<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+														Từ đúng (theo thứ tự)
+													</p>
+													{wordOrderCorrectOptions.map((opt, idx) => (
+														<div
+															key={opt.id}
+															className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
+															<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-xs font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'>
+																{idx + 1}
+															</span>
+															<Input
+																value={opt.content}
+																onChange={(event) =>
+																	updateOption(
+																		opt.id,
+																		event.target.value,
+																	)
+																}
+																placeholder={`Từ thứ ${idx + 1}`}
+																className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+															/>
+															<Button
+																type='button'
+																variant='ghost'
+																size='icon-xs'
+																aria-label={`Xoá từ thứ ${idx + 1}`}
+																disabled={
+																	wordOrderCorrectOptions.length <=
+																	2
+																}
+																onClick={() =>
+																	removeWordOrderCorrectOption(
+																		opt.id,
+																	)
+																}>
+																<X className='text-muted-foreground' />
+															</Button>
+														</div>
+													))}
+													<Button
+														type='button'
+														variant='outline'
+														size='sm'
+														onClick={addWordOrderCorrectOption}>
+														<Plus />
+														Thêm từ đúng
+													</Button>
+												</div>
+
+												{/* Distractor words */}
+												<div className='space-y-2'>
+													<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+														Từ nhiễu
+													</p>
+													{wordOrderDistractors.length === 0 && (
+														<p className='text-xs text-muted-foreground'>
+															Thêm từ nhiễu để học viên phải lựa chọn.
+														</p>
+													)}
+													{wordOrderDistractors.map((opt) => (
+														<div
+															key={opt.id}
+															className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
+															<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground'>
+																<X className='size-3.5' />
+															</span>
+															<Input
+																value={opt.content}
+																onChange={(event) =>
+																	updateOption(
+																		opt.id,
+																		event.target.value,
+																	)
+																}
+																placeholder='Từ nhiễu'
+																className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+															/>
+															<Button
+																type='button'
+																variant='ghost'
+																size='icon-xs'
+																aria-label='Xoá từ nhiễu'
+																onClick={() =>
+																	removeWordOrderDistractor(
+																		opt.id,
+																	)
+																}>
+																<X className='text-muted-foreground' />
+															</Button>
+														</div>
+													))}
+												</div>
+
 												<Button
 													type='button'
 													variant='outline'
 													size='sm'
-													onClick={addWordOrderCorrectOption}>
+													onClick={addOption}>
 													<Plus />
-													Thêm từ đúng
+													Thêm từ nhiễu
 												</Button>
 											</div>
-
-											{/* Distractor words */}
-											<div className='space-y-2'>
-												<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
-													Từ nhiễu
-												</p>
-												{wordOrderDistractors.length === 0 && (
-													<p className='text-xs text-muted-foreground'>
-														Thêm từ nhiễu để học viên phải lựa chọn.
-													</p>
-												)}
-												{wordOrderDistractors.map((opt) => (
-													<div
-														key={opt.id}
-														className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
-														<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground'>
-															<X className='size-3.5' />
-														</span>
-														<Input
-															value={opt.content}
-															onChange={(event) =>
-																updateOption(opt.id, event.target.value)
-															}
-															placeholder='Từ nhiễu'
-															className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
-														/>
-														<Button
-															type='button'
-															variant='ghost'
-															size='icon-xs'
-															aria-label='Xoá từ nhiễu'
-															onClick={() =>
-																removeWordOrderDistractor(opt.id)
-															}>
-															<X className='text-muted-foreground' />
-														</Button>
-													</div>
-												))}
-											</div>
-
-											<Button
-												type='button'
-												variant='outline'
-												size='sm'
-												onClick={addOption}>
-												<Plus />
-												Thêm từ nhiễu
-											</Button>
-										</div>
-									) : (
-										/* ── tất cả loại khác ── */
-										<div className='space-y-3'>
+										) : (
+											/* ── tất cả loại khác ── */
+											<div className='space-y-3'>
 												<div className='space-y-2'>
 													{activeQuestion.type === "matching"
 														? activeQuestion.options
@@ -1482,7 +1504,8 @@ function QuizCreatePage() {
 																						.metadata
 																						?.pairId &&
 																				option.metadata
-																					?.side === "right",
+																					?.side ===
+																					"right",
 																		);
 																	return (
 																		<div
@@ -1751,7 +1774,7 @@ function QuizCreatePage() {
 																							</Button>
 																						</div>
 																					)}
-																		</div>
+																			</div>
 																		);
 																	},
 																)}
@@ -1880,7 +1903,9 @@ function QuizCreatePage() {
 														return (
 															<Fragment key={i}>
 																{part && <span>{part}</span>}
-																{i < wordBankSentenceParts.length - 1 && (
+																{i <
+																	wordBankSentenceParts.length -
+																		1 && (
 																	<button
 																		type='button'
 																		disabled={previewChecked}
@@ -1904,9 +1929,14 @@ function QuizCreatePage() {
 																				!placedOption &&
 																				"border-muted-foreground/40 bg-muted/50 text-muted-foreground",
 																		)}>
-																		{placedOption
-																			? placedOption.content || "—"
-																			: <span className="opacity-0 select-none">___</span>}
+																		{placedOption ? (
+																			placedOption.content ||
+																			"—"
+																		) : (
+																			<span className='opacity-0 select-none'>
+																				___
+																			</span>
+																		)}
 																	</button>
 																)}
 															</Fragment>
@@ -1981,17 +2011,21 @@ function QuizCreatePage() {
 															);
 															const isCorrectPos =
 																previewChecked &&
-																wordOrderCorrectOptions[idx]?.id === optId;
+																wordOrderCorrectOptions[idx]?.id ===
+																	optId;
 															const isWrongPos =
 																previewChecked &&
-																wordOrderCorrectOptions[idx]?.id !== optId;
+																wordOrderCorrectOptions[idx]?.id !==
+																	optId;
 															return (
 																<button
 																	key={idx}
 																	type='button'
 																	disabled={previewChecked}
 																	onClick={() =>
-																		handleWordOrderPlacementClick(idx)
+																		handleWordOrderPlacementClick(
+																			idx,
+																		)
 																	}
 																	className={cn(
 																		"rounded-xl border-2 px-4 py-1.5 text-sm font-medium transition-colors",
@@ -2033,7 +2067,9 @@ function QuizCreatePage() {
 													{shuffledWordOrderOptions
 														.filter(
 															(opt) =>
-																!wordOrderPlacements.includes(opt.id),
+																!wordOrderPlacements.includes(
+																	opt.id,
+																),
 														)
 														.map((opt) => (
 															<button
