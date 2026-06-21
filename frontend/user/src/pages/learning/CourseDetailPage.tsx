@@ -18,9 +18,9 @@ import {
 	Sparkles,
 	Users,
 } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { learningService } from "@/services/learning.service";
-import { getCurrentUser, type AuthUser } from "@/services/auth.service";
+import type { AuthUser } from "@/services/auth.service";
 import type {
 	CourseDetail,
 	CourseLesson,
@@ -315,6 +315,63 @@ const Sidebar: React.FC<{
 	);
 };
 
+// ─── Panel yêu cầu đăng nhập ────────────────────────────────────────────────────
+
+const CourseContentLoginPanel: React.FC<{ courseSlug: string }> = ({ courseSlug }) => (
+	<div className='relative overflow-hidden rounded-2xl border-2 border-black bg-[var(--color-surface)] shadow-[4px_4px_0_#111]'>
+		<div className='flex items-center justify-between border-b-2 border-black bg-white px-4 py-3 sm:px-5'>
+			<span className='flex items-center gap-2 font-heading text-xs font-extrabold uppercase tracking-[0.12em] text-black'>
+				<Lock className='h-4 w-4' strokeWidth={2.5} />
+				Learning dashboard
+			</span>
+			<span className='rounded-full border-2 border-black bg-[var(--color-pastel-yellow)] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-black'>
+				Đang khóa
+			</span>
+		</div>
+
+		<div className='relative grid gap-5 p-5 sm:grid-cols-[1fr_190px] sm:p-7'>
+			<div className='flex flex-col justify-center'>
+				<span className='flex h-12 w-12 items-center justify-center rounded-xl border-2 border-black bg-[var(--color-primary)]'>
+					<Lock className='h-5 w-5 text-black' strokeWidth={2.75} />
+				</span>
+				<h3 className='mt-5 font-heading text-xl font-extrabold leading-tight text-black sm:text-2xl'>
+					Đăng nhập để mở khóa nội dung
+				</h3>
+				<p className='mt-2 max-w-md text-sm leading-6 text-gray-600'>
+					Theo dõi các buổi học, tiến độ và tài liệu của bạn trong một không gian học tập
+					cá nhân.
+				</p>
+				<Link
+					to={`/login?returnTo=${encodeURIComponent(`/khoa-hoc/${courseSlug}`)}`}
+					className='mt-5 inline-flex w-fit items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+					<ArrowLeft className='h-4 w-4 rotate-180' strokeWidth={2.75} />
+					Đăng nhập ngay
+				</Link>
+			</div>
+
+			<div className='grid grid-cols-2 gap-3 rounded-xl border-2 border-black bg-white p-3 shadow-[3px_3px_0_#111]'>
+				<div className='col-span-2 flex items-center justify-between border-b-2 border-black pb-2'>
+					<span className='text-[10px] font-extrabold uppercase tracking-wider text-gray-500'>
+						Tiến độ của bạn
+					</span>
+					<Lock className='h-3.5 w-3.5 text-gray-400' />
+				</div>
+				<div className='rounded-lg border-2 border-black bg-[var(--color-pastel-blue)] p-2'>
+					<p className='text-[10px] font-bold text-gray-600'>Hoàn thành</p>
+					<p className='mt-1 font-heading text-xl font-extrabold text-black'>—%</p>
+				</div>
+				<div className='rounded-lg border-2 border-black bg-[var(--color-pastel-pink)] p-2'>
+					<p className='text-[10px] font-bold text-gray-600'>Điểm XP của bạn</p>
+					<p className='mt-1 font-heading text-xl font-extrabold text-black'>—XP</p>
+				</div>
+				<div className='col-span-2 h-2 overflow-hidden rounded-full border-2 border-black bg-gray-100'>
+					<div className='h-full w-1/3 bg-gray-300' />
+				</div>
+			</div>
+		</div>
+	</div>
+);
+
 // ─── Skeleton ────────────────────────────────────────────────────────────────────
 
 const DetailSkeleton: React.FC = () => (
@@ -329,11 +386,13 @@ const DetailSkeleton: React.FC = () => (
 
 // ─── CourseDetailPage ─────────────────────────────────────────────────────────────
 
+type LayoutOutletContext = { user: AuthUser | null; loadingUser: boolean };
+
 const CourseDetailPage: React.FC = () => {
 	const { slug } = useParams<{ slug: string }>();
+	const { user, loadingUser } = useOutletContext<LayoutOutletContext>();
 	const [course, setCourse] = useState<CourseDetail | null>(null);
 	const [lessons, setLessons] = useState<CourseLesson[]>([]);
-	const [user, setUser] = useState<AuthUser | null>(null);
 	const [interested, setInterested] = useState(false);
 	const [enrolling, setEnrolling] = useState(false);
 	const [loading, setLoading] = useState(true);
@@ -364,23 +423,14 @@ const CourseDetailPage: React.FC = () => {
 		};
 	}, [slug]);
 
-	useEffect(() => {
-		let cancelled = false;
-		getCurrentUser()
-			.then((u) => {
-				if (!cancelled) setUser(u);
-			})
-			.catch(() => {});
-		return () => {
-			cancelled = true;
-		};
-	}, []);
-
 	// ─── Derived state ────────────────────────────────────────────────────────────
 
 	const phase = course ? getCoursePhase(course) : "in_progress";
 	const isEnrolled = Boolean(course?.enrollment_track);
 	const hasLessons = lessons.length > 0;
+	const hasAccessToken = Boolean(localStorage.getItem("access_token"));
+	const shouldWaitForUser = loadingUser && hasAccessToken;
+	const showSidebar = Boolean(user) && !shouldWaitForUser;
 	const resumeLesson = lessons.find((l) => !l.completed) ?? lessons[0];
 	const canClaimCertificate = (course?.progress ?? 0) >= 100;
 
@@ -586,14 +636,25 @@ const CourseDetailPage: React.FC = () => {
 						</div>
 
 						{/* ── Bố cục 2 cột ── */}
-						<div className='grid items-start gap-8 lg:grid-cols-[1fr_320px]'>
+						<div
+							className={`grid items-start gap-8 ${
+								showSidebar ? "lg:grid-cols-[1fr_320px]" : "grid-cols-1"
+							}`}>
 							{/* Danh sách buổi học */}
 							<div>
 								<h2 className='mb-4 font-heading text-2xl font-extrabold text-black'>
 									Nội dung khóa học
 								</h2>
 
-								{hasLessons ? (
+								{shouldWaitForUser ? (
+									<div className='flex min-h-72 items-center justify-center rounded-2xl border-2 border-black bg-[var(--color-surface)] px-6 text-center shadow-[4px_4px_0_#111]'>
+										<p className='font-heading text-sm font-extrabold text-gray-600'>
+											Đang kiểm tra phiên đăng nhập...
+										</p>
+									</div>
+								) : !user ? (
+									<CourseContentLoginPanel courseSlug={course.slug} />
+								) : hasLessons ? (
 									<div className='overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111] divide-y-2 divide-black'>
 										{lessons.map((lesson) => (
 											<LessonRow
@@ -626,15 +687,17 @@ const CourseDetailPage: React.FC = () => {
 								)}
 							</div>
 
-							{/* Sidebar */}
-							<aside className='lg:sticky lg:top-24 lg:self-start lg:pt-[calc(2rem+1rem)]'>
-								<Sidebar
-									canClaimCertificate={canClaimCertificate}
-									stats={course.stats}
-									track={effectiveTrack}
-									user={user}
-								/>
-							</aside>
+							{/* Sidebar chỉ hiển thị sau khi xác thực thành công */}
+							{showSidebar && (
+								<aside className='lg:sticky lg:top-24 lg:self-start lg:pt-[calc(2rem+1rem)]'>
+									<Sidebar
+										canClaimCertificate={canClaimCertificate}
+										stats={course.stats}
+										track={effectiveTrack}
+										user={user}
+									/>
+								</aside>
+							)}
 						</div>
 					</div>
 				)}
