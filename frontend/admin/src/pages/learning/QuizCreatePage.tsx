@@ -97,11 +97,6 @@ const questionTypeOptions: Array<{
 		description: "Có thể có nhiều phương án đúng.",
 	},
 	{
-		type: "true_false",
-		label: "Đúng / Sai",
-		description: "Một nhận định với hai lựa chọn cố định.",
-	},
-	{
 		type: "fill_blank",
 		label: "Điền đáp án",
 		description: "Học viên nhập câu trả lời ngắn.",
@@ -115,11 +110,6 @@ const questionTypeOptions: Array<{
 		type: "matching",
 		label: "Ghép đôi",
 		description: "Nối mỗi mục với cặp phù hợp.",
-	},
-	{
-		type: "ordering",
-		label: "Sắp xếp",
-		description: "Đặt các mục theo đúng trình tự.",
 	},
 	{
 		type: "word_order",
@@ -357,12 +347,12 @@ function QuizCreatePage() {
 		[activeQuestion?.type, activeQuestion?.options],
 	);
 
-	const shuffledWordBankOptions = useMemo(
+	const shuffledWordBankOptionIds = useMemo(
 		() =>
 			activeQuestion?.type === "word_bank_fill_blank"
-				? [...activeQuestion.options].sort(() => Math.random() - 0.5)
+				? [...activeQuestion.options].sort(() => Math.random() - 0.5).map((o) => o.id)
 				: [],
-		// Re-shuffle when question changes or options are added/removed
+		// Re-shuffle only when question changes or options are added/removed, not on content edits
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[activeQuestion?.id, activeQuestion?.type, activeQuestion?.options.length],
 	);
@@ -387,11 +377,12 @@ function QuizCreatePage() {
 		[activeQuestion?.type, activeQuestion?.options],
 	);
 
-	const shuffledWordOrderOptions = useMemo(
+	const shuffledWordOrderOptionIds = useMemo(
 		() =>
 			activeQuestion?.type === "word_order"
-				? [...activeQuestion.options].sort(() => Math.random() - 0.5)
+				? [...activeQuestion.options].sort(() => Math.random() - 0.5).map((o) => o.id)
 				: [],
+		// Re-shuffle only when question changes or options are added/removed, not on content edits
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[activeQuestion?.id, activeQuestion?.type, activeQuestion?.options.length],
 	);
@@ -1320,61 +1311,65 @@ function QuizCreatePage() {
 													</div>
 												)}
 
-												<div className='space-y-2'>
-													<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
-														Từ nhiễu
-													</p>
-													{wordBankDistractors.length === 0 && (
-														<p className='text-xs text-muted-foreground'>
-															Thêm từ nhiễu để học viên phải lựa chọn.
-														</p>
-													)}
-													{wordBankDistractors.map((opt) => (
-														<div
-															key={opt.id}
-															className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
-															<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground'>
-																<X className='size-3.5' />
-															</span>
-															<Input
-																value={opt.content}
-																onChange={(event) =>
-																	updateOption(
-																		opt.id,
-																		event.target.value,
-																	)
-																}
-																placeholder='Từ nhiễu'
-																className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
-															/>
-															<Button
-																type='button'
-																variant='ghost'
-																size='icon-xs'
-																aria-label='Xoá từ nhiễu'
-																disabled={
-																	wordBankDistractors.length <=
-																	requiredOptions(
-																		activeQuestion.type,
-																	)
-																}
-																onClick={() =>
-																	removeOption(opt.id)
-																}>
-																<X className='text-muted-foreground' />
-															</Button>
+												{wordBankBlankCount > 0 && (
+													<>
+														<div className='space-y-2'>
+															<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+																Từ nhiễu
+															</p>
+															{wordBankDistractors.length === 0 && (
+																<p className='text-xs text-muted-foreground'>
+																	Thêm từ nhiễu để học viên phải lựa chọn.
+																</p>
+															)}
+															{wordBankDistractors.map((opt) => (
+																<div
+																	key={opt.id}
+																	className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
+																	<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground'>
+																		<X className='size-3.5' />
+																	</span>
+																	<Input
+																		value={opt.content}
+																		onChange={(event) =>
+																			updateOption(
+																				opt.id,
+																				event.target.value,
+																			)
+																		}
+																		placeholder='Từ nhiễu'
+																		className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+																	/>
+																	<Button
+																		type='button'
+																		variant='ghost'
+																		size='icon-xs'
+																		aria-label='Xoá từ nhiễu'
+																		disabled={
+																			wordBankDistractors.length <=
+																			requiredOptions(
+																				activeQuestion.type,
+																			)
+																		}
+																		onClick={() =>
+																			removeOption(opt.id)
+																		}>
+																		<X className='text-muted-foreground' />
+																	</Button>
+																</div>
+															))}
 														</div>
-													))}
-												</div>
 
-												<Button
-													type='button'
-													variant='outline'
-													size='sm'
-													onClick={addOption}>
-													<Plus />
-													Thêm từ nhiễu
-												</Button>
+														<Button
+															type='button'
+															variant='outline'
+															size='sm'
+															onClick={addOption}>
+															<Plus />
+															Thêm từ nhiễu
+														</Button>
+													</>
+												)}
 											</div>
 										) : activeQuestion.type === "word_order" ? (
 											/* ── word_order options editor ── */
@@ -1945,21 +1940,6 @@ function QuizCreatePage() {
 												)}
 											</div>
 
-											{/* Show correct answers after wrong check */}
-											{previewChecked && !previewIsCorrect && (
-												<div className='mt-3 flex flex-wrap gap-2'>
-													{wordBankCorrectOptions.map((opt, i) => (
-														<span
-															key={opt.id}
-															className='rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'>
-															Chỗ trống {i + 1}:{" "}
-															<span className='font-bold'>
-																{opt.content || "—"}
-															</span>
-														</span>
-													))}
-												</div>
-											)}
 
 											{/* Word bank */}
 											{!previewChecked && (
@@ -1968,28 +1948,27 @@ function QuizCreatePage() {
 														Chọn từ bên dưới để điền vào chỗ trống:
 													</p>
 													<div className='flex flex-wrap gap-2'>
-														{shuffledWordBankOptions
+														{shuffledWordBankOptionIds
 															.filter(
-																(opt) =>
+																(id) =>
 																	!Array.from(
-																		{
-																			length: wordBankBlankCount,
-																		},
-																		(_, idx) =>
-																			wordBankPlacements[idx],
-																	).includes(opt.id),
+																		{ length: wordBankBlankCount },
+																		(_, idx) => wordBankPlacements[idx],
+																	).includes(id),
 															)
-															.map((opt) => (
-																<button
-																	key={opt.id}
-																	type='button'
-																	onClick={() =>
-																		handleWordBankSelect(opt.id)
-																	}
-																	className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
-																	{opt.content || "—"}
-																</button>
-															))}
+															.map((id) => {
+																const opt = activeQuestion.options.find((o) => o.id === id);
+																if (!opt) return null;
+																return (
+																	<button
+																		key={id}
+																		type='button'
+																		onClick={() => handleWordBankSelect(id)}
+																		className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
+																		{opt.content || "—"}
+																	</button>
+																);
+															})}
 													</div>
 												</div>
 											)}
@@ -2064,24 +2043,21 @@ function QuizCreatePage() {
 											{/* Word bank */}
 											{!previewChecked && (
 												<div className='flex flex-wrap gap-2'>
-													{shuffledWordOrderOptions
-														.filter(
-															(opt) =>
-																!wordOrderPlacements.includes(
-																	opt.id,
-																),
-														)
-														.map((opt) => (
-															<button
-																key={opt.id}
-																type='button'
-																onClick={() =>
-																	handleWordOrderSelect(opt.id)
-																}
-																className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
-																{opt.content || "—"}
-															</button>
-														))}
+													{shuffledWordOrderOptionIds
+														.filter((id) => !wordOrderPlacements.includes(id))
+														.map((id) => {
+															const opt = activeQuestion.options.find((o) => o.id === id);
+															if (!opt) return null;
+															return (
+																<button
+																	key={id}
+																	type='button'
+																	onClick={() => handleWordOrderSelect(id)}
+																	className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
+																	{opt.content || "—"}
+																</button>
+															);
+														})}
 												</div>
 											)}
 										</div>
@@ -2257,7 +2233,23 @@ function QuizCreatePage() {
 																		.map((o) => o.content)
 																		.filter(Boolean)
 																		.join(" / ")}`
-																: "Chưa chính xác"}
+																: activeQuestion.type === "word_bank_fill_blank"
+																	? (
+																		<>
+																			Đáp án:{" "}
+																			{wordBankSentenceParts.map((part, i) => (
+																				<Fragment key={i}>
+																					{part}
+																					{i < wordBankSentenceParts.length - 1 && (
+																						<span className='underline decoration-2 underline-offset-2'>
+																							{wordBankCorrectOptions[i]?.content ?? ""}
+																						</span>
+																					)}
+																				</Fragment>
+																			))}
+																		</>
+																	)
+																	: "Chưa chính xác"}
 													</p>
 													{activeQuestion.type !== "matching" && (
 														<p className='mt-1 text-xs leading-5 opacity-90'>
