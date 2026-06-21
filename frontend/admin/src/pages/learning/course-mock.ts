@@ -54,10 +54,13 @@ export type CourseSortKey =
 	| "title"
 	| "level"
 	| "status"
+	| "max_offline_slots"
 	| "lessons_count"
 	| "enrollments_count"
 	| "enrollment_deadline"
-	| "created_at";
+	| "created_at"
+	| "creator"
+	| "deleted_at";
 
 /** Lọc theo việc khóa có mở lớp offline hay chỉ online */
 export type CourseOfflineFilter = "all" | "has_offline" | "online_only";

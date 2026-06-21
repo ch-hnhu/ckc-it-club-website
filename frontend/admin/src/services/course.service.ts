@@ -99,6 +99,8 @@ const courseService = {
 	async getDeletedCourses(params: CourseListParams = {}): Promise<PaginatedResponse<AdminCourse>> {
 		const query: Record<string, unknown> = { page: params.page, per_page: params.per_page };
 		if (params.search) query.search = params.search;
+		if (params.sort) query.sort = params.sort;
+		if (params.order) query.order = params.order;
 		return api.get("/courses/trash", query);
 	},
 

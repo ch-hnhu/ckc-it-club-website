@@ -339,7 +339,7 @@ function CourseListPage() {
 										<Button
 											variant='ghost'
 											onClick={() => handleSort("id")}
-											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
 											ID {getSortIcon("id")}
 										</Button>
 									</TableHead>
@@ -347,7 +347,7 @@ function CourseListPage() {
 										<Button
 											variant='ghost'
 											onClick={() => handleSort("title")}
-											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
 											Khóa học {getSortIcon("title")}
 										</Button>
 									</TableHead>
@@ -355,16 +355,23 @@ function CourseListPage() {
 										<Button
 											variant='ghost'
 											onClick={() => handleSort("level")}
-											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
 											Trình độ {getSortIcon("level")}
 										</Button>
 									</TableHead>
-									<TableHead className='w-[120px]'>Lớp offline</TableHead>
+									<TableHead className='w-[120px]'>
+										<Button
+											variant='ghost'
+											onClick={() => handleSort("max_offline_slots")}
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
+											Lớp offline {getSortIcon("max_offline_slots")}
+										</Button>
+									</TableHead>
 									<TableHead className='w-[110px]'>
 										<Button
 											variant='ghost'
 											onClick={() => handleSort("lessons_count")}
-											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
 											Buổi học {getSortIcon("lessons_count")}
 										</Button>
 									</TableHead>
@@ -372,7 +379,7 @@ function CourseListPage() {
 										<Button
 											variant='ghost'
 											onClick={() => handleSort("enrollments_count")}
-											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
 											Học viên {getSortIcon("enrollments_count")}
 										</Button>
 									</TableHead>
@@ -380,7 +387,7 @@ function CourseListPage() {
 										<Button
 											variant='ghost'
 											onClick={() => handleSort("enrollment_deadline")}
-											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
 											Hạn ghi danh {getSortIcon("enrollment_deadline")}
 										</Button>
 									</TableHead>
@@ -388,11 +395,18 @@ function CourseListPage() {
 										<Button
 											variant='ghost'
 											onClick={() => handleSort("status")}
-											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
 											Trạng thái {getSortIcon("status")}
 										</Button>
 									</TableHead>
-									<TableHead className='min-w-[150px]'>Người tạo</TableHead>
+									<TableHead className='min-w-[150px]'>
+										<Button
+											variant='ghost'
+											onClick={() => handleSort("creator")}
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
+											Người tạo {getSortIcon("creator")}
+										</Button>
+									</TableHead>
 									<TableHead className='w-[52px]' />
 								</TableRow>
 							</TableHeader>

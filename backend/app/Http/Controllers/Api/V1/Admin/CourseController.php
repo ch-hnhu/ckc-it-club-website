@@ -10,6 +10,7 @@ use App\Models\CourseEnrollment;
 use App\Models\Lesson;
 use App\Models\LessonAttendance;
 use App\Models\Tag;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,8 +33,8 @@ class CourseController extends BaseApiController
         $offline = $request->query('offline'); // all | has_offline | online_only
 
         $sortable = [
-            'id', 'title', 'level', 'status',
-            'lessons_count', 'enrollments_count', 'enrollment_deadline', 'created_at',
+            'id', 'title', 'level', 'status', 'max_offline_slots',
+            'lessons_count', 'enrollments_count', 'enrollment_deadline', 'created_at', 'creator',
         ];
         $sort = in_array($request->query('sort'), $sortable, true) ? $request->query('sort') : 'created_at';
         $order = $request->query('order') === 'asc' ? 'asc' : 'desc';
@@ -52,7 +53,14 @@ class CourseController extends BaseApiController
             ->when($level && $level !== 'all', fn ($q) => $q->where('level', $level))
             ->when($offline === 'has_offline', fn ($q) => $q->whereNotNull('max_offline_slots'))
             ->when($offline === 'online_only', fn ($q) => $q->whereNull('max_offline_slots'))
-            ->orderBy($sort, $order)
+            ->when(
+                $sort === 'creator',
+                fn ($q) => $q->orderBy(
+                    User::select('full_name')->whereColumn('users.id', 'courses.created_by'),
+                    $order,
+                ),
+                fn ($q) => $q->orderBy($sort, $order),
+            )
             ->paginate($perPage);
 
         $courses->getCollection()->transform(fn (Course $c) => $this->transformCourse($c));
@@ -217,11 +225,15 @@ class CourseController extends BaseApiController
         $perPage = min((int) $request->query('per_page', 10), 50);
         $search = $request->query('search');
 
+        $sortable = ['id', 'title', 'level', 'enrollments_count', 'deleted_at'];
+        $sort = in_array($request->query('sort'), $sortable, true) ? $request->query('sort') : 'deleted_at';
+        $order = $request->query('order') === 'asc' ? 'asc' : 'desc';
+
         $courses = Course::onlyTrashed()
             ->with(['creator:id,full_name,avatar', 'tags:id,name'])
             ->withCount($this->courseCounts())
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
-            ->orderByDesc('deleted_at')
+            ->orderBy($sort, $order)
             ->paginate($perPage);
 
         $courses->getCollection()->transform(fn (Course $c) => $this->transformCourse($c));

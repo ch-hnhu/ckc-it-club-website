@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import {
+	ArrowDown,
 	ArrowLeft,
+	ArrowUp,
+	ArrowUpDown,
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
@@ -14,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -49,10 +53,11 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 import { cn } from "@/lib/utils";
 import { COURSE_LEVEL_MAP } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
-import type { AdminCourse } from "@/pages/learning/course-mock";
+import type { AdminCourse, CourseSortKey } from "@/pages/learning/course-mock";
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" });
 
@@ -79,7 +84,36 @@ function CourseTrashPage() {
 	const [restoringId, setRestoringId] = useState<number | null>(null);
 	const [forceTarget, setForceTarget] = useState<AdminCourse | null>(null);
 	const [forcing, setForcing] = useState(false);
+	const [bulkRestoring, setBulkRestoring] = useState(false);
+	const [bulkForceOpen, setBulkForceOpen] = useState(false);
+	const [bulkForcing, setBulkForcing] = useState(false);
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
+	const { allSelected, isSelected, selectedIds, toggleAll, toggleOne } = useTableSelection(
+		courses.map((c) => c.id),
+	);
+	const [sortConfig, setSortConfig] = useState<{
+		key: CourseSortKey | null;
+		order: "asc" | "desc" | null;
+	}>({ key: "deleted_at", order: "desc" });
+
+	const handleSort = (key: CourseSortKey) => {
+		let order: "asc" | "desc" | null = "asc";
+		if (sortConfig.key === key) {
+			order = sortConfig.order === "asc" ? "desc" : sortConfig.order === "desc" ? null : "asc";
+		}
+		setSortConfig({ key: order ? key : null, order });
+	};
+
+	const getSortIcon = (key: CourseSortKey) =>
+		sortConfig.key !== key ? (
+			<ArrowUpDown className='ml-2 h-4 w-4' />
+		) : sortConfig.order === "asc" ? (
+			<ArrowUp className='ml-2 h-4 w-4' />
+		) : sortConfig.order === "desc" ? (
+			<ArrowDown className='ml-2 h-4 w-4' />
+		) : (
+			<ArrowUpDown className='ml-2 h-4 w-4' />
+		);
 
 	useEffect(() => {
 		const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -98,6 +132,8 @@ function CourseTrashPage() {
 				page: meta.current_page,
 				per_page: meta.per_page,
 				search: debouncedSearch || undefined,
+				sort: sortConfig.key,
+				order: sortConfig.order,
 			})
 			.then((res) => {
 				if (cancelled) return;
@@ -113,7 +149,7 @@ function CourseTrashPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken]);
+	}, [debouncedSearch, meta.current_page, meta.per_page, reloadToken, sortConfig]);
 
 	const handleRestore = async (course: AdminCourse) => {
 		setRestoringId(course.id);
@@ -140,6 +176,37 @@ function CourseTrashPage() {
 			toast.error("Không thể xóa vĩnh viễn khóa học.");
 		} finally {
 			setForcing(false);
+		}
+	};
+
+	const handleBulkRestore = async () => {
+		if (selectedIds.length === 0) return;
+		setBulkRestoring(true);
+		try {
+			await Promise.all(selectedIds.map((id) => courseService.restoreCourse(id)));
+			toast.success(`Đã khôi phục ${selectedIds.length} khóa học.`);
+			toggleAll(false);
+			setReloadToken((p) => p + 1);
+		} catch {
+			toast.error("Không thể khôi phục các khóa học đã chọn.");
+		} finally {
+			setBulkRestoring(false);
+		}
+	};
+
+	const handleBulkForceDelete = async () => {
+		if (selectedIds.length === 0) return;
+		setBulkForcing(true);
+		try {
+			await Promise.all(selectedIds.map((id) => courseService.forceDeleteCourse(id)));
+			toast.success(`Đã xóa vĩnh viễn ${selectedIds.length} khóa học.`);
+			setBulkForceOpen(false);
+			toggleAll(false);
+			setReloadToken((p) => p + 1);
+		} catch {
+			toast.error("Không thể xóa vĩnh viễn các khóa học đã chọn.");
+		} finally {
+			setBulkForcing(false);
 		}
 	};
 
@@ -171,11 +238,53 @@ function CourseTrashPage() {
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead className='w-[90px]'>ID</TableHead>
-									<TableHead className='min-w-[280px]'>Khóa học</TableHead>
-									<TableHead className='w-[120px]'>Trình độ</TableHead>
-									<TableHead className='w-[120px]'>Học viên</TableHead>
-									<TableHead className='w-[180px]'>Ngày xóa</TableHead>
+									<TableHead className='w-[44px]'>
+										<Checkbox
+											aria-label='Chọn tất cả'
+											checked={allSelected}
+											onCheckedChange={(c) => toggleAll(c === true)}
+										/>
+									</TableHead>
+									<TableHead className='w-[90px]'>
+										<Button
+											variant='ghost'
+											onClick={() => handleSort("id")}
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
+											ID {getSortIcon("id")}
+										</Button>
+									</TableHead>
+									<TableHead className='min-w-[280px]'>
+										<Button
+											variant='ghost'
+											onClick={() => handleSort("title")}
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
+											Khóa học {getSortIcon("title")}
+										</Button>
+									</TableHead>
+									<TableHead className='w-[120px]'>
+										<Button
+											variant='ghost'
+											onClick={() => handleSort("level")}
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
+											Trình độ {getSortIcon("level")}
+										</Button>
+									</TableHead>
+									<TableHead className='w-[120px]'>
+										<Button
+											variant='ghost'
+											onClick={() => handleSort("enrollments_count")}
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
+											Học viên {getSortIcon("enrollments_count")}
+										</Button>
+									</TableHead>
+									<TableHead className='w-[180px]'>
+										<Button
+											variant='ghost'
+											onClick={() => handleSort("deleted_at")}
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
+											Ngày xóa {getSortIcon("deleted_at")}
+										</Button>
+									</TableHead>
 									<TableHead className='w-[52px]' />
 								</TableRow>
 							</TableHeader>
@@ -183,14 +292,21 @@ function CourseTrashPage() {
 								{loading ? (
 									Array.from({ length: meta.per_page }).map((_, i) => (
 										<TableRow key={i}>
-											<TableCell colSpan={6}>
+											<TableCell colSpan={7}>
 												<Skeleton className='h-4 w-full' />
 											</TableCell>
 										</TableRow>
 									))
 								) : courses.length > 0 ? (
 									courses.map((course) => (
-										<TableRow key={course.id}>
+										<TableRow key={course.id} data-state={isSelected(course.id) ? "selected" : undefined}>
+											<TableCell>
+												<Checkbox
+													aria-label={`Chọn khóa ${course.title}`}
+													checked={isSelected(course.id)}
+													onCheckedChange={(c) => toggleOne(course.id, c === true)}
+												/>
+											</TableCell>
 											<TableCell className='font-medium text-muted-foreground'>
 												KH-{course.id}
 											</TableCell>
@@ -250,7 +366,7 @@ function CourseTrashPage() {
 									))
 								) : (
 									<TableRow>
-										<TableCell colSpan={6} className='h-32 text-center text-muted-foreground'>
+										<TableCell colSpan={7} className='h-32 text-center text-muted-foreground'>
 											Thùng rác trống.
 										</TableCell>
 									</TableRow>
@@ -258,11 +374,37 @@ function CourseTrashPage() {
 							</TableBody>
 							<TableFooter className='bg-transparent'>
 								<TableRow>
-									<TableCell colSpan={6}>
+									<TableCell colSpan={7}>
 										<div className='flex items-center justify-between px-2'>
-											<p className='flex-1 text-sm text-muted-foreground'>
+											<div className='flex flex-1 items-center gap-3 text-sm text-muted-foreground'>
 												Đang hiển thị {courses.length} trên tổng {meta.total} khóa học.
-											</p>
+												{selectedIds.length > 0 && (
+													<>
+														<span className='text-border'>|</span>
+														<span className='font-medium text-foreground'>
+															{selectedIds.length} khóa được chọn
+														</span>
+														<Button
+															size='sm'
+															variant='outline'
+															disabled={bulkRestoring || bulkForcing}
+															onClick={() => void handleBulkRestore()}
+															className='h-7'>
+															<RotateCcw className='h-3.5 w-3.5' />
+															{bulkRestoring ? "Đang khôi phục..." : "Khôi phục đã chọn"}
+														</Button>
+														<Button
+															size='sm'
+															variant='destructive'
+															disabled={bulkRestoring || bulkForcing}
+															onClick={() => setBulkForceOpen(true)}
+															className='h-7'>
+															<Trash2 className='h-3.5 w-3.5' />
+															{bulkForcing ? "Đang xóa..." : "Xóa vĩnh viễn"}
+														</Button>
+													</>
+												)}
+											</div>
 											<div className='flex items-center space-x-6 lg:space-x-8'>
 												<div className='flex items-center space-x-2'>
 													<p className='text-sm font-medium'>Số hàng mỗi trang</p>
@@ -353,6 +495,30 @@ function CourseTrashPage() {
 							disabled={forcing}
 							className='bg-destructive text-white hover:bg-destructive/90'>
 							{forcing ? "Đang xóa..." : "Xóa vĩnh viễn"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			<AlertDialog open={bulkForceOpen} onOpenChange={(o) => !bulkForcing && setBulkForceOpen(o)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa vĩnh viễn {selectedIds.length} khóa học?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{selectedIds.length} khóa học đã chọn và toàn bộ dữ liệu liên quan sẽ bị xóa vĩnh
+							viễn, không thể khôi phục.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={bulkForcing}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(e) => {
+								e.preventDefault();
+								void handleBulkForceDelete();
+							}}
+							disabled={bulkForcing}
+							className='bg-destructive text-white hover:bg-destructive/90'>
+							{bulkForcing ? "Đang xóa..." : "Xóa vĩnh viễn"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
