@@ -219,6 +219,7 @@
 - `/diem-cua-toi` loads point history from `/gamification/me/history` in pages of 5 entries and appends the next page through a “Tải thêm” button until the paginated response has no more pages.
 - The community leaderboard right rail links to the seeded blog slug `gioi-thieu-bang-xep-hang`; its teaser card fetches the blog detail to show cover image, title, reading time, and published date.
 - Learning course detail reads `enrollment_track` (`offline` or `online`) from the course detail contract. The progress sidebar renders offline track metrics as Điểm danh, Bài thực hành, Quiz, and Điểm XP; online track metrics render only Quiz and Điểm XP. The learner card displays the track label and shows the certificate claim CTA only when `progress >= 100`.
+- Learning course detail remains publicly reachable, but its lesson-content column is gated for guests with a dashboard-style login panel. It consumes `user` and `loadingUser` from `MainLayout`'s outlet context so the authentication state stays consistent with the navbar; the learning sidebar stays hidden until an authenticated user is available.
 
 ## Environment Variables
 
