@@ -68,7 +68,11 @@ const ActionCard: React.FC<{
 	config: ActionConfig;
 	item: CourseContentItem | null;
 	internalTo?: string;
-}> = ({ config, item, internalTo }) => {
+	/** Khoá nội dung này lại (vd bài tập thực hành chỉ dành cho lớp offline) */
+	disabled?: boolean;
+	/** Thông báo hiển thị khi bị khoá */
+	disabledLabel?: string;
+}> = ({ config, item, internalTo, disabled = false, disabledLabel }) => {
 	const Icon = config.icon;
 	const hasActionTarget = Boolean(item && (config.isExternal ? item.url : internalTo));
 
@@ -85,6 +89,11 @@ const ActionCard: React.FC<{
 	const emptyPanel = (
 		<div className='flex min-h-12 items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-center'>
 			<p className='font-heading text-sm font-extrabold text-gray-500'>Chưa có dữ liệu</p>
+		</div>
+	);
+	const disabledBtn = (
+		<div className='flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-gray-100 px-4 py-3 font-heading text-sm font-extrabold text-gray-400'>
+			{disabledLabel ?? "Không khả dụng"}
 		</div>
 	);
 
@@ -116,7 +125,9 @@ const ActionCard: React.FC<{
 						</div>
 
 						{/* Action */}
-						{hasActionTarget && config.isExternal && item.url ? (
+						{disabled ? (
+							disabledBtn
+						) : hasActionTarget && config.isExternal && item.url ? (
 							<a href={item.url} target='_blank' rel='noopener noreferrer'>
 								{actionBtn}
 							</a>
@@ -126,6 +137,8 @@ const ActionCard: React.FC<{
 							emptyPanel
 						)}
 					</>
+				) : disabled ? (
+					disabledBtn
 				) : (
 					emptyPanel
 				)}
@@ -316,20 +329,32 @@ const LessonDetailPage: React.FC = () => {
 
 									<div className='relative'>
 										<div className='grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-x-72 md:gap-y-12'>
-											{ACTIONS.map((action) => (
-												<ActionCard
-													key={action.key}
-													config={action}
-													item={lesson[action.key]}
-													internalTo={
-														action.key === "video" && lesson.video?.slug
-															? `/khoa-hoc/${slug}/${lessonSlug}/${lesson.video.slug}`
-															: action.key === "quiz" && lesson.quiz?.slug
-																? `/khoa-hoc/${slug}/${lessonSlug}/quiz/${lesson.quiz.slug}`
+											{ACTIONS.map((action) => {
+												// Bài tập thực hành chỉ dành cho lớp offline.
+												const exerciseOnlineLocked =
+													action.key === "exercise" &&
+													lesson.enrollment_track !== "offline";
+												return (
+													<ActionCard
+														key={action.key}
+														config={action}
+														item={lesson[action.key]}
+														disabled={exerciseOnlineLocked}
+														disabledLabel={
+															exerciseOnlineLocked
+																? "Chỉ dành cho lớp offline"
 																: undefined
-													}
-												/>
-											))}
+														}
+														internalTo={
+															action.key === "video" && lesson.video?.slug
+																? `/khoa-hoc/${slug}/${lessonSlug}/${lesson.video.slug}`
+																: action.key === "quiz" && lesson.quiz?.slug
+																	? `/khoa-hoc/${slug}/${lessonSlug}/quiz/${lesson.quiz.slug}`
+																	: undefined
+														}
+													/>
+												);
+											})}
 										</div>
 
 										{/* Center node — chồng lên giữa trên desktop */}

@@ -18,7 +18,8 @@ import {
 	Sparkles,
 	Users,
 } from "lucide-react";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useOutletContext } from "react-router-dom";
+import { toast } from "sonner";
 import { learningService } from "@/services/learning.service";
 import type { AuthUser } from "@/services/auth.service";
 import type {
@@ -391,6 +392,8 @@ type LayoutOutletContext = { user: AuthUser | null; loadingUser: boolean };
 const CourseDetailPage: React.FC = () => {
 	const { slug } = useParams<{ slug: string }>();
 	const { user, loadingUser } = useOutletContext<LayoutOutletContext>();
+	const navigate = useNavigate();
+	const location = useLocation();
 	const [course, setCourse] = useState<CourseDetail | null>(null);
 	const [lessons, setLessons] = useState<CourseLesson[]>([]);
 	const [interested, setInterested] = useState(false);
@@ -472,8 +475,29 @@ const CourseDetailPage: React.FC = () => {
 
 	// ─── Handlers ─────────────────────────────────────────────────────────────────
 
+	// Yêu cầu đăng nhập trước mọi hành động; nếu chưa thì điều hướng tới trang đăng nhập kèm đường dẫn quay lại.
+	const requireAuth = (): boolean => {
+		if (!user) {
+			navigate("/login", { state: { from: location.pathname + location.search } });
+			return false;
+		}
+		return true;
+	};
+
 	const handleEnrollOffline = async () => {
 		if (enrolling) return;
+		if (!requireAuth()) return;
+
+		// Chỉ email sinh viên Cao Thắng hoặc thành viên CLB mới được đăng ký lớp offline.
+		const isClubMember = Boolean(user?.roles?.some((role) => role !== "user"));
+		const isStudentEmail = Boolean(user?.email?.toLowerCase().endsWith("@caothang.edu.vn"));
+		if (!isClubMember && !isStudentEmail) {
+			toast.error(
+				"Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) hoặc thành viên CLB mới được đăng ký lớp offline.",
+			);
+			return;
+		}
+
 		setEnrolling(true);
 		try {
 			// TODO: await learningService.enrollOffline(slug!);
@@ -484,12 +508,22 @@ const CourseDetailPage: React.FC = () => {
 	};
 
 	const handleToggleInterest = () => {
-		setInterested((prev) => !prev);
+		if (!requireAuth()) return;
+		const next = !interested;
+		setInterested(next);
+		if (next) {
+			toast.success("Đã thêm vào danh sách quan tâm.", {
+				description: "Bạn sẽ nhận thông báo khi khoá học mở đăng ký.",
+			});
+		} else {
+			toast("Đã bỏ quan tâm khoá học.");
+		}
 		// TODO: await learningService.toggleInterest(slug!);
 	};
 
 	// Optimistic: cấp vé QR tạm, server trả về token thật sau
 	const handleCreateTicket = (lessonId: number) => {
+		if (!requireAuth()) return;
 		setLessons((prev) =>
 			prev.map((l) =>
 				l.id === lessonId ? { ...l, qr_ticket: { token: "pending", used_at: null } } : l,

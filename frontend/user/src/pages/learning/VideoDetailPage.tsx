@@ -3,34 +3,36 @@ import {
 	ArrowLeft,
 	ArrowRight,
 	Check,
-	CircleCheck,
-	Clock,
 	FileText,
-	FileArchive,
-	Link2,
 	ListVideo,
-	MessagesSquare,
-	PlayCircle,
-	Sparkles,
+	Radio,
+	Video as VideoIcon,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { learningService } from "@/services/learning.service";
-import type { VideoAttachment, VideoDetail } from "@/types/learning.types";
+import { renderMarkdownContent } from "@/lib/markdown";
+import type { VideoDetail } from "@/types/learning.types";
 
-const ATTACHMENT_ICON: Record<VideoAttachment["kind"], React.ComponentType<{ className?: string }>> = {
-	pdf: FileText,
-	zip: FileArchive,
-	link: Link2,
-};
+type VideoTabKey = "lecture" | "live";
+
+interface VideoTab {
+	key: VideoTabKey;
+	label: string;
+	url: string;
+	icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+}
+
+const isEmbedUrl = (url: string) => url.includes("youtube") || url.includes("/embed");
 
 // ─── Skeleton ───────────────────────────────────────────────────────────────────
 
 const VideoSkeleton: React.FC = () => (
-	<div className='animate-pulse'>
-		<div className='aspect-video rounded-2xl border-2 border-black bg-gray-200' />
-		<div className='mt-8 grid gap-8 lg:grid-cols-[1fr_300px]'>
-			<div className='h-40 rounded-2xl border-2 border-black bg-gray-200' />
-			<div className='hidden h-72 rounded-2xl border-2 border-black bg-gray-200 lg:block' />
+	<div className='grid flex-1 lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'>
+		<div className='border-b-2 border-black p-6 lg:border-r-2 lg:border-b-0'>
+			<div className='h-[460px] animate-pulse rounded-2xl border-2 border-black bg-gray-200' />
+		</div>
+		<div className='bg-[#f5f7fb] p-6'>
+			<div className='aspect-video animate-pulse rounded-2xl border-2 border-black bg-gray-200' />
 		</div>
 	</div>
 );
@@ -47,20 +49,21 @@ const VideoDetailPage: React.FC = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [completed, setCompleted] = useState(false);
-	const [startAt, setStartAt] = useState(0);
+	const [activeTab, setActiveTab] = useState<VideoTabKey>("lecture");
 
 	useEffect(() => {
 		if (!slug || !lessonSlug || !videoSlug) return;
 		let cancelled = false;
 		setLoading(true);
 		setError(null);
-		setStartAt(0);
 		learningService
 			.getVideo(slug, lessonSlug, videoSlug)
 			.then((res) => {
 				if (cancelled) return;
 				setVideo(res.data);
 				setCompleted(res.data.completed);
+				// Ưu tiên video bài giảng; nếu chưa có thì mở bản ghi livestream
+				setActiveTab(res.data.lecture_url ? "lecture" : "live");
 			})
 			.catch(() => {
 				if (!cancelled) setError("Không tìm thấy video này.");
@@ -73,229 +76,151 @@ const VideoDetailPage: React.FC = () => {
 		};
 	}, [slug, lessonSlug, videoSlug]);
 
-	// Nguồn phát: nhúng iframe (YouTube) hoặc file mp4
-	const isEmbed = useMemo(
-		() => Boolean(video && (video.url.includes("youtube") || video.url.includes("/embed"))),
-		[video],
-	);
+	// Các nguồn video khả dụng (bài giảng ưu tiên trước, rồi livestream)
+	const tabs = useMemo<VideoTab[]>(() => {
+		if (!video) return [];
+		const list: VideoTab[] = [];
+		if (video.lecture_url) {
+			list.push({ key: "lecture", label: "Video bài giảng", url: video.lecture_url, icon: VideoIcon });
+		}
+		if (video.live_url) {
+			list.push({ key: "live", label: "Video bản ghi livestream", url: video.live_url, icon: Radio });
+		}
+		return list;
+	}, [video]);
 
-	const embedSrc = useMemo(() => {
-		if (!video) return "";
-		const sep = video.url.includes("?") ? "&" : "?";
-		return `${video.url}${sep}start=${startAt}${startAt ? "&autoplay=1" : ""}`;
-	}, [video, startAt]);
+	const activeUrl = tabs.find((t) => t.key === activeTab)?.url ?? tabs[0]?.url ?? "";
+	// Chỉ hiện thanh tab khi có cả 2 nguồn (không có bản ghi livestream → ẩn tab)
+	const showTabs = tabs.length > 1;
 
-	// Điều hướng tuần tự dựa trên playlist của buổi học
-	const playlist = video?.playlist ?? [];
-	const curIdx = playlist.findIndex((p) => p.current);
-	const prevItem = curIdx > 0 ? playlist[curIdx - 1] : null;
-	const nextItem =
-		curIdx >= 0 && curIdx < playlist.length - 1 ? playlist[curIdx + 1] : null;
-	// Back: video trước, hoặc về trang buổi học nếu đang ở video đầu
-	const backHref = prevItem
-		? `/khoa-hoc/${slug}/${lessonSlug}/${prevItem.slug}`
-		: `/khoa-hoc/${slug}/${lessonSlug}`;
-	// Next: video kế → buổi kế → null (vô hiệu hóa)
-	const nextHref = nextItem
-		? `/khoa-hoc/${slug}/${lessonSlug}/${nextItem.slug}`
-		: video?.next_lesson
-			? `/khoa-hoc/${slug}/${video.next_lesson.slug}`
-			: null;
+	const backHref = `/khoa-hoc/${slug}/${lessonSlug}`;
+	const prevHref = video?.prev_lesson
+		? `/khoa-hoc/${slug}/${video.prev_lesson.slug}/video`
+		: backHref;
+	const nextHref = video?.next_lesson
+		? `/khoa-hoc/${slug}/${video.next_lesson.slug}/video`
+		: null;
 
 	return (
-		<div className='w-full min-h-screen pb-28 pt-20'>
-			<div className='neo-container px-6'>
-				{/* Back link → trang buổi học */}
-				<Link
-					to={`/khoa-hoc/${slug}/${lessonSlug}`}
-					className='mb-6 inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 transition hover:text-black'>
-					<ArrowLeft className='h-4 w-4' />
-					{video ? `Buổi ${video.lesson.order} · ${video.lesson.title}` : "Quay lại buổi học"}
-				</Link>
-
-				{loading ? (
-					<VideoSkeleton />
-				) : error || !video ? (
-					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center shadow-[4px_4px_0_#111]'>
+		<div className='flex min-h-screen w-full flex-col bg-white pt-16 pb-28 lg:h-screen lg:overflow-hidden lg:pb-[74px]'>
+			{loading ? (
+				<VideoSkeleton />
+			) : error || !video ? (
+				<div className='flex flex-1 items-center justify-center px-6 py-16'>
+					<div className='w-full max-w-xl rounded-2xl border-2 border-black bg-white px-6 py-16 text-center shadow-[4px_4px_0_#111]'>
 						<p className='font-heading text-xl font-extrabold text-black'>Có lỗi xảy ra</p>
 						<p className='mt-2 text-sm text-gray-600'>{error ?? "Không tải được video."}</p>
 						<Link
-							to={`/khoa-hoc/${slug}/${lessonSlug}`}
+							to={backHref}
 							className='mt-5 inline-flex items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 							Quay lại buổi học
 						</Link>
 					</div>
-				) : (
-					<div className='grid gap-8 lg:grid-cols-[1fr_300px]'>
-						{/* ── Cột trái: player + thông tin ── */}
-						<div>
+				</div>
+			) : (
+				<div className='grid flex-1 lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'>
+					{/* Khối trái: tài liệu bài học */}
+					<section className='border-b-2 border-black bg-white px-4 py-5 md:px-6 lg:min-h-0 lg:overflow-y-auto lg:border-r-2 lg:border-b-0'>
+						<div className='w-full'>
+							<h2 className='mb-3 flex items-center gap-2 font-heading text-lg font-extrabold text-black'>
+								<FileText className='h-5 w-5' strokeWidth={2.5} />
+								Tài liệu buổi học
+							</h2>
+							{video.document ? (
+								<div className='so-editor-outer community-markdown'>
+									<div
+										className='s-prose'
+										dangerouslySetInnerHTML={{
+											__html: renderMarkdownContent(video.document),
+										}}
+									/>
+								</div>
+							) : (
+								<div className='rounded-2xl border-2 border-black bg-white py-12 text-center shadow-[4px_4px_0_#111]'>
+									<FileText className='mx-auto h-9 w-9 text-gray-300' />
+									<p className='mt-3 text-sm font-medium text-gray-500'>
+										Buổi học này chưa có tài liệu.
+									</p>
+								</div>
+							)}
+						</div>
+					</section>
+
+					{/* Khối phải: video và thao tác học */}
+					<section className='bg-[#f5f7fb] px-4 py-5 md:px-6 lg:min-h-0 lg:overflow-y-auto'>
+						<div className='w-full'>
+							<h2 className='mb-3 flex items-center gap-2 font-heading text-lg font-extrabold text-black'>
+								<VideoIcon className='h-5 w-5' strokeWidth={2.5} />
+								Video buổi học
+							</h2>
+
+							{/* Tabs nguồn video — chỉ hiện khi có cả bài giảng & livestream */}
+							{showTabs && (
+								<div className='mb-3 flex flex-wrap gap-2'>
+									{tabs.map((tab) => {
+										const Icon = tab.icon;
+										const active = tab.key === activeTab;
+										return (
+											<button
+												key={tab.key}
+												type='button'
+												onClick={() => setActiveTab(tab.key)}
+												className={`inline-flex items-center gap-2 rounded-xl border-2 border-black px-4 py-2 font-heading text-sm font-extrabold transition ${
+													active
+														? "bg-[var(--color-primary)] text-black shadow-[3px_3px_0_#111]"
+														: "bg-white text-gray-600 hover:bg-gray-50 shadow-none"
+												}`}>
+												<Icon className='h-4 w-4' strokeWidth={2.5} />
+												{tab.label}
+											</button>
+										);
+									})}
+								</div>
+							)}
+
 							{/* Player */}
 							<div className='overflow-hidden rounded-2xl border-2 border-black bg-black shadow-[4px_4px_0_#111]'>
 								<div className='aspect-video w-full'>
-									{isEmbed ? (
+									{isEmbedUrl(activeUrl) ? (
 										<iframe
-											key={embedSrc}
-											src={embedSrc}
+											key={activeUrl}
+											src={activeUrl}
 											title={video.title}
 											className='h-full w-full'
 											allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
 											allowFullScreen
 										/>
 									) : (
-										<video src={video.url} controls className='h-full w-full' />
+										<video key={activeUrl} src={activeUrl} controls className='h-full w-full' />
 									)}
 								</div>
 							</div>
 
-							{/* Tiêu đề + meta */}
+							{/* Tiêu đề */}
 							<h1 className='mt-5 font-heading text-2xl font-extrabold leading-tight text-black md:text-3xl'>
 								{video.title}
 							</h1>
-							<div className='mt-3 flex flex-wrap items-center gap-3 text-sm font-semibold text-gray-500'>
-								<span className='inline-flex items-center gap-1.5'>
-									<Clock className='h-4 w-4' />
-									{video.duration}
-								</span>
-								<span className='inline-flex items-center gap-1.5 rounded-full border-2 border-black bg-[var(--color-pastel-yellow)] px-2.5 py-0.5 text-xs font-extrabold text-black'>
-									<Sparkles className='h-3.5 w-3.5' strokeWidth={2.5} />+{video.xp} XP
-								</span>
-							</div>
 
-							{/* Chương trong video */}
-							<div className='mt-8'>
-								<h2 className='mb-3 flex items-center gap-2 font-heading text-lg font-extrabold text-black'>
-									<ListVideo className='h-5 w-5' strokeWidth={2.5} />
-									Chương trong video
-								</h2>
-								<div className='overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111] divide-y-2 divide-black'>
-									{video.chapters.map((ch) => (
-										<button
-											key={ch.seconds}
-											type='button'
-											onClick={() => setStartAt(ch.seconds)}
-											className={`flex w-full items-center gap-4 px-4 py-3 text-left transition hover:bg-[var(--color-primary-100)] ${
-												startAt === ch.seconds ? "bg-[var(--color-primary-100)]" : ""
-											}`}>
-											<span className='font-heading text-sm font-extrabold tabular-nums text-[var(--color-text-primary)]'>
-												{ch.time}
-											</span>
-											<span className='flex-1 text-sm font-semibold text-black'>{ch.label}</span>
-											<PlayCircle className='h-4 w-4 shrink-0 text-gray-400' />
-										</button>
-									))}
-								</div>
-							</div>
-
-							{/* Tài liệu đính kèm */}
-							<div className='mt-8'>
-								<h2 className='mb-3 font-heading text-lg font-extrabold text-black'>
-									Tài liệu đính kèm
-								</h2>
-								<div className='flex flex-wrap gap-3'>
-									{video.attachments.map((att) => {
-										const Icon = ATTACHMENT_ICON[att.kind];
-										return (
-											<button
-												key={att.id}
-												type='button'
-												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-												<Icon className='h-4 w-4' />
-												{att.title}
-											</button>
-										);
-									})}
-								</div>
-							</div>
 						</div>
+					</section>
+				</div>
+			)}
 
-						{/* ── Cột phải: playlist + hỏi đáp ── */}
-						<aside className='space-y-5 lg:sticky lg:top-24 lg:self-start'>
-							{/* Playlist buổi học */}
-							<div className='overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111]'>
-								<div className='flex items-center justify-between border-b-2 border-black bg-[var(--color-pastel-blue)] px-4 py-3'>
-									<span className='inline-flex items-center gap-2 font-heading text-sm font-extrabold text-black'>
-										<ListVideo className='h-4 w-4' strokeWidth={2.5} />
-										Trong buổi này
-									</span>
-									<span className='font-heading text-xs font-bold text-black'>
-										{video.playlist.filter((p) => p.completed).length}/{video.playlist.length}
-									</span>
-								</div>
-								<ul className='divide-y-2 divide-black'>
-									{video.playlist.map((p) => (
-										<li key={p.id}>
-											<Link
-												to={`/khoa-hoc/${slug}/${lessonSlug}/${p.slug}`}
-												className={`flex items-center gap-3 px-4 py-3 transition ${
-													p.current
-														? "bg-[var(--color-primary-100)]"
-														: "hover:bg-gray-50"
-												}`}>
-												{p.completed ? (
-													<CircleCheck className='h-5 w-5 shrink-0 text-[var(--color-text-primary)]' />
-												) : p.current ? (
-													<PlayCircle className='h-5 w-5 shrink-0 text-black' />
-												) : (
-													<PlayCircle className='h-5 w-5 shrink-0 text-gray-300' />
-												)}
-												<span
-													className={`flex-1 text-sm ${
-														p.current ? "font-extrabold text-black" : "font-semibold text-black"
-													}`}>
-													{p.title}
-												</span>
-												<span className='shrink-0 text-xs font-medium text-gray-400'>
-													{p.duration}
-												</span>
-											</Link>
-										</li>
-									))}
-								</ul>
-							</div>
-
-							{/* Hỏi đáp → cộng đồng */}
-							<div className='rounded-2xl border-2 border-black bg-[var(--color-pastel-purple)] p-5 shadow-[4px_4px_0_#111]'>
-								<h3 className='font-heading text-base font-extrabold text-black'>
-									Mắc kẹt ở đâu đó?
-								</h3>
-								<p className='mt-1 text-sm text-gray-600'>
-									Đặt câu hỏi cho cộng đồng CLB về nội dung video này.
-								</p>
-								<Link
-									to='/cong-dong'
-									className='mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-									<MessagesSquare className='h-4 w-4' strokeWidth={2.5} />
-									Đặt câu hỏi
-								</Link>
-							</div>
-						</aside>
-					</div>
-				)}
-			</div>
-
-			{/* ── Footer cố định: mục lục · hoàn thành · Back/Next ── */}
+			{/* ── Footer cố định: hoàn thành · Trước/Tiếp ── */}
 			{!loading && !error && video && (
 				<div className='fixed inset-x-0 bottom-0 z-40 border-t-2 border-black bg-white'>
-					<div className='neo-container grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[1fr_auto_1fr] sm:px-6'>
-						{/* Trái: mục lục buổi + thông tin */}
+					<div className='neo-container mx-0 grid max-w-none grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-3 md:px-6 lg:px-8'>
+						{/* Trái: về buổi học */}
 						<div className='flex min-w-0 items-center gap-3'>
 							<Link
-								to={`/khoa-hoc/${slug}/${lessonSlug}`}
+								to={backHref}
 								aria-label='Nội dung buổi học'
 								className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-white shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 								<ListVideo className='h-5 w-5' strokeWidth={2.5} />
 							</Link>
-							<div className='hidden min-w-0 sm:block'>
-								<p className='truncate font-heading text-sm font-extrabold text-black'>
-									{video.title}
-								</p>
-								<p className='flex items-center gap-2 text-xs font-medium text-gray-500'>
-									Video {curIdx + 1}/{playlist.length}
-									<span className='rounded-full border-2 border-black bg-[var(--color-pastel-yellow)] px-2 py-0.5 text-[11px] font-extrabold text-black'>
-										{video.xp} XP
-									</span>
-								</p>
-							</div>
+							<p className='hidden min-w-0 truncate font-heading text-sm font-extrabold text-black sm:block'>
+								{video.lesson.title}
+							</p>
 						</div>
 
 						{/* Giữa: đánh dấu hoàn thành */}
@@ -314,10 +239,10 @@ const VideoDetailPage: React.FC = () => {
 							<span className='sm:hidden'>{completed ? "Xong" : "Hoàn thành"}</span>
 						</button>
 
-						{/* Phải: Back / Next */}
+						{/* Phải: Trước / Tiếp (theo buổi học) */}
 						<div className='flex items-center justify-end gap-2'>
 							<Link
-								to={backHref}
+								to={prevHref}
 								className='inline-flex items-center gap-1.5 rounded-xl border-2 border-black bg-white px-4 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 								<ArrowLeft className='h-4 w-4' />
 								<span className='hidden sm:inline'>Trước</span>

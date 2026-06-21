@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
+use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
+use App\Http\Controllers\Api\V1\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\RankController;
@@ -35,6 +37,7 @@ use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
+use App\Http\Controllers\Api\V1\User\CourseController as UserCourseController;
 use App\Http\Controllers\Api\V1\User\EventController as UserEventController;
 use App\Http\Controllers\Api\V1\User\GamificationController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
@@ -158,6 +161,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{id}', [UserPostController::class, 'show']);
         Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
         Route::post('/blogs/{slug}/view', [UserBlogController::class, 'recordView']);
+    });
+
+    // Learning center (public read; auth optional để trả tiến độ/ghi danh của user hiện tại)
+    Route::prefix('learning')->group(function () {
+        Route::get('/courses', [UserCourseController::class, 'index']);
+        Route::get('/categories', [UserCourseController::class, 'categories']);
+        Route::get('/courses/{course:slug}', [UserCourseController::class, 'show']);
+        Route::get('/courses/{course:slug}/lessons/{lessonSlug}', [UserCourseController::class, 'lesson']);
+        Route::get('/courses/{course:slug}/lessons/{lessonSlug}/videos/{videoSlug}', [UserCourseController::class, 'video']);
     });
 
     // Registration with OTP verification (throttled: 5 attempts per minute per IP)
@@ -458,6 +470,27 @@ Route::prefix('v1')->group(function () {
             Route::patch('skills/{skill}', [SkillController::class, 'update']);
             Route::patch('skills/{skill}/toggle-status', [SkillController::class, 'toggleStatus']);
             Route::delete('skills/{skill}', [SkillController::class, 'destroy']);
+        });
+
+        // courses (admin) — Trung tâm đào tạo
+        Route::middleware('permission:courses.view')->group(function () {
+            Route::get('courses', [AdminCourseController::class, 'index']);
+            Route::get('courses/trash', [AdminCourseController::class, 'trash']);
+            Route::get('courses/{course}', [AdminCourseController::class, 'show']);
+            Route::get('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'show']);
+        });
+        Route::middleware('permission:courses.manage')->group(function () {
+            Route::post('courses', [AdminCourseController::class, 'store']);
+            Route::patch('courses/trash/{id}/restore', [AdminCourseController::class, 'restore']);
+            Route::delete('courses/trash/{id}/force', [AdminCourseController::class, 'forceDelete']);
+            Route::put('courses/{course}', [AdminCourseController::class, 'update']);
+            Route::patch('courses/{course}', [AdminCourseController::class, 'update']);
+            Route::delete('courses/{course}', [AdminCourseController::class, 'destroy']);
+            Route::post('courses/{course}/lessons', [AdminLessonController::class, 'store']);
+            Route::put('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
+            Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
+            Route::delete('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'destroy']);
+            Route::post('courses/{course}/lessons/{lesson}/check-in', [AdminLessonController::class, 'checkIn']);
         });
 
         // events (admin)
