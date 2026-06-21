@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { Fragment, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
 	ArrowLeft,
 	Check,
@@ -10,11 +10,14 @@ import {
 	Copy,
 	Eye,
 	FileQuestion,
+	GripVertical,
 	Lightbulb,
 	ImagePlus,
+	LayoutGrid,
 	ListChecks,
 	ListOrdered,
 	Link2,
+	Rows3,
 	Plus,
 	Save,
 	Send,
@@ -30,8 +33,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { cn } from "@/lib/utils";
@@ -42,7 +50,9 @@ type QuizQuestionType =
 	| "fill_blank"
 	| "true_false"
 	| "matching"
-	| "ordering";
+	| "ordering"
+	| "word_bank_fill_blank"
+	| "word_order";
 
 type PersistedQuestionType = Exclude<QuizQuestionType, "true_false">;
 
@@ -50,6 +60,7 @@ type QuestionOptionMetadata = {
 	side?: "left" | "right";
 	pairId?: string;
 	correctPosition?: number;
+	slot_index?: number;
 };
 
 type QuizOption = {
@@ -92,8 +103,13 @@ const questionTypeOptions: Array<{
 	},
 	{
 		type: "fill_blank",
-		label: "Điền đáp án ngắn",
+		label: "Điền đáp án",
 		description: "Học viên nhập câu trả lời ngắn.",
+	},
+	{
+		type: "word_bank_fill_blank",
+		label: "Chọn từ điền vào chỗ trống",
+		description: "Học viên chọn từ trong bank để điền vào ___.",
 	},
 	{
 		type: "matching",
@@ -105,18 +121,15 @@ const questionTypeOptions: Array<{
 		label: "Sắp xếp",
 		description: "Đặt các mục theo đúng trình tự.",
 	},
+	{
+		type: "word_order",
+		label: "Sắp xếp từ thành câu",
+		description: "Chọn từ trong bank theo đúng thứ tự để tạo câu.",
+	},
 ];
 
-let nextQuestionId = 2;
-let nextOptionId = 4;
-let nextPairId = 1;
-
-function createId(prefix: "question" | "option") {
-	if (prefix === "question") {
-		return `question-${nextQuestionId++}`;
-	}
-
-	return `option-${nextOptionId++}`;
+function createId(prefix: "question" | "option"): string {
+	return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 function createOptions(type: QuizQuestionType): QuizOption[] {
@@ -131,12 +144,59 @@ function createOptions(type: QuizQuestionType): QuizOption[] {
 		return [{ id: createId("option"), content: "", isCorrect: true, image: null }];
 	}
 
+	if (type === "word_bank_fill_blank") {
+		return [
+			{
+				id: createId("option"),
+				content: "",
+				isCorrect: true,
+				image: null,
+				metadata: { slot_index: 0 },
+			},
+			{ id: createId("option"), content: "", isCorrect: false, image: null },
+			{ id: createId("option"), content: "", isCorrect: false, image: null },
+		];
+	}
+
+	if (type === "word_order") {
+		return [
+			{
+				id: createId("option"),
+				content: "",
+				isCorrect: true,
+				image: null,
+				metadata: { slot_index: 0 },
+			},
+			{
+				id: createId("option"),
+				content: "",
+				isCorrect: true,
+				image: null,
+				metadata: { slot_index: 1 },
+			},
+			{ id: createId("option"), content: "", isCorrect: false, image: null },
+			{ id: createId("option"), content: "", isCorrect: false, image: null },
+		];
+	}
+
 	if (type === "matching") return createMatchingPair();
 
 	if (type === "ordering") {
 		return [
-			{ id: createId("option"), content: "", isCorrect: false, image: null, metadata: { correctPosition: 1 } },
-			{ id: createId("option"), content: "", isCorrect: false, image: null, metadata: { correctPosition: 2 } },
+			{
+				id: createId("option"),
+				content: "",
+				isCorrect: false,
+				image: null,
+				metadata: { correctPosition: 1 },
+			},
+			{
+				id: createId("option"),
+				content: "",
+				isCorrect: false,
+				image: null,
+				metadata: { correctPosition: 2 },
+			},
 		];
 	}
 
@@ -147,10 +207,22 @@ function createOptions(type: QuizQuestionType): QuizOption[] {
 }
 
 function createMatchingPair(): QuizOption[] {
-	const pairId = `pair-${nextPairId++}`;
+	const pairId = `pair-${Math.random().toString(36).slice(2, 9)}`;
 	return [
-		{ id: createId("option"), content: "", isCorrect: false, image: null, metadata: { side: "left", pairId } },
-		{ id: createId("option"), content: "", isCorrect: false, image: null, metadata: { side: "right", pairId } },
+		{
+			id: createId("option"),
+			content: "",
+			isCorrect: false,
+			image: null,
+			metadata: { side: "left", pairId },
+		},
+		{
+			id: createId("option"),
+			content: "",
+			isCorrect: false,
+			image: null,
+			metadata: { side: "right", pairId },
+		},
 	];
 }
 
@@ -172,13 +244,17 @@ const initialQuestions: QuizQuestion[] = [
 		type: "multiple_choice",
 		persistedType: "multiple_choice",
 		content: "HTML là viết tắt của cụm từ nào?",
-		explanation:
-			"HTML là ngôn ngữ đánh dấu dùng để mô tả cấu trúc nội dung của một trang web.",
+		explanation: "HTML là ngôn ngữ đánh dấu dùng để mô tả cấu trúc nội dung của một trang web.",
 		image: null,
 		options: [
 			{ id: "option-1", content: "HyperText Markup Language", isCorrect: true, image: null },
 			{ id: "option-2", content: "HighText Machine Language", isCorrect: false, image: null },
-			{ id: "option-3", content: "HyperTransfer Markup Language", isCorrect: false, image: null },
+			{
+				id: "option-3",
+				content: "HyperTransfer Markup Language",
+				isCorrect: false,
+				image: null,
+			},
 		],
 	},
 ];
@@ -196,6 +272,8 @@ function QuestionTypeIcon({ type, className }: { type: QuizQuestionType; classNa
 	if (type === "multiple_select") return <ListChecks className={className} />;
 	if (type === "true_false") return <CheckCircle2 className={className} />;
 	if (type === "fill_blank") return <TextCursorInput className={className} />;
+	if (type === "word_bank_fill_blank") return <LayoutGrid className={className} />;
+	if (type === "word_order") return <Rows3 className={className} />;
 	if (type === "matching") return <Link2 className={className} />;
 	if (type === "ordering") return <ListOrdered className={className} />;
 	return <CircleDot className={className} />;
@@ -206,7 +284,10 @@ function isChoiceQuestion(type: QuizQuestionType) {
 }
 
 function requiredOptions(type: QuizQuestionType) {
-	return type === "fill_blank" ? 1 : 2;
+	if (type === "fill_blank") return 1;
+	if (type === "word_bank_fill_blank") return 1;
+	if (type === "word_order") return 2;
+	return 2;
 }
 
 function QuizCreatePage() {
@@ -225,21 +306,124 @@ function QuizCreatePage() {
 	const [previewAnswer, setPreviewAnswer] = useState<string[]>([]);
 	const [previewTextAnswer, setPreviewTextAnswer] = useState("");
 	const [previewChecked, setPreviewChecked] = useState(false);
-	const [imageTarget, setImageTarget] = useState<{ questionId: string; optionId?: string } | null>(null);
+	const [wordBankPlacements, setWordBankPlacements] = useState<(string | null)[]>([]);
+	const [wordOrderPlacements, setWordOrderPlacements] = useState<string[]>([]);
+	const [imageTarget, setImageTarget] = useState<{
+		questionId: string;
+		optionId?: string;
+	} | null>(null);
 	const imageInputRef = useRef<HTMLInputElement>(null);
+	const [orderingDragIndex, setOrderingDragIndex] = useState<number | null>(null);
+	const [orderingDragOverIndex, setOrderingDragOverIndex] = useState<number | null>(null);
+	const [matchingSelected, setMatchingSelected] = useState<{
+		side: "left" | "right";
+		optionId: string;
+	} | null>(null);
+	const [matchingMatched, setMatchingMatched] = useState<Set<string>>(new Set());
+	const [matchingWrong, setMatchingWrong] = useState<{ leftId: string; rightId: string } | null>(
+		null,
+	);
 
 	const activeQuestionIndex = questions.findIndex((question) => question.id === activeQuestionId);
 	const activeQuestion = questions[activeQuestionIndex] ?? questions[0];
 	const courseReference = courseId ? `Khóa học #${courseId}` : "Khóa học chưa xác định";
 	const lessonReference = lessonId ? `Lesson #${lessonId}` : "Lesson chưa xác định";
 
+	const wordBankBlankCount = useMemo(
+		() =>
+			activeQuestion?.type === "word_bank_fill_blank"
+				? (activeQuestion.content.match(/___/g) || []).length
+				: 0,
+		[activeQuestion?.type, activeQuestion?.content],
+	);
+
+	const wordBankCorrectOptions = useMemo(
+		() =>
+			activeQuestion?.type === "word_bank_fill_blank"
+				? activeQuestion.options
+						.filter((o) => o.isCorrect)
+						.sort(
+							(a, b) => (a.metadata?.slot_index ?? 0) - (b.metadata?.slot_index ?? 0),
+						)
+				: [],
+		[activeQuestion?.type, activeQuestion?.options],
+	);
+
+	const wordBankDistractors = useMemo(
+		() =>
+			activeQuestion?.type === "word_bank_fill_blank"
+				? activeQuestion.options.filter((o) => !o.isCorrect)
+				: [],
+		[activeQuestion?.type, activeQuestion?.options],
+	);
+
+	const shuffledWordBankOptions = useMemo(
+		() =>
+			activeQuestion?.type === "word_bank_fill_blank"
+				? [...activeQuestion.options].sort(() => Math.random() - 0.5)
+				: [],
+		// Re-shuffle when question changes or options are added/removed
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[activeQuestion?.id, activeQuestion?.type, activeQuestion?.options.length],
+	);
+
+	const wordOrderCorrectOptions = useMemo(
+		() =>
+			activeQuestion?.type === "word_order"
+				? activeQuestion.options
+						.filter((o) => o.isCorrect)
+						.sort(
+							(a, b) => (a.metadata?.slot_index ?? 0) - (b.metadata?.slot_index ?? 0),
+						)
+				: [],
+		[activeQuestion?.type, activeQuestion?.options],
+	);
+
+	const wordOrderDistractors = useMemo(
+		() =>
+			activeQuestion?.type === "word_order"
+				? activeQuestion.options.filter((o) => !o.isCorrect)
+				: [],
+		[activeQuestion?.type, activeQuestion?.options],
+	);
+
+	const shuffledWordOrderOptions = useMemo(
+		() =>
+			activeQuestion?.type === "word_order"
+				? [...activeQuestion.options].sort(() => Math.random() - 0.5)
+				: [],
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[activeQuestion?.id, activeQuestion?.type, activeQuestion?.options.length],
+	);
+
 	const previewIsCorrect = useMemo(() => {
 		if (!activeQuestion) return false;
+
+		if (activeQuestion.type === "matching") {
+			const totalPairs = activeQuestion.options.filter(
+				(o) => o.metadata?.side === "left",
+			).length;
+			return matchingMatched.size === totalPairs && totalPairs > 0;
+		}
 
 		if (activeQuestion.type === "fill_blank") {
 			const normalizedAnswer = previewTextAnswer.trim().toLocaleLowerCase();
 			return activeQuestion.options.some(
 				(option) => option.content.trim().toLocaleLowerCase() === normalizedAnswer,
+			);
+		}
+
+		if (activeQuestion.type === "word_bank_fill_blank") {
+			if (wordBankBlankCount === 0 || wordBankCorrectOptions.length === 0) return false;
+			return wordBankCorrectOptions.every((opt, i) => wordBankPlacements[i] === opt.id);
+		}
+
+		if (activeQuestion.type === "word_order") {
+			const correctIds = wordOrderCorrectOptions.map((o) => o.id);
+			return (
+				correctIds.length > 0 &&
+				wordOrderPlacements.length === correctIds.length &&
+				correctIds.every((id, i) => wordOrderPlacements[i] === id)
 			);
 		}
 
@@ -252,16 +436,171 @@ function QuizCreatePage() {
 			correctOptionIds.length === previewAnswer.length &&
 			correctOptionIds.every((optionId) => previewAnswer.includes(optionId))
 		);
-	}, [activeQuestion, previewAnswer, previewTextAnswer]);
+	}, [
+		activeQuestion,
+		previewAnswer,
+		previewTextAnswer,
+		matchingMatched,
+		wordBankPlacements,
+		wordBankBlankCount,
+		wordBankCorrectOptions,
+		wordOrderPlacements,
+		wordOrderCorrectOptions,
+	]);
 
-	const hasPreviewAnswer = activeQuestion?.type === "fill_blank"
-		? Boolean(previewTextAnswer.trim())
-		: previewAnswer.length > 0;
+	const wordBankAllFilled =
+		activeQuestion?.type === "word_bank_fill_blank" &&
+		wordBankBlankCount > 0 &&
+		Array.from({ length: wordBankBlankCount }, (_, i) => wordBankPlacements[i]).every(Boolean);
+
+	const hasPreviewAnswer =
+		activeQuestion?.type === "fill_blank"
+			? Boolean(previewTextAnswer.trim())
+			: activeQuestion?.type === "word_bank_fill_blank"
+				? wordBankAllFilled
+				: activeQuestion?.type === "word_order"
+					? wordOrderPlacements.length > 0
+					: previewAnswer.length > 0;
 
 	const resetPreview = () => {
 		setPreviewAnswer([]);
 		setPreviewTextAnswer("");
 		setPreviewChecked(false);
+		setMatchingSelected(null);
+		setMatchingMatched(new Set());
+		setMatchingWrong(null);
+		setWordBankPlacements([]);
+		setWordOrderPlacements([]);
+	};
+
+	const shuffledMatchingLeftIds = useMemo(
+		() =>
+			activeQuestion?.type === "matching"
+				? activeQuestion.options
+						.filter((o) => o.metadata?.side === "left")
+						.map((o) => o.id)
+						.sort(() => Math.random() - 0.5)
+				: [],
+		// re-shuffle on question/type change or when pairs are added/removed
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[activeQuestion?.id, activeQuestion?.type, activeQuestion?.options.length],
+	);
+
+	const shuffledMatchingRightIds = useMemo(
+		() =>
+			activeQuestion?.type === "matching"
+				? activeQuestion.options
+						.filter((o) => o.metadata?.side === "right")
+						.map((o) => o.id)
+						.sort(() => Math.random() - 0.5)
+				: [],
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[activeQuestion?.id, activeQuestion?.type, activeQuestion?.options.length],
+	);
+
+	const handleMatchingSelect = (side: "left" | "right", optionId: string) => {
+		if (!activeQuestion) return;
+		const option = activeQuestion.options.find((o) => o.id === optionId);
+		const pairId = option?.metadata?.pairId;
+		if (!pairId || matchingMatched.has(pairId)) return;
+
+		if (!matchingSelected) {
+			setMatchingSelected({ side, optionId });
+			return;
+		}
+
+		if (matchingSelected.side === side) {
+			setMatchingSelected(optionId === matchingSelected.optionId ? null : { side, optionId });
+			return;
+		}
+
+		const leftId = side === "left" ? optionId : matchingSelected.optionId;
+		const rightId = side === "right" ? optionId : matchingSelected.optionId;
+		const leftOpt = activeQuestion.options.find((o) => o.id === leftId);
+		const rightOpt = activeQuestion.options.find((o) => o.id === rightId);
+
+		if (leftOpt?.metadata?.pairId && leftOpt.metadata.pairId === rightOpt?.metadata?.pairId) {
+			const next = new Set(matchingMatched);
+			next.add(leftOpt.metadata.pairId);
+			setMatchingMatched(next);
+			setMatchingSelected(null);
+			const totalPairs = activeQuestion.options.filter(
+				(o) => o.metadata?.side === "left",
+			).length;
+			if (next.size === totalPairs) setPreviewChecked(true);
+		} else {
+			setMatchingWrong({ leftId, rightId });
+			setMatchingSelected(null);
+			setTimeout(() => setMatchingWrong(null), 600);
+		}
+	};
+
+	const handleWordBankSelect = (optionId: string) => {
+		if (previewChecked) return;
+		const firstEmptySlot = Array.from(
+			{ length: wordBankBlankCount },
+			(_, i) => wordBankPlacements[i] ?? null,
+		).findIndex((p) => p === null);
+		if (firstEmptySlot === -1) return;
+		const next = [...wordBankPlacements];
+		next[firstEmptySlot] = optionId;
+		setWordBankPlacements(next);
+	};
+
+	const handleWordBankBlankClick = (slotIndex: number) => {
+		if (previewChecked) return;
+		const placed = wordBankPlacements[slotIndex];
+		if (!placed) return;
+		const next = [...wordBankPlacements];
+		next[slotIndex] = null;
+		setWordBankPlacements(next);
+	};
+
+	const handleWordOrderSelect = (optId: string) => {
+		if (previewChecked) return;
+		setWordOrderPlacements((prev) => [...prev, optId]);
+	};
+
+	const handleWordOrderPlacementClick = (index: number) => {
+		if (previewChecked) return;
+		setWordOrderPlacements((prev) => prev.filter((_, i) => i !== index));
+	};
+
+	const addWordOrderCorrectOption = () => {
+		if (!activeQuestion) return;
+		const correct = activeQuestion.options.filter((o) => o.isCorrect);
+		const distractors = activeQuestion.options.filter((o) => !o.isCorrect);
+		updateQuestion(activeQuestion.id, {
+			options: [
+				...correct,
+				{
+					id: createId("option"),
+					content: "",
+					isCorrect: true,
+					image: null,
+					metadata: { slot_index: correct.length },
+				},
+				...distractors,
+			],
+		});
+	};
+
+	const removeWordOrderCorrectOption = (optId: string) => {
+		if (!activeQuestion) return;
+		const correct = activeQuestion.options
+			.filter((o) => o.isCorrect && o.id !== optId)
+			.map((opt, i) => ({ ...opt, metadata: { ...opt.metadata, slot_index: i } }));
+		if (correct.length < 2) return;
+		const distractors = activeQuestion.options.filter((o) => !o.isCorrect);
+		updateQuestion(activeQuestion.id, { options: [...correct, ...distractors] });
+		setWordOrderPlacements((prev) => prev.filter((id) => id !== optId));
+	};
+
+	const removeWordOrderDistractor = (optId: string) => {
+		if (!activeQuestion) return;
+		updateQuestion(activeQuestion.id, {
+			options: activeQuestion.options.filter((o) => o.id !== optId),
+		});
 	};
 
 	const selectQuestion = (questionId: string) => {
@@ -277,9 +616,47 @@ function QuizCreatePage() {
 		);
 	};
 
+	const syncWordBankBlanks = (
+		questionId: string,
+		content: string,
+		currentOptions: QuizOption[],
+	) => {
+		const blankCount = (content.match(/___/g) || []).length;
+		const correctOptions = currentOptions
+			.filter((o) => o.isCorrect)
+			.sort((a, b) => (a.metadata?.slot_index ?? 0) - (b.metadata?.slot_index ?? 0));
+		const distractors = currentOptions.filter((o) => !o.isCorrect);
+
+		let newCorrectOptions = [...correctOptions];
+		if (newCorrectOptions.length < blankCount) {
+			for (let i = newCorrectOptions.length; i < blankCount; i++) {
+				newCorrectOptions.push({
+					id: createId("option"),
+					content: "",
+					isCorrect: true,
+					image: null,
+					metadata: { slot_index: i },
+				});
+			}
+		} else if (newCorrectOptions.length > blankCount) {
+			newCorrectOptions = newCorrectOptions.slice(0, blankCount);
+		}
+
+		newCorrectOptions = newCorrectOptions.map((opt, i) => ({
+			...opt,
+			metadata: { ...opt.metadata, slot_index: i },
+		}));
+
+		updateQuestion(questionId, { content, options: [...newCorrectOptions, ...distractors] });
+	};
+
 	const changeQuestionType = (type: QuizQuestionType) => {
 		if (!activeQuestion) return;
-		updateQuestion(activeQuestion.id, { type, persistedType: getPersistedQuestionType(type), options: createOptions(type) });
+		updateQuestion(activeQuestion.id, {
+			type,
+			persistedType: getPersistedQuestionType(type),
+			options: createOptions(type),
+		});
 		resetPreview();
 	};
 
@@ -341,20 +718,34 @@ function QuizCreatePage() {
 		});
 	};
 
-	const moveOption = (optionId: string, direction: -1 | 1) => {
-		if (!activeQuestion) return;
-		const optionIndex = activeQuestion.options.findIndex((option) => option.id === optionId);
-		const nextIndex = optionIndex + direction;
-		if (optionIndex < 0 || nextIndex < 0 || nextIndex >= activeQuestion.options.length) return;
+	const handleOrderingDragStart = (index: number) => {
+		setOrderingDragIndex(index);
+	};
+
+	const handleOrderingDragOver = (event: React.DragEvent, index: number) => {
+		event.preventDefault();
+		setOrderingDragOverIndex(index);
+	};
+
+	const handleOrderingDrop = (targetIndex: number) => {
+		if (orderingDragIndex === null || orderingDragIndex === targetIndex || !activeQuestion)
+			return;
 		const reordered = [...activeQuestion.options];
-		const [moved] = reordered.splice(optionIndex, 1);
-		reordered.splice(nextIndex, 0, moved);
+		const [moved] = reordered.splice(orderingDragIndex, 1);
+		reordered.splice(targetIndex, 0, moved);
 		updateQuestion(activeQuestion.id, {
-			options: reordered.map((option, index) => ({
+			options: reordered.map((option, idx) => ({
 				...option,
-				metadata: { ...option.metadata, correctPosition: index + 1 },
+				metadata: { ...option.metadata, correctPosition: idx + 1 },
 			})),
 		});
+		setOrderingDragIndex(null);
+		setOrderingDragOverIndex(null);
+	};
+
+	const handleOrderingDragEnd = () => {
+		setOrderingDragIndex(null);
+		setOrderingDragOverIndex(null);
 	};
 
 	const toggleCorrectOption = (optionId: string, checked: boolean) => {
@@ -363,34 +754,71 @@ function QuizCreatePage() {
 		updateQuestion(activeQuestion.id, {
 			options: activeQuestion.options.map((option) => ({
 				...option,
-				isCorrect: isMultipleChoice ? (option.id === optionId ? checked : option.isCorrect) : option.id === optionId,
+				isCorrect: isMultipleChoice
+					? option.id === optionId
+						? checked
+						: option.isCorrect
+					: option.id === optionId,
 			})),
 		});
 	};
 
 	const addOption = () => {
 		if (!activeQuestion) return;
+		if (
+			activeQuestion.type === "word_bank_fill_blank" ||
+			activeQuestion.type === "word_order"
+		) {
+			updateQuestion(activeQuestion.id, {
+				options: [
+					...activeQuestion.options,
+					{ id: createId("option"), content: "", isCorrect: false, image: null },
+				],
+			});
+			return;
+		}
 		updateQuestion(activeQuestion.id, {
-			options: activeQuestion.type === "matching"
-				? [...activeQuestion.options, ...createMatchingPair()]
-				: [...activeQuestion.options, {
-					id: createId("option"),
-					content: "",
-					isCorrect: false,
-					image: null,
-					metadata: activeQuestion.type === "ordering" ? { correctPosition: activeQuestion.options.length + 1 } : undefined,
-				}],
+			options:
+				activeQuestion.type === "matching"
+					? [...activeQuestion.options, ...createMatchingPair()]
+					: [
+							...activeQuestion.options,
+							{
+								id: createId("option"),
+								content: "",
+								isCorrect: false,
+								image: null,
+								metadata:
+									activeQuestion.type === "ordering"
+										? { correctPosition: activeQuestion.options.length + 1 }
+										: undefined,
+							},
+						],
 		});
 	};
 
 	const removeOption = (optionId: string) => {
-		if (!activeQuestion || activeQuestion.options.length <= requiredOptions(activeQuestion.type)) return;
+		if (!activeQuestion) return;
+		if (activeQuestion.type === "word_bank_fill_blank") {
+			const distractors = activeQuestion.options.filter((o) => !o.isCorrect);
+			if (distractors.length <= requiredOptions(activeQuestion.type)) return;
+			updateQuestion(activeQuestion.id, {
+				options: activeQuestion.options.filter((option) => option.id !== optionId),
+			});
+			return;
+		}
+		if (activeQuestion.options.length <= requiredOptions(activeQuestion.type)) return;
 		updateQuestion(activeQuestion.id, {
 			options: activeQuestion.options
 				.filter((option) => option.id !== optionId)
-				.map((option, index) => activeQuestion.type === "ordering"
-					? { ...option, metadata: { ...option.metadata, correctPosition: index + 1 } }
-					: option),
+				.map((option, index) =>
+					activeQuestion.type === "ordering"
+						? {
+								...option,
+								metadata: { ...option.metadata, correctPosition: index + 1 },
+							}
+						: option,
+				),
 		});
 	};
 
@@ -403,7 +831,9 @@ function QuizCreatePage() {
 	const deleteActiveQuestion = () => {
 		if (!activeQuestion || questions.length === 1) return;
 		const nextIndex = Math.max(0, activeQuestionIndex - 1);
-		const nextQuestion = questions.filter((question) => question.id !== activeQuestion.id)[nextIndex];
+		const nextQuestion = questions.filter((question) => question.id !== activeQuestion.id)[
+			nextIndex
+		];
 		setQuestions((current) => current.filter((question) => question.id !== activeQuestion.id));
 		selectQuestion(nextQuestion.id);
 	};
@@ -451,6 +881,15 @@ function QuizCreatePage() {
 			if (question.type === "fill_blank") {
 				return !question.options.some((option) => option.content.trim());
 			}
+			if (question.type === "word_bank_fill_blank") {
+				const blankCount = (question.content.match(/___/g) || []).length;
+				const correctOptions = question.options.filter((o) => o.isCorrect);
+				return (
+					blankCount === 0 ||
+					correctOptions.length !== blankCount ||
+					correctOptions.some((o) => !o.content.trim())
+				);
+			}
 			if (question.type === "matching" || question.type === "ordering") {
 				return question.options.some((option) => !option.content.trim());
 			}
@@ -475,9 +914,19 @@ function QuizCreatePage() {
 
 	if (!activeQuestion) return null;
 
+	// Derived values for word bank preview rendering
+	const wordBankSentenceParts =
+		activeQuestion.type === "word_bank_fill_blank" ? activeQuestion.content.split("___") : [];
+
 	return (
 		<div className='min-h-full bg-muted/30'>
-			<input ref={imageInputRef} type='file' accept='image/*' className='hidden' onChange={handleImageChange} />
+			<input
+				ref={imageInputRef}
+				type='file'
+				accept='image/*'
+				className='hidden'
+				onChange={handleImageChange}
+			/>
 			<div className='mx-auto flex w-full max-w-[1600px] flex-col gap-5 p-4 md:p-6 lg:p-8'>
 				<header className='flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-center xl:justify-between'>
 					<div className='flex min-w-0 items-start gap-3'>
@@ -495,7 +944,9 @@ function QuizCreatePage() {
 								<span aria-hidden='true'>/</span>
 								<span>{lessonReference}</span>
 							</div>
-							<h1 className='text-2xl font-semibold tracking-tight md:text-3xl'>Tạo quiz cho lesson</h1>
+							<h1 className='text-2xl font-semibold tracking-tight md:text-3xl'>
+								Tạo quiz cho lesson
+							</h1>
 							<p className='mt-1 text-sm text-muted-foreground'>
 								Thiết kế từng câu hỏi, sau đó xem ngay trải nghiệm của học viên.
 							</p>
@@ -516,327 +967,1190 @@ function QuizCreatePage() {
 
 				<div className='space-y-6'>
 					<div className='grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]'>
-					<aside className='relative'>
-						<Card className='absolute inset-0 flex flex-col'>
-							<CardHeader className='shrink-0 gap-3'>
-								<div className='flex items-center justify-between gap-3'>
-									<div>
-										<CardTitle className='text-base'>Câu hỏi</CardTitle>
-										<CardDescription>{questions.length} câu trong quiz</CardDescription>
-									</div>
-									<Badge variant='secondary' className='rounded-full'>{questions.length}</Badge>
-								</div>
-								<div className='flex gap-2'>
-									<Select
-										value={newQuestionType}
-										onValueChange={(value) => setNewQuestionType(value as QuizQuestionType)}>
-										<SelectTrigger className='min-w-0 flex-1'>
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											{questionTypeOptions.map((item) => (
-												<SelectItem key={item.type} value={item.type}>
-													{item.label}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									<Button type='button' size='icon' aria-label='Thêm câu hỏi' onClick={() => addQuestion(newQuestionType)}>
-										<Plus />
-									</Button>
-								</div>
-							</CardHeader>
-							<CardContent className='min-h-0 flex-1 space-y-2 overflow-y-auto'>
-								{questions.map((question, index) => {
-									const isActive = question.id === activeQuestion.id;
-									return (
-										<button
-											key={question.id}
-											type='button'
-											onClick={() => selectQuestion(question.id)}
-											className={cn(
-												"flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors",
-												isActive ? "border-primary bg-primary/5 shadow-sm" : "hover:bg-muted/60",
-											)}>
-											<span className={cn(
-												"flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-												isActive ? "border-primary bg-primary text-primary-foreground" : "bg-background",
-											)}>
-												{index + 1}
-											</span>
-											<div className='min-w-0 flex-1'>
-												<p className='truncate text-sm font-medium'>
-													{question.content.trim() || "Câu hỏi chưa có nội dung"}
-												</p>
-												<div className='mt-1 flex items-center gap-1.5 text-xs text-muted-foreground'>
-													<QuestionTypeIcon type={question.type} className='size-3.5' />
-													{getQuestionTypeLabel(question.type)}
-												</div>
-											</div>
-										</button>
-									);
-								})}
-							</CardContent>
-						</Card>
-					</aside>
-
-					<section className='min-w-0 space-y-5'>
-						<Card className='overflow-hidden'>
-							<div className='flex flex-col gap-3 border-b bg-muted/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between'>
-								<div className='flex items-center gap-3'>
-									<span className='flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
-										<FileQuestion className='size-4' />
-									</span>
-									<div>
-										<p className='text-sm font-semibold'>Câu {activeQuestionIndex + 1}</p>
-										<p className='text-xs text-muted-foreground'>Tự lưu trong phiên làm việc</p>
-									</div>
-								</div>
-								<div className='flex items-center gap-1'>
-									<Button
-										type='button'
-										variant='ghost'
-										size='icon-sm'
-										aria-label='Di chuyển câu hỏi lên'
-										disabled={activeQuestionIndex === 0}
-										onClick={() => moveQuestion(-1)}>
-										<ChevronUp />
-									</Button>
-									<Button
-										type='button'
-										variant='ghost'
-										size='icon-sm'
-										aria-label='Di chuyển câu hỏi xuống'
-										disabled={activeQuestionIndex === questions.length - 1}
-										onClick={() => moveQuestion(1)}>
-										<ChevronDown />
-									</Button>
-									<Button
-										type='button'
-										variant='ghost'
-										size='icon-sm'
-										aria-label='Xoá câu hỏi'
-										disabled={questions.length === 1}
-										onClick={deleteActiveQuestion}>
-										<Trash2 className='text-destructive' />
-									</Button>
-								</div>
-							</div>
-
-							<CardContent className='space-y-7 pt-6'>
-								<div className='space-y-3'>
-									<Label>Loại câu hỏi</Label>
-									<div className='grid gap-2 sm:grid-cols-2'>
-										{questionTypeOptions.map((item) => {
-											const isSelected = activeQuestion.type === item.type;
-											return (
-												<button
-													key={item.type}
-													type='button'
-													aria-pressed={isSelected}
-													onClick={() => changeQuestionType(item.type)}
-													className={cn(
-														"flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
-														isSelected ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/50",
-													)}>
-													<span className={cn(
-														"mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md",
-														isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-													)}>
-														<QuestionTypeIcon type={item.type} className='size-4' />
-													</span>
-													<span>
-														<span className='block text-sm font-medium'>{item.label}</span>
-														<span className='mt-0.5 block text-xs leading-5 text-muted-foreground'>{item.description}</span>
-													</span>
-												</button>
-											);
-										})}
-									</div>
-								</div>
-
-								<div className='space-y-2'>
+						<aside className='relative'>
+							<Card className='absolute inset-0 flex flex-col'>
+								<CardHeader className='shrink-0 gap-3'>
 									<div className='flex items-center justify-between gap-3'>
-										<Label htmlFor='question-content'>Nội dung câu hỏi</Label>
-										<Button type='button' variant='outline' size='sm' onClick={() => openImagePicker(activeQuestion.id)}>
-											<ImagePlus />
-											{activeQuestion.image ? "Đổi ảnh" : "Thêm ảnh"}
+										<div>
+											<CardTitle className='text-base'>Câu hỏi</CardTitle>
+											<CardDescription>
+												{questions.length} câu trong quiz
+											</CardDescription>
+										</div>
+										<Badge variant='secondary' className='rounded-full'>
+											{questions.length}
+										</Badge>
+									</div>
+									<div className='flex gap-2'>
+										<Select
+											value={newQuestionType}
+											onValueChange={(value) =>
+												setNewQuestionType(value as QuizQuestionType)
+											}>
+											<SelectTrigger className='min-w-0 flex-1'>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												{questionTypeOptions.map((item) => (
+													<SelectItem key={item.type} value={item.type}>
+														{item.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<Button
+											type='button'
+											size='icon'
+											aria-label='Thêm câu hỏi'
+											onClick={() => addQuestion(newQuestionType)}>
+											<Plus />
 										</Button>
 									</div>
-									<Textarea
-										id='question-content'
-										value={activeQuestion.content}
-										onChange={(event) => updateQuestion(activeQuestion.id, { content: event.target.value })}
-										placeholder='Ví dụ: Thẻ HTML nào dùng để tạo tiêu đề lớn nhất?'
-										className='min-h-28 resize-y text-base'
-									/>
-									{activeQuestion.image && (
-										<div className='relative overflow-hidden rounded-lg border bg-muted'>
-											<img src={activeQuestion.image} alt='Ảnh minh hoạ câu hỏi' className='max-h-72 w-full object-contain' />
-											<Button type='button' variant='secondary' size='icon-xs' className='absolute right-2 top-2' aria-label='Xoá ảnh câu hỏi' onClick={() => removeImage(activeQuestion.id)}>
-												<X />
-											</Button>
-										</div>
-									)}
-								</div>
+								</CardHeader>
+								<CardContent className='min-h-0 flex-1 space-y-2 overflow-y-auto'>
+									{questions.map((question, index) => {
+										const isActive = question.id === activeQuestion.id;
+										return (
+											<button
+												key={question.id}
+												type='button'
+												onClick={() => selectQuestion(question.id)}
+												className={cn(
+													"flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors",
+													isActive
+														? "border-primary bg-primary/5 shadow-sm"
+														: "hover:bg-muted/60",
+												)}>
+												<span
+													className={cn(
+														"flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+														isActive
+															? "border-primary bg-primary text-primary-foreground"
+															: "bg-background",
+													)}>
+													{index + 1}
+												</span>
+												<div className='min-w-0 flex-1'>
+													<p className='truncate text-sm font-medium'>
+														{question.content.trim() ||
+															"Câu hỏi chưa có nội dung"}
+													</p>
+													<div className='mt-1 flex items-center gap-1.5 text-xs text-muted-foreground'>
+														<QuestionTypeIcon
+															type={question.type}
+															className='size-3.5'
+														/>
+														{getQuestionTypeLabel(question.type)}
+													</div>
+												</div>
+											</button>
+										);
+									})}
+								</CardContent>
+							</Card>
+						</aside>
 
-								<div className='space-y-3'>
-									<div className='flex flex-wrap items-center justify-between gap-2'>
+						<section className='min-w-0 space-y-5'>
+							<Card className='overflow-hidden py-0 gap-0'>
+								<div className='flex flex-col gap-3 border-b bg-muted/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between'>
+									<div className='flex items-center gap-3'>
+										<span className='flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
+											<FileQuestion className='size-4' />
+										</span>
 										<div>
-											<Label>{activeQuestion.type === "fill_blank" ? "Đáp án chấp nhận" : activeQuestion.type === "matching" ? "Các cặp cần ghép" : activeQuestion.type === "ordering" ? "Thứ tự đúng" : "Các phương án trả lời"}</Label>
-											<p className='mt-1 text-xs text-muted-foreground'>
-												{activeQuestion.type === "multiple_select"
-													? "Đánh dấu tất cả phương án đúng."
-													: activeQuestion.type === "fill_blank"
-														? "Mỗi dòng là một đáp án được chấp nhận."
-														: activeQuestion.type === "matching"
-															? "Mỗi hàng là một cặp đáp án đúng."
-															: activeQuestion.type === "ordering"
-																? "Sắp xếp các mục theo trình tự đúng từ trên xuống."
-														: "Chọn đúng một phương án."}
+											<p className='text-sm font-semibold'>
+												Câu {activeQuestionIndex + 1}
+											</p>
+											<p className='text-xs text-muted-foreground'>
+												Tự lưu trong phiên làm việc
 											</p>
 										</div>
 									</div>
-
-									<div className='space-y-2'>
-										{activeQuestion.type === "matching" ? (
-											activeQuestion.options.filter((option) => option.metadata?.side === "left").map((leftOption, index) => {
-												const rightOption = activeQuestion.options.find((option) => option.metadata?.pairId === leftOption.metadata?.pairId && option.metadata?.side === "right");
-												return (
-													<div key={leftOption.id} className='grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-center'>
-														<Input value={leftOption.content} onChange={(event) => updateOption(leftOption.id, event.target.value)} placeholder={`Mục trái ${index + 1}`} />
-														<Link2 className='mx-auto size-4 text-muted-foreground' />
-														<Input value={rightOption?.content ?? ""} onChange={(event) => rightOption && updateOption(rightOption.id, event.target.value)} placeholder={`Mục phải ${index + 1}`} />
-														<Button type='button' variant='ghost' size='icon-xs' aria-label={`Xoá cặp ${index + 1}`} onClick={() => leftOption.metadata?.pairId && removeMatchingPair(leftOption.metadata.pairId)}><X /></Button>
-													</div>
-												);
-											})
-										) : activeQuestion.type === "ordering" ? (
-											activeQuestion.options.map((option, index) => (
-												<div key={option.id} className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
-													<span className='flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold'>{index + 1}</span>
-													<Input value={option.content} onChange={(event) => updateOption(option.id, event.target.value)} placeholder={`Mục thứ ${index + 1}`} className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0' />
-													<Button type='button' variant='ghost' size='icon-xs' aria-label='Di chuyển lên' disabled={index === 0} onClick={() => moveOption(option.id, -1)}><ChevronUp /></Button>
-													<Button type='button' variant='ghost' size='icon-xs' aria-label='Di chuyển xuống' disabled={index === activeQuestion.options.length - 1} onClick={() => moveOption(option.id, 1)}><ChevronDown /></Button>
-													<Button type='button' variant='ghost' size='icon-xs' aria-label={`Xoá mục ${index + 1}`} disabled={activeQuestion.options.length <= 2} onClick={() => removeOption(option.id)}><X /></Button>
-												</div>
-											))
-										) : activeQuestion.options.map((option, index) => {
-											const allowRemove = activeQuestion.type !== "true_false" && activeQuestion.options.length > requiredOptions(activeQuestion.type);
-											const isChoice = isChoiceQuestion(activeQuestion.type);
-											return (
-												<div key={option.id} className='flex items-center gap-3 rounded-lg border bg-card p-2.5'>
-													{activeQuestion.type === "multiple_select" ? (
-														<Checkbox
-															id={`correct-${option.id}`}
-															checked={option.isCorrect}
-															onCheckedChange={(checked) => toggleCorrectOption(option.id, checked === true)}
-															aria-label={`Đánh dấu phương án ${index + 1} là đúng`}
-														/>
-													) : isChoice ? (
-														<button
-															type='button'
-															aria-label={`Chọn phương án ${index + 1} là đáp án đúng`}
-															onClick={() => toggleCorrectOption(option.id, true)}
-															className={cn(
-																"flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-																option.isCorrect ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background",
-															)}>
-															{option.isCorrect && <Check className='size-3.5 stroke-[3]' />}
-														</button>
-													) : (
-														<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700'>
-															<Check className='size-3.5 stroke-[3]' />
-														</span>
-													)}
-													<Input
-														value={option.content}
-														onChange={(event) => updateOption(option.id, event.target.value)}
-														placeholder={activeQuestion.type === "fill_blank" ? "Nhập đáp án đúng" : `Phương án ${index + 1}`}
-														className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
-													/>
-													<Button type='button' variant='ghost' size='icon-xs' aria-label={`Thêm ảnh cho phương án ${index + 1}`} onClick={() => openImagePicker(activeQuestion.id, option.id)}><ImagePlus /></Button>
-													{allowRemove && (
-														<Button
-															type='button'
-															variant='ghost'
-															size='icon-xs'
-															aria-label={`Xoá phương án ${index + 1}`}
-															onClick={() => removeOption(option.id)}>
-															<X className='text-muted-foreground' />
-														</Button>
-													)}
-												</div>
-											);
-										})}
-									</div>
-
-									{activeQuestion.type !== "true_false" && (
-										<Button type='button' variant='outline' size='sm' onClick={addOption}>
-											<Plus />
-											{activeQuestion.type === "fill_blank" ? "Thêm đáp án chấp nhận" : activeQuestion.type === "matching" ? "Thêm cặp" : activeQuestion.type === "ordering" ? "Thêm mục" : "Thêm phương án"}
+									<div className='flex items-center gap-1'>
+										<Button
+											type='button'
+											variant='ghost'
+											size='icon-sm'
+											aria-label='Di chuyển câu hỏi lên'
+											disabled={activeQuestionIndex === 0}
+											onClick={() => moveQuestion(-1)}>
+											<ChevronUp />
 										</Button>
-									)}
+										<Button
+											type='button'
+											variant='ghost'
+											size='icon-sm'
+											aria-label='Di chuyển câu hỏi xuống'
+											disabled={activeQuestionIndex === questions.length - 1}
+											onClick={() => moveQuestion(1)}>
+											<ChevronDown />
+										</Button>
+										<Button
+											type='button'
+											variant='ghost'
+											size='icon-sm'
+											aria-label='Xoá câu hỏi'
+											disabled={questions.length === 1}
+											onClick={deleteActiveQuestion}>
+											<Trash2 className='text-destructive' />
+										</Button>
+									</div>
 								</div>
 
-								<div className='rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20'>
-									<div className='flex gap-3'>
-										<Lightbulb className='mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-300' />
-										<div className='min-w-0 flex-1 space-y-2'>
-											<Label htmlFor='question-explanation' className='text-amber-950 dark:text-amber-100'>
-												Giải thích sau khi trả lời
-											</Label>
-											<Textarea
-												id='question-explanation'
-												value={activeQuestion.explanation}
-												onChange={(event) => updateQuestion(activeQuestion.id, { explanation: event.target.value })}
-												placeholder='Giải thích vì sao đáp án này đúng để học viên hiểu bài hơn.'
-												className='min-h-24 resize-y border-amber-200 bg-background/80 dark:border-amber-900'
-											/>
+								<CardContent className='space-y-7 py-6'>
+									<div className='space-y-3'>
+										<Label>Loại câu hỏi</Label>
+										<div className='grid gap-2 sm:grid-cols-2'>
+											{questionTypeOptions.map((item) => {
+												const isSelected =
+													activeQuestion.type === item.type;
+												return (
+													<button
+														key={item.type}
+														type='button'
+														aria-pressed={isSelected}
+														onClick={() =>
+															changeQuestionType(item.type)
+														}
+														className={cn(
+															"flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+															isSelected
+																? "border-primary bg-primary/5 ring-1 ring-primary"
+																: "hover:bg-muted/50",
+														)}>
+														<span
+															className={cn(
+																"mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md",
+																isSelected
+																	? "bg-primary text-primary-foreground"
+																	: "bg-muted text-muted-foreground",
+															)}>
+															<QuestionTypeIcon
+																type={item.type}
+																className='size-4'
+															/>
+														</span>
+														<span>
+															<span className='block text-sm font-medium'>
+																{item.label}
+															</span>
+															<span className='mt-0.5 block text-xs leading-5 text-muted-foreground'>
+																{item.description}
+															</span>
+														</span>
+													</button>
+												);
+											})}
 										</div>
 									</div>
-								</div>
-							</CardContent>
-						</Card>
-					</section>
+
+									{activeQuestion.type !== "matching" && (
+										<div className='space-y-2'>
+											<div className='flex items-center justify-between gap-3'>
+												<Label htmlFor='question-content'>
+													Nội dung câu hỏi
+												</Label>
+												{(isChoiceQuestion(activeQuestion.type) ||
+													activeQuestion.type === "fill_blank" ||
+													activeQuestion.type === "ordering" ||
+													activeQuestion.type ===
+														"word_bank_fill_blank" ||
+													activeQuestion.type === "word_order") && (
+													<Button
+														type='button'
+														variant='outline'
+														size='sm'
+														onClick={() =>
+															openImagePicker(activeQuestion.id)
+														}>
+														<ImagePlus />
+														{activeQuestion.image
+															? "Đổi ảnh"
+															: "Thêm ảnh"}
+													</Button>
+												)}
+											</div>
+											<Textarea
+												id='question-content'
+												value={activeQuestion.content}
+												onChange={(event) => {
+													if (
+														activeQuestion.type ===
+														"word_bank_fill_blank"
+													) {
+														syncWordBankBlanks(
+															activeQuestion.id,
+															event.target.value,
+															activeQuestion.options,
+														);
+													} else {
+														updateQuestion(activeQuestion.id, {
+															content: event.target.value,
+														});
+													}
+												}}
+												placeholder={
+													activeQuestion.type === "word_bank_fill_blank"
+														? "Ví dụ: Hôm nay trời ___ lắm. Tôi mặc áo ___ cho ấm."
+														: activeQuestion.type === "word_order"
+															? "Ví dụ: 少しファーストフードを食べます。 hoặc Write this in English"
+															: "Ví dụ: Thẻ HTML nào dùng để tạo tiêu đề lớn nhất?"
+												}
+												className='min-h-28 resize-y text-base'
+											/>
+											{activeQuestion.type === "word_bank_fill_blank" && (
+												<p className='text-xs text-muted-foreground'>
+													Gõ{" "}
+													<code className='rounded bg-muted px-1 py-0.5 font-mono'>
+														___
+													</code>{" "}
+													(ba dấu gạch dưới) vào vị trí muốn tạo chỗ
+													trống. Phát hiện{" "}
+													<span className='font-semibold text-foreground'>
+														{wordBankBlankCount} chỗ trống
+													</span>
+													.
+												</p>
+											)}
+											{(isChoiceQuestion(activeQuestion.type) ||
+												activeQuestion.type === "fill_blank" ||
+												activeQuestion.type === "ordering" ||
+												activeQuestion.type === "word_bank_fill_blank" ||
+												activeQuestion.type === "word_order") &&
+												activeQuestion.image && (
+													<div className='relative overflow-hidden rounded-lg border bg-muted'>
+														<img
+															src={activeQuestion.image}
+															alt='Ảnh minh hoạ câu hỏi'
+															className='max-h-72 w-full object-contain'
+														/>
+														<Button
+															type='button'
+															variant='secondary'
+															size='icon-xs'
+															className='absolute right-2 top-2'
+															aria-label='Xoá ảnh câu hỏi'
+															onClick={() =>
+																removeImage(activeQuestion.id)
+															}>
+															<X />
+														</Button>
+													</div>
+												)}
+										</div>
+									)}
+
+									<div className='space-y-3'>
+										<div className='flex flex-wrap items-center justify-between gap-2'>
+											<div>
+												<Label>
+													{activeQuestion.type === "fill_blank"
+														? "Đáp án chấp nhận"
+														: activeQuestion.type ===
+															  "word_bank_fill_blank"
+															? "Word bank"
+															: activeQuestion.type === "word_order"
+																? "Các từ cần sắp xếp"
+																: activeQuestion.type === "matching"
+																	? "Các cặp cần ghép"
+																	: activeQuestion.type ===
+																		  "ordering"
+																		? "Thứ tự đúng"
+																		: "Các phương án trả lời"}
+												</Label>
+												<p className='mt-1 text-xs text-muted-foreground'>
+													{activeQuestion.type === "multiple_select"
+														? "Đánh dấu tất cả phương án đúng."
+														: activeQuestion.type === "fill_blank"
+															? "Mỗi dòng là một đáp án được chấp nhận."
+															: activeQuestion.type ===
+																  "word_bank_fill_blank"
+																? "Nhập đáp án đúng cho từng chỗ trống, rồi thêm từ nhiễu."
+																: activeQuestion.type ===
+																	  "word_order"
+																	? "Nhập các từ đúng theo thứ tự, rồi thêm từ nhiễu."
+																	: activeQuestion.type ===
+																		  "matching"
+																		? "Mỗi hàng là một cặp đáp án đúng."
+																		: activeQuestion.type ===
+																			  "ordering"
+																			? "Sắp xếp các mục theo trình tự đúng từ trên xuống."
+																			: "Chọn đúng một phương án."}
+												</p>
+											</div>
+										</div>
+
+										{/* ── word_bank_fill_blank options editor ── */}
+										{activeQuestion.type === "word_bank_fill_blank" ? (
+											<div className='space-y-4'>
+												{wordBankBlankCount === 0 ? (
+													<div className='rounded-lg border border-dashed border-amber-300 bg-amber-50/60 px-4 py-3 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300'>
+														Chưa có chỗ trống nào. Gõ{" "}
+														<code className='font-mono'>___</code> vào
+														câu hỏi để tạo.
+													</div>
+												) : (
+													<div className='space-y-2'>
+														<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+															Đáp án đúng
+														</p>
+														{wordBankCorrectOptions.map((opt, idx) => (
+															<div
+																key={opt.id}
+																className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
+																<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'>
+																	<Check className='size-3.5 stroke-[3]' />
+																</span>
+																<span className='w-28 shrink-0 text-xs text-muted-foreground'>
+																	Chỗ trống {idx + 1}
+																</span>
+																<Input
+																	value={opt.content}
+																	onChange={(event) =>
+																		updateOption(
+																			opt.id,
+																			event.target.value,
+																		)
+																	}
+																	placeholder='Từ đúng'
+																	className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+																/>
+															</div>
+														))}
+													</div>
+												)}
+
+												<div className='space-y-2'>
+													<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+														Từ nhiễu
+													</p>
+													{wordBankDistractors.length === 0 && (
+														<p className='text-xs text-muted-foreground'>
+															Thêm từ nhiễu để học viên phải lựa chọn.
+														</p>
+													)}
+													{wordBankDistractors.map((opt) => (
+														<div
+															key={opt.id}
+															className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
+															<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground'>
+																<X className='size-3.5' />
+															</span>
+															<Input
+																value={opt.content}
+																onChange={(event) =>
+																	updateOption(
+																		opt.id,
+																		event.target.value,
+																	)
+																}
+																placeholder='Từ nhiễu'
+																className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+															/>
+															<Button
+																type='button'
+																variant='ghost'
+																size='icon-xs'
+																aria-label='Xoá từ nhiễu'
+																disabled={
+																	wordBankDistractors.length <=
+																	requiredOptions(
+																		activeQuestion.type,
+																	)
+																}
+																onClick={() =>
+																	removeOption(opt.id)
+																}>
+																<X className='text-muted-foreground' />
+															</Button>
+														</div>
+													))}
+												</div>
+
+												<Button
+													type='button'
+													variant='outline'
+													size='sm'
+													onClick={addOption}>
+													<Plus />
+													Thêm từ nhiễu
+												</Button>
+											</div>
+										) : activeQuestion.type === "word_order" ? (
+											/* ── word_order options editor ── */
+											<div className='space-y-4'>
+												{/* Correct words in order */}
+												<div className='space-y-2'>
+													<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+														Từ đúng (theo thứ tự)
+													</p>
+													{wordOrderCorrectOptions.map((opt, idx) => (
+														<div
+															key={opt.id}
+															className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
+															<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-xs font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'>
+																{idx + 1}
+															</span>
+															<Input
+																value={opt.content}
+																onChange={(event) =>
+																	updateOption(
+																		opt.id,
+																		event.target.value,
+																	)
+																}
+																placeholder={`Từ thứ ${idx + 1}`}
+																className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+															/>
+															<Button
+																type='button'
+																variant='ghost'
+																size='icon-xs'
+																aria-label={`Xoá từ thứ ${idx + 1}`}
+																disabled={
+																	wordOrderCorrectOptions.length <=
+																	2
+																}
+																onClick={() =>
+																	removeWordOrderCorrectOption(
+																		opt.id,
+																	)
+																}>
+																<X className='text-muted-foreground' />
+															</Button>
+														</div>
+													))}
+													<Button
+														type='button'
+														variant='outline'
+														size='sm'
+														onClick={addWordOrderCorrectOption}>
+														<Plus />
+														Thêm từ đúng
+													</Button>
+												</div>
+
+												{/* Distractor words */}
+												<div className='space-y-2'>
+													<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+														Từ nhiễu
+													</p>
+													{wordOrderDistractors.length === 0 && (
+														<p className='text-xs text-muted-foreground'>
+															Thêm từ nhiễu để học viên phải lựa chọn.
+														</p>
+													)}
+													{wordOrderDistractors.map((opt) => (
+														<div
+															key={opt.id}
+															className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
+															<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground'>
+																<X className='size-3.5' />
+															</span>
+															<Input
+																value={opt.content}
+																onChange={(event) =>
+																	updateOption(
+																		opt.id,
+																		event.target.value,
+																	)
+																}
+																placeholder='Từ nhiễu'
+																className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+															/>
+															<Button
+																type='button'
+																variant='ghost'
+																size='icon-xs'
+																aria-label='Xoá từ nhiễu'
+																onClick={() =>
+																	removeWordOrderDistractor(
+																		opt.id,
+																	)
+																}>
+																<X className='text-muted-foreground' />
+															</Button>
+														</div>
+													))}
+												</div>
+
+												<Button
+													type='button'
+													variant='outline'
+													size='sm'
+													onClick={addOption}>
+													<Plus />
+													Thêm từ nhiễu
+												</Button>
+											</div>
+										) : (
+											/* ── tất cả loại khác ── */
+											<div className='space-y-3'>
+												<div className='space-y-2'>
+													{activeQuestion.type === "matching"
+														? activeQuestion.options
+																.filter(
+																	(option) =>
+																		option.metadata?.side ===
+																		"left",
+																)
+																.map((leftOption, index) => {
+																	const rightOption =
+																		activeQuestion.options.find(
+																			(option) =>
+																				option.metadata
+																					?.pairId ===
+																					leftOption
+																						.metadata
+																						?.pairId &&
+																				option.metadata
+																					?.side ===
+																					"right",
+																		);
+																	return (
+																		<div
+																			key={leftOption.id}
+																			className='grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-center'>
+																			<Input
+																				value={
+																					leftOption.content
+																				}
+																				onChange={(event) =>
+																					updateOption(
+																						leftOption.id,
+																						event.target
+																							.value,
+																					)
+																				}
+																				placeholder={`Mục trái ${index + 1}`}
+																			/>
+																			<Link2 className='mx-auto size-4 text-muted-foreground' />
+																			<Input
+																				value={
+																					rightOption?.content ??
+																					""
+																				}
+																				onChange={(event) =>
+																					rightOption &&
+																					updateOption(
+																						rightOption.id,
+																						event.target
+																							.value,
+																					)
+																				}
+																				placeholder={`Mục phải ${index + 1}`}
+																			/>
+																			<Button
+																				type='button'
+																				variant='ghost'
+																				size='icon-xs'
+																				aria-label={`Xoá cặp ${index + 1}`}
+																				onClick={() =>
+																					leftOption
+																						.metadata
+																						?.pairId &&
+																					removeMatchingPair(
+																						leftOption
+																							.metadata
+																							.pairId,
+																					)
+																				}>
+																				<X />
+																			</Button>
+																		</div>
+																	);
+																})
+														: activeQuestion.type === "ordering"
+															? activeQuestion.options.map(
+																	(option, index) => (
+																		<div
+																			key={option.id}
+																			draggable
+																			onDragStart={() =>
+																				handleOrderingDragStart(
+																					index,
+																				)
+																			}
+																			onDragOver={(e) =>
+																				handleOrderingDragOver(
+																					e,
+																					index,
+																				)
+																			}
+																			onDrop={() =>
+																				handleOrderingDrop(
+																					index,
+																				)
+																			}
+																			onDragEnd={
+																				handleOrderingDragEnd
+																			}
+																			className={cn(
+																				"flex select-none items-center gap-2 rounded-lg border bg-card p-2.5 transition-colors",
+																				orderingDragIndex ===
+																					index &&
+																					"opacity-40",
+																				orderingDragOverIndex ===
+																					index &&
+																					orderingDragIndex !==
+																						index &&
+																					"border-primary bg-primary/5",
+																			)}>
+																			<GripVertical className='size-4 shrink-0 cursor-grab text-muted-foreground' />
+																			<span className='flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold'>
+																				{index + 1}
+																			</span>
+																			<Input
+																				value={
+																					option.content
+																				}
+																				onChange={(event) =>
+																					updateOption(
+																						option.id,
+																						event.target
+																							.value,
+																					)
+																				}
+																				placeholder={`Mục thứ ${index + 1}`}
+																				className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+																			/>
+																			<Button
+																				type='button'
+																				variant='ghost'
+																				size='icon-xs'
+																				aria-label={`Xoá mục ${index + 1}`}
+																				disabled={
+																					activeQuestion
+																						.options
+																						.length <= 2
+																				}
+																				onClick={() =>
+																					removeOption(
+																						option.id,
+																					)
+																				}>
+																				<X />
+																			</Button>
+																		</div>
+																	),
+																)
+															: activeQuestion.options.map(
+																	(option, index) => {
+																		const allowRemove =
+																			activeQuestion.type !==
+																				"true_false" &&
+																			activeQuestion.options
+																				.length >
+																				requiredOptions(
+																					activeQuestion.type,
+																				);
+																		const isChoice =
+																			isChoiceQuestion(
+																				activeQuestion.type,
+																			);
+																		return (
+																			<div
+																				key={option.id}
+																				className='rounded-lg border bg-card p-2.5'>
+																				<div className='flex items-center gap-3'>
+																					{activeQuestion.type ===
+																					"multiple_select" ? (
+																						<Checkbox
+																							id={`correct-${option.id}`}
+																							checked={
+																								option.isCorrect
+																							}
+																							onCheckedChange={(
+																								checked,
+																							) =>
+																								toggleCorrectOption(
+																									option.id,
+																									checked ===
+																										true,
+																								)
+																							}
+																							aria-label={`Đánh dấu phương án ${index + 1} là đúng`}
+																						/>
+																					) : isChoice ? (
+																						<button
+																							type='button'
+																							aria-label={`Chọn phương án ${index + 1} là đáp án đúng`}
+																							onClick={() =>
+																								toggleCorrectOption(
+																									option.id,
+																									true,
+																								)
+																							}
+																							className={cn(
+																								"flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+																								option.isCorrect
+																									? "border-primary bg-primary text-primary-foreground"
+																									: "border-input bg-background",
+																							)}>
+																							{option.isCorrect && (
+																								<Check className='size-3.5 stroke-[3]' />
+																							)}
+																						</button>
+																					) : (
+																						<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700'>
+																							<Check className='size-3.5 stroke-[3]' />
+																						</span>
+																					)}
+																					<Input
+																						value={
+																							option.content
+																						}
+																						onChange={(
+																							event,
+																						) =>
+																							updateOption(
+																								option.id,
+																								event
+																									.target
+																									.value,
+																							)
+																						}
+																						placeholder={
+																							activeQuestion.type ===
+																							"fill_blank"
+																								? "Nhập đáp án đúng"
+																								: `Phương án ${index + 1}`
+																						}
+																						className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+																					/>
+																					{isChoice && (
+																						<Button
+																							type='button'
+																							variant='ghost'
+																							size='icon-xs'
+																							aria-label={`Thêm ảnh cho phương án ${index + 1}`}
+																							onClick={() =>
+																								openImagePicker(
+																									activeQuestion.id,
+																									option.id,
+																								)
+																							}>
+																							<ImagePlus />
+																						</Button>
+																					)}
+																					{allowRemove && (
+																						<Button
+																							type='button'
+																							variant='ghost'
+																							size='icon-xs'
+																							aria-label={`Xoá phương án ${index + 1}`}
+																							onClick={() =>
+																								removeOption(
+																									option.id,
+																								)
+																							}>
+																							<X className='text-muted-foreground' />
+																						</Button>
+																					)}
+																				</div>
+																				{isChoice &&
+																					option.image && (
+																						<div className='relative mt-2 overflow-hidden rounded-md border bg-muted'>
+																							<img
+																								src={
+																									option.image
+																								}
+																								alt={`Ảnh minh hoạ phương án ${index + 1}`}
+																								className='max-h-32 w-full object-contain'
+																							/>
+																							<Button
+																								type='button'
+																								variant='secondary'
+																								size='icon-xs'
+																								className='absolute right-1.5 top-1.5'
+																								aria-label={`Xoá ảnh phương án ${index + 1}`}
+																								onClick={() =>
+																									removeImage(
+																										activeQuestion.id,
+																										option.id,
+																									)
+																								}>
+																								<X />
+																							</Button>
+																						</div>
+																					)}
+																			</div>
+																		);
+																	},
+																)}
+												</div>
+
+												{activeQuestion.type !== "true_false" && (
+													<Button
+														type='button'
+														variant='outline'
+														size='sm'
+														onClick={addOption}>
+														<Plus />
+														{activeQuestion.type === "fill_blank"
+															? "Thêm đáp án"
+															: activeQuestion.type === "matching"
+																? "Thêm cặp"
+																: activeQuestion.type === "ordering"
+																	? "Thêm mục"
+																	: "Thêm phương án"}
+													</Button>
+												)}
+											</div>
+										)}
+									</div>
+
+									{activeQuestion.type !== "matching" && (
+										<div className='rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20'>
+											<div className='flex gap-3'>
+												<Lightbulb className='mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-300' />
+												<div className='min-w-0 flex-1 space-y-2'>
+													<Label
+														htmlFor='question-explanation'
+														className='text-amber-950 dark:text-amber-100'>
+														Giải thích
+													</Label>
+													<Textarea
+														id='question-explanation'
+														value={activeQuestion.explanation}
+														onChange={(event) =>
+															updateQuestion(activeQuestion.id, {
+																explanation: event.target.value,
+															})
+														}
+														placeholder='Giải thích vì sao đáp án này đúng để học viên hiểu bài hơn.'
+														className='min-h-24 resize-y border-amber-200 bg-background/80 dark:border-amber-900'
+													/>
+												</div>
+											</div>
+										</div>
+									)}
+								</CardContent>
+							</Card>
+						</section>
 					</div>
 
 					<aside className='space-y-5'>
-						<Card className='overflow-hidden'>
-							<CardHeader className='border-b bg-muted/30'>
+						<Card className='overflow-hidden py-0 gap-0'>
+							<CardHeader className='border-b bg-muted/30 px-6! py-3!'>
 								<div className='flex items-center justify-between gap-3'>
 									<div>
 										<CardTitle className='flex items-center gap-2 text-base'>
 											<Eye className='size-4' />
-											Xem trước học viên
+											Preview quiz
 										</CardTitle>
-										<CardDescription>Trải nghiệm một câu hỏi mỗi lần.</CardDescription>
+										<CardDescription>
+											Xem quiz của bạn trông như thế nào từ góc nhìn của học
+											viên.
+										</CardDescription>
 									</div>
-									<Badge variant='secondary' className='rounded-full'>Live</Badge>
 								</div>
 							</CardHeader>
-							<CardContent className='space-y-5 pt-5'>
-								<div>
-									<div className='mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground'>
-										<span>Câu {activeQuestionIndex + 1} / {questions.length}</span>
-										<span>Chấm theo tỷ lệ câu đúng</span>
-									</div>
-									<Progress value={((activeQuestionIndex + 1) / questions.length) * 100} className='h-2.5' />
-								</div>
-
+							<CardContent className='space-y-5 py-5'>
 								<div className='rounded-2xl border-2 border-emerald-500/70 bg-emerald-50/50 p-4 dark:bg-emerald-950/20'>
 									<div className='mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300'>
 										<span className='flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white'>
 											<FileQuestion className='size-3.5' />
 										</span>
-										Quiz của lesson
+										{getQuestionTypeLabel(activeQuestion.type)}
 									</div>
-									<h2 className='text-lg font-semibold leading-7'>
-										{activeQuestion.content.trim() || "Nội dung câu hỏi sẽ xuất hiện ở đây"}
-									</h2>
 
-									{activeQuestion.image && <img src={activeQuestion.image} alt='' className='mt-4 max-h-44 w-full rounded-xl object-contain' />}
-									{activeQuestion.type === "fill_blank" ? (
+									{/* ── Question content ── */}
+									{activeQuestion.type !== "matching" &&
+										activeQuestion.type !== "word_bank_fill_blank" && (
+											<h2 className='text-lg font-semibold leading-7'>
+												{activeQuestion.content.trim() ||
+													"Nội dung câu hỏi sẽ xuất hiện ở đây"}
+											</h2>
+										)}
+
+									{activeQuestion.image && (
+										<img
+											src={activeQuestion.image}
+											alt=''
+											className='mt-4 max-h-44 w-full rounded-xl object-contain'
+										/>
+									)}
+
+									{/* ── word_bank_fill_blank preview ── */}
+									{activeQuestion.type === "word_bank_fill_blank" ? (
+										<div>
+											{/* Sentence with blank boxes */}
+											<div className='flex flex-wrap items-center gap-x-1 gap-y-2 text-lg font-semibold leading-relaxed'>
+												{wordBankSentenceParts.length <= 1 ? (
+													<span className='text-muted-foreground'>
+														{activeQuestion.content.trim() ||
+															"Nội dung câu hỏi sẽ xuất hiện ở đây"}
+													</span>
+												) : (
+													wordBankSentenceParts.map((part, i) => {
+														const placedId =
+															wordBankPlacements[i] ?? null;
+														const placedOption = placedId
+															? activeQuestion.options.find(
+																	(o) => o.id === placedId,
+																)
+															: null;
+														const correctOpt =
+															wordBankCorrectOptions[i];
+														const isCorrectSlot =
+															previewChecked &&
+															placedId === correctOpt?.id;
+														const isWrongSlot =
+															previewChecked &&
+															placedId !== null &&
+															placedId !== correctOpt?.id;
+														return (
+															<Fragment key={i}>
+																{part && <span>{part}</span>}
+																{i <
+																	wordBankSentenceParts.length -
+																		1 && (
+																	<button
+																		type='button'
+																		disabled={previewChecked}
+																		onClick={() =>
+																			handleWordBankBlankClick(
+																				i,
+																			)
+																		}
+																		className={cn(
+																			"inline-flex min-w-20 items-center justify-center rounded-lg border-b-2 px-3 py-1 text-sm font-semibold transition-colors",
+																			isCorrectSlot &&
+																				"border-emerald-500 bg-emerald-100 text-emerald-800",
+																			isWrongSlot &&
+																				"border-rose-500 bg-rose-100 text-rose-800",
+																			!isCorrectSlot &&
+																				!isWrongSlot &&
+																				placedOption &&
+																				"border-primary bg-primary/10 text-primary hover:bg-primary/20",
+																			!isCorrectSlot &&
+																				!isWrongSlot &&
+																				!placedOption &&
+																				"border-muted-foreground/40 bg-muted/50 text-muted-foreground",
+																		)}>
+																		{placedOption ? (
+																			placedOption.content ||
+																			"—"
+																		) : (
+																			<span className='opacity-0 select-none'>
+																				___
+																			</span>
+																		)}
+																	</button>
+																)}
+															</Fragment>
+														);
+													})
+												)}
+											</div>
+
+											{/* Show correct answers after wrong check */}
+											{previewChecked && !previewIsCorrect && (
+												<div className='mt-3 flex flex-wrap gap-2'>
+													{wordBankCorrectOptions.map((opt, i) => (
+														<span
+															key={opt.id}
+															className='rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'>
+															Chỗ trống {i + 1}:{" "}
+															<span className='font-bold'>
+																{opt.content || "—"}
+															</span>
+														</span>
+													))}
+												</div>
+											)}
+
+											{/* Word bank */}
+											{!previewChecked && (
+												<div className='mt-5'>
+													<p className='mb-2 text-xs font-medium text-muted-foreground'>
+														Chọn từ bên dưới để điền vào chỗ trống:
+													</p>
+													<div className='flex flex-wrap gap-2'>
+														{shuffledWordBankOptions
+															.filter(
+																(opt) =>
+																	!Array.from(
+																		{
+																			length: wordBankBlankCount,
+																		},
+																		(_, idx) =>
+																			wordBankPlacements[idx],
+																	).includes(opt.id),
+															)
+															.map((opt) => (
+																<button
+																	key={opt.id}
+																	type='button'
+																	onClick={() =>
+																		handleWordBankSelect(opt.id)
+																	}
+																	className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
+																	{opt.content || "—"}
+																</button>
+															))}
+													</div>
+												</div>
+											)}
+										</div>
+									) : activeQuestion.type === "word_order" ? (
+										/* ── word_order preview ── */
+										<div>
+											{/* Construction area */}
+											<div className='min-h-16 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 p-3 dark:border-emerald-800 dark:bg-emerald-950/20'>
+												{wordOrderPlacements.length === 0 ? (
+													<p className='text-sm text-muted-foreground'>
+														Chọn từ bên dưới theo đúng thứ tự…
+													</p>
+												) : (
+													<div className='flex flex-wrap gap-2'>
+														{wordOrderPlacements.map((optId, idx) => {
+															const opt = activeQuestion.options.find(
+																(o) => o.id === optId,
+															);
+															const isCorrectPos =
+																previewChecked &&
+																wordOrderCorrectOptions[idx]?.id ===
+																	optId;
+															const isWrongPos =
+																previewChecked &&
+																wordOrderCorrectOptions[idx]?.id !==
+																	optId;
+															return (
+																<button
+																	key={idx}
+																	type='button'
+																	disabled={previewChecked}
+																	onClick={() =>
+																		handleWordOrderPlacementClick(
+																			idx,
+																		)
+																	}
+																	className={cn(
+																		"rounded-xl border-2 px-4 py-1.5 text-sm font-medium transition-colors",
+																		isCorrectPos &&
+																			"border-emerald-500 bg-emerald-100 text-emerald-800",
+																		isWrongPos &&
+																			"border-rose-500 bg-rose-100 text-rose-800",
+																		!isCorrectPos &&
+																			!isWrongPos &&
+																			"border-emerald-400 bg-white hover:bg-emerald-50 dark:bg-transparent",
+																	)}>
+																	{opt?.content || "—"}
+																</button>
+															);
+														})}
+													</div>
+												)}
+											</div>
+
+											{/* Show correct answer after wrong check */}
+											{previewChecked && !previewIsCorrect && (
+												<div className='mt-2 flex flex-wrap gap-1.5'>
+													{wordOrderCorrectOptions.map((opt, i) => (
+														<span
+															key={opt.id}
+															className='rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'>
+															{i + 1}. {opt.content || "—"}
+														</span>
+													))}
+												</div>
+											)}
+
+											{/* Separator */}
+											<div className='my-4 border-t border-border' />
+
+											{/* Word bank */}
+											{!previewChecked && (
+												<div className='flex flex-wrap gap-2'>
+													{shuffledWordOrderOptions
+														.filter(
+															(opt) =>
+																!wordOrderPlacements.includes(
+																	opt.id,
+																),
+														)
+														.map((opt) => (
+															<button
+																key={opt.id}
+																type='button'
+																onClick={() =>
+																	handleWordOrderSelect(opt.id)
+																}
+																className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
+																{opt.content || "—"}
+															</button>
+														))}
+												</div>
+											)}
+										</div>
+									) : activeQuestion.type === "matching" ? (
+										<div className='mt-5 grid grid-cols-2 gap-2'>
+											{[
+												{
+													ids: shuffledMatchingLeftIds,
+													side: "left" as const,
+												},
+												{
+													ids: shuffledMatchingRightIds,
+													side: "right" as const,
+												},
+											].map(({ ids, side }) => (
+												<div key={side} className='space-y-2'>
+													{ids.map((optionId) => {
+														const option = activeQuestion.options.find(
+															(o) => o.id === optionId,
+														);
+														if (!option) return null;
+														const isSelected =
+															matchingSelected?.optionId ===
+															option.id;
+														const isMatched = matchingMatched.has(
+															option.metadata?.pairId ?? "",
+														);
+														const isWrong =
+															side === "left"
+																? matchingWrong?.leftId ===
+																	option.id
+																: matchingWrong?.rightId ===
+																	option.id;
+														return (
+															<button
+																key={option.id}
+																type='button'
+																disabled={
+																	isMatched || previewChecked
+																}
+																onClick={() =>
+																	handleMatchingSelect(
+																		side,
+																		option.id,
+																	)
+																}
+																className={cn(
+																	"w-full rounded-xl border-2 px-3 py-2.5 text-center text-sm font-medium transition-colors disabled:cursor-default",
+																	isMatched &&
+																		"border-emerald-500 bg-emerald-50 text-emerald-800 opacity-70",
+																	isWrong &&
+																		"border-rose-400 bg-rose-50 text-rose-800",
+																	isSelected &&
+																		!isMatched &&
+																		!isWrong &&
+																		"border-primary bg-primary/10 text-primary",
+																	!isSelected &&
+																		!isMatched &&
+																		!isWrong &&
+																		"border-emerald-200 bg-white hover:border-emerald-400",
+																)}>
+																{option.content || "—"}
+															</button>
+														);
+													})}
+												</div>
+											))}
+										</div>
+									) : activeQuestion.type === "fill_blank" ? (
 										<Input
 											value={previewTextAnswer}
 											onChange={handlePreviewTextAnswer}
@@ -846,32 +2160,71 @@ function QuizCreatePage() {
 									) : (
 										<div className='mt-5 space-y-2.5'>
 											{activeQuestion.options.map((option, index) => {
-												const isSelected = previewAnswer.includes(option.id);
-												const showCorrect = previewChecked && option.isCorrect;
-												const showIncorrect = previewChecked && isSelected && !option.isCorrect;
+												const isSelected = previewAnswer.includes(
+													option.id,
+												);
+												const showCorrect =
+													previewChecked && option.isCorrect;
+												const showIncorrect =
+													previewChecked &&
+													isSelected &&
+													!option.isCorrect;
 												return (
 													<button
 														key={option.id}
 														type='button'
-														onClick={() => selectPreviewOption(option.id)}
+														onClick={() =>
+															selectPreviewOption(option.id)
+														}
 														disabled={previewChecked}
 														className={cn(
 															"flex w-full items-center gap-3 rounded-xl border-2 px-3 py-3 text-left text-sm font-medium transition-colors disabled:cursor-default",
-															showCorrect && "border-emerald-600 bg-emerald-100 text-emerald-950",
-															showIncorrect && "border-rose-500 bg-rose-100 text-rose-950",
-															!showCorrect && !showIncorrect && isSelected && "border-emerald-500 bg-white",
-															!showCorrect && !showIncorrect && !isSelected && "border-emerald-200 bg-white hover:border-emerald-400",
+															showCorrect &&
+																"border-emerald-600 bg-emerald-100 text-emerald-950",
+															showIncorrect &&
+																"border-rose-500 bg-rose-100 text-rose-950",
+															!showCorrect &&
+																!showIncorrect &&
+																isSelected &&
+																"border-emerald-500 bg-white",
+															!showCorrect &&
+																!showIncorrect &&
+																!isSelected &&
+																"border-emerald-200 bg-white hover:border-emerald-400",
 														)}>
-														<span className={cn(
-															"flex size-6 shrink-0 items-center justify-center border-2 text-xs font-semibold",
-															activeQuestion.type === "multiple_select" ? "rounded-md" : "rounded-full",
-															showCorrect ? "border-emerald-600 bg-emerald-600 text-white" : showIncorrect ? "border-rose-500 bg-rose-500 text-white" : isSelected ? "border-emerald-500 bg-emerald-500 text-white" : "border-emerald-200 bg-white text-emerald-700",
-														)}>
-															{showCorrect ? <Check className='size-3.5 stroke-[3]' /> : showIncorrect ? <X className='size-3.5 stroke-[3]' /> : String.fromCharCode(65 + index)}
+														<span
+															className={cn(
+																"flex size-6 shrink-0 items-center justify-center border-2 text-xs font-semibold",
+																activeQuestion.type ===
+																	"multiple_select"
+																	? "rounded-md"
+																	: "rounded-full",
+																showCorrect
+																	? "border-emerald-600 bg-emerald-600 text-white"
+																	: showIncorrect
+																		? "border-rose-500 bg-rose-500 text-white"
+																		: isSelected
+																			? "border-emerald-500 bg-emerald-500 text-white"
+																			: "border-emerald-200 bg-white text-emerald-700",
+															)}>
+															{showCorrect ? (
+																<Check className='size-3.5 stroke-[3]' />
+															) : showIncorrect ? (
+																<X className='size-3.5 stroke-[3]' />
+															) : (
+																String.fromCharCode(65 + index)
+															)}
 														</span>
 														<span className='min-w-0 flex-1'>
-															{option.content || `Phương án ${index + 1}`}
-															{option.image && <img src={option.image} alt='' className='mt-2 max-h-24 rounded-md object-contain' />}
+															{option.content ||
+																`Phương án ${index + 1}`}
+															{option.image && (
+																<img
+																	src={option.image}
+																	alt=''
+																	className='mt-2 max-h-24 rounded-md object-contain'
+																/>
+															)}
 														</span>
 													</button>
 												);
@@ -880,19 +2233,38 @@ function QuizCreatePage() {
 									)}
 
 									{previewChecked && (
-										<div className={cn(
-											"mt-5 rounded-xl border p-3.5",
-											previewIsCorrect
-												? "border-emerald-300 bg-emerald-100/80 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100"
-												: "border-rose-300 bg-rose-100/80 text-rose-950 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-100",
-										)}>
+										<div
+											className={cn(
+												"mt-5 rounded-xl border p-3.5",
+												previewIsCorrect
+													? "border-emerald-300 bg-emerald-100/80 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100"
+													: "border-rose-300 bg-rose-100/80 text-rose-950 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-100",
+											)}>
 											<div className='flex gap-2.5'>
-												{previewIsCorrect ? <CheckCircle2 className='mt-0.5 size-5 shrink-0' /> : <CircleX className='mt-0.5 size-5 shrink-0' />}
+												{previewIsCorrect ? (
+													<CheckCircle2 className='mt-0.5 size-5 shrink-0' />
+												) : (
+													<CircleX className='mt-0.5 size-5 shrink-0' />
+												)}
 												<div>
-													<p className='font-semibold'>{previewIsCorrect ? "Chính xác!" : "Chưa chính xác"}</p>
-													<p className='mt-1 text-xs leading-5 opacity-90'>
-														{activeQuestion.explanation.trim() || "Thêm giải thích để học viên hiểu rõ đáp án."}
+													<p className='font-semibold'>
+														{previewIsCorrect
+															? activeQuestion.type === "matching"
+																? "Xuất sắc! Bạn đã ghép đúng tất cả các cặp."
+																: "Chính xác!"
+															: activeQuestion.type === "fill_blank"
+																? `Đáp án: ${activeQuestion.options
+																		.map((o) => o.content)
+																		.filter(Boolean)
+																		.join(" / ")}`
+																: "Chưa chính xác"}
 													</p>
+													{activeQuestion.type !== "matching" && (
+														<p className='mt-1 text-xs leading-5 opacity-90'>
+															{activeQuestion.explanation.trim() ||
+																"Thêm giải thích để học viên hiểu rõ đáp án."}
+														</p>
+													)}
 												</div>
 											</div>
 										</div>
@@ -900,18 +2272,24 @@ function QuizCreatePage() {
 								</div>
 
 								{previewChecked ? (
-									<Button type='button' variant='outline' className='w-full' onClick={resetPreview}>
+									<Button
+										type='button'
+										variant='outline'
+										className='w-full'
+										onClick={resetPreview}>
 										<Copy />
 										Làm lại câu này
 									</Button>
 								) : (
-									<Button
-										type='button'
-										className='w-full bg-emerald-600 text-white hover:bg-emerald-700'
-										disabled={!hasPreviewAnswer}
-										onClick={() => setPreviewChecked(true)}>
-										Kiểm tra đáp án
-									</Button>
+									activeQuestion.type !== "matching" && (
+										<Button
+											type='button'
+											className='w-full bg-emerald-600 text-white hover:bg-emerald-700'
+											disabled={!hasPreviewAnswer}
+											onClick={() => setPreviewChecked(true)}>
+											Kiểm tra đáp án
+										</Button>
+									)
 								)}
 							</CardContent>
 						</Card>
