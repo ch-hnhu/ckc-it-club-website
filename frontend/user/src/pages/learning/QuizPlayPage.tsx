@@ -339,11 +339,16 @@ const QuizPlayPage: React.FC = () => {
 
 	if (loading) {
 		return (
-			<div className='mx-auto flex max-w-3xl flex-col gap-4 px-4 pb-10 pt-24'>
-				<div className='h-3 w-full animate-pulse rounded-full bg-gray-200' />
-				<div className='h-40 animate-pulse rounded-2xl border-2 border-black bg-gray-100' />
-				<div className='h-14 animate-pulse rounded-2xl border-2 border-black bg-gray-100' />
-				<div className='h-14 animate-pulse rounded-2xl border-2 border-black bg-gray-100' />
+			<div className='flex h-[100dvh] flex-col pt-16 overflow-hidden bg-white justify-center items-center px-4'>
+				<div className='w-full max-w-2xl animate-pulse rounded-3xl border-2 border-black bg-white p-8 text-center shadow-[6px_6px_0_#111]'>
+					<div className='mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gray-200' />
+					<div className='mx-auto mt-6 h-8 w-64 rounded bg-gray-200' />
+					<div className='mx-auto mt-3 h-5 w-48 rounded bg-gray-200' />
+					<div className='mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center'>
+						<div className='h-12 w-full rounded-xl bg-gray-200 sm:w-32' />
+						<div className='h-12 w-full rounded-xl bg-gray-200 sm:w-32' />
+					</div>
+				</div>
 			</div>
 		);
 	}

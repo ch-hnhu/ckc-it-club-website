@@ -38,6 +38,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { cn } from "@/lib/utils";
@@ -323,9 +324,7 @@ function describeInvalidQuestion(question: QuizQuestion): string | null {
 
 	switch (question.type) {
 		case "fill_blank":
-			return question.options.some((o) => o.content.trim())
-				? null
-				: "chưa nhập đáp án đúng";
+			return question.options.some((o) => o.content.trim()) ? null : "chưa nhập đáp án đúng";
 
 		case "word_bank_fill_blank": {
 			const blankCount = (question.content.match(/___/g) || []).length;
@@ -360,7 +359,11 @@ function QuizCreatePage() {
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
-		{ title: "Learning Center" },
+		{ title: "Khoá học", link: "/courses" },
+		{
+			title: courseId ? `${courseId}` : "Khóa học chưa xác định",
+			link: courseId ? `/courses/${courseId}` : undefined,
+		},
 		{ title: "Tạo quiz" },
 	]);
 
@@ -965,6 +968,83 @@ function QuizCreatePage() {
 		void persistQuiz("Đã xuất bản quiz cho buổi học.");
 	};
 
+	if (isLoading) {
+		return (
+			<div className='min-h-full bg-muted/30'>
+				<div className='mx-auto flex w-full max-w-[1600px] flex-col gap-5 p-4 md:p-6 lg:p-8'>
+					{/* Header skeleton */}
+					<header className='flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-center xl:justify-between'>
+						<div className='flex min-w-0 items-start gap-3'>
+							<Skeleton className='h-10 w-10 shrink-0' />
+							<div className='space-y-2 min-w-0'>
+								<Skeleton className='h-4 w-40' />
+								<Skeleton className='h-8 w-64' />
+							</div>
+						</div>
+						<div className='flex flex-wrap items-center gap-2'>
+							<Skeleton className='h-10 w-28' />
+							<Skeleton className='h-10 w-28' />
+						</div>
+					</header>
+
+					{/* Grid skeleton */}
+					<div className='space-y-6'>
+						<div className='grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]'>
+							{/* Questions list Card skeleton */}
+							<aside className='relative h-[400px]'>
+								<Card className='absolute inset-0 flex flex-col p-4 space-y-4'>
+									<Skeleton className='h-6 w-32' />
+									<Skeleton className='h-10 w-full' />
+									<div className='space-y-2 flex-1 overflow-hidden'>
+										<Skeleton className='h-14 w-full' />
+										<Skeleton className='h-14 w-full' />
+										<Skeleton className='h-14 w-full' />
+									</div>
+								</Card>
+							</aside>
+
+							{/* Editing Form Card skeleton */}
+							<section className='min-w-0 space-y-5'>
+								<Card className='p-6 space-y-6'>
+									<div className='flex items-center gap-3 border-b pb-4'>
+										<Skeleton className='h-9 w-9 rounded-lg' />
+										<div className='space-y-1.5'>
+											<Skeleton className='h-4 w-20' />
+											<Skeleton className='h-3 w-32' />
+										</div>
+									</div>
+									<div className='space-y-3'>
+										<Skeleton className='h-4 w-28' />
+										<div className='grid gap-2 sm:grid-cols-2'>
+											{Array.from({ length: 6 }).map((_, i) => (
+												<Skeleton key={i} className='h-16 w-full' />
+											))}
+										</div>
+									</div>
+									<div className='space-y-3'>
+										<Skeleton className='h-4 w-32' />
+										<Skeleton className='h-24 w-full' />
+									</div>
+								</Card>
+							</section>
+						</div>
+
+						{/* Preview Quiz Card skeleton */}
+						<aside className='space-y-5'>
+							<Card className='p-6 space-y-4'>
+								<div className='space-y-2'>
+									<Skeleton className='h-6 w-36' />
+									<Skeleton className='h-4 w-72' />
+								</div>
+								<Skeleton className='h-32 w-full rounded-2xl' />
+							</Card>
+						</aside>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	if (!activeQuestion) return null;
 
 	// Derived values for word bank preview rendering
@@ -981,8 +1061,8 @@ function QuizCreatePage() {
 				onChange={handleImageChange}
 			/>
 			<div className='mx-auto flex w-full max-w-[1600px] flex-col gap-5 p-4 md:p-6 lg:p-8'>
-				<header className='flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-center xl:justify-between'>
-					<div className='flex min-w-0 items-start gap-3'>
+				<header className='flex flex-col gap-4 pb-5 xl:flex-row xl:items-center xl:justify-between'>
+					<div className='flex min-w-0 items-end gap-3'>
 						<Button
 							type='button'
 							variant='outline'
@@ -992,17 +1072,9 @@ function QuizCreatePage() {
 							<ArrowLeft />
 						</Button>
 						<div className='min-w-0'>
-							<div className='mb-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
-								<span>{courseReference}</span>
-								<span aria-hidden='true'>/</span>
-								<span>{lessonReference}</span>
-							</div>
 							<h1 className='text-2xl font-semibold tracking-tight md:text-3xl'>
-								Tạo quiz cho lesson
+								Tạo quiz cho buổi học
 							</h1>
-							<p className='mt-1 text-sm text-muted-foreground'>
-								Thiết kế từng câu hỏi, sau đó xem ngay trải nghiệm của học viên.
-							</p>
 						</div>
 					</div>
 
@@ -1204,15 +1276,15 @@ function QuizCreatePage() {
 										</div>
 									</div>
 
-									{(
+									{
 										<div className='space-y-2'>
 											<div className='flex items-center justify-between gap-3'>
 												<Label htmlFor='question-content'>
 													Nội dung câu hỏi
 												</Label>
-								{(isChoiceQuestion(activeQuestion.type) ||
-									activeQuestion.type === "fill_blank" ||
-									activeQuestion.type ===
+												{(isChoiceQuestion(activeQuestion.type) ||
+													activeQuestion.type === "fill_blank" ||
+													activeQuestion.type ===
 														"word_bank_fill_blank" ||
 													activeQuestion.type === "word_order") && (
 													<Button
@@ -1273,9 +1345,9 @@ function QuizCreatePage() {
 													.
 												</p>
 											)}
-							{(isChoiceQuestion(activeQuestion.type) ||
-								activeQuestion.type === "fill_blank" ||
-								activeQuestion.type === "word_bank_fill_blank" ||
+											{(isChoiceQuestion(activeQuestion.type) ||
+												activeQuestion.type === "fill_blank" ||
+												activeQuestion.type === "word_bank_fill_blank" ||
 												activeQuestion.type === "word_order") &&
 												activeQuestion.image && (
 													<div className='relative overflow-hidden rounded-lg border bg-muted'>
@@ -1298,7 +1370,7 @@ function QuizCreatePage() {
 													</div>
 												)}
 										</div>
-									)}
+									}
 
 									<div className='space-y-3'>
 										<div className='flex flex-wrap items-center justify-between gap-2'>
@@ -1311,9 +1383,9 @@ function QuizCreatePage() {
 															? "Word bank"
 															: activeQuestion.type === "word_order"
 																? "Các từ cần sắp xếp"
-													: activeQuestion.type === "matching"
-														? "Các cặp cần ghép"
-														: "Các phương án trả lời"}
+																: activeQuestion.type === "matching"
+																	? "Các cặp cần ghép"
+																	: "Các phương án trả lời"}
 												</Label>
 												<p className='mt-1 text-xs text-muted-foreground'>
 													{activeQuestion.type === "multiple_select"
@@ -1326,10 +1398,10 @@ function QuizCreatePage() {
 																: activeQuestion.type ===
 																	  "word_order"
 																	? "Nhập các từ đúng theo thứ tự, rồi thêm từ nhiễu."
-															: activeQuestion.type ===
-																  "matching"
-																? "Mỗi hàng là một cặp đáp án đúng."
-																: "Chọn đúng một phương án."}
+																	: activeQuestion.type ===
+																		  "matching"
+																		? "Mỗi hàng là một cặp đáp án đúng."
+																		: "Chọn đúng một phương án."}
 												</p>
 											</div>
 										</div>
@@ -1620,149 +1692,149 @@ function QuizCreatePage() {
 																	);
 																})
 														: activeQuestion.options.map(
-																	(option, index) => {
-																		const allowRemove =
-																			activeQuestion.type !==
-																				"true_false" &&
-																			activeQuestion.options
-																				.length >
-																				requiredOptions(
-																					activeQuestion.type,
-																				);
-																		const isChoice =
-																			isChoiceQuestion(
+																(option, index) => {
+																	const allowRemove =
+																		activeQuestion.type !==
+																			"true_false" &&
+																		activeQuestion.options
+																			.length >
+																			requiredOptions(
 																				activeQuestion.type,
 																			);
-																		return (
-																			<div
-																				key={option.id}
-																				className='rounded-lg border bg-card p-2.5'>
-																				<div className='flex items-center gap-3'>
-																					{activeQuestion.type ===
-																					"multiple_select" ? (
-																						<Checkbox
-																							id={`correct-${option.id}`}
-																							checked={
-																								option.isCorrect
-																							}
-																							onCheckedChange={(
-																								checked,
-																							) =>
-																								toggleCorrectOption(
-																									option.id,
-																									checked ===
-																										true,
-																								)
-																							}
-																							aria-label={`Đánh dấu phương án ${index + 1} là đúng`}
-																						/>
-																					) : isChoice ? (
-																						<button
-																							type='button'
-																							aria-label={`Chọn phương án ${index + 1} là đáp án đúng`}
-																							onClick={() =>
-																								toggleCorrectOption(
-																									option.id,
-																									true,
-																								)
-																							}
-																							className={cn(
-																								"flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-																								option.isCorrect
-																									? "border-primary bg-primary text-primary-foreground"
-																									: "border-input bg-background",
-																							)}>
-																							{option.isCorrect && (
-																								<Check className='size-3.5 stroke-[3]' />
-																							)}
-																						</button>
-																					) : (
-																						<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700'>
-																							<Check className='size-3.5 stroke-[3]' />
-																						</span>
-																					)}
-																					<Input
-																						value={
-																							option.content
+																	const isChoice =
+																		isChoiceQuestion(
+																			activeQuestion.type,
+																		);
+																	return (
+																		<div
+																			key={option.id}
+																			className='rounded-lg border bg-card p-2.5'>
+																			<div className='flex items-center gap-3'>
+																				{activeQuestion.type ===
+																				"multiple_select" ? (
+																					<Checkbox
+																						id={`correct-${option.id}`}
+																						checked={
+																							option.isCorrect
 																						}
-																						onChange={(
-																							event,
+																						onCheckedChange={(
+																							checked,
 																						) =>
-																							updateOption(
+																							toggleCorrectOption(
 																								option.id,
-																								event
-																									.target
-																									.value,
+																								checked ===
+																									true,
 																							)
 																						}
-																						placeholder={
-																							activeQuestion.type ===
-																							"fill_blank"
-																								? "Nhập đáp án đúng"
-																								: `Phương án ${index + 1}`
-																						}
-																						className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+																						aria-label={`Đánh dấu phương án ${index + 1} là đúng`}
 																					/>
-																					{isChoice && (
+																				) : isChoice ? (
+																					<button
+																						type='button'
+																						aria-label={`Chọn phương án ${index + 1} là đáp án đúng`}
+																						onClick={() =>
+																							toggleCorrectOption(
+																								option.id,
+																								true,
+																							)
+																						}
+																						className={cn(
+																							"flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+																							option.isCorrect
+																								? "border-primary bg-primary text-primary-foreground"
+																								: "border-input bg-background",
+																						)}>
+																						{option.isCorrect && (
+																							<Check className='size-3.5 stroke-[3]' />
+																						)}
+																					</button>
+																				) : (
+																					<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700'>
+																						<Check className='size-3.5 stroke-[3]' />
+																					</span>
+																				)}
+																				<Input
+																					value={
+																						option.content
+																					}
+																					onChange={(
+																						event,
+																					) =>
+																						updateOption(
+																							option.id,
+																							event
+																								.target
+																								.value,
+																						)
+																					}
+																					placeholder={
+																						activeQuestion.type ===
+																						"fill_blank"
+																							? "Nhập đáp án đúng"
+																							: `Phương án ${index + 1}`
+																					}
+																					className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+																				/>
+																				{isChoice && (
+																					<Button
+																						type='button'
+																						variant='ghost'
+																						size='icon-xs'
+																						aria-label={`Thêm ảnh cho phương án ${index + 1}`}
+																						onClick={() =>
+																							openImagePicker(
+																								activeQuestion.id,
+																								option.id,
+																							)
+																						}>
+																						<ImagePlus />
+																					</Button>
+																				)}
+																				{allowRemove && (
+																					<Button
+																						type='button'
+																						variant='ghost'
+																						size='icon-xs'
+																						aria-label={`Xoá phương án ${index + 1}`}
+																						onClick={() =>
+																							removeOption(
+																								option.id,
+																							)
+																						}>
+																						<X className='text-muted-foreground' />
+																					</Button>
+																				)}
+																			</div>
+																			{isChoice &&
+																				option.image && (
+																					<div className='relative mt-2 overflow-hidden rounded-md border bg-muted'>
+																						<img
+																							src={
+																								option.image
+																							}
+																							alt={`Ảnh minh hoạ phương án ${index + 1}`}
+																							className='max-h-32 w-full object-contain'
+																						/>
 																						<Button
 																							type='button'
-																							variant='ghost'
+																							variant='secondary'
 																							size='icon-xs'
-																							aria-label={`Thêm ảnh cho phương án ${index + 1}`}
+																							className='absolute right-1.5 top-1.5'
+																							aria-label={`Xoá ảnh phương án ${index + 1}`}
 																							onClick={() =>
-																								openImagePicker(
+																								removeImage(
 																									activeQuestion.id,
 																									option.id,
 																								)
 																							}>
-																							<ImagePlus />
+																							<X />
 																						</Button>
-																					)}
-																					{allowRemove && (
-																						<Button
-																							type='button'
-																							variant='ghost'
-																							size='icon-xs'
-																							aria-label={`Xoá phương án ${index + 1}`}
-																							onClick={() =>
-																								removeOption(
-																									option.id,
-																								)
-																							}>
-																							<X className='text-muted-foreground' />
-																						</Button>
-																					)}
-																				</div>
-																				{isChoice &&
-																					option.image && (
-																						<div className='relative mt-2 overflow-hidden rounded-md border bg-muted'>
-																							<img
-																								src={
-																									option.image
-																								}
-																								alt={`Ảnh minh hoạ phương án ${index + 1}`}
-																								className='max-h-32 w-full object-contain'
-																							/>
-																							<Button
-																								type='button'
-																								variant='secondary'
-																								size='icon-xs'
-																								className='absolute right-1.5 top-1.5'
-																								aria-label={`Xoá ảnh phương án ${index + 1}`}
-																								onClick={() =>
-																									removeImage(
-																										activeQuestion.id,
-																										option.id,
-																									)
-																								}>
-																								<X />
-																							</Button>
-																						</div>
-																					)}
-																			</div>
-																		);
-																	},
-																)}
+																					</div>
+																				)}
+																		</div>
+																	);
+																},
+															)}
 												</div>
 
 												{activeQuestion.type !== "true_false" && (
