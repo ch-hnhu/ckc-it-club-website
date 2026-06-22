@@ -50,6 +50,8 @@ export interface CourseContentItem {
 	completed?: boolean;
 	/** URL ngoài (Google Drive, Google Forms...) */
 	url?: string;
+	/** Hạn nộp (chỉ có ở bài tập) — ISO string, null nếu không đặt hạn */
+	deadline?: string | null;
 }
 
 /** Một buổi học (chương) trong khóa học */

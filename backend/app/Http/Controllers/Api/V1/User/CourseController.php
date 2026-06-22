@@ -191,6 +191,7 @@ class CourseController extends BaseApiController
                     : 'Google Forms',
                 'url' => $lesson->assignment_url,
                 'completed' => $sections['assignment'] ?? false,
+                'deadline' => $lesson->assignment_deadline?->toIso8601String(),
             ] : null,
             'quiz' => $quiz ? [
                 'id' => $quiz->id,
