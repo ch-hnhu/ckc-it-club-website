@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
+use App\Enums\QuestionTypeKey;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Course;
 use App\Models\Lesson;
@@ -42,8 +43,9 @@ class QuizController extends BaseApiController
     {
         $this->assertBelongsTo($course, $lesson);
 
-        $typeMap = QuestionType::pluck('id', 'key'); // key => id
-        $data = $this->validateData($request, $typeMap->keys()->all());
+        $allowedTypes = QuestionTypeKey::values();
+        $typeMap = QuestionType::whereIn('key', $allowedTypes)->pluck('id', 'key'); // key => id
+        $data = $this->validateData($request, $allowedTypes);
 
         $quiz = DB::transaction(function () use ($lesson, $data, $typeMap) {
             $quiz = Quiz::firstOrCreate(['lesson_id' => $lesson->id]);
@@ -57,7 +59,7 @@ class QuizController extends BaseApiController
 
                 $question = $quiz->questions()->create([
                     'question_type_id' => $typeMap[$q['type']],
-                    'content' => $q['content'],
+                    'content' => $q['content'] ?? '',
                     'explanation' => $q['explanation'] ?? null,
                     'image' => $this->persistableImage($q['image'] ?? null),
                     'order' => $qIndex + 1,
@@ -100,11 +102,12 @@ class QuizController extends BaseApiController
             'questions' => 'required|array|min:1',
             'questions.*.type' => ['required', 'string', Rule::in($allowedTypes)],
             'questions.*.ui_type' => 'nullable|string|max:50',
-            'questions.*.content' => 'required|string|max:5000',
+            // content cho phép rỗng để lưu bản nháp; tính hoàn thiện được kiểm ở bước Xuất bản (frontend).
+            'questions.*.content' => 'nullable|string|max:5000',
             'questions.*.explanation' => 'nullable|string|max:5000',
             'questions.*.image' => 'nullable|string|max:2048',
             'questions.*.metadata' => 'nullable|array',
-            'questions.*.options' => 'required|array|min:1',
+            'questions.*.options' => 'present|array',
             'questions.*.options.*.content' => 'nullable|string|max:2000',
             'questions.*.options.*.image' => 'nullable|string|max:2048',
             'questions.*.options.*.is_correct' => 'boolean',

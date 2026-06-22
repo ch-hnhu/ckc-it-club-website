@@ -15,6 +15,7 @@ import LearningFeedPage from "@/pages/learning/LearningFeedPage";
 import CourseDetailPage from "@/pages/learning/CourseDetailPage";
 import LessonDetailPage from "@/pages/learning/LessonDetailPage";
 import VideoDetailPage from "@/pages/learning/VideoDetailPage";
+import QuizPlayPage from "@/pages/learning/QuizPlayPage";
 import EventsFeedPage from "@/pages/event/EventsFeedPage";
 import EventDetailPage from "@/pages/event/EventDetailPage";
 import LandingPage from "@/pages/LandingPage";
@@ -85,6 +86,10 @@ const router = createBrowserRouter([
 			{
 				path: "khoa-hoc/:slug/:lessonSlug",
 				element: <LessonDetailPage />,
+			},
+			{
+				path: "khoa-hoc/:slug/:lessonSlug/quiz",
+				element: <QuizPlayPage />,
 			},
 			{
 				path: "khoa-hoc/:slug/:lessonSlug/:videoSlug",

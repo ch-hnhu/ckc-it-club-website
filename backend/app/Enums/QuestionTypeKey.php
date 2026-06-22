@@ -19,12 +19,12 @@ enum QuestionTypeKey: string
             self::FILL_BLANK => 'Điền vào chỗ trống',
             self::WORD_BANK_FILL_BLANK => 'Chọn từ điền vào chỗ trống',
             self::MATCHING => 'Ghép đôi',
-            self::WORD_ORDER => 'Sắp xếp từ thành câu',
+            self::WORD_ORDER => 'Chọn từ và sắp xếp đúng thứ tự',
         };
     }
 
     // Các type có đáp án đúng/sai trên từng option (is_correct).
-    // matching và ordering: correctness nằm trong option.metadata, không dùng is_correct.
+    // matching và word_order dùng metadata: correctness nằm trong option.metadata, không dùng is_correct.
     public function usesIsCorrect(): bool
     {
         return match ($this) {

@@ -348,8 +348,8 @@ const LessonDetailPage: React.FC = () => {
 														internalTo={
 															action.key === "video" && lesson.video?.slug
 																? `/khoa-hoc/${slug}/${lessonSlug}/${lesson.video.slug}`
-																: action.key === "quiz" && lesson.quiz?.slug
-																	? `/khoa-hoc/${slug}/${lessonSlug}/quiz/${lesson.quiz.slug}`
+																: action.key === "quiz" && lesson.quiz
+																	? `/khoa-hoc/${slug}/${lessonSlug}/quiz`
 																	: undefined
 														}
 													/>
