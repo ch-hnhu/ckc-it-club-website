@@ -7,6 +7,7 @@ import {
 	BookOpen,
 	CalendarClock,
 	CheckCircle2,
+	FileQuestion,
 	FileText,
 	GraduationCap,
 	ImageIcon,
@@ -55,6 +56,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePaginationFooter } from "@/components/TablePaginationFooter";
+import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { cn } from "@/lib/utils";
@@ -155,6 +157,8 @@ function StatCard({
 function CourseDetailPage() {
 	const { slug = "" } = useParams();
 	const navigate = useNavigate();
+	const { hasPermission } = useAuth();
+	const canManageQuiz = hasPermission("quizzes.manage");
 
 	const [course, setCourse] = useState<AdminCourseDetail | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -502,6 +506,17 @@ function CourseDetailPage() {
 															<Pencil className='h-4 w-4' />
 															Sửa
 														</DropdownMenuItem>
+														{canManageQuiz && (
+															<DropdownMenuItem
+																onClick={() =>
+																	navigate(
+																		`/learning/courses/${course.slug}/lessons/${lesson.id}/quiz/create`,
+																	)
+																}>
+																<FileQuestion className='h-4 w-4' />
+																Quiz
+															</DropdownMenuItem>
+														)}
 														<DropdownMenuItem
 															className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 															onClick={() => setDeletingLesson(lesson)}>

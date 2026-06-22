@@ -292,9 +292,12 @@ const router = createBrowserRouter([
 				element: <NotificationsPage />,
 			},
 			{
-				// UI-only route: Learning Center permissions/API will be added together with course management.
 				path: "learning/courses/:courseId/lessons/:lessonId/quiz/create",
-				element: <QuizCreatePage />,
+				element: (
+					<PermissionRoute permission='quizzes.manage'>
+						<QuizCreatePage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "events",

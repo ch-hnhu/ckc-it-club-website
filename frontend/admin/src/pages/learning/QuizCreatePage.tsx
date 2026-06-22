@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
 	ArrowLeft,
 	Check,
@@ -43,6 +43,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { cn } from "@/lib/utils";
+import courseService, {
+	type QuizQuestionDTO,
+	type QuizOptionDTO,
+} from "@/services/course.service";
 
 type QuizQuestionType =
 	| "multiple_choice"
@@ -254,6 +258,59 @@ function getPersistedQuestionType(type: QuizQuestionType): PersistedQuestionType
 	return type === "true_false" ? "multiple_choice" : type;
 }
 
+const KNOWN_UI_TYPES: QuizQuestionType[] = [
+	"multiple_choice",
+	"multiple_select",
+	"fill_blank",
+	"true_false",
+	"matching",
+	"ordering",
+	"word_bank_fill_blank",
+	"word_order",
+];
+
+/** State câu hỏi trên trình tạo → payload gửi backend. */
+function toQuestionPayload(question: QuizQuestion): QuizQuestionDTO {
+	return {
+		type: question.persistedType,
+		ui_type: question.type,
+		content: question.content,
+		explanation: question.explanation.trim() ? question.explanation : null,
+		image: question.image,
+		options: question.options.map<QuizOptionDTO>((option) => ({
+			content: option.content,
+			is_correct: option.isCorrect,
+			image: option.image,
+			metadata: option.metadata ? { ...option.metadata } : null,
+		})),
+	};
+}
+
+/** Payload backend → state câu hỏi để prefill trình tạo. */
+function fromQuestionDTO(dto: QuizQuestionDTO): QuizQuestion {
+	const uiType = (
+		dto.ui_type && KNOWN_UI_TYPES.includes(dto.ui_type as QuizQuestionType)
+			? dto.ui_type
+			: dto.type
+	) as QuizQuestionType;
+
+	return {
+		id: createId("question"),
+		type: uiType,
+		persistedType: getPersistedQuestionType(uiType),
+		content: dto.content ?? "",
+		explanation: dto.explanation ?? "",
+		image: dto.image ?? null,
+		options: dto.options.map((option) => ({
+			id: createId("option"),
+			content: option.content ?? "",
+			isCorrect: option.is_correct,
+			image: option.image ?? null,
+			metadata: (option.metadata as QuizOption["metadata"]) ?? undefined,
+		})),
+	};
+}
+
 function getQuestionTypeLabel(type: QuizQuestionType) {
 	return questionTypeOptions.find((item) => item.type === type)?.label ?? "Câu hỏi";
 }
@@ -313,6 +370,39 @@ function QuizCreatePage() {
 	const [matchingWrong, setMatchingWrong] = useState<{ leftId: string; rightId: string } | null>(
 		null,
 	);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isSaving, setIsSaving] = useState(false);
+
+	// Prefill nội dung quiz đã lưu (nếu có) khi mở trình tạo.
+	useEffect(() => {
+		if (!courseId || !lessonId) {
+			setIsLoading(false);
+			return;
+		}
+
+		let cancelled = false;
+		(async () => {
+			try {
+				const res = await courseService.getQuiz(courseId, Number(lessonId));
+				if (cancelled) return;
+				const loaded = res.data?.questions?.map(fromQuestionDTO) ?? [];
+				if (loaded.length > 0) {
+					setQuestions(loaded);
+					setActiveQuestionId(loaded[0].id);
+				}
+			} catch {
+				if (!cancelled) {
+					toast.error("Không tải được quiz đã lưu của buổi học.", { position: "top-right" });
+				}
+			} finally {
+				if (!cancelled) setIsLoading(false);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [courseId, lessonId]);
 
 	const activeQuestionIndex = questions.findIndex((question) => question.id === activeQuestionId);
 	const activeQuestion = questions[activeQuestionIndex] ?? questions[0];
@@ -862,8 +952,26 @@ function QuizCreatePage() {
 		setPreviewTextAnswer(event.target.value);
 	};
 
+	const persistQuiz = async (successMessage: string) => {
+		if (!courseId || !lessonId) {
+			toast.error("Thiếu thông tin khóa học hoặc buổi học.", { position: "top-right" });
+			return;
+		}
+		setIsSaving(true);
+		try {
+			await courseService.saveQuiz(courseId, Number(lessonId), {
+				questions: questions.map(toQuestionPayload),
+			});
+			toast.success(successMessage, { position: "top-right" });
+		} catch {
+			toast.error("Lưu quiz thất bại. Vui lòng thử lại.", { position: "top-right" });
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
 	const saveDraft = () => {
-		toast.success("Đã lưu bản nháp trong phiên làm việc.", { position: "top-right" });
+		void persistQuiz("Đã lưu bản nháp quiz.");
 	};
 
 	const publishQuiz = () => {
@@ -898,9 +1006,7 @@ function QuizCreatePage() {
 			return;
 		}
 
-		toast.success("Quiz đã sẵn sàng để xuất bản khi API tạo quiz được kết nối.", {
-			position: "top-right",
-		});
+		void persistQuiz("Đã xuất bản quiz cho buổi học.");
 	};
 
 	if (!activeQuestion) return null;
@@ -945,11 +1051,18 @@ function QuizCreatePage() {
 					</div>
 
 					<div className='flex flex-wrap items-center gap-2'>
-						<Button type='button' variant='outline' onClick={saveDraft}>
+						<Button
+							type='button'
+							variant='outline'
+							onClick={saveDraft}
+							disabled={isSaving || isLoading}>
 							<Save />
 							Lưu bản nháp
 						</Button>
-						<Button type='button' onClick={publishQuiz}>
+						<Button
+							type='button'
+							onClick={publishQuiz}
+							disabled={isSaving || isLoading}>
 							<Send />
 							Xuất bản quiz
 						</Button>

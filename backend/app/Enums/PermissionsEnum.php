@@ -67,8 +67,9 @@ enum PermissionsEnum: string
     case COMMUNITY_SKILLS_MANAGE      = 'community.skills.manage';
 
     // Khóa học — Trung tâm đào tạo
-    case COURSES_VIEW   = 'courses.view';
-    case COURSES_MANAGE = 'courses.manage';
+    case COURSES_VIEW    = 'courses.view';
+    case COURSES_MANAGE  = 'courses.manage';
+    case QUIZZES_MANAGE  = 'quizzes.manage';
 
     // Sự kiện
     case EVENTS_VIEW     = 'events.view';
