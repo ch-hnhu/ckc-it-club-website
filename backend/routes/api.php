@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Api\V1\Admin\LessonController as AdminLessonController;
+use App\Http\Controllers\Api\V1\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\RankController;
@@ -491,6 +492,11 @@ Route::prefix('v1')->group(function () {
             Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::delete('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'destroy']);
             Route::post('courses/{course}/lessons/{lesson}/check-in', [AdminLessonController::class, 'checkIn']);
+        });
+        // quiz của buổi học — quyền riêng cho Trung tâm đào tạo
+        Route::middleware('permission:quizzes.manage')->group(function () {
+            Route::get('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'show']);
+            Route::put('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert']);
         });
 
         // events (admin)

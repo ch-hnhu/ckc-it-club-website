@@ -45,6 +45,40 @@ export interface LessonCheckInResult {
 	student: CheckInStudentDTO;
 }
 
+/** Một đáp án của câu hỏi quiz (shape khớp backend QuizController). */
+export interface QuizOptionDTO {
+	id?: number;
+	content: string | null;
+	image: string | null;
+	is_correct: boolean;
+	order?: number;
+	metadata?: Record<string, unknown> | null;
+}
+
+/** Một câu hỏi quiz. `type` là key đã lưu (DB), `ui_type` là template trên trình tạo. */
+export interface QuizQuestionDTO {
+	id?: number;
+	type: string;
+	ui_type?: string;
+	content: string;
+	explanation: string | null;
+	image: string | null;
+	order?: number;
+	metadata?: Record<string, unknown> | null;
+	options: QuizOptionDTO[];
+}
+
+export interface QuizDTO {
+	id: number;
+	lesson_id: number;
+	questions: QuizQuestionDTO[];
+}
+
+/** Payload gửi lên khi lưu quiz: chỉ cần danh sách câu hỏi. */
+export interface QuizPayload {
+	questions: QuizQuestionDTO[];
+}
+
 const courseService = {
 	/**
 	 * Danh sách khóa học (admin). Bỏ qua các tham số rỗng / "all" để URL gọn
@@ -131,6 +165,24 @@ const courseService = {
 
 	async deleteLesson(courseSlug: string, lessonId: number): Promise<ApiResponse<null>> {
 		return api.delete(`/courses/${courseSlug}/lessons/${lessonId}`);
+	},
+
+	// ── Quiz của buổi học ──
+	/** Lấy quiz hiện có của buổi học (data = null nếu chưa có). */
+	async getQuiz(
+		courseSlug: string,
+		lessonId: number,
+	): Promise<ApiResponse<QuizDTO | null>> {
+		return api.get(`/courses/${courseSlug}/lessons/${lessonId}/quiz`);
+	},
+
+	/** Tạo mới hoặc thay thế toàn bộ nội dung quiz của buổi học. */
+	async saveQuiz(
+		courseSlug: string,
+		lessonId: number,
+		payload: QuizPayload,
+	): Promise<ApiResponse<QuizDTO>> {
+		return api.put(`/courses/${courseSlug}/lessons/${lessonId}/quiz`, payload);
 	},
 
 	/** Điểm danh buổi học bằng mã QR (token trên vé học viên). */
