@@ -50,6 +50,7 @@
 - outlet content
 - footer
 - back-to-top control
+- the shell uses `min-h-[100dvh]` (with `min-h-screen` fallback) so its background and footer always reach the visual viewport edge.
 - lesson video pages (`/khoa-hoc/:slug/:lessonSlug/:videoSlug`) use an app-like split layout: fixed navbar with logo plus breadcrumb instead of the normal nav tabs; the breadcrumb shows the backend lesson title and `Video`, then two full-height main panes for lesson material and video, a fixed bottom learning navigation bar, and no global site footer/back-to-top control
 - `/cong-dong` is a dense community layout exception:
 - footer is hidden

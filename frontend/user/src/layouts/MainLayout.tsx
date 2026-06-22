@@ -40,7 +40,7 @@ const MainLayout: React.FC = () => {
 	}, [pathname]);
 
 	return (
-		<div className='min-h-screen bg-white text-black flex flex-col'>
+		<div className='flex min-h-screen min-h-[100dvh] flex-col bg-white text-black'>
 			{/* Fixed Navbar */}
 			<Navbar user={user} onAuthSuccess={refreshUser} avatarTs={avatarTs} />
 

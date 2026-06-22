@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check, RotateCcw, Sparkles, Trophy, X } from "lucide-react";
+import { ArrowRight, Check, RotateCcw, BookCheck, Trophy, X } from "lucide-react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { learningService } from "@/services/learning.service";
 import type { AuthUser } from "@/services/auth.service";
@@ -430,11 +430,11 @@ const QuizPlayPage: React.FC = () => {
 		return (
 			<div className='flex h-[100dvh] flex-col pt-16 overflow-hidden bg-white justify-center items-center px-4'>
 				<div className='w-full max-w-2xl rounded-3xl border-2 border-black bg-white p-8 text-center shadow-[6px_6px_0_#111]'>
-					<div className='mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-black bg-[var(--color-pastel-pink)] shadow-[3px_3px_0_#111]'>
-						<Sparkles className='h-10 w-10' strokeWidth={2.5} />
+					<div className='mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gray-200'>
+						<BookCheck className='h-12 w-12 text-white' strokeWidth={2.5} />
 					</div>
 					<h1 className='mt-6 font-heading text-3xl font-extrabold'>
-						Quiz: {quiz.lesson.title}
+						Quiz kiểm tra buổi {quiz.lesson.order}
 					</h1>
 					<p className='mt-2 font-medium text-gray-500'>
 						{total} câu hỏi · Cần đúng{" "}
@@ -452,8 +452,12 @@ const QuizPlayPage: React.FC = () => {
 							type='button'
 							onClick={() => setPhase("playing")}
 							className='inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-base font-extrabold shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-							Bắt đầu làm bài
-							<ArrowRight className='h-5 w-5' strokeWidth={2.5} />
+							{quiz.completed ? "Làm lại" : "Bắt đầu"}
+							{quiz.completed ? (
+								<RotateCcw className='h-5 w-5' strokeWidth={2.5} />
+							) : (
+								<ArrowRight className='h-5 w-5' strokeWidth={2.5} />
+							)}
 						</button>
 						<Link
 							to={lessonHref}
