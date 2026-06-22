@@ -4,13 +4,18 @@ namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\CourseStatus;
 use App\Enums\LessonSectionType;
+use App\Enums\RolesEnum;
 use App\Enums\TagModelType;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Course;
+use App\Models\CourseEnrollment;
+use App\Models\CourseFollower;
 use App\Models\Lesson;
+use App\Models\LessonQrTicket;
 use App\Models\Tag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CourseController extends BaseApiController
@@ -35,6 +40,7 @@ class CourseController extends BaseApiController
             ->withCount([
                 'lessons as lessons_count' => fn ($q) => $q->where('status', CourseStatus::PUBLISHED->value),
                 'enrollments as enrolled_count',
+                'followers as followers_count',
             ])
             ->withSum([
                 'lessons as total_video_seconds' => fn ($q) => $q->where('status', CourseStatus::PUBLISHED->value),
@@ -52,9 +58,13 @@ class CourseController extends BaseApiController
             fn ($q) => $q->orderBy('created_at', $order),
         );
 
+        $userId = auth('sanctum')->id();
+        $query->when($userId, fn ($q) => $q->withExists([
+            'followers as is_interested' => fn ($f) => $f->where('user_id', $userId),
+        ]));
+
         $courses = $query->paginate($perPage);
 
-        $userId = auth('sanctum')->id();
         $courses->getCollection()->transform(fn (Course $c) => $this->transformCourseCard($c, $userId));
 
         return $this->paginatedResponse($courses, 'Lấy danh sách khoá học thành công.');
@@ -98,6 +108,8 @@ class CourseController extends BaseApiController
         // Aggregate mà transformCourseCard cần (show() không đi qua withCount/withSum của index()).
         $course->setAttribute('enrolled_count', $course->enrollments()->count());
         $course->setAttribute('total_video_seconds', (int) $lessons->sum('video_duration'));
+        $course->setAttribute('followers_count', $course->followers()->count());
+        $course->setAttribute('is_interested', $course->isFollowedBy($userId));
 
         $card = $this->transformCourseCard($course, $userId, $lessons->count());
 
@@ -107,7 +119,6 @@ class CourseController extends BaseApiController
             'enrollment_start' => $course->enrollment_start?->toIso8601String(),
             'enrollment_deadline' => $course->enrollment_deadline?->toIso8601String(),
             'course_end' => $course->course_end?->toIso8601String(),
-            'is_interested' => false, // TODO(G2): bảng theo dõi/quan tâm khoá học
             'lessons' => $lessons->map(fn (Lesson $l) => $this->transformLessonRow($l, $userId, $enrollment?->track))->all(),
             'stats' => $this->buildStats($course, $lessons, $userId),
         ]);
@@ -236,6 +247,168 @@ class CourseController extends BaseApiController
         return $this->successResponse(true, $data, 'Lấy thông tin video thành công.');
     }
 
+    /**
+     * Ghi danh khoá học theo hình thức (track) offline hoặc online.
+     *
+     * - offline: chỉ trong cửa sổ ghi danh (enrollment_start..enrollment_deadline),
+     *   giới hạn `max_offline_slots`, chống race bằng khoá hàng trong transaction.
+     * - online: mở tới khi khoá kết thúc (course_end).
+     *
+     * Điều kiện tư cách giống Sự kiện: email sinh viên Cao Thắng hoặc thành viên CLB.
+     */
+    public function enroll(Request $request, Course $course): JsonResponse
+    {
+        abort_if($course->status !== CourseStatus::PUBLISHED, 404);
+
+        $validated = $request->validate([
+            'track' => ['required', 'in:offline,online'],
+        ]);
+        $track = $validated['track'];
+
+        $user = $request->user();
+
+        // Thành viên CLB = có bất kỳ vai trò nào ngoài "user" thường
+        $memberRoles = array_values(array_filter(
+            array_map(fn (RolesEnum $case) => $case->value, RolesEnum::cases()),
+            fn (string $role) => $role !== RolesEnum::USER->value,
+        ));
+        $isClubMember = $user->hasAnyRole($memberRoles);
+
+        abort_if(
+            ! $isClubMember && ! str_ends_with(strtolower((string) $user->email), '@caothang.edu.vn'),
+            422,
+            'Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) hoặc thành viên CLB mới được ghi danh khoá học.'
+        );
+
+        // Đã ghi danh rồi → chặn (đổi/thêm track còn chờ chốt nghiệp vụ)
+        if ($course->enrollmentFor($user->id)) {
+            return $this->errorResponse(false, 'Bạn đã ghi danh khoá học này rồi.', 422);
+        }
+
+        $now = now();
+
+        if ($track === 'offline') {
+            abort_if($course->max_offline_slots === null, 422, 'Khoá học này không mở lớp offline.');
+            abort_if(
+                $course->enrollment_start && $now->lt($course->enrollment_start),
+                422,
+                'Khoá học chưa mở ghi danh. Vui lòng quay lại sau.'
+            );
+            abort_if(
+                $course->enrollment_deadline && $now->gt($course->enrollment_deadline),
+                422,
+                'Đã hết hạn ghi danh lớp offline.'
+            );
+
+            $enrollment = DB::transaction(function () use ($course, $user) {
+                $taken = $course->enrollments()
+                    ->where('track', 'offline')
+                    ->lockForUpdate()
+                    ->count();
+
+                abort_if(
+                    $taken >= $course->max_offline_slots,
+                    422,
+                    'Lớp offline đã đủ số lượng học viên.'
+                );
+
+                return CourseEnrollment::create([
+                    'user_id' => $user->id,
+                    'course_id' => $course->id,
+                    'track' => 'offline',
+                    'progress' => 0,
+                ]);
+            });
+        } else {
+            abort_if(
+                $course->course_end && $now->gt($course->course_end),
+                422,
+                'Khoá học đã kết thúc, không thể ghi danh học online.'
+            );
+
+            $enrollment = CourseEnrollment::create([
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+                'track' => 'online',
+                'progress' => 0,
+            ]);
+        }
+
+        return $this->createdResponse(['track' => $enrollment->track], 'Ghi danh khoá học thành công.');
+    }
+
+    /**
+     * Bật/tắt trạng thái "quan tâm" khoá học của user hiện tại.
+     */
+    public function toggleFollow(Request $request, Course $course): JsonResponse
+    {
+        abort_if($course->status !== CourseStatus::PUBLISHED, 404);
+
+        $userId = $request->user()->id;
+
+        $existing = $course->followers()->where('user_id', $userId)->first();
+
+        if ($existing) {
+            $existing->delete();
+            $isInterested = false;
+        } else {
+            CourseFollower::create(['user_id' => $userId, 'course_id' => $course->id]);
+            $isInterested = true;
+        }
+
+        return $this->successResponse(
+            true,
+            [
+                'is_interested' => $isInterested,
+                'followers_count' => $course->followers()->count(),
+            ],
+            $isInterested ? 'Đã thêm vào danh sách quan tâm.' : 'Đã bỏ quan tâm khoá học.',
+        );
+    }
+
+    /**
+     * Đăng ký "sẽ tham gia" một buổi học offline → cấp vé QR điểm danh.
+     * Idempotent: nếu đã có vé thì trả lại vé cũ (token + used_at).
+     */
+    public function createQrTicket(Request $request, Course $course, string $lessonSlug): JsonResponse
+    {
+        abort_if($course->status !== CourseStatus::PUBLISHED, 404);
+
+        $lesson = $course->lessons()
+            ->where('status', CourseStatus::PUBLISHED->value)
+            ->where('slug', $lessonSlug)
+            ->first();
+        abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
+
+        $userId = $request->user()->id;
+
+        // Vé QR chỉ dành cho học viên đã ghi danh lớp offline.
+        $enrollment = $course->enrollmentFor($userId);
+        abort_if(
+            ! $enrollment || $enrollment->track !== 'offline',
+            422,
+            'Chỉ học viên đã ghi danh lớp offline mới có thể đăng ký tham gia buổi học.'
+        );
+
+        // Buổi đã kết thúc thì không cấp vé mới nữa.
+        abort_if(
+            $lesson->session_end && now()->gt($lesson->session_end),
+            422,
+            'Buổi học đã kết thúc, không thể đăng ký tham gia.'
+        );
+
+        $ticket = LessonQrTicket::firstOrCreate(
+            ['user_id' => $userId, 'lesson_id' => $lesson->id],
+            ['token' => LessonQrTicket::generateToken($lesson->id, $userId)],
+        );
+
+        return $this->successResponse(
+            true,
+            ['token' => $ticket->token, 'used_at' => $ticket->used_at?->toIso8601String()],
+            'Đã đăng ký tham gia buổi học. Xuất trình mã QR để điểm danh.',
+        );
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
@@ -261,12 +434,14 @@ class CourseController extends BaseApiController
             'lessons_count' => $lessonsCount ?? (int) ($course->lessons_count ?? 0),
             'duration_minutes' => (int) round(((int) ($course->total_video_seconds ?? 0)) / 60),
             'enrolled_count' => (int) ($course->enrolled_count ?? 0),
+            'followers_count' => (int) ($course->followers_count ?? 0),
             'categories' => $course->tags->map(fn (Tag $t) => [
                 'id' => $t->id,
                 'name' => $t->name,
                 'color' => null,
             ])->all(),
             'progress' => $progress !== null ? (int) $progress : null,
+            'is_interested' => (bool) ($course->is_interested ?? false),
             'created_at' => $course->created_at?->toIso8601String(),
             'updated_at' => $course->updated_at?->toIso8601String(),
         ];

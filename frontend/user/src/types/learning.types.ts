@@ -26,10 +26,14 @@ export interface Course {
 	/** Tổng thời lượng (phút) */
 	duration_minutes: number;
 	enrolled_count: number;
+	/** Số người đã "quan tâm" khoá học */
+	followers_count: number;
 	categories: CourseCategory[];
 	is_featured?: boolean;
 	/** Tiến độ của user hiện tại (0-100), null nếu chưa ghi danh */
 	progress: number | null;
+	/** User hiện tại có đang "quan tâm" khoá học không */
+	is_interested?: boolean;
 	created_at: string;
 	updated_at: string;
 }

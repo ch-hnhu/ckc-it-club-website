@@ -76,6 +76,23 @@ class Course extends Model
         return $this->hasMany(CourseCertificate::class);
     }
 
+    public function followers(): HasMany
+    {
+        return $this->hasMany(CourseFollower::class);
+    }
+
+    /**
+     * User hiện tại có đang "quan tâm" khoá học không.
+     */
+    public function isFollowedBy(?int $userId): bool
+    {
+        if (! $userId) {
+            return false;
+        }
+
+        return $this->followers()->where('user_id', $userId)->exists();
+    }
+
     /**
      * Bản ghi ghi danh của một user trong khoá học (nếu có).
      */

@@ -170,6 +170,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/courses/{course:slug}', [UserCourseController::class, 'show']);
         Route::get('/courses/{course:slug}/lessons/{lessonSlug}', [UserCourseController::class, 'lesson']);
         Route::get('/courses/{course:slug}/lessons/{lessonSlug}/videos/{videoSlug}', [UserCourseController::class, 'video']);
+
+        // Authenticated learning actions
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/courses/{course:slug}/enroll', [UserCourseController::class, 'enroll']);
+            Route::post('/courses/{course:slug}/follow', [UserCourseController::class, 'toggleFollow']);
+            Route::post('/courses/{course:slug}/lessons/{lessonSlug}/qr-ticket', [UserCourseController::class, 'createQrTicket']);
+        });
     });
 
     // Registration with OTP verification (throttled: 5 attempts per minute per IP)

@@ -21,6 +21,17 @@ class LessonQrTicket extends Model
         ];
     }
 
+    /**
+     * Sinh token vé QR (khớp cách Events sinh qr_token): HMAC theo app key,
+     * duy nhất theo buổi học + học viên + thời điểm cấp.
+     */
+    public static function generateToken(int $lessonId, int $userId): string
+    {
+        $payload = "{$lessonId}:{$userId}:".now()->timestamp;
+
+        return hash_hmac('sha256', $payload, config('app.key'));
+    }
+
     public function lesson(): BelongsTo
     {
         return $this->belongsTo(Lesson::class);

@@ -32,4 +32,23 @@ export const learningService = {
 		api.get<ApiResponse<VideoDetail>>(
 			`/learning/courses/${courseSlug}/lessons/${lessonSlug}/videos/${videoSlug}`,
 		),
+
+	// Ghi danh khoá học theo hình thức offline/online (yêu cầu đăng nhập).
+	enroll: (slug: string, track: "offline" | "online") =>
+		api.post<ApiResponse<{ track: "offline" | "online" }>>(
+			`/learning/courses/${slug}/enroll`,
+			{ track },
+		),
+
+	// Bật/tắt "quan tâm" khoá học (yêu cầu đăng nhập).
+	toggleFollow: (slug: string) =>
+		api.post<ApiResponse<{ is_interested: boolean; followers_count: number }>>(
+			`/learning/courses/${slug}/follow`,
+		),
+
+	// Đăng ký "sẽ tham gia" buổi học offline → cấp vé QR điểm danh (yêu cầu đăng nhập).
+	createQrTicket: (slug: string, lessonSlug: string) =>
+		api.post<ApiResponse<{ token: string; used_at: string | null }>>(
+			`/learning/courses/${slug}/lessons/${lessonSlug}/qr-ticket`,
+		),
 };
