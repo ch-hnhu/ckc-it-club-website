@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
  * Chấm điểm câu trả lời quiz phía server (nguồn sự thật).
  *
  * Mỗi loại câu hỏi có một định dạng `answer_data` riêng:
- *  - multiple_choice / multiple_select / true_false : {"selected": [option_id, ...]}
+ *  - multiple_choice / multiple_select               : {"selected": [option_id, ...]}
  *  - fill_blank                                      : {"text": "..."}
  *  - word_bank_fill_blank                            : {"slots": [option_id_blank0, option_id_blank1, ...]}
  *  - word_order                                      : {"order": [option_id, ...]}

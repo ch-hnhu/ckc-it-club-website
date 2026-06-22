@@ -189,8 +189,8 @@ export interface QuizQuestion {
 	id: number;
 	/** Loại đã lưu (dùng để chấm) */
 	type: QuizQuestionType;
-	/** Template hiển thị (vd "true_false" là preset của multiple_choice) */
-	ui_type: QuizQuestionType | "true_false";
+	/** Template hiển thị */
+	ui_type: QuizQuestionType;
 	content: string;
 	explanation: string | null;
 	image: string | null;

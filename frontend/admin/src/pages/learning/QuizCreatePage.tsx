@@ -9,7 +9,7 @@ import {
 	CircleX,
 	Copy,
 	Eye,
-	FileQuestion,
+	FilePen,
 	Lightbulb,
 	ImagePlus,
 	LayoutGrid,
@@ -48,12 +48,11 @@ type QuizQuestionType =
 	| "multiple_choice"
 	| "multiple_select"
 	| "fill_blank"
-	| "true_false"
 	| "matching"
 	| "word_bank_fill_blank"
 	| "word_order";
 
-type PersistedQuestionType = Exclude<QuizQuestionType, "true_false">;
+type PersistedQuestionType = QuizQuestionType;
 
 type QuestionOptionMetadata = {
 	side?: "left" | "right";
@@ -96,7 +95,7 @@ const questionTypeOptions: Array<{
 	},
 	{
 		type: "fill_blank",
-		label: "Điền đáp án",
+		label: "Điền vào chỗ trống",
 		description: "Học viên nhập câu trả lời ngắn.",
 	},
 	{
@@ -106,12 +105,12 @@ const questionTypeOptions: Array<{
 	},
 	{
 		type: "matching",
-		label: "Ghép đôi",
+		label: "Ghép cặp",
 		description: "Nối mỗi mục với cặp phù hợp.",
 	},
 	{
 		type: "word_order",
-		label: "Sắp xếp từ thành câu",
+		label: "Sắp xếp các từ theo đúng thứ tự",
 		description: "Chọn từ trong bank theo đúng thứ tự để tạo câu.",
 	},
 ];
@@ -121,13 +120,6 @@ function createId(prefix: "question" | "option"): string {
 }
 
 function createOptions(type: QuizQuestionType): QuizOption[] {
-	if (type === "true_false") {
-		return [
-			{ id: createId("option"), content: "Đúng", isCorrect: true, image: null },
-			{ id: createId("option"), content: "Sai", isCorrect: false, image: null },
-		];
-	}
-
 	if (type === "fill_blank") {
 		return [{ id: createId("option"), content: "", isCorrect: true, image: null }];
 	}
@@ -229,15 +221,13 @@ const initialQuestions: QuizQuestion[] = [
 ];
 
 function getPersistedQuestionType(type: QuizQuestionType): PersistedQuestionType {
-	// Đúng/Sai là preset UI của multiple_choice, không cần thêm question_type riêng trong DB.
-	return type === "true_false" ? "multiple_choice" : type;
+	return type;
 }
 
 const KNOWN_UI_TYPES: QuizQuestionType[] = [
 	"multiple_choice",
 	"multiple_select",
 	"fill_blank",
-	"true_false",
 	"matching",
 	"word_bank_fill_blank",
 	"word_order",
@@ -291,7 +281,6 @@ function getQuestionTypeLabel(type: QuizQuestionType) {
 
 function QuestionTypeIcon({ type, className }: { type: QuizQuestionType; className?: string }) {
 	if (type === "multiple_select") return <ListChecks className={className} />;
-	if (type === "true_false") return <CheckCircle2 className={className} />;
 	if (type === "fill_blank") return <TextCursorInput className={className} />;
 	if (type === "word_bank_fill_blank") return <LayoutGrid className={className} />;
 	if (type === "word_order") return <Rows3 className={className} />;
@@ -300,7 +289,7 @@ function QuestionTypeIcon({ type, className }: { type: QuizQuestionType; classNa
 }
 
 function isChoiceQuestion(type: QuizQuestionType) {
-	return type === "multiple_choice" || type === "multiple_select" || type === "true_false";
+	return type === "multiple_choice" || type === "multiple_select";
 }
 
 function requiredOptions(type: QuizQuestionType) {
@@ -345,7 +334,7 @@ function describeInvalidQuestion(question: QuizQuestion): string | null {
 				? "còn mục chưa nhập nội dung"
 				: null;
 
-		default: // multiple_choice, multiple_select, true_false
+		default: // multiple_choice, multiple_select
 			if (question.options.some((o) => !isOptionFilled(o)))
 				return "còn phương án chưa nhập nội dung";
 			if (!question.options.some((o) => o.isCorrect)) return "chưa chọn đáp án đúng";
@@ -1187,7 +1176,7 @@ function QuizCreatePage() {
 								<div className='flex flex-col gap-3 border-b bg-muted/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between'>
 									<div className='flex items-center gap-3'>
 										<span className='flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
-											<FileQuestion className='size-4' />
+											<FilePen className='size-4' />
 										</span>
 										<div>
 											<p className='text-sm font-semibold'>
@@ -1694,13 +1683,11 @@ function QuizCreatePage() {
 														: activeQuestion.options.map(
 																(option, index) => {
 																	const allowRemove =
-																		activeQuestion.type !==
-																			"true_false" &&
 																		activeQuestion.options
 																			.length >
-																			requiredOptions(
-																				activeQuestion.type,
-																			);
+																		requiredOptions(
+																			activeQuestion.type,
+																		);
 																	const isChoice =
 																		isChoiceQuestion(
 																			activeQuestion.type,
@@ -1837,20 +1824,18 @@ function QuizCreatePage() {
 															)}
 												</div>
 
-												{activeQuestion.type !== "true_false" && (
-													<Button
-														type='button'
-														variant='outline'
-														size='sm'
-														onClick={addOption}>
-														<Plus />
-														{activeQuestion.type === "fill_blank"
-															? "Thêm đáp án"
-															: activeQuestion.type === "matching"
-																? "Thêm cặp"
-																: "Thêm phương án"}
-													</Button>
-												)}
+												<Button
+													type='button'
+													variant='outline'
+													size='sm'
+													onClick={addOption}>
+													<Plus />
+													{activeQuestion.type === "fill_blank"
+														? "Thêm đáp án"
+														: activeQuestion.type === "matching"
+															? "Thêm cặp"
+															: "Thêm phương án"}
+												</Button>
 											</div>
 										)}
 									</div>
@@ -1905,7 +1890,7 @@ function QuizCreatePage() {
 								<div className='rounded-2xl border-2 border-emerald-500/70 bg-emerald-50/50 p-4 dark:bg-emerald-950/20'>
 									<div className='mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300'>
 										<span className='flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white'>
-											<FileQuestion className='size-3.5' />
+											<FilePen className='size-3.5' />
 										</span>
 										{getQuestionTypeLabel(activeQuestion.type)}
 									</div>

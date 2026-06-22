@@ -16,7 +16,6 @@ const QUESTION_TYPE_LABELS: Record<QuizQuestion["ui_type"], string> = {
 	word_bank_fill_blank: "Chọn từ điền vào chỗ trống",
 	matching: "Ghép cặp",
 	word_order: "Sắp xếp các từ theo đúng thứ tự",
-	true_false: "Đúng / Sai",
 };
 
 /** Trạng thái trả lời đang dựng cho câu hỏi hiện tại. */
