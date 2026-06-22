@@ -14,11 +14,10 @@ return new class extends Migration
             $table->string('content')->nullable(); // null nếu chỉ có ảnh
             $table->string('image')->nullable();
             // Dùng cho multiple_choice, multiple_select, fill_blank.
-            // matching và ordering: luôn false, correctness nằm trong metadata.
+            // matching: correctness nằm trong metadata.
             $table->boolean('is_correct')->default(false);
             $table->unsignedSmallInteger('order')->default(0);
             // matching: {"side": "left"|"right", "pair_id": 1}
-            // ordering: {"correct_position": 1}
             $table->json('metadata')->nullable();
             $table->timestamps();
 

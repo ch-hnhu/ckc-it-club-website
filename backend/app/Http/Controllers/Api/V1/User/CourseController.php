@@ -196,7 +196,7 @@ class CourseController extends BaseApiController
             'quiz' => $quiz ? [
                 'id' => $quiz->id,
                 'slug' => 'quiz',
-                'title' => 'Quiz kiểm tra: ' . $lesson->title,
+                'title' => 'Quiz kiểm tra buổi ' . $lesson->order,
                 'meta' => $quiz->questions->count() . ' câu hỏi',
                 'completed' => $sections['quiz'] ?? false,
             ] : null,

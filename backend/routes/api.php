@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\CourseController as UserCourseController;
+use App\Http\Controllers\Api\V1\User\QuizController as UserQuizController;
 use App\Http\Controllers\Api\V1\User\EventController as UserEventController;
 use App\Http\Controllers\Api\V1\User\GamificationController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
@@ -170,6 +171,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/categories', [UserCourseController::class, 'categories']);
         Route::get('/courses/{course:slug}', [UserCourseController::class, 'show']);
         Route::get('/courses/{course:slug}/lessons/{lessonSlug}', [UserCourseController::class, 'lesson']);
+        Route::get('/courses/{course:slug}/lessons/{lessonSlug}/quiz', [UserQuizController::class, 'show']);
         Route::get('/courses/{course:slug}/lessons/{lessonSlug}/videos/{videoSlug}', [UserCourseController::class, 'video']);
 
         // Authenticated learning actions
@@ -203,6 +205,9 @@ Route::prefix('v1')->group(function () {
 
     // user logged-in routes
     Route::middleware('auth:sanctum')->group(function () {
+        // learning — nộp bài quiz (cần đăng nhập để ghi nhận tiến độ)
+        Route::post('/learning/courses/{course:slug}/lessons/{lessonSlug}/quiz/submit', [UserQuizController::class, 'submit']);
+
         // user notifications (realtime + REST)
         Route::prefix('user-notifications')->group(function () {
             Route::get('/', [UserNotificationController::class, 'index']);

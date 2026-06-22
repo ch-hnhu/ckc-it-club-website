@@ -6,6 +6,9 @@ import type {
 	CourseDetail,
 	CourseListParams,
 	LessonDetail,
+	QuizAnswerInput,
+	QuizPlay,
+	QuizSubmitResult,
 	VideoDetail,
 } from "@/types/learning.types";
 
@@ -50,5 +53,20 @@ export const learningService = {
 	createQrTicket: (slug: string, lessonSlug: string) =>
 		api.post<ApiResponse<{ token: string; used_at: string | null }>>(
 			`/learning/courses/${slug}/lessons/${lessonSlug}/qr-ticket`,
+		),
+
+	getQuiz: (courseSlug: string, lessonSlug: string) =>
+		api.get<ApiResponse<QuizPlay>>(
+			`/learning/courses/${courseSlug}/lessons/${lessonSlug}/quiz`,
+		),
+
+	submitQuiz: (
+		courseSlug: string,
+		lessonSlug: string,
+		answers: QuizAnswerInput[],
+	) =>
+		api.post<ApiResponse<QuizSubmitResult>>(
+			`/learning/courses/${courseSlug}/lessons/${lessonSlug}/quiz/submit`,
+			{ answers },
 		),
 };
