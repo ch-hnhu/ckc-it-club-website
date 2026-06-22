@@ -110,7 +110,7 @@ const questionTypeOptions: Array<{
 	},
 	{
 		type: "word_order",
-		label: "Sắp xếp các từ theo đúng thứ tự",
+		label: "Sắp xếp",
 		description: "Chọn từ trong bank theo đúng thứ tự để tạo câu.",
 	},
 ];
@@ -346,12 +346,18 @@ function QuizCreatePage() {
 	const navigate = useNavigate();
 	const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
 
+	const [courseTitle, setCourseTitle] = useState<string>("");
+	const [lessonTitle, setLessonTitle] = useState<string>("");
+
 	useBreadcrumb([
-		{ title: "Dashboard", link: "/" },
 		{ title: "Khoá học", link: "/courses" },
 		{
-			title: courseId ? `${courseId}` : "Khóa học chưa xác định",
+			title: courseTitle || (courseId ? `Khoá học: #${courseId}` : "Khóa học chưa xác định"),
 			link: courseId ? `/courses/${courseId}` : undefined,
+		},
+		{
+			title: lessonTitle || (lessonId ? `Buổi #${lessonId}` : "Buổi học chưa xác định"),
+			link: lessonId ? `/courses/${courseId}/${lessonId}` : undefined,
 		},
 		{ title: "Tạo quiz" },
 	]);
@@ -390,16 +396,29 @@ function QuizCreatePage() {
 		let cancelled = false;
 		(async () => {
 			try {
-				const res = await courseService.getQuiz(courseId, Number(lessonId));
+				const [quizRes, courseRes] = await Promise.all([
+					courseService.getQuiz(courseId, Number(lessonId)),
+					courseService.getCourse(courseId),
+				]);
+
 				if (cancelled) return;
-				const loaded = res.data?.questions?.map(fromQuestionDTO) ?? [];
+
+				if (courseRes.data) {
+					setCourseTitle(courseRes.data.title);
+					const lesson = courseRes.data.lessons?.find((l) => l.id === Number(lessonId));
+					if (lesson) {
+						setLessonTitle(lesson.title);
+					}
+				}
+
+				const loaded = quizRes.data?.questions?.map(fromQuestionDTO) ?? [];
 				if (loaded.length > 0) {
 					setQuestions(loaded);
 					setActiveQuestionId(loaded[0].id);
 				}
 			} catch {
 				if (!cancelled) {
-					toast.error("Không tải được quiz đã lưu của buổi học.", {
+					toast.error("Không tải được thông tin khóa học hoặc quiz của buổi học.", {
 						position: "top-right",
 					});
 				}
@@ -1183,7 +1202,8 @@ function QuizCreatePage() {
 												Câu {activeQuestionIndex + 1}
 											</p>
 											<p className='text-xs text-muted-foreground'>
-												Tự lưu trong phiên làm việc
+												{activeQuestion.content.trim() ||
+													"Câu hỏi chưa có nội dung"}
 											</p>
 										</div>
 									</div>
