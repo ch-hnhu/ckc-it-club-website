@@ -332,10 +332,29 @@ class LearningCenterSeeder extends Seeder
                 ]);
             }
 
+            $hasOffline = $c['max_offline_slots'] !== null;
+
             foreach ($c['lessons'] as $i => $topic) {
                 // Thời lượng video xen kẽ 30–50 phút cho thực tế
                 $duration = (30 + ($i % 3) * 10) * 60;
-                $this->createSimpleLesson($courseId, $i + 1, $topic, $duration, $adminId, $typeId);
+
+                // Lịch offline: buổi 1 bắt đầu ngay sau khi đóng đăng ký, mỗi buổi cách nhau 1 tuần.
+                // Chỉ set khi khoá có mở lớp offline — khoá online-only không có lịch.
+                $sessionStart = $hasOffline
+                    ? $c['enrollment_deadline']->copy()->addDays($i * 7)->setTime(18, 0)
+                    : null;
+                $sessionEnd = $sessionStart?->copy()->addHours(2);
+
+                $this->createSimpleLesson(
+                    $courseId,
+                    $i + 1,
+                    $topic,
+                    $duration,
+                    $adminId,
+                    $typeId,
+                    $sessionStart,
+                    $sessionEnd,
+                );
             }
 
             $this->seedEnrollments($courseId, $userIds, $c['enroll']);
@@ -344,9 +363,18 @@ class LearningCenterSeeder extends Seeder
 
     /**
      * Tạo một buổi học gọn (video + tài nguyên + bài tập + quiz 2 câu) cho khoá demo.
+     * $sessionStart/$sessionEnd chỉ truyền khi khoá có mở lớp offline (max_offline_slots != null).
      */
-    private function createSimpleLesson(int $courseId, int $order, string $topic, int $duration, int $adminId, int $typeId): void
-    {
+    private function createSimpleLesson(
+        int $courseId,
+        int $order,
+        string $topic,
+        int $duration,
+        int $adminId,
+        int $typeId,
+        ?\Illuminate\Support\Carbon $sessionStart = null,
+        ?\Illuminate\Support\Carbon $sessionEnd = null,
+    ): void {
         $slug = Str::slug("buoi-{$order}-{$topic}");
 
         if (DB::table('lessons')->where('course_id', $courseId)->where('slug', $slug)->exists()) {
@@ -360,6 +388,8 @@ class LearningCenterSeeder extends Seeder
             'description'         => "Nội dung buổi học: {$topic}.",
             'order'               => $order,
             'status'              => CourseStatus::PUBLISHED->value,
+            'session_start'       => $sessionStart,
+            'session_end'         => $sessionEnd,
             'resource_url'        => 'https://developer.mozilla.org/vi/docs/Learn',
             'resource_label'      => "Tài liệu tham khảo — {$topic}",
             'video_url'           => 'https://www.youtube.com/embed/rfscVS0vtbw',

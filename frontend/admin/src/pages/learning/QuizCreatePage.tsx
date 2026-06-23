@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
 	ArrowLeft,
 	Check,
@@ -9,13 +9,11 @@ import {
 	CircleX,
 	Copy,
 	Eye,
-	FileQuestion,
-	GripVertical,
+	FilePen,
 	Lightbulb,
 	ImagePlus,
 	LayoutGrid,
 	ListChecks,
-	ListOrdered,
 	Link2,
 	Rows3,
 	Plus,
@@ -40,26 +38,25 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { cn } from "@/lib/utils";
+import courseService, { type QuizQuestionDTO, type QuizOptionDTO } from "@/services/course.service";
 
 type QuizQuestionType =
 	| "multiple_choice"
 	| "multiple_select"
 	| "fill_blank"
-	| "true_false"
 	| "matching"
-	| "ordering"
 	| "word_bank_fill_blank"
 	| "word_order";
 
-type PersistedQuestionType = Exclude<QuizQuestionType, "true_false">;
+type PersistedQuestionType = QuizQuestionType;
 
 type QuestionOptionMetadata = {
 	side?: "left" | "right";
 	pairId?: string;
-	correctPosition?: number;
 	slot_index?: number;
 };
 
@@ -97,13 +94,8 @@ const questionTypeOptions: Array<{
 		description: "Có thể có nhiều phương án đúng.",
 	},
 	{
-		type: "true_false",
-		label: "Đúng / Sai",
-		description: "Một nhận định với hai lựa chọn cố định.",
-	},
-	{
 		type: "fill_blank",
-		label: "Điền đáp án",
+		label: "Điền vào chỗ trống",
 		description: "Học viên nhập câu trả lời ngắn.",
 	},
 	{
@@ -113,17 +105,12 @@ const questionTypeOptions: Array<{
 	},
 	{
 		type: "matching",
-		label: "Ghép đôi",
+		label: "Ghép cặp",
 		description: "Nối mỗi mục với cặp phù hợp.",
 	},
 	{
-		type: "ordering",
-		label: "Sắp xếp",
-		description: "Đặt các mục theo đúng trình tự.",
-	},
-	{
 		type: "word_order",
-		label: "Sắp xếp từ thành câu",
+		label: "Sắp xếp các từ theo đúng thứ tự",
 		description: "Chọn từ trong bank theo đúng thứ tự để tạo câu.",
 	},
 ];
@@ -133,13 +120,6 @@ function createId(prefix: "question" | "option"): string {
 }
 
 function createOptions(type: QuizQuestionType): QuizOption[] {
-	if (type === "true_false") {
-		return [
-			{ id: createId("option"), content: "Đúng", isCorrect: true, image: null },
-			{ id: createId("option"), content: "Sai", isCorrect: false, image: null },
-		];
-	}
-
 	if (type === "fill_blank") {
 		return [{ id: createId("option"), content: "", isCorrect: true, image: null }];
 	}
@@ -180,25 +160,6 @@ function createOptions(type: QuizQuestionType): QuizOption[] {
 	}
 
 	if (type === "matching") return createMatchingPair();
-
-	if (type === "ordering") {
-		return [
-			{
-				id: createId("option"),
-				content: "",
-				isCorrect: false,
-				image: null,
-				metadata: { correctPosition: 1 },
-			},
-			{
-				id: createId("option"),
-				content: "",
-				isCorrect: false,
-				image: null,
-				metadata: { correctPosition: 2 },
-			},
-		];
-	}
 
 	return [
 		{ id: createId("option"), content: "", isCorrect: true, image: null },
@@ -260,8 +221,58 @@ const initialQuestions: QuizQuestion[] = [
 ];
 
 function getPersistedQuestionType(type: QuizQuestionType): PersistedQuestionType {
-	// Đúng/Sai là preset UI của multiple_choice, không cần thêm question_type riêng trong DB.
-	return type === "true_false" ? "multiple_choice" : type;
+	return type;
+}
+
+const KNOWN_UI_TYPES: QuizQuestionType[] = [
+	"multiple_choice",
+	"multiple_select",
+	"fill_blank",
+	"matching",
+	"word_bank_fill_blank",
+	"word_order",
+];
+
+/** State câu hỏi trên trình tạo → payload gửi backend. */
+function toQuestionPayload(question: QuizQuestion): QuizQuestionDTO {
+	return {
+		type: question.persistedType,
+		ui_type: question.type,
+		content: question.content,
+		explanation: question.explanation.trim() ? question.explanation : null,
+		image: question.image,
+		options: question.options.map<QuizOptionDTO>((option) => ({
+			content: option.content,
+			is_correct: option.isCorrect,
+			image: option.image,
+			metadata: option.metadata ? { ...option.metadata } : null,
+		})),
+	};
+}
+
+/** Payload backend → state câu hỏi để prefill trình tạo. */
+function fromQuestionDTO(dto: QuizQuestionDTO): QuizQuestion {
+	const uiType = (
+		dto.ui_type && KNOWN_UI_TYPES.includes(dto.ui_type as QuizQuestionType)
+			? dto.ui_type
+			: dto.type
+	) as QuizQuestionType;
+
+	return {
+		id: createId("question"),
+		type: uiType,
+		persistedType: getPersistedQuestionType(uiType),
+		content: dto.content ?? "",
+		explanation: dto.explanation ?? "",
+		image: dto.image ?? null,
+		options: dto.options.map((option) => ({
+			id: createId("option"),
+			content: option.content ?? "",
+			isCorrect: option.is_correct,
+			image: option.image ?? null,
+			metadata: (option.metadata as QuizOption["metadata"]) ?? undefined,
+		})),
+	};
 }
 
 function getQuestionTypeLabel(type: QuizQuestionType) {
@@ -270,17 +281,15 @@ function getQuestionTypeLabel(type: QuizQuestionType) {
 
 function QuestionTypeIcon({ type, className }: { type: QuizQuestionType; className?: string }) {
 	if (type === "multiple_select") return <ListChecks className={className} />;
-	if (type === "true_false") return <CheckCircle2 className={className} />;
 	if (type === "fill_blank") return <TextCursorInput className={className} />;
 	if (type === "word_bank_fill_blank") return <LayoutGrid className={className} />;
 	if (type === "word_order") return <Rows3 className={className} />;
 	if (type === "matching") return <Link2 className={className} />;
-	if (type === "ordering") return <ListOrdered className={className} />;
 	return <CircleDot className={className} />;
 }
 
 function isChoiceQuestion(type: QuizQuestionType) {
-	return type === "multiple_choice" || type === "multiple_select" || type === "true_false";
+	return type === "multiple_choice" || type === "multiple_select";
 }
 
 function requiredOptions(type: QuizQuestionType) {
@@ -290,13 +299,60 @@ function requiredOptions(type: QuizQuestionType) {
 	return 2;
 }
 
+/** Một phương án được coi là "đã nhập" nếu có nội dung chữ hoặc ảnh. */
+function isOptionFilled(option: QuizOption): boolean {
+	return option.content.trim() !== "" || Boolean(option.image);
+}
+
+/**
+ * Kiểm tra một câu hỏi đã đủ điều kiện xuất bản chưa.
+ * Trả về null nếu hợp lệ, hoặc lý do (tiếng Việt) nếu chưa hợp lệ.
+ */
+function describeInvalidQuestion(question: QuizQuestion): string | null {
+	if (!question.content.trim()) return "chưa có nội dung câu hỏi";
+
+	switch (question.type) {
+		case "fill_blank":
+			return question.options.some((o) => o.content.trim()) ? null : "chưa nhập đáp án đúng";
+
+		case "word_bank_fill_blank": {
+			const blankCount = (question.content.match(/___/g) || []).length;
+			const correct = question.options.filter((o) => o.isCorrect);
+			if (blankCount === 0) return "chưa có chỗ trống (gõ ___ vào nội dung)";
+			if (correct.length !== blankCount) return "số đáp án đúng chưa khớp số chỗ trống";
+			if (correct.some((o) => !o.content.trim())) return "đáp án cho chỗ trống còn để trống";
+			return null;
+		}
+
+		case "matching":
+			return question.options.some((o) => !isOptionFilled(o))
+				? "còn cặp ghép chưa nhập đủ nội dung"
+				: null;
+
+		case "word_order":
+			return question.options.some((o) => !isOptionFilled(o))
+				? "còn mục chưa nhập nội dung"
+				: null;
+
+		default: // multiple_choice, multiple_select
+			if (question.options.some((o) => !isOptionFilled(o)))
+				return "còn phương án chưa nhập nội dung";
+			if (!question.options.some((o) => o.isCorrect)) return "chưa chọn đáp án đúng";
+			return null;
+	}
+}
+
 function QuizCreatePage() {
 	const navigate = useNavigate();
 	const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
-		{ title: "Learning Center" },
+		{ title: "Khoá học", link: "/courses" },
+		{
+			title: courseId ? `${courseId}` : "Khóa học chưa xác định",
+			link: courseId ? `/courses/${courseId}` : undefined,
+		},
 		{ title: "Tạo quiz" },
 	]);
 
@@ -313,8 +369,6 @@ function QuizCreatePage() {
 		optionId?: string;
 	} | null>(null);
 	const imageInputRef = useRef<HTMLInputElement>(null);
-	const [orderingDragIndex, setOrderingDragIndex] = useState<number | null>(null);
-	const [orderingDragOverIndex, setOrderingDragOverIndex] = useState<number | null>(null);
 	const [matchingSelected, setMatchingSelected] = useState<{
 		side: "left" | "right";
 		optionId: string;
@@ -323,11 +377,44 @@ function QuizCreatePage() {
 	const [matchingWrong, setMatchingWrong] = useState<{ leftId: string; rightId: string } | null>(
 		null,
 	);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isSaving, setIsSaving] = useState(false);
+
+	// Prefill nội dung quiz đã lưu (nếu có) khi mở trình tạo.
+	useEffect(() => {
+		if (!courseId || !lessonId) {
+			setIsLoading(false);
+			return;
+		}
+
+		let cancelled = false;
+		(async () => {
+			try {
+				const res = await courseService.getQuiz(courseId, Number(lessonId));
+				if (cancelled) return;
+				const loaded = res.data?.questions?.map(fromQuestionDTO) ?? [];
+				if (loaded.length > 0) {
+					setQuestions(loaded);
+					setActiveQuestionId(loaded[0].id);
+				}
+			} catch {
+				if (!cancelled) {
+					toast.error("Không tải được quiz đã lưu của buổi học.", {
+						position: "top-right",
+					});
+				}
+			} finally {
+				if (!cancelled) setIsLoading(false);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [courseId, lessonId]);
 
 	const activeQuestionIndex = questions.findIndex((question) => question.id === activeQuestionId);
 	const activeQuestion = questions[activeQuestionIndex] ?? questions[0];
-	const courseReference = courseId ? `Khóa học #${courseId}` : "Khóa học chưa xác định";
-	const lessonReference = lessonId ? `Lesson #${lessonId}` : "Lesson chưa xác định";
 
 	const wordBankBlankCount = useMemo(
 		() =>
@@ -357,12 +444,12 @@ function QuizCreatePage() {
 		[activeQuestion?.type, activeQuestion?.options],
 	);
 
-	const shuffledWordBankOptions = useMemo(
+	const shuffledWordBankOptionIds = useMemo(
 		() =>
 			activeQuestion?.type === "word_bank_fill_blank"
-				? [...activeQuestion.options].sort(() => Math.random() - 0.5)
+				? [...activeQuestion.options].sort(() => Math.random() - 0.5).map((o) => o.id)
 				: [],
-		// Re-shuffle when question changes or options are added/removed
+		// Re-shuffle only when question changes or options are added/removed, not on content edits
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[activeQuestion?.id, activeQuestion?.type, activeQuestion?.options.length],
 	);
@@ -387,11 +474,12 @@ function QuizCreatePage() {
 		[activeQuestion?.type, activeQuestion?.options],
 	);
 
-	const shuffledWordOrderOptions = useMemo(
+	const shuffledWordOrderOptionIds = useMemo(
 		() =>
 			activeQuestion?.type === "word_order"
-				? [...activeQuestion.options].sort(() => Math.random() - 0.5)
+				? [...activeQuestion.options].sort(() => Math.random() - 0.5).map((o) => o.id)
 				: [],
+		// Re-shuffle only when question changes or options are added/removed, not on content edits
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[activeQuestion?.id, activeQuestion?.type, activeQuestion?.options.length],
 	);
@@ -718,36 +806,6 @@ function QuizCreatePage() {
 		});
 	};
 
-	const handleOrderingDragStart = (index: number) => {
-		setOrderingDragIndex(index);
-	};
-
-	const handleOrderingDragOver = (event: React.DragEvent, index: number) => {
-		event.preventDefault();
-		setOrderingDragOverIndex(index);
-	};
-
-	const handleOrderingDrop = (targetIndex: number) => {
-		if (orderingDragIndex === null || orderingDragIndex === targetIndex || !activeQuestion)
-			return;
-		const reordered = [...activeQuestion.options];
-		const [moved] = reordered.splice(orderingDragIndex, 1);
-		reordered.splice(targetIndex, 0, moved);
-		updateQuestion(activeQuestion.id, {
-			options: reordered.map((option, idx) => ({
-				...option,
-				metadata: { ...option.metadata, correctPosition: idx + 1 },
-			})),
-		});
-		setOrderingDragIndex(null);
-		setOrderingDragOverIndex(null);
-	};
-
-	const handleOrderingDragEnd = () => {
-		setOrderingDragIndex(null);
-		setOrderingDragOverIndex(null);
-	};
-
 	const toggleCorrectOption = (optionId: string, checked: boolean) => {
 		if (!activeQuestion) return;
 		const isMultipleChoice = activeQuestion.type === "multiple_select";
@@ -788,10 +846,6 @@ function QuizCreatePage() {
 								content: "",
 								isCorrect: false,
 								image: null,
-								metadata:
-									activeQuestion.type === "ordering"
-										? { correctPosition: activeQuestion.options.length + 1 }
-										: undefined,
 							},
 						],
 		});
@@ -809,16 +863,7 @@ function QuizCreatePage() {
 		}
 		if (activeQuestion.options.length <= requiredOptions(activeQuestion.type)) return;
 		updateQuestion(activeQuestion.id, {
-			options: activeQuestion.options
-				.filter((option) => option.id !== optionId)
-				.map((option, index) =>
-					activeQuestion.type === "ordering"
-						? {
-								...option,
-								metadata: { ...option.metadata, correctPosition: index + 1 },
-							}
-						: option,
-				),
+			options: activeQuestion.options.filter((option) => option.id !== optionId),
 		});
 	};
 
@@ -871,46 +916,121 @@ function QuizCreatePage() {
 		setPreviewTextAnswer(event.target.value);
 	};
 
+	const persistQuiz = async (successMessage: string) => {
+		if (!courseId || !lessonId) {
+			toast.error("Thiếu thông tin khóa học hoặc buổi học.", { position: "top-right" });
+			return;
+		}
+		setIsSaving(true);
+		try {
+			await courseService.saveQuiz(courseId, Number(lessonId), {
+				questions: questions.map(toQuestionPayload),
+			});
+			toast.success(successMessage, { position: "top-right" });
+		} catch {
+			toast.error("Lưu quiz thất bại. Vui lòng thử lại.", { position: "top-right" });
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
 	const saveDraft = () => {
-		toast.success("Đã lưu bản nháp trong phiên làm việc.", { position: "top-right" });
+		void persistQuiz("Đã lưu bản nháp quiz.");
 	};
 
 	const publishQuiz = () => {
-		const hasInvalidQuestion = questions.some((question) => {
-			if (!question.content.trim()) return true;
-			if (question.type === "fill_blank") {
-				return !question.options.some((option) => option.content.trim());
-			}
-			if (question.type === "word_bank_fill_blank") {
-				const blankCount = (question.content.match(/___/g) || []).length;
-				const correctOptions = question.options.filter((o) => o.isCorrect);
-				return (
-					blankCount === 0 ||
-					correctOptions.length !== blankCount ||
-					correctOptions.some((o) => !o.content.trim())
-				);
-			}
-			if (question.type === "matching" || question.type === "ordering") {
-				return question.options.some((option) => !option.content.trim());
-			}
+		const invalidIndex = questions.findIndex(
+			(question) => describeInvalidQuestion(question) !== null,
+		);
 
-			return (
-				question.options.some((option) => !option.content.trim()) ||
-				!question.options.some((option) => option.isCorrect)
-			);
-		});
-
-		if (hasInvalidQuestion) {
-			toast.error("Hãy hoàn thiện nội dung và đáp án đúng cho tất cả câu hỏi.", {
+		if (invalidIndex !== -1) {
+			const reason = describeInvalidQuestion(questions[invalidIndex]);
+			selectQuestion(questions[invalidIndex].id);
+			toast.error(`Câu ${invalidIndex + 1}: ${reason}.`, {
 				position: "top-right",
 			});
 			return;
 		}
 
-		toast.success("Quiz đã sẵn sàng để xuất bản khi API tạo quiz được kết nối.", {
-			position: "top-right",
-		});
+		void persistQuiz("Đã xuất bản quiz cho buổi học.");
 	};
+
+	if (isLoading) {
+		return (
+			<div className='min-h-full bg-muted/30'>
+				<div className='mx-auto flex w-full max-w-[1600px] flex-col gap-5 p-4 md:p-6 lg:p-8'>
+					{/* Header skeleton */}
+					<header className='flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-center xl:justify-between'>
+						<div className='flex min-w-0 items-start gap-3'>
+							<Skeleton className='h-10 w-10 shrink-0' />
+							<div className='space-y-2 min-w-0'>
+								<Skeleton className='h-4 w-40' />
+								<Skeleton className='h-8 w-64' />
+							</div>
+						</div>
+						<div className='flex flex-wrap items-center gap-2'>
+							<Skeleton className='h-10 w-28' />
+							<Skeleton className='h-10 w-28' />
+						</div>
+					</header>
+
+					{/* Grid skeleton */}
+					<div className='space-y-6'>
+						<div className='grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]'>
+							{/* Questions list Card skeleton */}
+							<aside className='relative h-[400px]'>
+								<Card className='absolute inset-0 flex flex-col p-4 space-y-4'>
+									<Skeleton className='h-6 w-32' />
+									<Skeleton className='h-10 w-full' />
+									<div className='space-y-2 flex-1 overflow-hidden'>
+										<Skeleton className='h-14 w-full' />
+										<Skeleton className='h-14 w-full' />
+										<Skeleton className='h-14 w-full' />
+									</div>
+								</Card>
+							</aside>
+
+							{/* Editing Form Card skeleton */}
+							<section className='min-w-0 space-y-5'>
+								<Card className='p-6 space-y-6'>
+									<div className='flex items-center gap-3 border-b pb-4'>
+										<Skeleton className='h-9 w-9 rounded-lg' />
+										<div className='space-y-1.5'>
+											<Skeleton className='h-4 w-20' />
+											<Skeleton className='h-3 w-32' />
+										</div>
+									</div>
+									<div className='space-y-3'>
+										<Skeleton className='h-4 w-28' />
+										<div className='grid gap-2 sm:grid-cols-2'>
+											{Array.from({ length: 6 }).map((_, i) => (
+												<Skeleton key={i} className='h-16 w-full' />
+											))}
+										</div>
+									</div>
+									<div className='space-y-3'>
+										<Skeleton className='h-4 w-32' />
+										<Skeleton className='h-24 w-full' />
+									</div>
+								</Card>
+							</section>
+						</div>
+
+						{/* Preview Quiz Card skeleton */}
+						<aside className='space-y-5'>
+							<Card className='p-6 space-y-4'>
+								<div className='space-y-2'>
+									<Skeleton className='h-6 w-36' />
+									<Skeleton className='h-4 w-72' />
+								</div>
+								<Skeleton className='h-32 w-full rounded-2xl' />
+							</Card>
+						</aside>
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	if (!activeQuestion) return null;
 
@@ -928,8 +1048,8 @@ function QuizCreatePage() {
 				onChange={handleImageChange}
 			/>
 			<div className='mx-auto flex w-full max-w-[1600px] flex-col gap-5 p-4 md:p-6 lg:p-8'>
-				<header className='flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-center xl:justify-between'>
-					<div className='flex min-w-0 items-start gap-3'>
+				<header className='flex flex-col gap-4 pb-5 xl:flex-row xl:items-center xl:justify-between'>
+					<div className='flex min-w-0 items-end gap-3'>
 						<Button
 							type='button'
 							variant='outline'
@@ -939,26 +1059,25 @@ function QuizCreatePage() {
 							<ArrowLeft />
 						</Button>
 						<div className='min-w-0'>
-							<div className='mb-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
-								<span>{courseReference}</span>
-								<span aria-hidden='true'>/</span>
-								<span>{lessonReference}</span>
-							</div>
 							<h1 className='text-2xl font-semibold tracking-tight md:text-3xl'>
-								Tạo quiz cho lesson
+								Tạo quiz cho buổi học
 							</h1>
-							<p className='mt-1 text-sm text-muted-foreground'>
-								Thiết kế từng câu hỏi, sau đó xem ngay trải nghiệm của học viên.
-							</p>
 						</div>
 					</div>
 
 					<div className='flex flex-wrap items-center gap-2'>
-						<Button type='button' variant='outline' onClick={saveDraft}>
+						<Button
+							type='button'
+							variant='outline'
+							onClick={saveDraft}
+							disabled={isSaving || isLoading}>
 							<Save />
 							Lưu bản nháp
 						</Button>
-						<Button type='button' onClick={publishQuiz}>
+						<Button
+							type='button'
+							onClick={publishQuiz}
+							disabled={isSaving || isLoading}>
 							<Send />
 							Xuất bản quiz
 						</Button>
@@ -1055,7 +1174,7 @@ function QuizCreatePage() {
 								<div className='flex flex-col gap-3 border-b bg-muted/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between'>
 									<div className='flex items-center gap-3'>
 										<span className='flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
-											<FileQuestion className='size-4' />
+											<FilePen className='size-4' />
 										</span>
 										<div>
 											<p className='text-sm font-semibold'>
@@ -1144,7 +1263,7 @@ function QuizCreatePage() {
 										</div>
 									</div>
 
-									{activeQuestion.type !== "matching" && (
+									{
 										<div className='space-y-2'>
 											<div className='flex items-center justify-between gap-3'>
 												<Label htmlFor='question-content'>
@@ -1152,7 +1271,6 @@ function QuizCreatePage() {
 												</Label>
 												{(isChoiceQuestion(activeQuestion.type) ||
 													activeQuestion.type === "fill_blank" ||
-													activeQuestion.type === "ordering" ||
 													activeQuestion.type ===
 														"word_bank_fill_blank" ||
 													activeQuestion.type === "word_order") && (
@@ -1193,8 +1311,10 @@ function QuizCreatePage() {
 													activeQuestion.type === "word_bank_fill_blank"
 														? "Ví dụ: Hôm nay trời ___ lắm. Tôi mặc áo ___ cho ấm."
 														: activeQuestion.type === "word_order"
-															? "Ví dụ: 少しファーストフードを食べます。 hoặc Write this in English"
-															: "Ví dụ: Thẻ HTML nào dùng để tạo tiêu đề lớn nhất?"
+															? "Ví dụ: Hãy cho biết luồng hoạt động của một ứng dụng web từ khi người dùng nhập URL đến khi nhận được phản hồi."
+															: activeQuestion.type === "matching"
+																? "Ví dụ: Ghép mỗi mục ở cột trái với đáp án phù hợp ở cột phải."
+																: "Ví dụ: Thẻ HTML nào dùng để tạo tiêu đề lớn nhất?"
 												}
 												className='min-h-28 resize-y text-base'
 											/>
@@ -1214,7 +1334,6 @@ function QuizCreatePage() {
 											)}
 											{(isChoiceQuestion(activeQuestion.type) ||
 												activeQuestion.type === "fill_blank" ||
-												activeQuestion.type === "ordering" ||
 												activeQuestion.type === "word_bank_fill_blank" ||
 												activeQuestion.type === "word_order") &&
 												activeQuestion.image && (
@@ -1238,7 +1357,7 @@ function QuizCreatePage() {
 													</div>
 												)}
 										</div>
-									)}
+									}
 
 									<div className='space-y-3'>
 										<div className='flex flex-wrap items-center justify-between gap-2'>
@@ -1253,10 +1372,7 @@ function QuizCreatePage() {
 																? "Các từ cần sắp xếp"
 																: activeQuestion.type === "matching"
 																	? "Các cặp cần ghép"
-																	: activeQuestion.type ===
-																		  "ordering"
-																		? "Thứ tự đúng"
-																		: "Các phương án trả lời"}
+																	: "Các phương án trả lời"}
 												</Label>
 												<p className='mt-1 text-xs text-muted-foreground'>
 													{activeQuestion.type === "multiple_select"
@@ -1272,10 +1388,7 @@ function QuizCreatePage() {
 																	: activeQuestion.type ===
 																		  "matching"
 																		? "Mỗi hàng là một cặp đáp án đúng."
-																		: activeQuestion.type ===
-																			  "ordering"
-																			? "Sắp xếp các mục theo trình tự đúng từ trên xuống."
-																			: "Chọn đúng một phương án."}
+																		: "Chọn đúng một phương án."}
 												</p>
 											</div>
 										</div>
@@ -1320,61 +1433,66 @@ function QuizCreatePage() {
 													</div>
 												)}
 
-												<div className='space-y-2'>
-													<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
-														Từ nhiễu
-													</p>
-													{wordBankDistractors.length === 0 && (
-														<p className='text-xs text-muted-foreground'>
-															Thêm từ nhiễu để học viên phải lựa chọn.
-														</p>
-													)}
-													{wordBankDistractors.map((opt) => (
-														<div
-															key={opt.id}
-															className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
-															<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground'>
-																<X className='size-3.5' />
-															</span>
-															<Input
-																value={opt.content}
-																onChange={(event) =>
-																	updateOption(
-																		opt.id,
-																		event.target.value,
-																	)
-																}
-																placeholder='Từ nhiễu'
-																className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
-															/>
-															<Button
-																type='button'
-																variant='ghost'
-																size='icon-xs'
-																aria-label='Xoá từ nhiễu'
-																disabled={
-																	wordBankDistractors.length <=
-																	requiredOptions(
-																		activeQuestion.type,
-																	)
-																}
-																onClick={() =>
-																	removeOption(opt.id)
-																}>
-																<X className='text-muted-foreground' />
-															</Button>
+												{wordBankBlankCount > 0 && (
+													<>
+														<div className='space-y-2'>
+															<p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+																Từ nhiễu
+															</p>
+															{wordBankDistractors.length === 0 && (
+																<p className='text-xs text-muted-foreground'>
+																	Thêm từ nhiễu để học viên phải
+																	lựa chọn.
+																</p>
+															)}
+															{wordBankDistractors.map((opt) => (
+																<div
+																	key={opt.id}
+																	className='flex items-center gap-2 rounded-lg border bg-card p-2.5'>
+																	<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground'>
+																		<X className='size-3.5' />
+																	</span>
+																	<Input
+																		value={opt.content}
+																		onChange={(event) =>
+																			updateOption(
+																				opt.id,
+																				event.target.value,
+																			)
+																		}
+																		placeholder='Từ nhiễu'
+																		className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+																	/>
+																	<Button
+																		type='button'
+																		variant='ghost'
+																		size='icon-xs'
+																		aria-label='Xoá từ nhiễu'
+																		disabled={
+																			wordBankDistractors.length <=
+																			requiredOptions(
+																				activeQuestion.type,
+																			)
+																		}
+																		onClick={() =>
+																			removeOption(opt.id)
+																		}>
+																		<X className='text-muted-foreground' />
+																	</Button>
+																</div>
+															))}
 														</div>
-													))}
-												</div>
 
-												<Button
-													type='button'
-													variant='outline'
-													size='sm'
-													onClick={addOption}>
-													<Plus />
-													Thêm từ nhiễu
-												</Button>
+														<Button
+															type='button'
+															variant='outline'
+															size='sm'
+															onClick={addOption}>
+															<Plus />
+															Thêm từ nhiễu
+														</Button>
+													</>
+												)}
 											</div>
 										) : activeQuestion.type === "word_order" ? (
 											/* ── word_order options editor ── */
@@ -1560,242 +1678,162 @@ function QuizCreatePage() {
 																		</div>
 																	);
 																})
-														: activeQuestion.type === "ordering"
-															? activeQuestion.options.map(
-																	(option, index) => (
+														: activeQuestion.options.map(
+																(option, index) => {
+																	const allowRemove =
+																		activeQuestion.options
+																			.length >
+																		requiredOptions(
+																			activeQuestion.type,
+																		);
+																	const isChoice =
+																		isChoiceQuestion(
+																			activeQuestion.type,
+																		);
+																	return (
 																		<div
 																			key={option.id}
-																			draggable
-																			onDragStart={() =>
-																				handleOrderingDragStart(
-																					index,
-																				)
-																			}
-																			onDragOver={(e) =>
-																				handleOrderingDragOver(
-																					e,
-																					index,
-																				)
-																			}
-																			onDrop={() =>
-																				handleOrderingDrop(
-																					index,
-																				)
-																			}
-																			onDragEnd={
-																				handleOrderingDragEnd
-																			}
-																			className={cn(
-																				"flex select-none items-center gap-2 rounded-lg border bg-card p-2.5 transition-colors",
-																				orderingDragIndex ===
-																					index &&
-																					"opacity-40",
-																				orderingDragOverIndex ===
-																					index &&
-																					orderingDragIndex !==
-																						index &&
-																					"border-primary bg-primary/5",
-																			)}>
-																			<GripVertical className='size-4 shrink-0 cursor-grab text-muted-foreground' />
-																			<span className='flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold'>
-																				{index + 1}
-																			</span>
-																			<Input
-																				value={
-																					option.content
-																				}
-																				onChange={(event) =>
-																					updateOption(
-																						option.id,
-																						event.target
-																							.value,
-																					)
-																				}
-																				placeholder={`Mục thứ ${index + 1}`}
-																				className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
-																			/>
-																			<Button
-																				type='button'
-																				variant='ghost'
-																				size='icon-xs'
-																				aria-label={`Xoá mục ${index + 1}`}
-																				disabled={
-																					activeQuestion
-																						.options
-																						.length <= 2
-																				}
-																				onClick={() =>
-																					removeOption(
-																						option.id,
-																					)
-																				}>
-																				<X />
-																			</Button>
-																		</div>
-																	),
-																)
-															: activeQuestion.options.map(
-																	(option, index) => {
-																		const allowRemove =
-																			activeQuestion.type !==
-																				"true_false" &&
-																			activeQuestion.options
-																				.length >
-																				requiredOptions(
-																					activeQuestion.type,
-																				);
-																		const isChoice =
-																			isChoiceQuestion(
-																				activeQuestion.type,
-																			);
-																		return (
-																			<div
-																				key={option.id}
-																				className='rounded-lg border bg-card p-2.5'>
-																				<div className='flex items-center gap-3'>
-																					{activeQuestion.type ===
-																					"multiple_select" ? (
-																						<Checkbox
-																							id={`correct-${option.id}`}
-																							checked={
-																								option.isCorrect
-																							}
-																							onCheckedChange={(
-																								checked,
-																							) =>
-																								toggleCorrectOption(
-																									option.id,
-																									checked ===
-																										true,
-																								)
-																							}
-																							aria-label={`Đánh dấu phương án ${index + 1} là đúng`}
-																						/>
-																					) : isChoice ? (
-																						<button
-																							type='button'
-																							aria-label={`Chọn phương án ${index + 1} là đáp án đúng`}
-																							onClick={() =>
-																								toggleCorrectOption(
-																									option.id,
-																									true,
-																								)
-																							}
-																							className={cn(
-																								"flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-																								option.isCorrect
-																									? "border-primary bg-primary text-primary-foreground"
-																									: "border-input bg-background",
-																							)}>
-																							{option.isCorrect && (
-																								<Check className='size-3.5 stroke-[3]' />
-																							)}
-																						</button>
-																					) : (
-																						<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700'>
-																							<Check className='size-3.5 stroke-[3]' />
-																						</span>
-																					)}
-																					<Input
-																						value={
-																							option.content
+																			className='rounded-lg border bg-card p-2.5'>
+																			<div className='flex items-center gap-3'>
+																				{activeQuestion.type ===
+																				"multiple_select" ? (
+																					<Checkbox
+																						id={`correct-${option.id}`}
+																						checked={
+																							option.isCorrect
 																						}
-																						onChange={(
-																							event,
+																						onCheckedChange={(
+																							checked,
 																						) =>
-																							updateOption(
+																							toggleCorrectOption(
 																								option.id,
-																								event
-																									.target
-																									.value,
+																								checked ===
+																									true,
 																							)
 																						}
-																						placeholder={
-																							activeQuestion.type ===
-																							"fill_blank"
-																								? "Nhập đáp án đúng"
-																								: `Phương án ${index + 1}`
-																						}
-																						className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+																						aria-label={`Đánh dấu phương án ${index + 1} là đúng`}
 																					/>
-																					{isChoice && (
+																				) : isChoice ? (
+																					<button
+																						type='button'
+																						aria-label={`Chọn phương án ${index + 1} là đáp án đúng`}
+																						onClick={() =>
+																							toggleCorrectOption(
+																								option.id,
+																								true,
+																							)
+																						}
+																						className={cn(
+																							"flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+																							option.isCorrect
+																								? "border-primary bg-primary text-primary-foreground"
+																								: "border-input bg-background",
+																						)}>
+																						{option.isCorrect && (
+																							<Check className='size-3.5 stroke-[3]' />
+																						)}
+																					</button>
+																				) : (
+																					<span className='flex size-5 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700'>
+																						<Check className='size-3.5 stroke-[3]' />
+																					</span>
+																				)}
+																				<Input
+																					value={
+																						option.content
+																					}
+																					onChange={(
+																						event,
+																					) =>
+																						updateOption(
+																							option.id,
+																							event
+																								.target
+																								.value,
+																						)
+																					}
+																					placeholder={
+																						activeQuestion.type ===
+																						"fill_blank"
+																							? "Nhập đáp án đúng"
+																							: `Phương án ${index + 1}`
+																					}
+																					className='h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0'
+																				/>
+																				{isChoice && (
+																					<Button
+																						type='button'
+																						variant='ghost'
+																						size='icon-xs'
+																						aria-label={`Thêm ảnh cho phương án ${index + 1}`}
+																						onClick={() =>
+																							openImagePicker(
+																								activeQuestion.id,
+																								option.id,
+																							)
+																						}>
+																						<ImagePlus />
+																					</Button>
+																				)}
+																				{allowRemove && (
+																					<Button
+																						type='button'
+																						variant='ghost'
+																						size='icon-xs'
+																						aria-label={`Xoá phương án ${index + 1}`}
+																						onClick={() =>
+																							removeOption(
+																								option.id,
+																							)
+																						}>
+																						<X className='text-muted-foreground' />
+																					</Button>
+																				)}
+																			</div>
+																			{isChoice &&
+																				option.image && (
+																					<div className='relative mt-2 overflow-hidden rounded-md border bg-muted'>
+																						<img
+																							src={
+																								option.image
+																							}
+																							alt={`Ảnh minh hoạ phương án ${index + 1}`}
+																							className='max-h-32 w-full object-contain'
+																						/>
 																						<Button
 																							type='button'
-																							variant='ghost'
+																							variant='secondary'
 																							size='icon-xs'
-																							aria-label={`Thêm ảnh cho phương án ${index + 1}`}
+																							className='absolute right-1.5 top-1.5'
+																							aria-label={`Xoá ảnh phương án ${index + 1}`}
 																							onClick={() =>
-																								openImagePicker(
+																								removeImage(
 																									activeQuestion.id,
 																									option.id,
 																								)
 																							}>
-																							<ImagePlus />
+																							<X />
 																						</Button>
-																					)}
-																					{allowRemove && (
-																						<Button
-																							type='button'
-																							variant='ghost'
-																							size='icon-xs'
-																							aria-label={`Xoá phương án ${index + 1}`}
-																							onClick={() =>
-																								removeOption(
-																									option.id,
-																								)
-																							}>
-																							<X className='text-muted-foreground' />
-																						</Button>
-																					)}
-																				</div>
-																				{isChoice &&
-																					option.image && (
-																						<div className='relative mt-2 overflow-hidden rounded-md border bg-muted'>
-																							<img
-																								src={
-																									option.image
-																								}
-																								alt={`Ảnh minh hoạ phương án ${index + 1}`}
-																								className='max-h-32 w-full object-contain'
-																							/>
-																							<Button
-																								type='button'
-																								variant='secondary'
-																								size='icon-xs'
-																								className='absolute right-1.5 top-1.5'
-																								aria-label={`Xoá ảnh phương án ${index + 1}`}
-																								onClick={() =>
-																									removeImage(
-																										activeQuestion.id,
-																										option.id,
-																									)
-																								}>
-																								<X />
-																							</Button>
-																						</div>
-																					)}
-																			</div>
-																		);
-																	},
-																)}
+																					</div>
+																				)}
+																		</div>
+																	);
+																},
+															)}
 												</div>
 
-												{activeQuestion.type !== "true_false" && (
-													<Button
-														type='button'
-														variant='outline'
-														size='sm'
-														onClick={addOption}>
-														<Plus />
-														{activeQuestion.type === "fill_blank"
-															? "Thêm đáp án"
-															: activeQuestion.type === "matching"
-																? "Thêm cặp"
-																: activeQuestion.type === "ordering"
-																	? "Thêm mục"
-																	: "Thêm phương án"}
-													</Button>
-												)}
+												<Button
+													type='button'
+													variant='outline'
+													size='sm'
+													onClick={addOption}>
+													<Plus />
+													{activeQuestion.type === "fill_blank"
+														? "Thêm đáp án"
+														: activeQuestion.type === "matching"
+															? "Thêm cặp"
+															: "Thêm phương án"}
+												</Button>
 											</div>
 										)}
 									</div>
@@ -1850,7 +1888,7 @@ function QuizCreatePage() {
 								<div className='rounded-2xl border-2 border-emerald-500/70 bg-emerald-50/50 p-4 dark:bg-emerald-950/20'>
 									<div className='mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300'>
 										<span className='flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white'>
-											<FileQuestion className='size-3.5' />
+											<FilePen className='size-3.5' />
 										</span>
 										{getQuestionTypeLabel(activeQuestion.type)}
 									</div>
@@ -1945,22 +1983,6 @@ function QuizCreatePage() {
 												)}
 											</div>
 
-											{/* Show correct answers after wrong check */}
-											{previewChecked && !previewIsCorrect && (
-												<div className='mt-3 flex flex-wrap gap-2'>
-													{wordBankCorrectOptions.map((opt, i) => (
-														<span
-															key={opt.id}
-															className='rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'>
-															Chỗ trống {i + 1}:{" "}
-															<span className='font-bold'>
-																{opt.content || "—"}
-															</span>
-														</span>
-													))}
-												</div>
-											)}
-
 											{/* Word bank */}
 											{!previewChecked && (
 												<div className='mt-5'>
@@ -1968,28 +1990,35 @@ function QuizCreatePage() {
 														Chọn từ bên dưới để điền vào chỗ trống:
 													</p>
 													<div className='flex flex-wrap gap-2'>
-														{shuffledWordBankOptions
+														{shuffledWordBankOptionIds
 															.filter(
-																(opt) =>
+																(id) =>
 																	!Array.from(
 																		{
 																			length: wordBankBlankCount,
 																		},
 																		(_, idx) =>
 																			wordBankPlacements[idx],
-																	).includes(opt.id),
+																	).includes(id),
 															)
-															.map((opt) => (
-																<button
-																	key={opt.id}
-																	type='button'
-																	onClick={() =>
-																		handleWordBankSelect(opt.id)
-																	}
-																	className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
-																	{opt.content || "—"}
-																</button>
-															))}
+															.map((id) => {
+																const opt =
+																	activeQuestion.options.find(
+																		(o) => o.id === id,
+																	);
+																if (!opt) return null;
+																return (
+																	<button
+																		key={id}
+																		type='button'
+																		onClick={() =>
+																			handleWordBankSelect(id)
+																		}
+																		className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
+																		{opt.content || "—"}
+																	</button>
+																);
+															})}
 													</div>
 												</div>
 											)}
@@ -2064,24 +2093,28 @@ function QuizCreatePage() {
 											{/* Word bank */}
 											{!previewChecked && (
 												<div className='flex flex-wrap gap-2'>
-													{shuffledWordOrderOptions
+													{shuffledWordOrderOptionIds
 														.filter(
-															(opt) =>
-																!wordOrderPlacements.includes(
-																	opt.id,
-																),
+															(id) =>
+																!wordOrderPlacements.includes(id),
 														)
-														.map((opt) => (
-															<button
-																key={opt.id}
-																type='button'
-																onClick={() =>
-																	handleWordOrderSelect(opt.id)
-																}
-																className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
-																{opt.content || "—"}
-															</button>
-														))}
+														.map((id) => {
+															const opt = activeQuestion.options.find(
+																(o) => o.id === id,
+															);
+															if (!opt) return null;
+															return (
+																<button
+																	key={id}
+																	type='button'
+																	onClick={() =>
+																		handleWordOrderSelect(id)
+																	}
+																	className='rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:hover:border-emerald-600'>
+																	{opt.content || "—"}
+																</button>
+															);
+														})}
 												</div>
 											)}
 										</div>
@@ -2248,16 +2281,42 @@ function QuizCreatePage() {
 												)}
 												<div>
 													<p className='font-semibold'>
-														{previewIsCorrect
-															? activeQuestion.type === "matching"
-																? "Xuất sắc! Bạn đã ghép đúng tất cả các cặp."
-																: "Chính xác!"
-															: activeQuestion.type === "fill_blank"
-																? `Đáp án: ${activeQuestion.options
-																		.map((o) => o.content)
-																		.filter(Boolean)
-																		.join(" / ")}`
-																: "Chưa chính xác"}
+														{previewIsCorrect ? (
+															activeQuestion.type === "matching" ? (
+																"Xuất sắc! Bạn đã ghép đúng tất cả các cặp."
+															) : (
+																"Chính xác!"
+															)
+														) : activeQuestion.type === "fill_blank" ? (
+															`Đáp án: ${activeQuestion.options
+																.map((o) => o.content)
+																.filter(Boolean)
+																.join(" / ")}`
+														) : activeQuestion.type ===
+														  "word_bank_fill_blank" ? (
+															<>
+																Đáp án:{" "}
+																{wordBankSentenceParts.map(
+																	(part, i) => (
+																		<Fragment key={i}>
+																			{part}
+																			{i <
+																				wordBankSentenceParts.length -
+																					1 && (
+																				<span className='underline decoration-2 underline-offset-2'>
+																					{wordBankCorrectOptions[
+																						i
+																					]?.content ??
+																						""}
+																				</span>
+																			)}
+																		</Fragment>
+																	),
+																)}
+															</>
+														) : (
+															"Chưa đúng"
+														)}
 													</p>
 													{activeQuestion.type !== "matching" && (
 														<p className='mt-1 text-xs leading-5 opacity-90'>

@@ -72,6 +72,13 @@ function toLocalInput(iso: string | null): string {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** datetime-local (giờ địa phương, không kèm timezone) → ISO UTC để gửi lên backend (lưu giờ UTC) */
+function toUtcIso(localValue: string): string {
+	if (!localValue) return "";
+	const d = new Date(localValue);
+	return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 interface LessonFormDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -156,15 +163,15 @@ function LessonFormDialog({ open, onOpenChange, courseSlug, lessonId, onSaved }:
 			title: form.title.trim(),
 			status: form.status,
 			description: form.description,
-			session_start: form.session_start,
-			session_end: form.session_end,
+			session_start: toUtcIso(form.session_start),
+			session_end: toUtcIso(form.session_end),
 			video_url: form.video_url,
 			video_duration: form.video_duration,
 			live_url: form.live_url,
 			resource_url: form.resource_url,
 			resource_label: form.resource_label,
 			assignment_url: form.assignment_url,
-			assignment_deadline: form.assignment_deadline,
+			assignment_deadline: toUtcIso(form.assignment_deadline),
 			document: editorRef.current?.getContent() ?? "",
 		};
 

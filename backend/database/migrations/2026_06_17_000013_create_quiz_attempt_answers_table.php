@@ -16,7 +16,7 @@ return new class extends Migration
             // multiple_choice/select : {"selected": [option_id, ...]}
             // fill_blank             : {"text": "câu trả lời"}
             // matching               : {"pairs": [[left_id, right_id], ...]}
-            // ordering               : {"order": [opt_id_1, opt_id_2, ...]}
+            // word_order             : {"order": [opt_id_1, opt_id_2, ...]}
             $table->json('answer_data');
             $table->boolean('is_correct')->default(false);
             $table->timestamps();

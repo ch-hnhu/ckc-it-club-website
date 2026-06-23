@@ -26,10 +26,14 @@ export interface Course {
 	/** Tổng thời lượng (phút) */
 	duration_minutes: number;
 	enrolled_count: number;
+	/** Số người đã "quan tâm" khoá học */
+	followers_count: number;
 	categories: CourseCategory[];
 	is_featured?: boolean;
 	/** Tiến độ của user hiện tại (0-100), null nếu chưa ghi danh */
 	progress: number | null;
+	/** User hiện tại có đang "quan tâm" khoá học không */
+	is_interested?: boolean;
 	created_at: string;
 	updated_at: string;
 }
@@ -46,6 +50,8 @@ export interface CourseContentItem {
 	completed?: boolean;
 	/** URL ngoài (Google Drive, Google Forms...) */
 	url?: string;
+	/** Hạn nộp (chỉ có ở bài tập) — ISO string, null nếu không đặt hạn */
+	deadline?: string | null;
 }
 
 /** Một buổi học (chương) trong khóa học */
@@ -157,6 +163,71 @@ export interface VideoDetail {
 	prev_lesson: { slug: string; title: string } | null;
 	/** Buổi kế tiếp (điều hướng) */
 	next_lesson: { slug: string; title: string } | null;
+}
+
+// ─── Quiz (làm bài kiểu Duolingo) ────────────────────────────────────────────
+
+/** Loại câu hỏi đã lưu (DB) + các template authoring của trình tạo quiz. */
+export type QuizQuestionType =
+	| "multiple_choice"
+	| "multiple_select"
+	| "fill_blank"
+	| "word_bank_fill_blank"
+	| "matching"
+	| "word_order";
+
+export interface QuizOptionMetadata {
+	side?: "left" | "right";
+	pairId?: string;
+	slot_index?: number;
+}
+
+export interface QuizOption {
+	id: number;
+	content: string | null;
+	image: string | null;
+	is_correct: boolean;
+	order: number;
+	metadata: QuizOptionMetadata | null;
+}
+
+export interface QuizQuestion {
+	id: number;
+	/** Loại đã lưu (dùng để chấm) */
+	type: QuizQuestionType;
+	/** Template hiển thị */
+	ui_type: QuizQuestionType;
+	content: string;
+	explanation: string | null;
+	image: string | null;
+	options: QuizOption[];
+}
+
+/** Payload khi mở quiz để làm bài. */
+export interface QuizPlay {
+	quiz_id: number;
+	pass_threshold: number;
+	/** User đã từng đạt quiz này chưa */
+	completed: boolean;
+	course: { slug: string; title: string };
+	lesson: { slug: string; title: string; order: number };
+	questions: QuizQuestion[];
+}
+
+/** Một câu trả lời gửi lên khi nộp bài. */
+export interface QuizAnswerInput {
+	question_id: number;
+	answer_data: Record<string, unknown>;
+}
+
+/** Kết quả chấm điểm trả về từ server. */
+export interface QuizSubmitResult {
+	score: number;
+	is_passed: boolean;
+	pass_threshold: number;
+	correct_count: number;
+	total: number;
+	results: Array<{ question_id: number; is_correct: boolean }>;
 }
 
 export interface CourseListParams {

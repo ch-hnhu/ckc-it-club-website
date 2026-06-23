@@ -13,8 +13,9 @@ class QuestionTypeSeeder extends Seeder
             ['key' => 'multiple_choice', 'label' => 'Trắc nghiệm'],
             ['key' => 'multiple_select', 'label' => 'Chọn nhiều đáp án'],
             ['key' => 'fill_blank', 'label' => 'Điền vào chỗ trống'],
+            ['key' => 'word_bank_fill_blank', 'label' => 'Chọn từ điền vào chỗ trống'],
             ['key' => 'matching', 'label' => 'Ghép đôi'],
-            ['key' => 'ordering', 'label' => 'Sắp xếp'],
+            ['key' => 'word_order', 'label' => 'Sắp xếp từ thành câu'],
         ];
 
         foreach ($types as $type) {

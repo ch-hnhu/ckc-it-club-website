@@ -50,6 +50,38 @@ class PointRuleSeeder extends Seeder
                 'max_per_day' => null,
                 'max_per_week' => null,
             ],
+            [
+                'key' => 'learning_center.video_completed',
+                'name' => 'Hoàn thành video bài giảng',
+                'description' => 'Cộng điểm khi xem hết (≥80%) video một buổi học (mỗi buổi tính 1 lần).',
+                'points' => 5,
+                'max_per_day' => null,
+                'max_per_week' => null,
+            ],
+            [
+                'key' => 'learning_center.quiz_passed',
+                'name' => 'Đạt quiz buổi học',
+                'description' => 'Cộng điểm khi đạt ngưỡng điểm quiz của một buổi học (mỗi buổi tính 1 lần).',
+                'points' => 10,
+                'max_per_day' => null,
+                'max_per_week' => null,
+            ],
+            [
+                'key' => 'learning_center.assignment_completed',
+                'name' => 'Hoàn thành bài tập',
+                'description' => 'Cộng điểm khi bài tập một buổi học được chấm đạt ngưỡng (mỗi buổi tính 1 lần).',
+                'points' => 10,
+                'max_per_day' => null,
+                'max_per_week' => null,
+            ],
+            [
+                'key' => 'learning_center.course_completed',
+                'name' => 'Hoàn thành khóa học',
+                'description' => 'Cộng điểm thưởng khi hoàn thành toàn bộ khóa học (mỗi khóa tính 1 lần).',
+                'points' => 50,
+                'max_per_day' => null,
+                'max_per_week' => null,
+            ],
         ];
 
         foreach ($rules as $rule) {

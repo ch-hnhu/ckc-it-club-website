@@ -89,6 +89,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 	const lectureCourseSlug = lecturePathParts[1] ?? "";
 	const lectureLessonSlug = lecturePathParts[2] ?? "";
 	const lectureVideoSlug = lecturePathParts[3] ?? "";
+	// Trang làm quiz dùng chung layout breadcrumb với trang video (cùng cấp URL).
+	const isQuizPage = isLectureVideoPage && lectureVideoSlug === "quiz";
 	const userDisplayName = user?.name || user?.email || "CKC member";
 	const userAvatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(
 		userDisplayName,
@@ -106,10 +108,18 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 		}
 
 		let cancelled = false;
-		learningService
-			.getVideo(lectureCourseSlug, lectureLessonSlug, lectureVideoSlug)
-			.then((res) => {
-				if (!cancelled) setBreadcrumbLessonTitle(res.data.lesson.title);
+		// Trang quiz lấy tên buổi học qua getLesson (không có video để gọi getVideo).
+		const request = isQuizPage
+			? learningService
+					.getLesson(lectureCourseSlug, lectureLessonSlug)
+					.then((res) => res.data.title)
+			: learningService
+					.getVideo(lectureCourseSlug, lectureLessonSlug, lectureVideoSlug)
+					.then((res) => res.data.lesson.title);
+
+		request
+			.then((title) => {
+				if (!cancelled) setBreadcrumbLessonTitle(title);
 			})
 			.catch(() => {
 				if (!cancelled) setBreadcrumbLessonTitle("");
@@ -118,7 +128,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 		return () => {
 			cancelled = true;
 		};
-	}, [isLectureVideoPage, lectureCourseSlug, lectureLessonSlug, lectureVideoSlug]);
+	}, [isLectureVideoPage, isQuizPage, lectureCourseSlug, lectureLessonSlug, lectureVideoSlug]);
 
 	useEffect(() => {
 		if (!isProfileOpen) return;
@@ -326,7 +336,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 									<BreadcrumbSeparator />
 									<BreadcrumbItem className='min-w-0'>
 										<BreadcrumbPage className='font-bold text-black'>
-											Video bài giảng
+											{isQuizPage ? "Quiz" : "Video bài giảng"}
 										</BreadcrumbPage>
 									</BreadcrumbItem>
 								</BreadcrumbList>

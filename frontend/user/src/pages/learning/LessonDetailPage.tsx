@@ -334,22 +334,32 @@ const LessonDetailPage: React.FC = () => {
 												const exerciseOnlineLocked =
 													action.key === "exercise" &&
 													lesson.enrollment_track !== "offline";
+												// Đã qua hạn nộp và chưa nộp → khoá nút (đã nộp rồi thì vẫn cho xem lại).
+												const exerciseDeadlinePassed =
+													action.key === "exercise" &&
+													!lesson.exercise?.completed &&
+													Boolean(lesson.exercise?.deadline) &&
+													new Date(lesson.exercise!.deadline!) < new Date();
+												const exerciseDisabled =
+													exerciseOnlineLocked || exerciseDeadlinePassed;
 												return (
 													<ActionCard
 														key={action.key}
 														config={action}
 														item={lesson[action.key]}
-														disabled={exerciseOnlineLocked}
+														disabled={exerciseDisabled}
 														disabledLabel={
 															exerciseOnlineLocked
 																? "Chỉ dành cho lớp offline"
-																: undefined
+																: exerciseDeadlinePassed
+																	? "Đã quá hạn nộp"
+																	: undefined
 														}
 														internalTo={
 															action.key === "video" && lesson.video?.slug
 																? `/khoa-hoc/${slug}/${lessonSlug}/${lesson.video.slug}`
-																: action.key === "quiz" && lesson.quiz?.slug
-																	? `/khoa-hoc/${slug}/${lessonSlug}/quiz/${lesson.quiz.slug}`
+																: action.key === "quiz" && lesson.quiz
+																	? `/khoa-hoc/${slug}/${lessonSlug}/quiz`
 																	: undefined
 														}
 													/>

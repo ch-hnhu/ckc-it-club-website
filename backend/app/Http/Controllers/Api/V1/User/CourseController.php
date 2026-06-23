@@ -7,8 +7,17 @@ use App\Enums\LessonSectionType;
 use App\Enums\TagModelType;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Course;
+use App\Models\CourseEnrollment;
+use App\Models\CourseFollower;
 use App\Models\Lesson;
+use App\Models\LessonProgress;
+use App\Models\LessonQrTicket;
+use App\Models\PointRule;
+use App\Models\PointTransaction;
 use App\Models\Tag;
+use App\Services\CourseCompletionService;
+use App\Services\CourseEnrollmentService;
+use App\Services\PointService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -35,6 +44,7 @@ class CourseController extends BaseApiController
             ->withCount([
                 'lessons as lessons_count' => fn ($q) => $q->where('status', CourseStatus::PUBLISHED->value),
                 'enrollments as enrolled_count',
+                'followers as followers_count',
             ])
             ->withSum([
                 'lessons as total_video_seconds' => fn ($q) => $q->where('status', CourseStatus::PUBLISHED->value),
@@ -52,9 +62,13 @@ class CourseController extends BaseApiController
             fn ($q) => $q->orderBy('created_at', $order),
         );
 
+        $userId = auth('sanctum')->id();
+        $query->when($userId, fn ($q) => $q->withExists([
+            'followers as is_interested' => fn ($f) => $f->where('user_id', $userId),
+        ]));
+
         $courses = $query->paginate($perPage);
 
-        $userId = auth('sanctum')->id();
         $courses->getCollection()->transform(fn (Course $c) => $this->transformCourseCard($c, $userId));
 
         return $this->paginatedResponse($courses, 'Lấy danh sách khoá học thành công.');
@@ -98,6 +112,8 @@ class CourseController extends BaseApiController
         // Aggregate mà transformCourseCard cần (show() không đi qua withCount/withSum của index()).
         $course->setAttribute('enrolled_count', $course->enrollments()->count());
         $course->setAttribute('total_video_seconds', (int) $lessons->sum('video_duration'));
+        $course->setAttribute('followers_count', $course->followers()->count());
+        $course->setAttribute('is_interested', $course->isFollowedBy($userId));
 
         $card = $this->transformCourseCard($course, $userId, $lessons->count());
 
@@ -107,9 +123,8 @@ class CourseController extends BaseApiController
             'enrollment_start' => $course->enrollment_start?->toIso8601String(),
             'enrollment_deadline' => $course->enrollment_deadline?->toIso8601String(),
             'course_end' => $course->course_end?->toIso8601String(),
-            'is_interested' => false, // TODO(G2): bảng theo dõi/quan tâm khoá học
             'lessons' => $lessons->map(fn (Lesson $l) => $this->transformLessonRow($l, $userId, $enrollment?->track))->all(),
-            'stats' => $this->buildStats($course, $lessons, $userId),
+            'stats' => $this->buildStats($course, $lessons, $userId, $enrollment),
         ]);
 
         return $this->successResponse(true, $data, 'Lấy thông tin khoá học thành công.');
@@ -180,11 +195,12 @@ class CourseController extends BaseApiController
                     : 'Google Forms',
                 'url' => $lesson->assignment_url,
                 'completed' => $sections['assignment'] ?? false,
+                'deadline' => $lesson->assignment_deadline?->toIso8601String(),
             ] : null,
             'quiz' => $quiz ? [
                 'id' => $quiz->id,
                 'slug' => 'quiz',
-                'title' => 'Quiz kiểm tra: ' . $lesson->title,
+                'title' => 'Quiz kiểm tra buổi ' . $lesson->order,
                 'meta' => $quiz->questions->count() . ' câu hỏi',
                 'completed' => $sections['quiz'] ?? false,
             ] : null,
@@ -236,6 +252,158 @@ class CourseController extends BaseApiController
         return $this->successResponse(true, $data, 'Lấy thông tin video thành công.');
     }
 
+    /**
+     * Ghi danh khoá học theo hình thức (track) offline hoặc online.
+     *
+     * - offline: chỉ trong cửa sổ ghi danh (enrollment_start..enrollment_deadline),
+     *   giới hạn `max_offline_slots`, chống race bằng khoá hàng trong transaction.
+     * - online: mở tới khi khoá kết thúc (course_end).
+     *
+     * Điều kiện tư cách giống Sự kiện: email sinh viên Cao Thắng hoặc thành viên CLB.
+     */
+    public function enroll(Request $request, Course $course): JsonResponse
+    {
+        $validated = $request->validate([
+            'track' => ['required', 'in:offline,online'],
+        ]);
+
+        $enrollment = app(CourseEnrollmentService::class)
+            ->enroll($course, $request->user(), $validated['track']);
+
+        return $this->createdResponse(['track' => $enrollment->track], 'Ghi danh khoá học thành công.');
+    }
+
+    /**
+     * Bật/tắt trạng thái "quan tâm" khoá học của user hiện tại.
+     */
+    public function toggleFollow(Request $request, Course $course): JsonResponse
+    {
+        abort_if($course->status !== CourseStatus::PUBLISHED, 404);
+
+        $userId = $request->user()->id;
+
+        $existing = $course->followers()->where('user_id', $userId)->first();
+
+        if ($existing) {
+            $existing->delete();
+            $isInterested = false;
+        } else {
+            CourseFollower::create(['user_id' => $userId, 'course_id' => $course->id]);
+            $isInterested = true;
+        }
+
+        return $this->successResponse(
+            true,
+            [
+                'is_interested' => $isInterested,
+                'followers_count' => $course->followers()->count(),
+            ],
+            $isInterested ? 'Đã thêm vào danh sách quan tâm.' : 'Đã bỏ quan tâm khoá học.',
+        );
+    }
+
+    /**
+     * Đăng ký "sẽ tham gia" một buổi học offline → cấp vé QR điểm danh.
+     * Idempotent: nếu đã có vé thì trả lại vé cũ (token + used_at).
+     */
+    public function createQrTicket(Request $request, Course $course, string $lessonSlug): JsonResponse
+    {
+        abort_if($course->status !== CourseStatus::PUBLISHED, 404);
+
+        $lesson = $course->lessons()
+            ->where('status', CourseStatus::PUBLISHED->value)
+            ->where('slug', $lessonSlug)
+            ->first();
+        abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
+
+        $userId = $request->user()->id;
+
+        // Vé QR chỉ dành cho học viên đã ghi danh lớp offline.
+        $enrollment = $course->enrollmentFor($userId);
+        abort_if(
+            ! $enrollment || $enrollment->track !== 'offline',
+            422,
+            'Chỉ học viên đã ghi danh lớp offline mới có thể đăng ký tham gia buổi học.'
+        );
+
+        // Buổi đã kết thúc thì không cấp vé mới nữa.
+        abort_if(
+            $lesson->session_end && now()->gt($lesson->session_end),
+            422,
+            'Buổi học đã kết thúc, không thể đăng ký tham gia.'
+        );
+
+        $ticket = LessonQrTicket::firstOrCreate(
+            ['user_id' => $userId, 'lesson_id' => $lesson->id],
+            ['token' => LessonQrTicket::generateToken($lesson->id, $userId)],
+        );
+
+        return $this->successResponse(
+            true,
+            ['token' => $ticket->token, 'used_at' => $ticket->used_at?->toIso8601String()],
+            'Đã đăng ký tham gia buổi học. Xuất trình mã QR để điểm danh.',
+        );
+    }
+
+    /**
+     * Ghi nhận % xem video bài giảng (hybrid: tự động qua YouTube IFrame API + nút đánh dấu tay).
+     * Chỉ học viên đã ghi danh khoá học mới được ghi tiến độ. Giữ % cao nhất đã đạt được
+     * (không tụt lùi nếu xem lại từ đầu); is_completed khi đạt ngưỡng (LessonSectionType::VIDEO, 80%).
+     */
+    public function markVideoProgress(Request $request, Course $course, string $lessonSlug): JsonResponse
+    {
+        abort_if($course->status !== CourseStatus::PUBLISHED, 404);
+
+        $lesson = $course->lessons()
+            ->where('status', CourseStatus::PUBLISHED->value)
+            ->where('slug', $lessonSlug)
+            ->first();
+        abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
+        abort_if(! $lesson->playableVideoUrl(), 422, 'Buổi học này chưa có video bài giảng.');
+
+        $userId = $request->user()->id;
+        $enrollment = $course->enrollmentFor($userId);
+        abort_if(! $enrollment, 403, 'Bạn cần ghi danh khoá học trước khi xem video.');
+
+        $validated = $request->validate([
+            'watch_percentage' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $existing = LessonProgress::where('user_id', $userId)
+            ->where('lesson_id', $lesson->id)
+            ->where('section_type', LessonSectionType::VIDEO->value)
+            ->first();
+
+        $bestPercentage = max((int) $validated['watch_percentage'], (int) ($existing?->watch_percentage ?? 0));
+        $isCompleted = $bestPercentage >= LessonSectionType::VIDEO->completionThreshold();
+        $wasCompleted = (bool) ($existing?->is_completed);
+
+        $progress = LessonProgress::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'lesson_id' => $lesson->id,
+                'section_type' => LessonSectionType::VIDEO->value,
+            ],
+            [
+                'watch_percentage' => $bestPercentage,
+                'is_completed' => $isCompleted,
+                'completed_at' => $isCompleted ? ($existing?->completed_at ?? now()) : null,
+            ],
+        );
+
+        if (! $wasCompleted && $isCompleted) {
+            PointService::award($request->user(), 'learning_center.video_completed', $progress);
+        }
+
+        app(CourseCompletionService::class)->recalc($enrollment);
+
+        return $this->successResponse(
+            true,
+            ['watch_percentage' => $progress->watch_percentage, 'is_completed' => $progress->is_completed],
+            'Đã ghi nhận tiến độ xem video.',
+        );
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
@@ -261,12 +429,14 @@ class CourseController extends BaseApiController
             'lessons_count' => $lessonsCount ?? (int) ($course->lessons_count ?? 0),
             'duration_minutes' => (int) round(((int) ($course->total_video_seconds ?? 0)) / 60),
             'enrolled_count' => (int) ($course->enrolled_count ?? 0),
+            'followers_count' => (int) ($course->followers_count ?? 0),
             'categories' => $course->tags->map(fn (Tag $t) => [
                 'id' => $t->id,
                 'name' => $t->name,
                 'color' => null,
             ])->all(),
             'progress' => $progress !== null ? (int) $progress : null,
+            'is_interested' => (bool) ($course->is_interested ?? false),
             'created_at' => $course->created_at?->toIso8601String(),
             'updated_at' => $course->updated_at?->toIso8601String(),
         ];
@@ -359,9 +529,10 @@ class CourseController extends BaseApiController
     /**
      * Thống kê tiến độ hiển thị ở sidebar trang tổng quan.
      */
-    private function buildStats(Course $course, $lessons, ?int $userId): array
+    private function buildStats(Course $course, $lessons, ?int $userId, ?CourseEnrollment $enrollment): array
     {
         $attendanceTotal = $lessons->count();
+        $videoLessons = $lessons->filter(fn (Lesson $l) => (bool) $l->playableVideoUrl());
         $exerciseLessons = $lessons->filter(fn (Lesson $l) => (bool) $l->assignment_url);
         $quizLessons = $lessons->filter(fn (Lesson $l) => (bool) $l->quiz);
 
@@ -388,6 +559,22 @@ class CourseController extends BaseApiController
             }
         }
 
+        $xpRules = PointRule::whereIn('key', [
+            'learning_center.video_completed',
+            'learning_center.quiz_passed',
+            'learning_center.assignment_completed',
+            'learning_center.course_completed',
+        ])->pluck('points', 'key');
+
+        $xpTotal = $videoLessons->count() * (int) ($xpRules['learning_center.video_completed'] ?? 0)
+            + $quizLessons->count() * (int) ($xpRules['learning_center.quiz_passed'] ?? 0)
+            + $exerciseLessons->count() * (int) ($xpRules['learning_center.assignment_completed'] ?? 0)
+            + (int) ($xpRules['learning_center.course_completed'] ?? 0);
+
+        $xpEarned = $userId
+            ? $this->xpEarnedForCourse($lessons, $userId, $enrollment)
+            : 0;
+
         return [
             'attendance_done' => $attendanceDone,
             'attendance_total' => $attendanceTotal,
@@ -397,11 +584,44 @@ class CourseController extends BaseApiController
             'projects_total' => 0,
             'quizzes_done' => $quizzesDone,
             'quizzes_total' => $quizLessons->count(),
-            'xp_earned' => 0,       // TODO(G2): tích hợp gamification
-            'xp_total' => 0,
+            'xp_earned' => $xpEarned,
+            'xp_total' => $xpTotal,
             'badges_earned' => 0,
             'badges_total' => 0,
         ];
+    }
+
+    /**
+     * Tổng điểm XP đã cộng thật (point_transactions) cho user trong khoá học này — gồm
+     * điểm từng buổi (video/quiz/bài tập) và điểm thưởng hoàn thành khoá (nếu đã đạt).
+     */
+    private function xpEarnedForCourse($lessons, int $userId, ?CourseEnrollment $enrollment): int
+    {
+        $progressIds = LessonProgress::where('user_id', $userId)
+            ->whereIn('lesson_id', $lessons->pluck('id'))
+            ->pluck('id');
+
+        $lessonXp = $progressIds->isNotEmpty()
+            ? (int) PointTransaction::where('user_id', $userId)
+                ->where('source_type', 'lesson_progress')
+                ->whereIn('source_id', $progressIds)
+                ->whereHas('pointRule', fn ($q) => $q->whereIn('key', [
+                    'learning_center.video_completed',
+                    'learning_center.quiz_passed',
+                    'learning_center.assignment_completed',
+                ]))
+                ->sum('points')
+            : 0;
+
+        $courseXp = $enrollment
+            ? (int) PointTransaction::where('user_id', $userId)
+                ->where('source_type', 'course_enrollment')
+                ->where('source_id', $enrollment->id)
+                ->whereHas('pointRule', fn ($q) => $q->where('key', 'learning_center.course_completed'))
+                ->sum('points')
+            : 0;
+
+        return $lessonXp + $courseXp;
     }
 
     /**

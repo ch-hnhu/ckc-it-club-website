@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Api\V1\Admin\LessonController as AdminLessonController;
+use App\Http\Controllers\Api\V1\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
 use App\Http\Controllers\Api\V1\Admin\RankController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\CourseController as UserCourseController;
+use App\Http\Controllers\Api\V1\User\QuizController as UserQuizController;
 use App\Http\Controllers\Api\V1\User\EventController as UserEventController;
 use App\Http\Controllers\Api\V1\User\GamificationController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
@@ -169,7 +171,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/categories', [UserCourseController::class, 'categories']);
         Route::get('/courses/{course:slug}', [UserCourseController::class, 'show']);
         Route::get('/courses/{course:slug}/lessons/{lessonSlug}', [UserCourseController::class, 'lesson']);
+        Route::get('/courses/{course:slug}/lessons/{lessonSlug}/quiz', [UserQuizController::class, 'show']);
         Route::get('/courses/{course:slug}/lessons/{lessonSlug}/videos/{videoSlug}', [UserCourseController::class, 'video']);
+
+        // Authenticated learning actions
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/courses/{course:slug}/enroll', [UserCourseController::class, 'enroll']);
+            Route::post('/courses/{course:slug}/follow', [UserCourseController::class, 'toggleFollow']);
+            Route::post('/courses/{course:slug}/lessons/{lessonSlug}/qr-ticket', [UserCourseController::class, 'createQrTicket']);
+            Route::post('/courses/{course:slug}/lessons/{lessonSlug}/progress', [UserCourseController::class, 'markVideoProgress']);
+        });
     });
 
     // Registration with OTP verification (throttled: 5 attempts per minute per IP)
@@ -195,6 +206,9 @@ Route::prefix('v1')->group(function () {
 
     // user logged-in routes
     Route::middleware('auth:sanctum')->group(function () {
+        // learning — nộp bài quiz (cần đăng nhập để ghi nhận tiến độ)
+        Route::post('/learning/courses/{course:slug}/lessons/{lessonSlug}/quiz/submit', [UserQuizController::class, 'submit']);
+
         // user notifications (realtime + REST)
         Route::prefix('user-notifications')->group(function () {
             Route::get('/', [UserNotificationController::class, 'index']);
@@ -491,6 +505,19 @@ Route::prefix('v1')->group(function () {
             Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::delete('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'destroy']);
             Route::post('courses/{course}/lessons/{lesson}/check-in', [AdminLessonController::class, 'checkIn']);
+            Route::get('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'grades']);
+            Route::put('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'saveGrades']);
+            Route::get('courses/{course}/enrollable-users', [AdminCourseController::class, 'searchEnrollableUsers']);
+            Route::post('courses/{course}/enrollments', [AdminCourseController::class, 'enrollStudent']);
+            Route::patch('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'updateEnrollmentTrack']);
+            Route::delete('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'removeEnrollment']);
+            Route::post('courses/{course}/certificates/{certificate}/revoke', [AdminCourseController::class, 'revokeCertificate']);
+            Route::post('courses/{course}/certificates/{certificate}/reissue', [AdminCourseController::class, 'reissueCertificate']);
+        });
+        // quiz của buổi học — quyền riêng cho Trung tâm đào tạo
+        Route::middleware('permission:quizzes.manage')->group(function () {
+            Route::get('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'show']);
+            Route::put('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert']);
         });
 
         // events (admin)

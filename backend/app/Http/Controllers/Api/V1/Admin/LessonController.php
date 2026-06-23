@@ -3,13 +3,19 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
+use App\Enums\LessonSectionType;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\LessonAttendance;
+use App\Models\LessonProgress;
 use App\Models\LessonQrTicket;
+use App\Models\User;
+use App\Services\CourseCompletionService;
+use App\Services\PointService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -101,6 +107,10 @@ class LessonController extends BaseApiController
             $ticket->update(['used_at' => now()]);
         }
 
+        if ($enrollment = $course->enrollmentFor($ticket->user_id)) {
+            app(CourseCompletionService::class)->recalc($enrollment);
+        }
+
         $user = $ticket->user;
         $payload = [
             'already' => ! $attendance->wasRecentlyCreated,
@@ -108,11 +118,7 @@ class LessonController extends BaseApiController
                 'id' => $user?->id,
                 'full_name' => $user?->full_name,
                 'email' => $user?->email,
-                'avatar' => $user?->avatar
-                    ? (str_starts_with($user->avatar, 'http') || str_starts_with($user->avatar, '/')
-                        ? $user->avatar
-                        : Storage::disk('public')->url($user->avatar))
-                    : null,
+                'avatar' => $this->resolveAvatar($user?->avatar),
             ],
         ];
 
@@ -123,11 +129,137 @@ class LessonController extends BaseApiController
         return $this->successResponse(true, $payload, $message);
     }
 
+    /**
+     * Danh sách học viên track offline đã ghi danh + điểm bài tập hiện tại (nếu có) của buổi học.
+     * Chấm bài chỉ áp dụng cho track offline (online tính tiến độ theo % xem video).
+     */
+    public function grades(Course $course, Lesson $lesson): JsonResponse
+    {
+        $this->assertBelongsTo($course, $lesson);
+
+        $scores = LessonProgress::query()
+            ->where('lesson_id', $lesson->id)
+            ->where('section_type', LessonSectionType::ASSIGNMENT)
+            ->pluck('score', 'user_id');
+
+        $students = $course->enrollments()
+            ->where('track', 'offline')
+            ->with('user:id,full_name,email,avatar')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn ($e) => [
+                'user_id' => $e->user_id,
+                'full_name' => $e->user?->full_name,
+                'email' => $e->user?->email,
+                'avatar' => $this->resolveAvatar($e->user?->avatar),
+                'track' => $e->track,
+                'score' => isset($scores[$e->user_id]) ? (float) $scores[$e->user_id] : null,
+            ])
+            ->all();
+
+        return $this->successResponse(true, $students, ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Lưu điểm bài tập cho nhiều học viên track offline cùng lúc. score = null → bỏ điểm (chưa chấm).
+     * is_completed tính theo ngưỡng của LessonSectionType::ASSIGNMENT (80đ).
+     */
+    public function saveGrades(Request $request, Course $course, Lesson $lesson): JsonResponse
+    {
+        $this->assertBelongsTo($course, $lesson);
+
+        $data = $request->validate([
+            'grades' => 'required|array',
+            'grades.*.user_id' => 'required|integer',
+            'grades.*.score' => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        $offlineUserIds = $course->enrollments()->where('track', 'offline')->pluck('user_id')->all();
+        $threshold = LessonSectionType::ASSIGNMENT->completionThreshold();
+        $newlyCompleted = [];
+
+        DB::transaction(function () use ($data, $lesson, $offlineUserIds, $threshold, &$newlyCompleted) {
+            foreach ($data['grades'] as $grade) {
+                abort_if(
+                    ! in_array($grade['user_id'], $offlineUserIds, true),
+                    422,
+                    'Chỉ chấm bài tập cho học viên track offline.'
+                );
+
+                if ($grade['score'] === null) {
+                    LessonProgress::where([
+                        'user_id' => $grade['user_id'],
+                        'lesson_id' => $lesson->id,
+                        'section_type' => LessonSectionType::ASSIGNMENT,
+                    ])->delete();
+
+                    continue;
+                }
+
+                $existing = LessonProgress::where([
+                    'user_id' => $grade['user_id'],
+                    'lesson_id' => $lesson->id,
+                    'section_type' => LessonSectionType::ASSIGNMENT,
+                ])->first();
+
+                $isCompleted = $grade['score'] >= $threshold;
+
+                $progress = LessonProgress::updateOrCreate(
+                    [
+                        'user_id' => $grade['user_id'],
+                        'lesson_id' => $lesson->id,
+                        'section_type' => LessonSectionType::ASSIGNMENT,
+                    ],
+                    [
+                        'score' => $grade['score'],
+                        'is_completed' => $isCompleted,
+                        'completed_at' => $isCompleted ? now() : null,
+                    ],
+                );
+
+                if (! ((bool) $existing?->is_completed) && $isCompleted) {
+                    $newlyCompleted[] = $progress;
+                }
+            }
+        });
+
+        if ($newlyCompleted !== []) {
+            $usersById = User::whereIn('id', array_map(fn ($p) => $p->user_id, $newlyCompleted))
+                ->get()
+                ->keyBy('id');
+            foreach ($newlyCompleted as $progress) {
+                if ($user = $usersById->get($progress->user_id)) {
+                    PointService::award($user, 'learning_center.assignment_completed', $progress);
+                }
+            }
+        }
+
+        $affectedUserIds = collect($data['grades'])->pluck('user_id')->unique();
+        $completionService = app(CourseCompletionService::class);
+        $course->enrollments()
+            ->whereIn('user_id', $affectedUserIds)
+            ->get()
+            ->each(fn ($enrollment) => $completionService->recalc($enrollment));
+
+        return $this->grades($course, $lesson);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private function assertBelongsTo(Course $course, Lesson $lesson): void
     {
         abort_if($lesson->course_id !== $course->id, 404, 'Buổi học không thuộc khóa học này.');
+    }
+
+    private function resolveAvatar(?string $avatar): ?string
+    {
+        if (! $avatar) {
+            return null;
+        }
+
+        return str_starts_with($avatar, 'http') || str_starts_with($avatar, '/')
+            ? $avatar
+            : Storage::disk('public')->url($avatar);
     }
 
     /**
