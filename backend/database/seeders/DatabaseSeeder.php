@@ -39,6 +39,7 @@ class DatabaseSeeder extends Seeder
             PointRuleSeeder::class,
             QuestionTypeSeeder::class,
             LearningCenterSeeder::class,
+            CertificateTemplateSeeder::class,
         ]);
     }
 }

@@ -38,9 +38,11 @@ export interface CourseEnrollmentRow {
 export interface CourseCertificateRow {
 	id: number;
 	cert_code: string;
+	cert_url: string | null;
 	user: { id: number; full_name: string; email: string };
 	track: EnrollmentTrack;
 	issued_at: string;
+	revoked_at: string | null;
 }
 
 export interface AdminCourseDetail extends AdminCourse {

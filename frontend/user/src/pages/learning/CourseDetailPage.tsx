@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
 	ArrowLeft,
 	Award,
@@ -9,6 +9,7 @@ import {
 	Check,
 	ChevronRight,
 	Clock,
+	Download,
 	Dumbbell,
 	GraduationCap,
 	ListChecks,
@@ -17,7 +18,9 @@ import {
 	QrCode,
 	Sparkles,
 	Users,
+	X,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Link, useLocation, useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { learningService } from "@/services/learning.service";
@@ -57,8 +60,19 @@ const LessonRow: React.FC<{
 	track: CourseTrack | null;
 	isActiveQrLesson: boolean;
 	isFrontendLocked: boolean;
-	onCreateTicket: (lessonId: number) => void;
-}> = ({ courseSlug, lesson, track, isActiveQrLesson, isFrontendLocked, onCreateTicket }) => {
+	creatingTicket: boolean;
+	onCreateTicket: (lesson: CourseLesson) => void;
+	onShowTicket: (lesson: CourseLesson) => void;
+}> = ({
+	courseSlug,
+	lesson,
+	track,
+	isActiveQrLesson,
+	isFrontendLocked,
+	creatingTicket,
+	onCreateTicket,
+	onShowTicket,
+}) => {
 	const navigate = useNavigate();
 	const locked = Boolean(lesson.is_locked) || isFrontendLocked;
 	const isOffline = track === "offline";
@@ -100,23 +114,27 @@ const LessonRow: React.FC<{
 							Đã điểm danh
 						</span>
 					) : lesson.qr_ticket ? (
-						<Link
-							to={`/khoa-hoc/${courseSlug}/${lesson.slug}/qr`}
-							onClick={(e) => e.stopPropagation()}
-							className='flex items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-primary)] px-3 py-1.5 font-heading text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none'>
-							<QrCode className='h-3.5 w-3.5' strokeWidth={2.5} />
-							QR điểm danh
-						</Link>
-					) : (
 						<button
 							type='button'
 							onClick={(e) => {
 								e.stopPropagation();
-								onCreateTicket(lesson.id);
+								onShowTicket(lesson);
 							}}
-							className='flex items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 py-1.5 font-heading text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none'>
+							className='flex items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-primary)] px-3 py-1.5 font-heading text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none'>
+							<QrCode className='h-3.5 w-3.5' strokeWidth={2.5} />
+							QR điểm danh
+						</button>
+					) : (
+						<button
+							type='button'
+							disabled={creatingTicket}
+							onClick={(e) => {
+								e.stopPropagation();
+								onCreateTicket(lesson);
+							}}
+							className='flex items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 py-1.5 font-heading text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none disabled:opacity-60 disabled:cursor-not-allowed'>
 							<CalendarCheck className='h-3.5 w-3.5' strokeWidth={2.5} />
-							Sẽ tham gia
+							{creatingTicket ? "Đang đăng ký..." : "Sẽ tham gia"}
 						</button>
 					)}
 				</div>
@@ -127,6 +145,240 @@ const LessonRow: React.FC<{
 			) : (
 				<ChevronRight className='h-5 w-5 shrink-0 text-gray-400 transition group-hover:translate-x-0.5 group-hover:text-black' />
 			)}
+		</div>
+	);
+};
+
+// ─── Modal vé QR điểm danh buổi học ───────────────────────────────────────────────
+
+function toSafeFileName(value: string): string {
+	const normalized = value
+		.normalize("NFD")
+		.replace(/[̀-ͯ]/g, "")
+		.replace(/đ/g, "d")
+		.replace(/Đ/g, "D")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+
+	return normalized || "buoi-hoc";
+}
+
+const LessonTicketModal: React.FC<{
+	qrToken: string;
+	lesson: CourseLesson;
+	courseTitle: string;
+	onClose: () => void;
+}> = ({ qrToken, lesson, courseTitle, onClose }) => {
+	const qrRef = useRef<SVGSVGElement | null>(null);
+
+	const handleDownloadQr = async () => {
+		const svg = qrRef.current;
+		if (!svg) {
+			toast.error("Không thể tải mã QR. Vui lòng thử lại.");
+			return;
+		}
+
+		try {
+			// Đảm bảo web-font đã sẵn sàng để vẽ chữ đúng kiểu thiết kế.
+			if (document.fonts?.ready) await document.fonts.ready;
+
+			// 1. Render QR (SVG) ra ảnh để vẽ lên vé.
+			const qrImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+				const cloned = svg.cloneNode(true) as SVGSVGElement;
+				cloned.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+				cloned.setAttribute("width", "480");
+				cloned.setAttribute("height", "480");
+				const url = URL.createObjectURL(
+					new Blob([new XMLSerializer().serializeToString(cloned)], {
+						type: "image/svg+xml;charset=utf-8",
+					}),
+				);
+				const img = new Image();
+				img.onload = () => {
+					URL.revokeObjectURL(url);
+					resolve(img);
+				};
+				img.onerror = () => {
+					URL.revokeObjectURL(url);
+					reject(new Error("qr render failed"));
+				};
+				img.src = url;
+			});
+
+			// 2. Bố cục vé (giống modal trên web): card trắng, viền đen, bóng đổ.
+			const HEADING = '"Be Vietnam Pro", sans-serif';
+			const BODY = '"Inter", sans-serif';
+			const W = 600;
+			const shadow = 14;
+			const pad = 48;
+			const cardW = W - shadow;
+			const contentW = cardW - pad * 2;
+			const cx = cardW / 2;
+
+			const measure = document.createElement("canvas").getContext("2d")!;
+			const wrap = (text: string, font: string, maxW: number): string[] => {
+				measure.font = font;
+				const lines: string[] = [];
+				let line = "";
+				for (const word of text.split(/\s+/)) {
+					const test = line ? `${line} ${word}` : word;
+					if (measure.measureText(test).width > maxW && line) {
+						lines.push(line);
+						line = word;
+					} else {
+						line = test;
+					}
+				}
+				if (line) lines.push(line);
+				return lines;
+			};
+
+			const lessonFont = `600 22px ${HEADING}`;
+			const courseFont = `500 15px ${BODY}`;
+			const noteFont = `500 13px ${BODY}`;
+			const note = "Xuất trình mã QR này tại buổi học để được điểm danh.";
+
+			const lessonLines = wrap(lesson.title, lessonFont, contentW);
+			const courseLines = courseTitle ? wrap(courseTitle, courseFont, contentW) : [];
+			const noteLines = wrap(note, noteFont, contentW);
+			const qrBox = 300;
+
+			// Tính chiều cao động theo số dòng (mỗi mốc là baseline / cạnh trên).
+			let y = 52;
+			const headingY = y + 24; // baseline tiêu đề (~28px)
+			y += 44; // hết chữ tiêu đề
+			const accentY = y; // cạnh trên thanh accent
+			y += 7 + 26; // chiều cao thanh + khoảng cách xuống tên buổi
+			const lessonY = y + 18; // baseline dòng tên buổi đầu tiên
+			y += lessonLines.length * 30 + 4;
+			const courseY = y + 15;
+			y += courseLines.length ? courseLines.length * 22 + 24 : 10;
+			const qrY = y;
+			y += qrBox + 28;
+			const noteY = y + 13;
+			y += noteLines.length * 20 + 44;
+			const H = y;
+
+			// 3. Vẽ lên canvas hi-res (2x).
+			const scale = 2;
+			const canvas = document.createElement("canvas");
+			canvas.width = W * scale;
+			canvas.height = H * scale;
+			const ctx = canvas.getContext("2d");
+			if (!ctx) {
+				toast.error("Không thể tải mã QR. Vui lòng thử lại.");
+				return;
+			}
+			ctx.scale(scale, scale);
+			ctx.textBaseline = "alphabetic";
+
+			const roundRect = (x: number, ry: number, w: number, h: number, r: number) => {
+				ctx.beginPath();
+				ctx.moveTo(x + r, ry);
+				ctx.arcTo(x + w, ry, x + w, ry + h, r);
+				ctx.arcTo(x + w, ry + h, x, ry + h, r);
+				ctx.arcTo(x, ry + h, x, ry, r);
+				ctx.arcTo(x, ry, x + w, ry, r);
+				ctx.closePath();
+			};
+
+			// Nền trong suốt → fill toàn canvas trắng cho ảnh PNG.
+			ctx.fillStyle = "#ffffff";
+			ctx.fillRect(0, 0, W, H);
+
+			// Bóng đổ neo-brutalist.
+			ctx.fillStyle = "#111111";
+			roundRect(shadow, shadow, cardW, H - shadow - 2, 26);
+			ctx.fill();
+			// Card trắng + viền đen.
+			ctx.fillStyle = "#ffffff";
+			roundRect(0, 0, cardW, H - shadow - 2, 26);
+			ctx.fill();
+			ctx.lineWidth = 4;
+			ctx.strokeStyle = "#111111";
+			roundRect(0, 0, cardW, H - shadow - 2, 26);
+			ctx.stroke();
+
+			ctx.textAlign = "center";
+
+			// Tiêu đề.
+			ctx.fillStyle = "#111111";
+			ctx.font = `800 28px ${HEADING}`;
+			ctx.fillText("Vé QR điểm danh", cx, headingY);
+
+			// Thanh accent lime.
+			ctx.fillStyle = "#a3e635";
+			roundRect(cx - 32, accentY, 64, 7, 4);
+			ctx.fill();
+
+			// Tên buổi học.
+			ctx.fillStyle = "#374151";
+			ctx.font = lessonFont;
+			lessonLines.forEach((line, i) => ctx.fillText(line, cx, lessonY + i * 30));
+
+			// Tên khóa học.
+			if (courseLines.length) {
+				ctx.fillStyle = "#6b7280";
+				ctx.font = courseFont;
+				courseLines.forEach((line, i) => ctx.fillText(line, cx, courseY + i * 22));
+			}
+
+			// Khung QR.
+			const boxX = cx - qrBox / 2;
+			ctx.fillStyle = "#ffffff";
+			roundRect(boxX, qrY, qrBox, qrBox, 18);
+			ctx.fill();
+			ctx.lineWidth = 4;
+			ctx.strokeStyle = "#111111";
+			roundRect(boxX, qrY, qrBox, qrBox, 18);
+			ctx.stroke();
+			const qrInner = qrBox - 40;
+			ctx.drawImage(qrImg, cx - qrInner / 2, qrY + 20, qrInner, qrInner);
+
+			// Ghi chú.
+			ctx.fillStyle = "#9ca3af";
+			ctx.font = noteFont;
+			noteLines.forEach((line, i) => ctx.fillText(line, cx, noteY + i * 20));
+
+			const link = document.createElement("a");
+			link.href = canvas.toDataURL("image/png");
+			link.download = `ve-qr-${toSafeFileName(lesson.title)}.png`;
+			link.click();
+			toast.success("Đã tải mã QR điểm danh.");
+		} catch {
+			toast.error("Không thể tải mã QR. Vui lòng thử lại.");
+		}
+	};
+
+	return (
+		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4'>
+			<div className='relative w-full max-w-sm rounded-2xl border-2 border-black bg-white p-7 text-center shadow-[6px_6px_0_#111]'>
+				<button
+					onClick={onClose}
+					className='absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+					<X className='h-4 w-4' />
+				</button>
+				<QrCode className='mx-auto mb-3 h-8 w-8 text-black' />
+				<h2 className='font-heading text-lg font-extrabold text-black'>Vé QR điểm danh</h2>
+				<p className='mt-1 line-clamp-2 text-sm font-semibold text-gray-700'>
+					{lesson.title}
+				</p>
+				<p className='text-xs text-gray-500'>{courseTitle}</p>
+				<div className='mx-auto mt-5 flex w-fit items-center justify-center rounded-2xl border-2 border-black bg-white p-4'>
+					<QRCodeSVG ref={qrRef} value={qrToken} size={200} />
+				</div>
+				<button
+					type='button'
+					onClick={handleDownloadQr}
+					className='mx-auto mt-4 inline-flex h-10 items-center gap-2 rounded-lg border-2 border-black bg-white px-4 text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+					<Download className='h-4 w-4' />
+					Tải QR
+				</button>
+				<p className='mt-4 text-xs font-medium text-gray-400'>
+					Xuất trình mã QR này tại buổi học để được điểm danh.
+				</p>
+			</div>
 		</div>
 	);
 };
@@ -397,9 +649,13 @@ const CourseDetailPage: React.FC = () => {
 	const [course, setCourse] = useState<CourseDetail | null>(null);
 	const [lessons, setLessons] = useState<CourseLesson[]>([]);
 	const [interested, setInterested] = useState(false);
+	const [followersCount, setFollowersCount] = useState(0);
 	const [enrolling, setEnrolling] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	// Buổi học đang mở modal vé QR; id buổi đang gọi API cấp vé.
+	const [ticketLesson, setTicketLesson] = useState<CourseLesson | null>(null);
+	const [creatingTicketId, setCreatingTicketId] = useState<number | null>(null);
 
 	useEffect(() => {
 		if (!slug) return;
@@ -413,6 +669,7 @@ const CourseDetailPage: React.FC = () => {
 					setCourse(res.data);
 					setLessons(res.data.lessons);
 					setInterested(res.data.is_interested);
+					setFollowersCount(res.data.followers_count);
 				}
 			})
 			.catch(() => {
@@ -436,6 +693,13 @@ const CourseDetailPage: React.FC = () => {
 	const showSidebar = Boolean(user) && !shouldWaitForUser;
 	const resumeLesson = lessons.find((l) => !l.completed) ?? lessons[0];
 	const canClaimCertificate = (course?.progress ?? 0) >= 100;
+	// CTA "Quan tâm" chỉ hiện khi khoá chưa mở đăng ký và chưa có bài học để vào học
+	const showInterestCta =
+		!isEnrolled &&
+		phase !== "enrollment_open" &&
+		!(hasLessons && phase !== "upcoming");
+	// Lớp chưa khai giảng → mọi buổi đang bị khoá, chưa thể bắt đầu học
+	const beforeKickoff = phase === "upcoming" || phase === "enrollment_open";
 
 	// Khoá đã đóng đăng ký và có lesson → tự động coi là học online cho sidebar
 	const effectiveTrack =
@@ -500,37 +764,96 @@ const CourseDetailPage: React.FC = () => {
 
 		setEnrolling(true);
 		try {
-			// TODO: await learningService.enrollOffline(slug!);
+			await learningService.enroll(slug!, "offline");
 			// Reload course để lấy enrollment_track mới
+			const res = await learningService.getCourse(slug!);
+			setCourse(res.data);
+			setLessons(res.data.lessons);
+			toast.success("Đăng ký lớp học offline thành công.");
+		} catch (err) {
+			toast.error(
+				(err as { response?: { data?: { message?: string } } })?.response?.data
+					?.message ?? "Không thể đăng ký lớp offline. Vui lòng thử lại.",
+			);
 		} finally {
 			setEnrolling(false);
 		}
 	};
 
-	const handleToggleInterest = () => {
+	const handleStartOnline = async () => {
+		if (enrolling) return;
 		if (!requireAuth()) return;
-		const next = !interested;
-		setInterested(next);
-		if (next) {
-			toast.success("Đã thêm vào danh sách quan tâm.", {
-				description: "Bạn sẽ nhận thông báo khi khoá học mở đăng ký.",
-			});
-		} else {
-			toast("Đã bỏ quan tâm khoá học.");
+
+		// Đã ghi danh → vào học luôn
+		if (isEnrolled) {
+			if (resumeLesson) navigate(`/khoa-hoc/${slug}/${resumeLesson.slug}`);
+			return;
 		}
-		// TODO: await learningService.toggleInterest(slug!);
+
+		setEnrolling(true);
+		try {
+			await learningService.enroll(slug!, "online");
+			const res = await learningService.getCourse(slug!);
+			setCourse(res.data);
+			setLessons(res.data.lessons);
+			const target = res.data.lessons.find((l) => !l.completed) ?? res.data.lessons[0];
+			if (target) navigate(`/khoa-hoc/${slug}/${target.slug}`);
+		} catch (err) {
+			toast.error(
+				(err as { response?: { data?: { message?: string } } })?.response?.data
+					?.message ?? "Không thể ghi danh học online. Vui lòng thử lại.",
+			);
+		} finally {
+			setEnrolling(false);
+		}
 	};
 
-	// Optimistic: cấp vé QR tạm, server trả về token thật sau
-	const handleCreateTicket = (lessonId: number) => {
-		if (!requireAuth()) return;
-		setLessons((prev) =>
-			prev.map((l) =>
-				l.id === lessonId ? { ...l, qr_ticket: { token: "pending", used_at: null } } : l,
-			),
-		);
-		// TODO: const ticket = await learningService.createQrTicket(lessonId);
-		// setLessons(prev => prev.map(l => l.id === lessonId ? { ...l, qr_ticket: ticket } : l));
+	const handleToggleInterest = async () => {
+		if (!requireAuth() || !slug) return;
+		const next = !interested;
+		setInterested(next); // optimistic
+		setFollowersCount((c) => c + (next ? 1 : -1)); // optimistic
+		try {
+			const res = await learningService.toggleFollow(slug);
+			setInterested(res.data.is_interested);
+			setFollowersCount(res.data.followers_count);
+			if (res.data.is_interested) {
+				toast.success("Đã thêm vào danh sách quan tâm.", {
+					description: "Bạn sẽ nhận thông báo khi khoá học mở đăng ký.",
+				});
+			} else {
+				toast("Đã bỏ quan tâm khoá học.");
+			}
+		} catch {
+			setInterested(!next); // rollback
+			setFollowersCount((c) => c + (next ? -1 : 1)); // rollback
+			toast.error("Không thể cập nhật trạng thái quan tâm. Vui lòng thử lại.");
+		}
+	};
+
+	// Đăng ký "sẽ tham gia" buổi học offline → server cấp vé QR rồi mở modal QR.
+	const handleCreateTicket = async (lesson: CourseLesson) => {
+		if (!requireAuth() || !slug || creatingTicketId !== null) return;
+		setCreatingTicketId(lesson.id);
+		try {
+			const res = await learningService.createQrTicket(slug, lesson.slug);
+			const ticket = { token: res.data.token, used_at: res.data.used_at };
+			const updated = { ...lesson, qr_ticket: ticket };
+			setLessons((prev) => prev.map((l) => (l.id === lesson.id ? updated : l)));
+			setTicketLesson(updated); // mở luôn modal QR sau khi đăng ký
+			toast.success("Đã đăng ký tham gia buổi học.");
+		} catch (err) {
+			toast.error(
+				(err as { response?: { data?: { message?: string } } })?.response?.data
+					?.message ?? "Không thể đăng ký tham gia. Vui lòng thử lại.",
+			);
+		} finally {
+			setCreatingTicketId(null);
+		}
+	};
+
+	const handleShowTicket = (lesson: CourseLesson) => {
+		if (lesson.qr_ticket) setTicketLesson(lesson);
 	};
 
 	return (
@@ -594,19 +917,28 @@ const CourseDetailPage: React.FC = () => {
 								{/* ── CTA chính ── */}
 								<div className='mt-6 flex flex-wrap items-center gap-3'>
 									{isEnrolled ? (
-										/* Đã ghi danh → tiếp tục / bắt đầu học */
-										resumeLesson && (
-											<Link
-												to={`/khoa-hoc/${course.slug}/${resumeLesson.slug}`}
-												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-												<GraduationCap
-													className='h-4 w-4'
-													strokeWidth={2.5}
-												/>
-												{(course.progress ?? 0) > 0
-													? "Tiếp tục học"
-													: "Bắt đầu học"}
-											</Link>
+										beforeKickoff ? (
+											/* Đã ghi danh nhưng lớp chưa khai giảng → các buổi còn khoá */
+											<span
+												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111]'>
+												<Lock className='h-4 w-4' strokeWidth={2.5} />
+												Đã đăng ký · Chờ khai giảng
+											</span>
+										) : (
+											/* Đã ghi danh, lớp đã khai giảng → tiếp tục / bắt đầu học */
+											resumeLesson && (
+												<Link
+													to={`/khoa-hoc/${course.slug}/${resumeLesson.slug}`}
+													className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+													<GraduationCap
+														className='h-4 w-4'
+														strokeWidth={2.5}
+													/>
+													{(course.progress ?? 0) > 0
+														? "Tiếp tục học"
+														: "Bắt đầu học"}
+												</Link>
+											)
 										)
 									) : phase === "enrollment_open" ? (
 										/* Đang mở đăng ký → đăng ký offline */
@@ -621,13 +953,15 @@ const CourseDetailPage: React.FC = () => {
 												: "Đăng ký lớp học offline"}
 										</button>
 									) : hasLessons && phase !== "upcoming" ? (
-										/* Đã đóng đăng ký, có bài học → học online */
-										<Link
-											to={`/khoa-hoc/${course.slug}/${resumeLesson?.slug}`}
-											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+										/* Đã đóng đăng ký, có bài học → ghi danh học online rồi vào học */
+										<button
+											type='button'
+											onClick={handleStartOnline}
+											disabled={enrolling}
+											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60 disabled:cursor-not-allowed'>
 											<GraduationCap className='h-4 w-4' strokeWidth={2.5} />
-											Bắt đầu học
-										</Link>
+											{enrolling ? "Đang ghi danh..." : "Bắt đầu học"}
+										</button>
 									) : (
 										/* Khoá chưa mở hoặc chưa có bài học → quan tâm */
 										<button
@@ -661,10 +995,12 @@ const CourseDetailPage: React.FC = () => {
 										<Clock className='h-4 w-4' />
 										{Math.round(course.duration_minutes / 60)} giờ
 									</span>
-									<span className='flex items-center gap-1.5'>
-										<Users className='h-4 w-4' />
-										{course.enrolled_count} học viên
-									</span>
+									{showInterestCta && (
+										<span className='flex items-center gap-1.5'>
+											<Bookmark className='h-4 w-4' />
+											{followersCount} quan tâm
+										</span>
+									)}
 								</div>
 							</div>
 						</div>
@@ -698,7 +1034,9 @@ const CourseDetailPage: React.FC = () => {
 												track={effectiveTrack}
 												isActiveQrLesson={lesson.id === activeQrLessonId}
 												isFrontendLocked={frontendLockedIds.has(lesson.id)}
+												creatingTicket={creatingTicketId === lesson.id}
 												onCreateTicket={handleCreateTicket}
+												onShowTicket={handleShowTicket}
 											/>
 										))}
 									</div>
@@ -736,6 +1074,15 @@ const CourseDetailPage: React.FC = () => {
 					</div>
 				)}
 			</div>
+
+			{ticketLesson?.qr_ticket && (
+				<LessonTicketModal
+					qrToken={ticketLesson.qr_ticket.token}
+					lesson={ticketLesson}
+					courseTitle={course?.title ?? ""}
+					onClose={() => setTicketLesson(null)}
+				/>
+			)}
 		</div>
 	);
 };

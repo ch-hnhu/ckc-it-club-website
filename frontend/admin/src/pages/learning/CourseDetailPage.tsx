@@ -3,11 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import { isAxiosError } from "axios";
 import {
 	ArrowLeft,
+	ArrowLeftRight,
 	Award,
+	Ban,
 	BookOpen,
 	CalendarClock,
 	CheckCircle2,
 	FilePen,
+	Download,
 	FileText,
 	GraduationCap,
 	ImageIcon,
@@ -16,9 +19,11 @@ import {
 	Pencil,
 	PlayCircle,
 	Plus,
+	RotateCcw,
 	ScanLine,
 	Trash2,
 	Users,
+	UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -67,7 +72,10 @@ import {
 	type CourseStatus,
 } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
+import type { ApiErrorResponse } from "@/types/api.types";
 import type { AdminCourseDetail, EnrollmentTrack } from "@/pages/learning/course-detail-mock";
+import AssignmentGradeDialog from "@/pages/learning/AssignmentGradeDialog";
+import EnrollStudentDialog from "@/pages/learning/EnrollStudentDialog";
 import LessonCheckInDialog from "@/pages/learning/LessonCheckInDialog";
 import LessonFormDialog from "@/pages/learning/LessonFormDialog";
 
@@ -164,12 +172,26 @@ function CourseDetailPage() {
 	const [checkInLesson, setCheckInLesson] = useState<AdminCourseDetail["lessons"][number] | null>(
 		null,
 	);
+	const [gradingLesson, setGradingLesson] = useState<AdminCourseDetail["lessons"][number] | null>(
+		null,
+	);
 	const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
 	const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
 	const [deletingLesson, setDeletingLesson] = useState<
 		AdminCourseDetail["lessons"][number] | null
 	>(null);
 	const [isDeletingLesson, setIsDeletingLesson] = useState(false);
+	const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+	const [changingTrackId, setChangingTrackId] = useState<number | null>(null);
+	const [removingEnrollment, setRemovingEnrollment] = useState<
+		AdminCourseDetail["enrollments"][number] | null
+	>(null);
+	const [isRemovingEnrollment, setIsRemovingEnrollment] = useState(false);
+	const [revokingCertificate, setRevokingCertificate] = useState<
+		AdminCourseDetail["certificates"][number] | null
+	>(null);
+	const [isRevokingCertificate, setIsRevokingCertificate] = useState(false);
+	const [reissuingCertificateId, setReissuingCertificateId] = useState<number | null>(null);
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
@@ -239,6 +261,77 @@ function CourseDetailPage() {
 			toast.error("Không thể xóa buổi học.", { position: "top-right" });
 		} finally {
 			setIsDeletingLesson(false);
+		}
+	};
+
+	const handleChangeTrack = async (
+		enrollment: AdminCourseDetail["enrollments"][number],
+		track: EnrollmentTrack,
+	) => {
+		setChangingTrackId(enrollment.id);
+		try {
+			await courseService.updateEnrollmentTrack(slug, enrollment.id, track);
+			toast.success("Đã đổi hình thức học.", { position: "top-right" });
+			await loadCourse({ silent: true });
+		} catch (err) {
+			const message =
+				isAxiosError(err) && (err.response?.data as ApiErrorResponse | undefined)?.message
+					? String((err.response?.data as ApiErrorResponse).message)
+					: "Không thể đổi hình thức học.";
+			toast.error(message, { position: "top-right" });
+		} finally {
+			setChangingTrackId(null);
+		}
+	};
+
+	const handleRemoveEnrollment = async () => {
+		if (!removingEnrollment) return;
+		setIsRemovingEnrollment(true);
+		try {
+			await courseService.removeEnrollment(slug, removingEnrollment.id);
+			toast.success("Đã xóa ghi danh.", { position: "top-right" });
+			setRemovingEnrollment(null);
+			await loadCourse({ silent: true });
+		} catch {
+			toast.error("Không thể xóa ghi danh.", { position: "top-right" });
+		} finally {
+			setIsRemovingEnrollment(false);
+		}
+	};
+
+	const handleRevokeCertificate = async () => {
+		if (!revokingCertificate) return;
+		setIsRevokingCertificate(true);
+		try {
+			await courseService.revokeCertificate(slug, revokingCertificate.id);
+			toast.success("Đã thu hồi chứng chỉ.", { position: "top-right" });
+			setRevokingCertificate(null);
+			await loadCourse({ silent: true });
+		} catch (err) {
+			const message =
+				isAxiosError(err) && (err.response?.data as ApiErrorResponse | undefined)?.message
+					? String((err.response?.data as ApiErrorResponse).message)
+					: "Không thể thu hồi chứng chỉ.";
+			toast.error(message, { position: "top-right" });
+		} finally {
+			setIsRevokingCertificate(false);
+		}
+	};
+
+	const handleReissueCertificate = async (cert: AdminCourseDetail["certificates"][number]) => {
+		setReissuingCertificateId(cert.id);
+		try {
+			await courseService.reissueCertificate(slug, cert.id);
+			toast.success("Đã cấp lại chứng chỉ.", { position: "top-right" });
+			await loadCourse({ silent: true });
+		} catch (err) {
+			const message =
+				isAxiosError(err) && (err.response?.data as ApiErrorResponse | undefined)?.message
+					? String((err.response?.data as ApiErrorResponse).message)
+					: "Không thể cấp lại chứng chỉ.";
+			toast.error(message, { position: "top-right" });
+		} finally {
+			setReissuingCertificateId(null);
 		}
 	};
 
@@ -536,15 +629,14 @@ function CourseDetailPage() {
 																<Pencil className='h-4 w-4' />
 																Sửa
 															</DropdownMenuItem>
-															{canManageQuiz && (
+
+															{lesson.has_assignment && (
 																<DropdownMenuItem
 																	onClick={() =>
-																		navigate(
-																			`/learning/courses/${course.slug}/lessons/${lesson.id}/quiz/create`,
-																		)
+																		setGradingLesson(lesson)
 																	}>
-																	<FilePen className='h-4 w-4' />
-																	Quiz
+																	<ListChecks className='h-4 w-4' />
+																	Chấm bài
 																</DropdownMenuItem>
 															)}
 															<DropdownMenuItem
@@ -609,6 +701,14 @@ function CourseDetailPage() {
 								</Button>
 							))}
 							<div className='ml-auto flex items-center gap-3'>
+								<Button
+									size='sm'
+									variant='outline'
+									className='h-8'
+									onClick={() => setEnrollDialogOpen(true)}>
+									<UserPlus className='h-4 w-4' />
+									Ghi danh
+								</Button>
 								{trackFilter === "offline" &&
 									course.offline_enrollments_count > 0 && (
 										<DropdownMenu>
@@ -656,6 +756,7 @@ function CourseDetailPage() {
 										<TableHead className='min-w-[180px]'>Tiến độ</TableHead>
 										<TableHead className='w-[100px]'>Vắng</TableHead>
 										<TableHead className='w-[150px]'>Hoàn thành</TableHead>
+										<TableHead className='w-[52px]' />
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -723,12 +824,51 @@ function CourseDetailPage() {
 														"Đang học"
 													)}
 												</TableCell>
+												<TableCell>
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button
+																variant='ghost'
+																className='h-8 w-8 p-0 data-[state=open]:bg-muted'
+																disabled={changingTrackId === e.id}>
+																<MoreHorizontal className='h-4 w-4' />
+															</Button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent
+															align='end'
+															className='w-[180px]'>
+															<DropdownMenuItem
+																onClick={() =>
+																	handleChangeTrack(
+																		e,
+																		e.track === "offline"
+																			? "online"
+																			: "offline",
+																	)
+																}>
+																<ArrowLeftRight className='h-4 w-4' />
+																Chuyển sang{" "}
+																{e.track === "offline"
+																	? "Online"
+																	: "Offline"}
+															</DropdownMenuItem>
+															<DropdownMenuItem
+																className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+																onClick={() =>
+																	setRemovingEnrollment(e)
+																}>
+																<Trash2 className='h-4 w-4 text-destructive' />
+																Xóa ghi danh
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
+												</TableCell>
 											</TableRow>
 										))
 									) : (
 										<TableRow>
 											<TableCell
-												colSpan={5}
+												colSpan={6}
 												className='h-32 text-center text-muted-foreground'>
 												Chưa có học viên nào ghi danh.
 											</TableCell>
@@ -737,7 +877,7 @@ function CourseDetailPage() {
 								</TableBody>
 								{filteredEnrollments.length > 0 && (
 									<TablePaginationFooter
-										colSpan={5}
+										colSpan={6}
 										shown={studentsPg.pageItems.length}
 										total={studentsPg.total}
 										noun='học viên'
@@ -764,6 +904,8 @@ function CourseDetailPage() {
 										<TableHead className='min-w-[240px]'>Học viên</TableHead>
 										<TableHead className='w-[110px]'>Track</TableHead>
 										<TableHead className='w-[150px]'>Ngày cấp</TableHead>
+										<TableHead className='w-[130px]'>Trạng thái</TableHead>
+										<TableHead className='w-[52px]' />
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -787,12 +929,73 @@ function CourseDetailPage() {
 												<TableCell className='text-sm text-muted-foreground'>
 													{formatDate(cert.issued_at)}
 												</TableCell>
+												<TableCell>
+													{cert.revoked_at ? (
+														<Badge variant='destructive'>
+															Đã thu hồi
+														</Badge>
+													) : (
+														<Badge className='bg-emerald-100 text-emerald-700 hover:bg-emerald-100'>
+															Còn hiệu lực
+														</Badge>
+													)}
+												</TableCell>
+												<TableCell>
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button
+																variant='ghost'
+																className='h-8 w-8 p-0 data-[state=open]:bg-muted'
+																disabled={
+																	reissuingCertificateId ===
+																	cert.id
+																}>
+																<MoreHorizontal className='h-4 w-4' />
+															</Button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent
+															align='end'
+															className='w-[180px]'>
+															{cert.cert_url && (
+																<DropdownMenuItem asChild>
+																	<a
+																		href={cert.cert_url}
+																		target='_blank'
+																		rel='noreferrer'>
+																		<Download className='h-4 w-4' />
+																		Xem PDF
+																	</a>
+																</DropdownMenuItem>
+															)}
+															{cert.revoked_at ? (
+																<DropdownMenuItem
+																	onClick={() =>
+																		handleReissueCertificate(
+																			cert,
+																		)
+																	}>
+																	<RotateCcw className='h-4 w-4' />
+																	Cấp lại
+																</DropdownMenuItem>
+															) : (
+																<DropdownMenuItem
+																	className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+																	onClick={() =>
+																		setRevokingCertificate(cert)
+																	}>
+																	<Ban className='h-4 w-4 text-destructive' />
+																	Thu hồi
+																</DropdownMenuItem>
+															)}
+														</DropdownMenuContent>
+													</DropdownMenu>
+												</TableCell>
 											</TableRow>
 										))
 									) : (
 										<TableRow>
 											<TableCell
-												colSpan={4}
+												colSpan={6}
 												className='h-32 text-center text-muted-foreground'>
 												Chưa cấp chứng chỉ nào. Chứng chỉ được cấp khi học
 												viên hoàn thành khóa học.
@@ -802,7 +1005,7 @@ function CourseDetailPage() {
 								</TableBody>
 								{course.certificates.length > 0 && (
 									<TablePaginationFooter
-										colSpan={4}
+										colSpan={6}
 										shown={certificatesPg.pageItems.length}
 										total={certificatesPg.total}
 										noun='chứng chỉ'
@@ -826,6 +1029,75 @@ function CourseDetailPage() {
 				lesson={checkInLesson}
 				onCheckedIn={() => void loadCourse({ silent: true })}
 			/>
+
+			<AssignmentGradeDialog
+				open={gradingLesson !== null}
+				onOpenChange={(o) => !o && setGradingLesson(null)}
+				courseSlug={course.slug}
+				lesson={gradingLesson}
+				onSaved={() => void loadCourse({ silent: true })}
+			/>
+
+			<EnrollStudentDialog
+				open={enrollDialogOpen}
+				onOpenChange={setEnrollDialogOpen}
+				courseSlug={course.slug}
+				onEnrolled={() => void loadCourse({ silent: true })}
+			/>
+
+			<AlertDialog
+				open={removingEnrollment !== null}
+				onOpenChange={(o) => !o && setRemovingEnrollment(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Xóa ghi danh?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{removingEnrollment
+								? `Bạn có chắc muốn xóa ghi danh của "${removingEnrollment.user.full_name}"? Tiến độ và điểm danh liên quan trong khóa này sẽ bị xóa.`
+								: "Bạn có chắc muốn xóa ghi danh này?"}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isRemovingEnrollment}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(e) => {
+								e.preventDefault();
+								void handleRemoveEnrollment();
+							}}
+							disabled={isRemovingEnrollment}
+							className='bg-destructive text-white hover:bg-destructive/90'>
+							{isRemovingEnrollment ? "Đang xóa..." : "Xóa ghi danh"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			<AlertDialog
+				open={revokingCertificate !== null}
+				onOpenChange={(o) => !o && setRevokingCertificate(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Thu hồi chứng chỉ?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{revokingCertificate
+								? `Bạn có chắc muốn thu hồi chứng chỉ "${revokingCertificate.cert_code}" của "${revokingCertificate.user.full_name}"? Có thể cấp lại sau nếu cần.`
+								: "Bạn có chắc muốn thu hồi chứng chỉ này?"}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isRevokingCertificate}>Hủy</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(e) => {
+								e.preventDefault();
+								void handleRevokeCertificate();
+							}}
+							disabled={isRevokingCertificate}
+							className='bg-destructive text-white hover:bg-destructive/90'>
+							{isRevokingCertificate ? "Đang thu hồi..." : "Thu hồi"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 
 			<LessonFormDialog
 				open={lessonDialogOpen}

@@ -26,4 +26,17 @@ class CertificateTemplate extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    /**
+     * Thay các placeholder dạng {{key}} trong html_content bằng giá trị tương ứng.
+     * Placeholder hỗ trợ: {{name}}, {{course}}, {{cert_code}}, {{issued_at}}.
+     *
+     * @param  array<string,string>  $placeholders
+     */
+    public function render(array $placeholders): string
+    {
+        $search = array_map(fn (string $key) => '{{'.$key.'}}', array_keys($placeholders));
+
+        return str_replace($search, array_values($placeholders), $this->html_content);
+    }
 }

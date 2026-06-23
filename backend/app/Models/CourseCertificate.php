@@ -16,6 +16,8 @@ class CourseCertificate extends Model
         'cert_url',
         'has_physical',
         'issued_at',
+        'revoked_at',
+        'revoked_by',
     ];
 
     protected function casts(): array
@@ -23,6 +25,7 @@ class CourseCertificate extends Model
         return [
             'has_physical' => 'boolean',
             'issued_at' => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 
@@ -34,5 +37,15 @@ class CourseCertificate extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(CertificateTemplate::class, 'template_id');
+    }
+
+    public function revoker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'revoked_by');
     }
 }

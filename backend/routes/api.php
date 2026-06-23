@@ -174,6 +174,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/courses/{course:slug}/lessons/{lessonSlug}', [UserCourseController::class, 'lesson']);
         Route::get('/courses/{course:slug}/lessons/{lessonSlug}/quiz', [UserQuizController::class, 'show']);
         Route::get('/courses/{course:slug}/lessons/{lessonSlug}/videos/{videoSlug}', [UserCourseController::class, 'video']);
+
+        // Authenticated learning actions
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/courses/{course:slug}/enroll', [UserCourseController::class, 'enroll']);
+            Route::post('/courses/{course:slug}/follow', [UserCourseController::class, 'toggleFollow']);
+            Route::post('/courses/{course:slug}/lessons/{lessonSlug}/qr-ticket', [UserCourseController::class, 'createQrTicket']);
+            Route::post('/courses/{course:slug}/lessons/{lessonSlug}/progress', [UserCourseController::class, 'markVideoProgress']);
+        });
     });
 
     // Registration with OTP verification (throttled: 5 attempts per minute per IP)
@@ -499,6 +507,14 @@ Route::prefix('v1')->group(function () {
             Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::delete('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'destroy']);
             Route::post('courses/{course}/lessons/{lesson}/check-in', [AdminLessonController::class, 'checkIn']);
+            Route::get('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'grades']);
+            Route::put('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'saveGrades']);
+            Route::get('courses/{course}/enrollable-users', [AdminCourseController::class, 'searchEnrollableUsers']);
+            Route::post('courses/{course}/enrollments', [AdminCourseController::class, 'enrollStudent']);
+            Route::patch('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'updateEnrollmentTrack']);
+            Route::delete('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'removeEnrollment']);
+            Route::post('courses/{course}/certificates/{certificate}/revoke', [AdminCourseController::class, 'revokeCertificate']);
+            Route::post('courses/{course}/certificates/{certificate}/reissue', [AdminCourseController::class, 'reissueCertificate']);
         });
         // quiz của buổi học — quyền riêng cho Trung tâm đào tạo
         Route::middleware('permission:quizzes.manage')->group(function () {

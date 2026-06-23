@@ -434,8 +434,6 @@ function QuizCreatePage() {
 
 	const activeQuestionIndex = questions.findIndex((question) => question.id === activeQuestionId);
 	const activeQuestion = questions[activeQuestionIndex] ?? questions[0];
-	const courseReference = courseId ? `Khóa học #${courseId}` : "Khóa học chưa xác định";
-	const lessonReference = lessonId ? `Lesson #${lessonId}` : "Lesson chưa xác định";
 
 	const wordBankBlankCount = useMemo(
 		() =>

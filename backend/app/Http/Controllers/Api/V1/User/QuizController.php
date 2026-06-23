@@ -10,6 +10,8 @@ use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
+use App\Services\CourseCompletionService;
+use App\Services\PointService;
 use App\Services\QuizGradingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -114,7 +116,10 @@ class QuizController extends BaseApiController
         $threshold = (int) $course->quiz_pass_threshold;
         $isPassed = $score >= $threshold;
 
-        DB::transaction(function () use ($quiz, $userId, $score, $isPassed, $graded, $lesson) {
+        $quizProgress = null;
+        $wasQuizCompleted = false;
+
+        DB::transaction(function () use ($quiz, $userId, $score, $isPassed, $graded, $lesson, &$quizProgress, &$wasQuizCompleted) {
             $attempt = QuizAttempt::create([
                 'user_id' => $userId,
                 'quiz_id' => $quiz->id,
@@ -141,8 +146,9 @@ class QuizController extends BaseApiController
 
             $completed = $isPassed || (bool) ($existing?->is_completed);
             $bestScore = max((float) $score, (float) ($existing?->score ?? 0));
+            $wasQuizCompleted = (bool) ($existing?->is_completed);
 
-            LessonProgress::updateOrCreate(
+            $quizProgress = LessonProgress::updateOrCreate(
                 [
                     'user_id' => $userId,
                     'lesson_id' => $lesson->id,
@@ -155,6 +161,14 @@ class QuizController extends BaseApiController
                 ],
             );
         });
+
+        if (! $wasQuizCompleted && $quizProgress?->is_completed) {
+            PointService::award($request->user(), 'learning_center.quiz_passed', $quizProgress);
+        }
+
+        if ($enrollment = $course->enrollmentFor($userId)) {
+            app(CourseCompletionService::class)->recalc($enrollment);
+        }
 
         return $this->successResponse(true, [
             'score' => $score,
