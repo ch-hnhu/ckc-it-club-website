@@ -11,13 +11,11 @@ import {
 	CheckCircle2,
 	FilePen,
 	Download,
-	FileText,
 	GraduationCap,
 	ImageIcon,
 	ListChecks,
 	MoreHorizontal,
 	Pencil,
-	PlayCircle,
 	Plus,
 	RotateCcw,
 	ScanLine,
@@ -232,6 +230,19 @@ function CourseDetailPage() {
 		if (!course) return [];
 		return course.lessons.filter((l) => l.session_start);
 	}, [course]);
+
+	/**
+	 * Buổi học offline "chuẩn bị diễn ra" — buổi sớm nhất theo `order` mà session_end
+	 * chưa qua (hoặc chưa đặt session_end). Chỉ buổi này được điểm danh/quét QR để
+	 * tránh admin lỡ quét nhầm buổi, và vì học viên chỉ có danh sách ghi danh theo buổi
+	 * khi buổi đó đến lượt diễn ra (giống logic bên trang học viên).
+	 */
+	const activeLessonId = useMemo(() => {
+		const now = new Date();
+		return (
+			offlineLessons.find((l) => !l.session_end || new Date(l.session_end) > now)?.id ?? null
+		);
+	}, [offlineLessons]);
 
 	const lessonsPg = useClientPagination(course?.lessons ?? []);
 	const studentsPg = useClientPagination(filteredEnrollments);
@@ -545,7 +556,6 @@ function CourseDetailPage() {
 										<TableHead className='min-w-[180px]'>
 											Lịch offline
 										</TableHead>
-										<TableHead className='w-[180px]'>Nội dung</TableHead>
 										<TableHead className='w-[180px]'>Điểm danh</TableHead>
 										<TableHead className='w-[120px]'>Trạng thái</TableHead>
 										<TableHead className='w-[52px]' />
@@ -566,30 +576,8 @@ function CourseDetailPage() {
 														? formatDateTime(lesson.session_start)
 														: "—"}
 												</TableCell>
-												<TableCell>
-													<div className='flex flex-wrap gap-1.5'>
-														{lesson.has_video && (
-															<span className='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] text-muted-foreground'>
-																<PlayCircle className='h-3 w-3' />{" "}
-																Video
-															</span>
-														)}
-														{lesson.has_document && (
-															<span className='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] text-muted-foreground'>
-																<FileText className='h-3 w-3' /> Tài
-																liệu
-															</span>
-														)}
-														{lesson.has_assignment && (
-															<span className='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] text-muted-foreground'>
-																<ListChecks className='h-3 w-3' />{" "}
-																Bài tập
-															</span>
-														)}
-													</div>
-												</TableCell>
 												<TableCell className='text-sm'>
-													{lesson.session_start ? (
+													{lesson.session_start && lesson.id === activeLessonId ? (
 														<div className='flex items-center gap-2'>
 															<span className='flex items-center gap-1.5'>
 																<CheckCircle2 className='h-3.5 w-3.5 text-muted-foreground' />
