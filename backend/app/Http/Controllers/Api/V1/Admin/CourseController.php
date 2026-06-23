@@ -11,6 +11,8 @@ use App\Models\Lesson;
 use App\Models\LessonAttendance;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\CourseCertificateService;
+use App\Services\CourseEnrollmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -303,7 +305,162 @@ class CourseController extends BaseApiController
             ->orderByDesc('issued_at')
             ->get();
 
-        // Số buổi vắng (offline): tính trên các buổi offline đã kết thúc.
+        [$attendedByUser, $pastOfflineCount] = $this->absentContext($lessons);
+
+        $data = array_merge($this->transformCourse($course), [
+            'lessons' => $lessons->map(fn (Lesson $l) => [
+                'id' => $l->id,
+                'order' => $l->order,
+                'title' => $l->title,
+                'status' => $l->status->value,
+                'session_start' => $l->session_start?->toIso8601String(),
+                'session_end' => $l->session_end?->toIso8601String(),
+                'has_video' => (bool) $l->playableVideoUrl(),
+                'has_document' => (bool) $l->document,
+                'has_assignment' => (bool) $l->assignment_url,
+                'attendances_count' => (int) ($l->attendances_count ?? 0),
+            ])->all(),
+            'enrollments' => $enrollments->map(
+                fn (CourseEnrollment $e) => $this->transformEnrollment($e, $attendedByUser, $pastOfflineCount)
+            )->all(),
+            'certificates' => $certificates->map(fn (CourseCertificate $cert) => $this->transformCertificate($cert))->all(),
+        ]);
+
+        return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Thu hồi chứng chỉ — giữ lại bản ghi + file PDF cũ làm lịch sử, chỉ đánh dấu đã thu hồi.
+     */
+    public function revokeCertificate(Request $request, Course $course, CourseCertificate $certificate): JsonResponse
+    {
+        $this->assertCertificateBelongsTo($course, $certificate);
+        abort_if((bool) $certificate->revoked_at, 422, 'Chứng chỉ này đã bị thu hồi trước đó.');
+
+        app(CourseCertificateService::class)->revoke($certificate, $request->user());
+
+        return $this->successResponse(true, $this->transformCertificate($certificate->refresh()), 'Đã thu hồi chứng chỉ.');
+    }
+
+    /**
+     * Cấp lại chứng chỉ (sinh cert_code + PDF mới, gỡ trạng thái thu hồi nếu có).
+     */
+    public function reissueCertificate(Course $course, CourseCertificate $certificate): JsonResponse
+    {
+        $this->assertCertificateBelongsTo($course, $certificate);
+
+        $certificate = app(CourseCertificateService::class)->reissue($certificate);
+
+        return $this->successResponse(true, $this->transformCertificate($certificate), 'Đã cấp lại chứng chỉ.');
+    }
+
+    /**
+     * Tìm user chưa ghi danh khoá học (theo tên/email/username) để admin chọn ghi danh thay.
+     */
+    public function searchEnrollableUsers(Request $request, Course $course): JsonResponse
+    {
+        $search = trim((string) $request->query('search'));
+        abort_if(mb_strlen($search) < 2, 422, 'Nhập tối thiểu 2 ký tự để tìm kiếm.');
+
+        $enrolledIds = $course->enrollments()->pluck('user_id');
+
+        $users = User::query()
+            ->whereNotIn('id', $enrolledIds)
+            ->where(
+                fn ($q) => $q->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+            )
+            ->limit(10)
+            ->get(['id', 'full_name', 'email', 'avatar']);
+
+        return $this->successResponse(true, $users->map(fn (User $u) => [
+            'id' => $u->id,
+            'full_name' => $u->full_name,
+            'email' => $u->email,
+            'avatar' => $this->resolveUrl($u->avatar),
+        ])->all(), ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Ghi danh thay học viên (admin). Áp cùng điều kiện như học viên tự đăng ký
+     * (tư cách + cửa sổ thời gian + giới hạn slot offline) — tái dùng CourseEnrollmentService.
+     */
+    public function enrollStudent(Request $request, Course $course): JsonResponse
+    {
+        $data = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'track' => 'required|in:offline,online',
+        ]);
+
+        $enrollment = app(CourseEnrollmentService::class)
+            ->enroll($course, User::findOrFail($data['user_id']), $data['track']);
+
+        $enrollment->load('user:id,full_name,email,avatar');
+        [$attendedByUser, $pastOfflineCount] = $this->absentContext($course->lessons()->get());
+
+        return $this->createdResponse(
+            $this->transformEnrollment($enrollment, $attendedByUser, $pastOfflineCount),
+            'Ghi danh học viên thành công.'
+        );
+    }
+
+    /**
+     * Đổi track (offline/online) của một ghi danh — cùng điều kiện cửa sổ thời gian/slot
+     * như ghi danh mới cho track đích.
+     */
+    public function updateEnrollmentTrack(Request $request, Course $course, CourseEnrollment $enrollment): JsonResponse
+    {
+        $this->assertEnrollmentBelongsTo($course, $enrollment);
+
+        $data = $request->validate([
+            'track' => 'required|in:offline,online',
+        ]);
+
+        $enrollment = app(CourseEnrollmentService::class)->changeTrack($enrollment, $data['track']);
+        $enrollment->load('user:id,full_name,email,avatar');
+        [$attendedByUser, $pastOfflineCount] = $this->absentContext($course->lessons()->get());
+
+        return $this->successResponse(
+            true,
+            $this->transformEnrollment($enrollment, $attendedByUser, $pastOfflineCount),
+            'Đã đổi hình thức học.'
+        );
+    }
+
+    /**
+     * Xoá ghi danh (admin) — cascade xoá tiến độ/điểm danh liên quan trong khoá này.
+     * Chứng chỉ đã cấp được giữ lại.
+     */
+    public function removeEnrollment(Course $course, CourseEnrollment $enrollment): JsonResponse
+    {
+        $this->assertEnrollmentBelongsTo($course, $enrollment);
+
+        app(CourseEnrollmentService::class)->remove($enrollment);
+
+        return $this->successResponse(true, null, 'Đã xoá ghi danh.');
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private function assertEnrollmentBelongsTo(Course $course, CourseEnrollment $enrollment): void
+    {
+        abort_if($enrollment->course_id !== $course->id, 404, 'Ghi danh không thuộc khóa học này.');
+    }
+
+    private function assertCertificateBelongsTo(Course $course, CourseCertificate $certificate): void
+    {
+        abort_if($certificate->course_id !== $course->id, 404, 'Chứng chỉ không thuộc khóa học này.');
+    }
+
+    /**
+     * Số buổi vắng (offline) tính trên các buổi offline đã kết thúc.
+     *
+     * @param  \Illuminate\Support\Collection<int,Lesson>  $lessons
+     * @return array{0:array<int,int>,1:int} [attendedByUser, pastOfflineCount]
+     */
+    private function absentContext($lessons): array
+    {
         $now = now();
         $pastOfflineLessonIds = $lessons
             ->filter(fn (Lesson $l) => $l->session_end && $l->session_end->lt($now))
@@ -319,58 +476,55 @@ class CourseController extends BaseApiController
                 ->all()
             : [];
 
-        $data = array_merge($this->transformCourse($course), [
-            'lessons' => $lessons->map(fn (Lesson $l) => [
-                'id' => $l->id,
-                'order' => $l->order,
-                'title' => $l->title,
-                'status' => $l->status->value,
-                'session_start' => $l->session_start?->toIso8601String(),
-                'session_end' => $l->session_end?->toIso8601String(),
-                'has_video' => (bool) $l->playableVideoUrl(),
-                'has_document' => (bool) $l->document,
-                'has_assignment' => (bool) $l->assignment_url,
-                'attendances_count' => (int) ($l->attendances_count ?? 0),
-            ])->all(),
-            'enrollments' => $enrollments->map(function (CourseEnrollment $e) use ($attendedByUser, $pastOfflineCount) {
-                $absent = 0;
-                if ($e->track === 'offline') {
-                    $attended = (int) ($attendedByUser[$e->user_id] ?? 0);
-                    $absent = max(0, $pastOfflineCount - $attended);
-                }
-
-                return [
-                    'id' => $e->id,
-                    'user' => [
-                        'id' => $e->user?->id,
-                        'full_name' => $e->user?->full_name,
-                        'email' => $e->user?->email,
-                        'avatar' => $this->resolveUrl($e->user?->avatar),
-                    ],
-                    'track' => $e->track,
-                    'progress' => (int) $e->progress,
-                    'absent_count' => $absent,
-                    'completed_at' => $e->completed_at?->toIso8601String(),
-                    'enrolled_at' => $e->created_at?->toIso8601String(),
-                ];
-            })->all(),
-            'certificates' => $certificates->map(fn (CourseCertificate $cert) => [
-                'id' => $cert->id,
-                'cert_code' => $cert->cert_code,
-                'user' => [
-                    'id' => $cert->user?->id,
-                    'full_name' => $cert->user?->full_name,
-                    'email' => $cert->user?->email,
-                ],
-                'track' => $cert->track,
-                'issued_at' => $cert->issued_at?->toIso8601String(),
-            ])->all(),
-        ]);
-
-        return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
+        return [$attendedByUser, $pastOfflineCount];
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    /**
+     * Map CourseEnrollment → dòng trong tab "Học viên".
+     */
+    private function transformEnrollment(CourseEnrollment $e, array $attendedByUser, int $pastOfflineCount): array
+    {
+        $absent = 0;
+        if ($e->track === 'offline') {
+            $attended = (int) ($attendedByUser[$e->user_id] ?? 0);
+            $absent = max(0, $pastOfflineCount - $attended);
+        }
+
+        return [
+            'id' => $e->id,
+            'user' => [
+                'id' => $e->user?->id,
+                'full_name' => $e->user?->full_name,
+                'email' => $e->user?->email,
+                'avatar' => $this->resolveUrl($e->user?->avatar),
+            ],
+            'track' => $e->track,
+            'progress' => (int) $e->progress,
+            'absent_count' => $absent,
+            'completed_at' => $e->completed_at?->toIso8601String(),
+            'enrolled_at' => $e->created_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Map CourseCertificate → dòng trong tab "Chứng chỉ".
+     */
+    private function transformCertificate(CourseCertificate $cert): array
+    {
+        return [
+            'id' => $cert->id,
+            'cert_code' => $cert->cert_code,
+            'cert_url' => $cert->cert_url,
+            'user' => [
+                'id' => $cert->user?->id,
+                'full_name' => $cert->user?->full_name,
+                'email' => $cert->user?->email,
+            ],
+            'track' => $cert->track,
+            'issued_at' => $cert->issued_at?->toIso8601String(),
+            'revoked_at' => $cert->revoked_at?->toIso8601String(),
+        ];
+    }
 
     /**
      * Map Course → shape `AdminCourse` (dòng trong bảng quản lý).

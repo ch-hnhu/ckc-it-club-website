@@ -9,6 +9,7 @@ import {
 	Video as VideoIcon,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { learningService } from "@/services/learning.service";
 import { renderMarkdownContent } from "@/lib/markdown";
 import type { VideoDetail } from "@/types/learning.types";
@@ -49,6 +50,7 @@ const VideoDetailPage: React.FC = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [completed, setCompleted] = useState(false);
+	const [markingProgress, setMarkingProgress] = useState(false);
 	const [activeTab, setActiveTab] = useState<VideoTabKey>("lecture");
 
 	useEffect(() => {
@@ -92,6 +94,25 @@ const VideoDetailPage: React.FC = () => {
 	const activeUrl = tabs.find((t) => t.key === activeTab)?.url ?? tabs[0]?.url ?? "";
 	// Chỉ hiện thanh tab khi có cả 2 nguồn (không có bản ghi livestream → ẩn tab)
 	const showTabs = tabs.length > 1;
+
+	// Nút đánh dấu tay (fallback của hybrid tracking) — một chiều, gửi 100% khi đánh dấu hoàn thành.
+	// % xem đã đạt không bị tụt lùi ở backend nên không hỗ trợ "bỏ đánh dấu".
+	const handleMarkCompleted = async () => {
+		if (!slug || !lessonSlug || markingProgress || completed) return;
+		setMarkingProgress(true);
+		try {
+			const res = await learningService.markVideoProgress(slug, lessonSlug, 100);
+			setCompleted(res.data.is_completed);
+			toast.success("Đã đánh dấu hoàn thành video.");
+		} catch (err) {
+			toast.error(
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+					"Không thể ghi nhận tiến độ. Vui lòng thử lại.",
+			);
+		} finally {
+			setMarkingProgress(false);
+		}
+	};
 
 	const backHref = `/khoa-hoc/${slug}/${lessonSlug}`;
 	const prevHref = video?.prev_lesson
@@ -226,8 +247,9 @@ const VideoDetailPage: React.FC = () => {
 						{/* Giữa: đánh dấu hoàn thành */}
 						<button
 							type='button'
-							onClick={() => setCompleted((c) => !c)}
-							className={`inline-flex items-center justify-center gap-2 justify-self-center rounded-xl border-2 border-black px-5 py-2.5 font-heading text-sm font-extrabold shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${
+							onClick={handleMarkCompleted}
+							disabled={completed || markingProgress}
+							className={`inline-flex items-center justify-center gap-2 justify-self-center rounded-xl border-2 border-black px-5 py-2.5 font-heading text-sm font-extrabold shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed ${
 								completed
 									? "bg-[var(--color-pastel-green)] text-black"
 									: "bg-[var(--color-primary)] text-black"

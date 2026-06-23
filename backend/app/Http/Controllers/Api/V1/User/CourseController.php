@@ -4,18 +4,18 @@ namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\CourseStatus;
 use App\Enums\LessonSectionType;
-use App\Enums\RolesEnum;
 use App\Enums\TagModelType;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Course;
-use App\Models\CourseEnrollment;
 use App\Models\CourseFollower;
 use App\Models\Lesson;
+use App\Models\LessonProgress;
 use App\Models\LessonQrTicket;
 use App\Models\Tag;
+use App\Services\CourseCompletionService;
+use App\Services\CourseEnrollmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CourseController extends BaseApiController
@@ -259,81 +259,12 @@ class CourseController extends BaseApiController
      */
     public function enroll(Request $request, Course $course): JsonResponse
     {
-        abort_if($course->status !== CourseStatus::PUBLISHED, 404);
-
         $validated = $request->validate([
             'track' => ['required', 'in:offline,online'],
         ]);
-        $track = $validated['track'];
 
-        $user = $request->user();
-
-        // Thành viên CLB = có bất kỳ vai trò nào ngoài "user" thường
-        $memberRoles = array_values(array_filter(
-            array_map(fn (RolesEnum $case) => $case->value, RolesEnum::cases()),
-            fn (string $role) => $role !== RolesEnum::USER->value,
-        ));
-        $isClubMember = $user->hasAnyRole($memberRoles);
-
-        abort_if(
-            ! $isClubMember && ! str_ends_with(strtolower((string) $user->email), '@caothang.edu.vn'),
-            422,
-            'Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) hoặc thành viên CLB mới được ghi danh khoá học.'
-        );
-
-        // Đã ghi danh rồi → chặn (đổi/thêm track còn chờ chốt nghiệp vụ)
-        if ($course->enrollmentFor($user->id)) {
-            return $this->errorResponse(false, 'Bạn đã ghi danh khoá học này rồi.', 422);
-        }
-
-        $now = now();
-
-        if ($track === 'offline') {
-            abort_if($course->max_offline_slots === null, 422, 'Khoá học này không mở lớp offline.');
-            abort_if(
-                $course->enrollment_start && $now->lt($course->enrollment_start),
-                422,
-                'Khoá học chưa mở ghi danh. Vui lòng quay lại sau.'
-            );
-            abort_if(
-                $course->enrollment_deadline && $now->gt($course->enrollment_deadline),
-                422,
-                'Đã hết hạn ghi danh lớp offline.'
-            );
-
-            $enrollment = DB::transaction(function () use ($course, $user) {
-                $taken = $course->enrollments()
-                    ->where('track', 'offline')
-                    ->lockForUpdate()
-                    ->count();
-
-                abort_if(
-                    $taken >= $course->max_offline_slots,
-                    422,
-                    'Lớp offline đã đủ số lượng học viên.'
-                );
-
-                return CourseEnrollment::create([
-                    'user_id' => $user->id,
-                    'course_id' => $course->id,
-                    'track' => 'offline',
-                    'progress' => 0,
-                ]);
-            });
-        } else {
-            abort_if(
-                $course->course_end && $now->gt($course->course_end),
-                422,
-                'Khoá học đã kết thúc, không thể ghi danh học online.'
-            );
-
-            $enrollment = CourseEnrollment::create([
-                'user_id' => $user->id,
-                'course_id' => $course->id,
-                'track' => 'online',
-                'progress' => 0,
-            ]);
-        }
+        $enrollment = app(CourseEnrollmentService::class)
+            ->enroll($course, $request->user(), $validated['track']);
 
         return $this->createdResponse(['track' => $enrollment->track], 'Ghi danh khoá học thành công.');
     }
@@ -407,6 +338,60 @@ class CourseController extends BaseApiController
             true,
             ['token' => $ticket->token, 'used_at' => $ticket->used_at?->toIso8601String()],
             'Đã đăng ký tham gia buổi học. Xuất trình mã QR để điểm danh.',
+        );
+    }
+
+    /**
+     * Ghi nhận % xem video bài giảng (hybrid: tự động qua YouTube IFrame API + nút đánh dấu tay).
+     * Chỉ học viên đã ghi danh khoá học mới được ghi tiến độ. Giữ % cao nhất đã đạt được
+     * (không tụt lùi nếu xem lại từ đầu); is_completed khi đạt ngưỡng (LessonSectionType::VIDEO, 80%).
+     */
+    public function markVideoProgress(Request $request, Course $course, string $lessonSlug): JsonResponse
+    {
+        abort_if($course->status !== CourseStatus::PUBLISHED, 404);
+
+        $lesson = $course->lessons()
+            ->where('status', CourseStatus::PUBLISHED->value)
+            ->where('slug', $lessonSlug)
+            ->first();
+        abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
+        abort_if(! $lesson->playableVideoUrl(), 422, 'Buổi học này chưa có video bài giảng.');
+
+        $userId = $request->user()->id;
+        $enrollment = $course->enrollmentFor($userId);
+        abort_if(! $enrollment, 403, 'Bạn cần ghi danh khoá học trước khi xem video.');
+
+        $validated = $request->validate([
+            'watch_percentage' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $existing = LessonProgress::where('user_id', $userId)
+            ->where('lesson_id', $lesson->id)
+            ->where('section_type', LessonSectionType::VIDEO->value)
+            ->first();
+
+        $bestPercentage = max((int) $validated['watch_percentage'], (int) ($existing?->watch_percentage ?? 0));
+        $isCompleted = $bestPercentage >= LessonSectionType::VIDEO->completionThreshold();
+
+        $progress = LessonProgress::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'lesson_id' => $lesson->id,
+                'section_type' => LessonSectionType::VIDEO->value,
+            ],
+            [
+                'watch_percentage' => $bestPercentage,
+                'is_completed' => $isCompleted,
+                'completed_at' => $isCompleted ? ($existing?->completed_at ?? now()) : null,
+            ],
+        );
+
+        app(CourseCompletionService::class)->recalc($enrollment);
+
+        return $this->successResponse(
+            true,
+            ['watch_percentage' => $progress->watch_percentage, 'is_completed' => $progress->is_completed],
+            'Đã ghi nhận tiến độ xem video.',
         );
     }
 

@@ -10,6 +10,7 @@ use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
+use App\Services\CourseCompletionService;
 use App\Services\QuizGradingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -155,6 +156,10 @@ class QuizController extends BaseApiController
                 ],
             );
         });
+
+        if ($enrollment = $course->enrollmentFor($userId)) {
+            app(CourseCompletionService::class)->recalc($enrollment);
+        }
 
         return $this->successResponse(true, [
             'score' => $score,

@@ -55,6 +55,13 @@ export const learningService = {
 			`/learning/courses/${slug}/lessons/${lessonSlug}/qr-ticket`,
 		),
 
+	// Ghi nhận % xem video bài giảng (hybrid: tự động qua YouTube IFrame API + nút đánh dấu tay).
+	markVideoProgress: (courseSlug: string, lessonSlug: string, watchPercentage: number) =>
+		api.post<ApiResponse<{ watch_percentage: number; is_completed: boolean }>>(
+			`/learning/courses/${courseSlug}/lessons/${lessonSlug}/progress`,
+			{ watch_percentage: watchPercentage },
+		),
+
 	getQuiz: (courseSlug: string, lessonSlug: string) =>
 		api.get<ApiResponse<QuizPlay>>(
 			`/learning/courses/${courseSlug}/lessons/${lessonSlug}/quiz`,

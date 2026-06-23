@@ -1,8 +1,21 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type { AdminCourse, CourseListParams } from "@/pages/learning/course-mock";
-import type { AdminCourseDetail } from "@/pages/learning/course-detail-mock";
+import type {
+	AdminCourseDetail,
+	CourseCertificateRow,
+	CourseEnrollmentRow,
+	EnrollmentTrack,
+} from "@/pages/learning/course-detail-mock";
 import type { CourseStatus } from "@/pages/learning/course-meta";
+
+/** Một user gợi ý khi tìm để ghi danh thay (chưa ghi danh khóa học). */
+export interface EnrollableUserDTO {
+	id: number;
+	full_name: string | null;
+	email: string | null;
+	avatar: string | null;
+}
 
 export interface CourseCategoryOption {
 	id: number;
@@ -43,6 +56,22 @@ export interface CheckInStudentDTO {
 export interface LessonCheckInResult {
 	already: boolean;
 	student: CheckInStudentDTO;
+}
+
+/** Một học viên trong danh sách chấm bài tập của buổi học. */
+export interface AssignmentGradeDTO {
+	user_id: number;
+	full_name: string | null;
+	email: string | null;
+	avatar: string | null;
+	track: "offline" | "online";
+	/** null = chưa chấm */
+	score: number | null;
+}
+
+export interface GradeInput {
+	user_id: number;
+	score: number | null;
 }
 
 /** Một đáp án của câu hỏi quiz (shape khớp backend QuizController). */
@@ -192,6 +221,71 @@ const courseService = {
 		qrToken: string,
 	): Promise<ApiResponse<LessonCheckInResult>> {
 		return api.post(`/courses/${courseSlug}/lessons/${lessonId}/check-in`, { qr_token: qrToken });
+	},
+
+	/** Danh sách học viên + điểm bài tập hiện tại của buổi học. */
+	async getGrades(
+		courseSlug: string,
+		lessonId: number,
+	): Promise<ApiResponse<AssignmentGradeDTO[]>> {
+		return api.get(`/courses/${courseSlug}/lessons/${lessonId}/grades`);
+	},
+
+	/** Lưu điểm bài tập cho nhiều học viên cùng lúc. */
+	async saveGrades(
+		courseSlug: string,
+		lessonId: number,
+		grades: GradeInput[],
+	): Promise<ApiResponse<AssignmentGradeDTO[]>> {
+		return api.put(`/courses/${courseSlug}/lessons/${lessonId}/grades`, { grades });
+	},
+
+	// ── Ghi danh thủ công (admin) ──
+	/** Tìm user chưa ghi danh khóa học (theo tên/email/username) để ghi danh thay. */
+	async searchEnrollableUsers(
+		courseSlug: string,
+		search: string,
+	): Promise<ApiResponse<EnrollableUserDTO[]>> {
+		return api.get(`/courses/${courseSlug}/enrollable-users`, { search });
+	},
+
+	/** Ghi danh thay học viên. */
+	async enrollStudent(
+		courseSlug: string,
+		userId: number,
+		track: EnrollmentTrack,
+	): Promise<ApiResponse<CourseEnrollmentRow>> {
+		return api.post(`/courses/${courseSlug}/enrollments`, { user_id: userId, track });
+	},
+
+	/** Đổi track (offline/online) của một ghi danh. */
+	async updateEnrollmentTrack(
+		courseSlug: string,
+		enrollmentId: number,
+		track: EnrollmentTrack,
+	): Promise<ApiResponse<CourseEnrollmentRow>> {
+		return api.patch(`/courses/${courseSlug}/enrollments/${enrollmentId}`, { track });
+	},
+
+	/** Xoá ghi danh (cascade xoá tiến độ/điểm danh liên quan). */
+	async removeEnrollment(courseSlug: string, enrollmentId: number): Promise<ApiResponse<null>> {
+		return api.delete(`/courses/${courseSlug}/enrollments/${enrollmentId}`);
+	},
+
+	/** Thu hồi chứng chỉ (giữ lại bản ghi, chỉ đánh dấu đã thu hồi). */
+	async revokeCertificate(
+		courseSlug: string,
+		certificateId: number,
+	): Promise<ApiResponse<CourseCertificateRow>> {
+		return api.post(`/courses/${courseSlug}/certificates/${certificateId}/revoke`);
+	},
+
+	/** Cấp lại chứng chỉ (sinh cert_code + PDF mới, gỡ trạng thái thu hồi). */
+	async reissueCertificate(
+		courseSlug: string,
+		certificateId: number,
+	): Promise<ApiResponse<CourseCertificateRow>> {
+		return api.post(`/courses/${courseSlug}/certificates/${certificateId}/reissue`);
 	},
 };
 
