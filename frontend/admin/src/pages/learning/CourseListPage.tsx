@@ -66,11 +66,7 @@ import {
 	type CourseStatus,
 } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
-import type {
-	AdminCourse,
-	CourseOfflineFilter,
-	CourseSortKey,
-} from "@/pages/learning/course-mock";
+import type { AdminCourse, CourseOfflineFilter, CourseSortKey } from "@/pages/learning/course-mock";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -116,7 +112,7 @@ const offlineOptions: Array<{ value: CourseOfflineFilter; label: string }> = [
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function CourseListPage() {
-	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Quản lý khóa học" }]);
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Khóa học" }]);
 
 	const navigate = useNavigate();
 
@@ -192,7 +188,8 @@ function CourseListPage() {
 	const handleSort = (key: CourseSortKey) => {
 		let order: "asc" | "desc" | null = "asc";
 		if (sortConfig.key === key) {
-			order = sortConfig.order === "asc" ? "desc" : sortConfig.order === "desc" ? null : "asc";
+			order =
+				sortConfig.order === "asc" ? "desc" : sortConfig.order === "desc" ? null : "asc";
 		}
 		setSortConfig({ key: order ? key : null, order });
 	};
@@ -248,8 +245,8 @@ function CourseListPage() {
 				<div className='space-y-2'>
 					<h2 className='text-2xl font-semibold tracking-tight'>Quản lý khóa học</h2>
 					<p className='text-muted-foreground'>
-						Tạo và quản lý các khóa học của Trung tâm đào tạo CLB — nội dung buổi học, ghi
-						danh và chứng chỉ.
+						Tạo và quản lý các khóa học của Trung tâm đào tạo CLB — nội dung buổi học,
+						ghi danh và chứng chỉ.
 					</p>
 				</div>
 
@@ -267,7 +264,10 @@ function CourseListPage() {
 								<DropdownMenuTrigger asChild>
 									<Button variant='outline' size='sm' className='h-8'>
 										<Filter className='h-4 w-4' />
-										{offlineOptions.find((o) => o.value === offlineFilter)?.label}
+										{
+											offlineOptions.find((o) => o.value === offlineFilter)
+												?.label
+										}
 									</Button>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align='end' className='w-[180px]'>
@@ -277,7 +277,11 @@ function CourseListPage() {
 										<DropdownMenuItem
 											key={opt.value}
 											onClick={() => setOfflineFilter(opt.value)}
-											className={offlineFilter === opt.value ? "bg-muted font-medium" : ""}>
+											className={
+												offlineFilter === opt.value
+													? "bg-muted font-medium"
+													: ""
+											}>
 											{opt.label}
 										</DropdownMenuItem>
 									))}
@@ -298,7 +302,11 @@ function CourseListPage() {
 										<DropdownMenuItem
 											key={opt.value}
 											onClick={() => setLevelFilter(opt.value)}
-											className={levelFilter === opt.value ? "bg-muted font-medium" : ""}>
+											className={
+												levelFilter === opt.value
+													? "bg-muted font-medium"
+													: ""
+											}>
 											{opt.label}
 										</DropdownMenuItem>
 									))}
@@ -429,7 +437,9 @@ function CourseListPage() {
 											<TableCell>
 												<Checkbox
 													checked={isSelected(course.id)}
-													onCheckedChange={(c) => toggleOne(course.id, c === true)}
+													onCheckedChange={(c) =>
+														toggleOne(course.id, c === true)
+													}
 												/>
 											</TableCell>
 											<TableCell className='font-medium text-muted-foreground'>
@@ -451,7 +461,9 @@ function CourseListPage() {
 													<div className='min-w-0 space-y-1'>
 														<button
 															type='button'
-															onClick={() => navigate(`/courses/${course.slug}`)}
+															onClick={() =>
+																navigate(`/courses/${course.slug}`)
+															}
 															className='block max-w-[320px] truncate text-left text-sm font-medium hover:underline'>
 															{course.title}
 														</button>
@@ -475,15 +487,20 @@ function CourseListPage() {
 															className={cn(
 																"font-medium",
 																course.offline_enrollments_count >=
-																	course.max_offline_slots && "text-rose-600",
+																	course.max_offline_slots &&
+																	"text-rose-600",
 															)}>
 															{course.offline_enrollments_count}/
 															{course.max_offline_slots}
 														</span>
-														<p className='text-xs text-muted-foreground'>slot</p>
+														<p className='text-xs text-muted-foreground'>
+															slot
+														</p>
 													</div>
 												) : (
-													<span className='text-xs text-muted-foreground'>Chỉ online</span>
+													<span className='text-xs text-muted-foreground'>
+														Chỉ online
+													</span>
 												)}
 											</TableCell>
 											<TableCell>
@@ -496,11 +513,14 @@ function CourseListPage() {
 												<div className='space-y-0.5 text-sm'>
 													<div className='flex items-center gap-1.5'>
 														<Users className='h-3.5 w-3.5 text-muted-foreground' />
-														{course.enrollments_count.toLocaleString("vi-VN")}
+														{course.enrollments_count.toLocaleString(
+															"vi-VN",
+														)}
 													</div>
 													{course.enrollments_count > 0 && (
 														<p className='text-xs text-muted-foreground'>
-															{course.offline_enrollments_count} offline ·{" "}
+															{course.offline_enrollments_count}{" "}
+															offline ·{" "}
 															{course.online_enrollments_count} online
 														</p>
 													)}
@@ -516,7 +536,12 @@ function CourseListPage() {
 												{course.creator ? (
 													<div className='flex items-center gap-2.5'>
 														<Avatar className='h-7 w-7'>
-															<AvatarImage src={course.creator.avatar ?? undefined} />
+															<AvatarImage
+																src={
+																	course.creator.avatar ??
+																	undefined
+																}
+															/>
 															<AvatarFallback className='text-xs'>
 																{(course.creator.full_name ?? "?")
 																	.charAt(0)
@@ -528,7 +553,9 @@ function CourseListPage() {
 														</p>
 													</div>
 												) : (
-													<span className='text-sm text-muted-foreground'>--</span>
+													<span className='text-sm text-muted-foreground'>
+														--
+													</span>
 												)}
 											</TableCell>
 											<TableCell>
@@ -540,14 +567,22 @@ function CourseListPage() {
 															<MoreHorizontal className='h-4 w-4' />
 														</Button>
 													</DropdownMenuTrigger>
-													<DropdownMenuContent align='end' className='w-[200px]'>
+													<DropdownMenuContent
+														align='end'
+														className='w-[200px]'>
 														<DropdownMenuItem
-															onClick={() => navigate(`/courses/${course.slug}`)}>
+															onClick={() =>
+																navigate(`/courses/${course.slug}`)
+															}>
 															<Eye className='h-4 w-4' />
 															Xem chi tiết
 														</DropdownMenuItem>
 														<DropdownMenuItem
-															onClick={() => navigate(`/courses/${course.slug}/edit`)}>
+															onClick={() =>
+																navigate(
+																	`/courses/${course.slug}/edit`,
+																)
+															}>
 															<Pencil className='h-4 w-4' />
 															Chỉnh sửa
 														</DropdownMenuItem>
@@ -579,7 +614,8 @@ function CourseListPage() {
 									<TableCell colSpan={11}>
 										<div className='flex items-center justify-between px-2'>
 											<div className='flex flex-1 items-center gap-3 text-sm text-muted-foreground'>
-												Đang hiển thị {courses.length} trên tổng {meta.total} khóa học.
+												Đang hiển thị {courses.length} trên tổng{" "}
+												{meta.total} khóa học.
 												{selectedIds.length > 0 && (
 													<>
 														<span className='text-border'>|</span>
@@ -593,14 +629,18 @@ function CourseListPage() {
 															onClick={() => setBulkDeleteOpen(true)}
 															className='h-7'>
 															<Trash2 className='h-3.5 w-3.5' />
-															{bulkDeleting ? "Đang xóa..." : "Xóa đã chọn"}
+															{bulkDeleting
+																? "Đang xóa..."
+																: "Xóa đã chọn"}
 														</Button>
 													</>
 												)}
 											</div>
 											<div className='flex items-center space-x-6 lg:space-x-8'>
 												<div className='flex items-center space-x-2'>
-													<p className='text-sm font-medium'>Số hàng mỗi trang</p>
+													<p className='text-sm font-medium'>
+														Số hàng mỗi trang
+													</p>
 													<Select
 														value={`${meta.per_page}`}
 														onValueChange={(v) =>
@@ -629,7 +669,12 @@ function CourseListPage() {
 													<Button
 														variant='outline'
 														className='hidden h-8 w-8 p-0 lg:flex'
-														onClick={() => setMeta((p) => ({ ...p, current_page: 1 }))}
+														onClick={() =>
+															setMeta((p) => ({
+																...p,
+																current_page: 1,
+															}))
+														}
 														disabled={meta.current_page === 1}>
 														<ChevronsLeft className='h-4 w-4' />
 													</Button>
@@ -639,7 +684,10 @@ function CourseListPage() {
 														onClick={() =>
 															setMeta((p) => ({
 																...p,
-																current_page: Math.max(1, p.current_page - 1),
+																current_page: Math.max(
+																	1,
+																	p.current_page - 1,
+																),
 															}))
 														}
 														disabled={meta.current_page === 1}>
@@ -657,16 +705,23 @@ function CourseListPage() {
 																),
 															}))
 														}
-														disabled={meta.current_page === meta.last_page}>
+														disabled={
+															meta.current_page === meta.last_page
+														}>
 														<ChevronRight className='h-4 w-4' />
 													</Button>
 													<Button
 														variant='outline'
 														className='hidden h-8 w-8 p-0 lg:flex'
 														onClick={() =>
-															setMeta((p) => ({ ...p, current_page: p.last_page }))
+															setMeta((p) => ({
+																...p,
+																current_page: p.last_page,
+															}))
 														}
-														disabled={meta.current_page === meta.last_page}>
+														disabled={
+															meta.current_page === meta.last_page
+														}>
 														<ChevronsRight className='h-4 w-4' />
 													</Button>
 												</div>
@@ -697,8 +752,8 @@ function CourseListPage() {
 									.
 								</p>
 								<p>
-									Khóa học sẽ được chuyển vào thùng rác. Học viên sẽ không còn truy cập
-									được nội dung khóa học này.
+									Khóa học sẽ được chuyển vào thùng rác. Học viên sẽ không còn
+									truy cập được nội dung khóa học này.
 								</p>
 							</div>
 							<DialogFooter>
@@ -708,7 +763,10 @@ function CourseListPage() {
 									disabled={isDeleting}>
 									Hủy
 								</Button>
-								<Button variant='destructive' onClick={handleDelete} disabled={isDeleting}>
+								<Button
+									variant='destructive'
+									onClick={handleDelete}
+									disabled={isDeleting}>
 									{isDeleting ? "Đang xóa..." : "Xóa khóa học"}
 								</Button>
 							</DialogFooter>
@@ -733,7 +791,10 @@ function CourseListPage() {
 							disabled={bulkDeleting}>
 							Hủy
 						</Button>
-						<Button variant='destructive' onClick={handleBulkDelete} disabled={bulkDeleting}>
+						<Button
+							variant='destructive'
+							onClick={handleBulkDelete}
+							disabled={bulkDeleting}>
 							{bulkDeleting ? "Đang xóa..." : "Xóa đã chọn"}
 						</Button>
 					</DialogFooter>

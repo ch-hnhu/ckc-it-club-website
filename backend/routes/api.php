@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactControlle
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
+use App\Http\Controllers\Api\V1\Admin\CertificateTemplateController as AdminCertificateTemplateController;
 use App\Http\Controllers\Api\V1\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Api\V1\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Api\V1\Admin\EventController as AdminEventController;
@@ -490,6 +491,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:courses.view')->group(function () {
             Route::get('courses', [AdminCourseController::class, 'index']);
             Route::get('courses/trash', [AdminCourseController::class, 'trash']);
+            Route::get('certificate-templates', [AdminCertificateTemplateController::class, 'index']);
             Route::get('courses/{course}', [AdminCourseController::class, 'show']);
             Route::get('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'show']);
         });
