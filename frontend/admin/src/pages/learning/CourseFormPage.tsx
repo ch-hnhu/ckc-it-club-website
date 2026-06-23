@@ -80,6 +80,13 @@ function toLocalInput(iso: string | null): string {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** datetime-local (giờ địa phương, không kèm timezone) → ISO UTC để gửi lên backend (lưu giờ UTC) */
+function toUtcIso(localValue: string): string {
+	if (!localValue) return "";
+	const d = new Date(localValue);
+	return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 function CourseFormPage() {
@@ -240,9 +247,9 @@ function CourseFormPage() {
 			fd.append("level", form.level);
 			fd.append("status", form.status);
 			fd.append("description", form.description.trim());
-			fd.append("enrollment_start", form.enrollment_start);
-			fd.append("enrollment_deadline", form.enrollment_deadline);
-			fd.append("course_end", form.course_end);
+			fd.append("enrollment_start", toUtcIso(form.enrollment_start));
+			fd.append("enrollment_deadline", toUtcIso(form.enrollment_deadline));
+			fd.append("course_end", toUtcIso(form.course_end));
 			fd.append("quiz_pass_threshold", form.quiz_pass_threshold);
 			fd.append("has_offline", hasOffline ? "1" : "0");
 			if (hasOffline) {
