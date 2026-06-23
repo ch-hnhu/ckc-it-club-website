@@ -175,8 +175,6 @@ function CourseDetailPage() {
 	const [gradingLesson, setGradingLesson] = useState<AdminCourseDetail["lessons"][number] | null>(
 		null,
 	);
-	const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
-	const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
 	const [deletingLesson, setDeletingLesson] = useState<
 		AdminCourseDetail["lessons"][number] | null
 	>(null);
@@ -245,6 +243,10 @@ function CourseDetailPage() {
 
 	const openEditLesson = (id: number) => {
 		navigate(`/courses/${slug}/lessons/${id}/edit`);
+	};
+
+	const openQuizBuilder = (id: number) => {
+		navigate(`/learning/courses/${course?.slug ?? slug}/lessons/${id}/quiz/create`);
 	};
 
 	const handleDeleteLesson = async () => {
@@ -635,6 +637,16 @@ function CourseDetailPage() {
 																<Pencil className='h-4 w-4' />
 																Sửa
 															</DropdownMenuItem>
+
+															{canManageQuiz && (
+																<DropdownMenuItem
+																	onClick={() =>
+																		openQuizBuilder(lesson.id)
+																	}>
+																	<FilePen className='h-4 w-4' />
+																	Quiz
+																</DropdownMenuItem>
+															)}
 
 															{lesson.has_assignment && (
 																<DropdownMenuItem
