@@ -7,13 +7,17 @@ use App\Enums\LessonSectionType;
 use App\Enums\TagModelType;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Course;
+use App\Models\CourseEnrollment;
 use App\Models\CourseFollower;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\LessonQrTicket;
+use App\Models\PointRule;
+use App\Models\PointTransaction;
 use App\Models\Tag;
 use App\Services\CourseCompletionService;
 use App\Services\CourseEnrollmentService;
+use App\Services\PointService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -120,7 +124,7 @@ class CourseController extends BaseApiController
             'enrollment_deadline' => $course->enrollment_deadline?->toIso8601String(),
             'course_end' => $course->course_end?->toIso8601String(),
             'lessons' => $lessons->map(fn (Lesson $l) => $this->transformLessonRow($l, $userId, $enrollment?->track))->all(),
-            'stats' => $this->buildStats($course, $lessons, $userId),
+            'stats' => $this->buildStats($course, $lessons, $userId, $enrollment),
         ]);
 
         return $this->successResponse(true, $data, 'Lấy thông tin khoá học thành công.');
@@ -372,6 +376,7 @@ class CourseController extends BaseApiController
 
         $bestPercentage = max((int) $validated['watch_percentage'], (int) ($existing?->watch_percentage ?? 0));
         $isCompleted = $bestPercentage >= LessonSectionType::VIDEO->completionThreshold();
+        $wasCompleted = (bool) ($existing?->is_completed);
 
         $progress = LessonProgress::updateOrCreate(
             [
@@ -385,6 +390,10 @@ class CourseController extends BaseApiController
                 'completed_at' => $isCompleted ? ($existing?->completed_at ?? now()) : null,
             ],
         );
+
+        if (! $wasCompleted && $isCompleted) {
+            PointService::award($request->user(), 'learning_center.video_completed', $progress);
+        }
 
         app(CourseCompletionService::class)->recalc($enrollment);
 
@@ -520,9 +529,10 @@ class CourseController extends BaseApiController
     /**
      * Thống kê tiến độ hiển thị ở sidebar trang tổng quan.
      */
-    private function buildStats(Course $course, $lessons, ?int $userId): array
+    private function buildStats(Course $course, $lessons, ?int $userId, ?CourseEnrollment $enrollment): array
     {
         $attendanceTotal = $lessons->count();
+        $videoLessons = $lessons->filter(fn (Lesson $l) => (bool) $l->playableVideoUrl());
         $exerciseLessons = $lessons->filter(fn (Lesson $l) => (bool) $l->assignment_url);
         $quizLessons = $lessons->filter(fn (Lesson $l) => (bool) $l->quiz);
 
@@ -549,6 +559,22 @@ class CourseController extends BaseApiController
             }
         }
 
+        $xpRules = PointRule::whereIn('key', [
+            'learning_center.video_completed',
+            'learning_center.quiz_passed',
+            'learning_center.assignment_completed',
+            'learning_center.course_completed',
+        ])->pluck('points', 'key');
+
+        $xpTotal = $videoLessons->count() * (int) ($xpRules['learning_center.video_completed'] ?? 0)
+            + $quizLessons->count() * (int) ($xpRules['learning_center.quiz_passed'] ?? 0)
+            + $exerciseLessons->count() * (int) ($xpRules['learning_center.assignment_completed'] ?? 0)
+            + (int) ($xpRules['learning_center.course_completed'] ?? 0);
+
+        $xpEarned = $userId
+            ? $this->xpEarnedForCourse($lessons, $userId, $enrollment)
+            : 0;
+
         return [
             'attendance_done' => $attendanceDone,
             'attendance_total' => $attendanceTotal,
@@ -558,11 +584,44 @@ class CourseController extends BaseApiController
             'projects_total' => 0,
             'quizzes_done' => $quizzesDone,
             'quizzes_total' => $quizLessons->count(),
-            'xp_earned' => 0,       // TODO(G2): tích hợp gamification
-            'xp_total' => 0,
+            'xp_earned' => $xpEarned,
+            'xp_total' => $xpTotal,
             'badges_earned' => 0,
             'badges_total' => 0,
         ];
+    }
+
+    /**
+     * Tổng điểm XP đã cộng thật (point_transactions) cho user trong khoá học này — gồm
+     * điểm từng buổi (video/quiz/bài tập) và điểm thưởng hoàn thành khoá (nếu đã đạt).
+     */
+    private function xpEarnedForCourse($lessons, int $userId, ?CourseEnrollment $enrollment): int
+    {
+        $progressIds = LessonProgress::where('user_id', $userId)
+            ->whereIn('lesson_id', $lessons->pluck('id'))
+            ->pluck('id');
+
+        $lessonXp = $progressIds->isNotEmpty()
+            ? (int) PointTransaction::where('user_id', $userId)
+                ->where('source_type', 'lesson_progress')
+                ->whereIn('source_id', $progressIds)
+                ->whereHas('pointRule', fn ($q) => $q->whereIn('key', [
+                    'learning_center.video_completed',
+                    'learning_center.quiz_passed',
+                    'learning_center.assignment_completed',
+                ]))
+                ->sum('points')
+            : 0;
+
+        $courseXp = $enrollment
+            ? (int) PointTransaction::where('user_id', $userId)
+                ->where('source_type', 'course_enrollment')
+                ->where('source_id', $enrollment->id)
+                ->whereHas('pointRule', fn ($q) => $q->where('key', 'learning_center.course_completed'))
+                ->sum('points')
+            : 0;
+
+        return $lessonXp + $courseXp;
     }
 
     /**

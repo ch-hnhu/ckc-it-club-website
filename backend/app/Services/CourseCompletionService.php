@@ -57,11 +57,12 @@ class CourseCompletionService
         }
         $enrollment->save();
 
-        // Tự động cấp chứng chỉ ngay khi vừa chuyển sang hoàn thành — chỉ gọi đúng một lần lúc
-        // chuyển trạng thái, không gọi lại mỗi lần recalc trên enrollment đã hoàn thành (tránh
-        // cấp đè chứng chỉ admin đã chủ động thu hồi).
+        // Tự động cấp chứng chỉ + cộng điểm thưởng ngay khi vừa chuyển sang hoàn thành — chỉ gọi
+        // đúng một lần lúc chuyển trạng thái, không gọi lại mỗi lần recalc trên enrollment đã
+        // hoàn thành (tránh cấp đè chứng chỉ admin đã chủ động thu hồi / cộng điểm trùng).
         if ($justCompleted) {
             app(CourseCertificateService::class)->issue($enrollment);
+            PointService::award($enrollment->user, 'learning_center.course_completed', $enrollment);
         }
 
         return $enrollment;

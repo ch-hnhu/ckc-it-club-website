@@ -10,7 +10,9 @@ use App\Models\Lesson;
 use App\Models\LessonAttendance;
 use App\Models\LessonProgress;
 use App\Models\LessonQrTicket;
+use App\Models\User;
 use App\Services\CourseCompletionService;
+use App\Services\PointService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -174,8 +176,9 @@ class LessonController extends BaseApiController
 
         $offlineUserIds = $course->enrollments()->where('track', 'offline')->pluck('user_id')->all();
         $threshold = LessonSectionType::ASSIGNMENT->completionThreshold();
+        $newlyCompleted = [];
 
-        DB::transaction(function () use ($data, $lesson, $offlineUserIds, $threshold) {
+        DB::transaction(function () use ($data, $lesson, $offlineUserIds, $threshold, &$newlyCompleted) {
             foreach ($data['grades'] as $grade) {
                 abort_if(
                     ! in_array($grade['user_id'], $offlineUserIds, true),
@@ -193,9 +196,15 @@ class LessonController extends BaseApiController
                     continue;
                 }
 
+                $existing = LessonProgress::where([
+                    'user_id' => $grade['user_id'],
+                    'lesson_id' => $lesson->id,
+                    'section_type' => LessonSectionType::ASSIGNMENT,
+                ])->first();
+
                 $isCompleted = $grade['score'] >= $threshold;
 
-                LessonProgress::updateOrCreate(
+                $progress = LessonProgress::updateOrCreate(
                     [
                         'user_id' => $grade['user_id'],
                         'lesson_id' => $lesson->id,
@@ -207,8 +216,23 @@ class LessonController extends BaseApiController
                         'completed_at' => $isCompleted ? now() : null,
                     ],
                 );
+
+                if (! ((bool) $existing?->is_completed) && $isCompleted) {
+                    $newlyCompleted[] = $progress;
+                }
             }
         });
+
+        if ($newlyCompleted !== []) {
+            $usersById = User::whereIn('id', array_map(fn ($p) => $p->user_id, $newlyCompleted))
+                ->get()
+                ->keyBy('id');
+            foreach ($newlyCompleted as $progress) {
+                if ($user = $usersById->get($progress->user_id)) {
+                    PointService::award($user, 'learning_center.assignment_completed', $progress);
+                }
+            }
+        }
 
         $affectedUserIds = collect($data['grades'])->pluck('user_id')->unique();
         $completionService = app(CourseCompletionService::class);
