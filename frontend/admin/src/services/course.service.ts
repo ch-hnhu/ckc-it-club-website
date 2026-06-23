@@ -35,7 +35,6 @@ export interface LessonFull {
 	session_start: string | null;
 	session_end: string | null;
 	resource_url: string | null;
-	resource_label: string | null;
 	video_url: string | null;
 	video_duration: number | null;
 	live_url: string | null;
@@ -152,6 +151,11 @@ const courseService = {
 	/** Danh mục (tag) khóa học để chọn khi tạo/sửa — dùng endpoint công khai. */
 	async getCategories(): Promise<ApiResponse<CourseCategoryOption[]>> {
 		return api.get("/learning/categories");
+	},
+
+	/** Lấy thời lượng video YouTube (giây + nhãn "X tiếng Y phút") từ URL qua backend. */
+	async getYoutubeDuration(url: string): Promise<ApiResponse<{ seconds: number; label: string }>> {
+		return api.get("/lessons/youtube-duration", { url });
 	},
 
 	// ── Xóa / thùng rác ──

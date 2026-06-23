@@ -23,7 +23,6 @@ class Lesson extends Model
         'session_start',
         'session_end',
         'resource_url',
-        'resource_label',
         'video_url',
         'video_duration',
         'live_url',

@@ -16,6 +16,7 @@ use App\Services\PointService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -244,6 +245,106 @@ class LessonController extends BaseApiController
         return $this->grades($course, $lesson);
     }
 
+    /**
+     * Lấy thời lượng video YouTube từ URL qua YouTube Data API v3 (contentDetails.duration).
+     * Trả về số giây + nhãn "X tiếng Y phút" để admin form tự điền (không nhập tay).
+     */
+    public function youtubeDuration(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'url' => 'required|string|max:2048',
+        ]);
+
+        $videoId = $this->parseYoutubeId($data['url']);
+        abort_if(! $videoId, 422, 'Link YouTube không hợp lệ.');
+
+        $apiKey = config('services.youtube.key');
+        abort_if(! $apiKey, 422, 'Chưa cấu hình YOUTUBE_API_KEY trên máy chủ.');
+
+        $response = Http::get('https://www.googleapis.com/youtube/v3/videos', [
+            'part' => 'contentDetails',
+            'id' => $videoId,
+            'key' => $apiKey,
+        ]);
+
+        abort_if($response->failed(), 422, 'Không gọi được YouTube API. Kiểm tra lại API key.');
+
+        $isoDuration = $response->json('items.0.contentDetails.duration');
+        abort_if(! $isoDuration, 422, 'Không tìm thấy video hoặc video không công khai.');
+
+        $seconds = $this->iso8601ToSeconds($isoDuration);
+
+        return $this->successResponse(true, [
+            'seconds' => $seconds,
+            'label' => $this->durationLabel($seconds),
+        ], ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Tách video ID từ các dạng URL YouTube: watch?v=, youtu.be/, embed/, shorts/.
+     */
+    private function parseYoutubeId(string $url): ?string
+    {
+        $patterns = [
+            '#youtu\.be/([A-Za-z0-9_-]{11})#',
+            '#youtube\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/|v/)([A-Za-z0-9_-]{11})#',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $url, $m)) {
+                return $m[1];
+            }
+        }
+
+        // URL chỉ chứa đúng ID (11 ký tự)
+        return preg_match('#^[A-Za-z0-9_-]{11}$#', trim($url)) ? trim($url) : null;
+    }
+
+    /**
+     * ISO8601 duration (PT#H#M#S) → tổng số giây.
+     */
+    private function iso8601ToSeconds(string $iso): int
+    {
+        try {
+            $interval = new \DateInterval($iso);
+        } catch (\Exception) {
+            return 0;
+        }
+
+        return ($interval->d * 86400)
+            + ($interval->h * 3600)
+            + ($interval->i * 60)
+            + $interval->s;
+    }
+
+    /**
+     * Nhãn thời lượng dạng "X tiếng Y phút" (bỏ qua phần 0, làm tròn phút lên).
+     */
+    private function durationLabel(int $seconds): string
+    {
+        if ($seconds <= 0) {
+            return '—';
+        }
+
+        $hours = intdiv($seconds, 3600);
+        $minutes = (int) round(($seconds % 3600) / 60);
+
+        if ($minutes === 60) {
+            $hours++;
+            $minutes = 0;
+        }
+
+        $parts = [];
+        if ($hours > 0) {
+            $parts[] = "{$hours} tiếng";
+        }
+        if ($minutes > 0 || $hours === 0) {
+            $parts[] = "{$minutes} phút";
+        }
+
+        return implode(' ', $parts);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private function assertBelongsTo(Course $course, Lesson $lesson): void
@@ -276,7 +377,6 @@ class LessonController extends BaseApiController
             'session_start' => 'nullable|date',
             'session_end' => 'nullable|date|after_or_equal:session_start',
             'resource_url' => 'nullable|url|max:2048',
-            'resource_label' => 'nullable|string|max:255',
             'video_url' => 'nullable|url|max:2048',
             'video_duration' => 'nullable|integer|min:0|max:86400',
             'live_url' => 'nullable|url|max:2048',
@@ -289,7 +389,7 @@ class LessonController extends BaseApiController
     private function nullifyEmpty(Request $request): void
     {
         $fields = [
-            'description', 'session_start', 'session_end', 'resource_url', 'resource_label',
+            'description', 'session_start', 'session_end', 'resource_url',
             'video_url', 'video_duration', 'live_url', 'document', 'assignment_url', 'assignment_deadline',
         ];
 
@@ -332,7 +432,6 @@ class LessonController extends BaseApiController
             'session_start' => $lesson->session_start?->toIso8601String(),
             'session_end' => $lesson->session_end?->toIso8601String(),
             'resource_url' => $lesson->resource_url,
-            'resource_label' => $lesson->resource_label,
             'video_url' => $lesson->video_url,
             'video_duration' => $lesson->video_duration,
             'live_url' => $lesson->live_url,

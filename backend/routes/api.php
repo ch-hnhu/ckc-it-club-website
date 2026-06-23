@@ -502,6 +502,7 @@ Route::prefix('v1')->group(function () {
             Route::put('courses/{course}', [AdminCourseController::class, 'update']);
             Route::patch('courses/{course}', [AdminCourseController::class, 'update']);
             Route::delete('courses/{course}', [AdminCourseController::class, 'destroy']);
+            Route::get('lessons/youtube-duration', [AdminLessonController::class, 'youtubeDuration']);
             Route::post('courses/{course}/lessons', [AdminLessonController::class, 'store']);
             Route::put('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);

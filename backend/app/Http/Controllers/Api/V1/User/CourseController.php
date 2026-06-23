@@ -182,7 +182,7 @@ class CourseController extends BaseApiController
             ] : null,
             'reference' => $lesson->resource_url ? [
                 'id' => $lesson->id,
-                'title' => $lesson->resource_label ?: 'Tài nguyên tham khảo',
+                'title' => 'Tài nguyên tham khảo',
                 'meta' => 'Tài liệu',
                 'url' => $lesson->resource_url,
                 'completed' => false,
@@ -362,8 +362,8 @@ class CourseController extends BaseApiController
         abort_if(! $lesson->playableVideoUrl(), 422, 'Buổi học này chưa có video bài giảng.');
 
         $userId = $request->user()->id;
-        $enrollment = $course->enrollmentFor($userId);
-        abort_if(! $enrollment, 403, 'Bạn cần ghi danh khoá học trước khi xem video.');
+        // Vào học là tự ghi danh (track online) — không cần bước ghi danh thủ công.
+        $enrollment = app(CourseEnrollmentService::class)->ensureEnrolledOnline($course, $request->user());
 
         $validated = $request->validate([
             'watch_percentage' => ['required', 'integer', 'min:0', 'max:100'],
