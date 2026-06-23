@@ -52,6 +52,7 @@ import CourseListPage from "@/pages/learning/CourseListPage";
 import CourseFormPage from "@/pages/learning/CourseFormPage";
 import CourseDetailPage from "@/pages/learning/CourseDetailPage";
 import CourseTrashPage from "@/pages/learning/CourseTrashPage";
+import LessonFormPage from "@/pages/learning/LessonFormPage";
 import PointRulesPage from "@/pages/gamification/PointRulesPage";
 import RanksPage from "@/pages/gamification/RanksPage";
 import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
@@ -469,6 +470,22 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='courses.manage'>
 						<CourseFormPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "courses/:slug/lessons/create",
+				element: (
+					<PermissionRoute permission='courses.manage'>
+						<LessonFormPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "courses/:slug/lessons/:lessonId/edit",
+				element: (
+					<PermissionRoute permission='courses.manage'>
+						<LessonFormPage />
 					</PermissionRoute>
 				),
 			},

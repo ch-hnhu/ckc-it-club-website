@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
 import {
 	ArrowLeft,
@@ -80,7 +80,6 @@ import type {
 import AssignmentGradeDialog from "@/pages/learning/AssignmentGradeDialog";
 import EnrollStudentDialog from "@/pages/learning/EnrollStudentDialog";
 import LessonCheckInDialog from "@/pages/learning/LessonCheckInDialog";
-import LessonFormDialog from "@/pages/learning/LessonFormDialog";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -165,6 +164,7 @@ function StatCard({
 function CourseDetailPage() {
 	const { slug = "" } = useParams();
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
 	const { hasPermission } = useAuth();
 	const canManageQuiz = hasPermission("quizzes.manage");
 
@@ -178,8 +178,6 @@ function CourseDetailPage() {
 	const [gradingLesson, setGradingLesson] = useState<AdminCourseDetail["lessons"][number] | null>(
 		null,
 	);
-	const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
-	const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
 	const [deletingLesson, setDeletingLesson] = useState<AdminCourseDetail["lessons"][number] | null>(
 		null,
 	);
@@ -243,13 +241,11 @@ function CourseDetailPage() {
 	const certificatesPg = useClientPagination(course?.certificates ?? []);
 
 	const openCreateLesson = () => {
-		setEditingLessonId(null);
-		setLessonDialogOpen(true);
+		navigate(`/courses/${slug}/lessons/create`);
 	};
 
 	const openEditLesson = (id: number) => {
-		setEditingLessonId(id);
-		setLessonDialogOpen(true);
+		navigate(`/courses/${slug}/lessons/${id}/edit`);
 	};
 
 	const handleDeleteLesson = async () => {
@@ -450,7 +446,15 @@ function CourseDetailPage() {
 				</div>
 
 				{/* Tabs */}
-				<Tabs defaultValue='overview' className='w-full'>
+				<Tabs
+					defaultValue={
+						["overview", "lessons", "students", "certificates"].includes(
+							searchParams.get("tab") ?? "",
+						)
+							? searchParams.get("tab")!
+							: "overview"
+					}
+					className='w-full'>
 					<TabsList>
 						<TabsTrigger value='overview'>Tổng quan</TabsTrigger>
 						<TabsTrigger value='lessons'>Buổi học ({course.lessons_count})</TabsTrigger>
@@ -1021,14 +1025,6 @@ function CourseDetailPage() {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-
-			<LessonFormDialog
-				open={lessonDialogOpen}
-				onOpenChange={setLessonDialogOpen}
-				courseSlug={course.slug}
-				lessonId={editingLessonId}
-				onSaved={() => void loadCourse({ silent: true })}
-			/>
 
 			<AlertDialog
 				open={deletingLesson !== null}
