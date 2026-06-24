@@ -71,15 +71,25 @@ class CourseCertificateService
     private function generate(CourseEnrollment $enrollment, CertificateTemplate $template, ?CourseCertificate $existing): CourseCertificate
     {
         $certCode = $this->generateCertCode();
-        $html = $template->render([
+        $renderData = [
             'name' => $enrollment->user->full_name ?? '',
             'course' => $enrollment->course->title,
             'cert_code' => $certCode,
             'issued_at' => now()->format('d/m/Y'),
-        ]);
+            'verify_url' => rtrim((string) config('app.url'), '/').'/verify/'.$certCode,
+        ];
 
         $path = "certificates/{$certCode}.pdf";
-        Storage::disk('public')->put($path, Pdf::loadHTML($html)->setPaper('a4', 'landscape')->output());
+
+        if (is_array($template->design) && ! empty($template->design['canvas'])) {
+            // Mẫu thiết kế canvas (editor kéo-thả) → render WYSIWYG bằng Browsershot.
+            $pdfBytes = app(CertificateRenderer::class)->renderPdf($template, $renderData);
+        } else {
+            // Mẫu cũ chỉ có html_content → fallback dompdf.
+            $pdfBytes = Pdf::loadHTML($template->render($renderData))->setPaper('a4', 'landscape')->output();
+        }
+
+        Storage::disk('public')->put($path, $pdfBytes);
 
         $data = [
             'template_id' => $template->id,

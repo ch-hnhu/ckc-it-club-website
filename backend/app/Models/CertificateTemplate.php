@@ -9,6 +9,7 @@ class CertificateTemplate extends Model
 {
     protected $fillable = [
         'name',
+        'design',
         'html_content',
         'thumbnail',
         'is_default',
@@ -18,6 +19,7 @@ class CertificateTemplate extends Model
     protected function casts(): array
     {
         return [
+            'design' => 'array',
             'is_default' => 'boolean',
         ];
     }
