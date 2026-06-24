@@ -52,6 +52,7 @@ import CourseListPage from "@/pages/learning/CourseListPage";
 import CourseFormPage from "@/pages/learning/CourseFormPage";
 import CourseDetailPage from "@/pages/learning/CourseDetailPage";
 import CourseTrashPage from "@/pages/learning/CourseTrashPage";
+import CertificateTemplateListPage from "@/pages/learning/CertificateTemplateListPage";
 import PointRulesPage from "@/pages/gamification/PointRulesPage";
 import RanksPage from "@/pages/gamification/RanksPage";
 import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
@@ -469,6 +470,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='courses.manage'>
 						<CourseFormPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "certificate-templates",
+				element: (
+					<PermissionRoute permission='courses.view'>
+						<CertificateTemplateListPage />
 					</PermissionRoute>
 				),
 			},

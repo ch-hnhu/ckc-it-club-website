@@ -35,7 +35,7 @@ class CertificateTemplate extends Model
      */
     public function render(array $placeholders): string
     {
-        $search = array_map(fn (string $key) => '{{' . $key . '}}', array_keys($placeholders));
+        $search = array_map(fn (string $key) => '{{'.$key.'}}', array_keys($placeholders));
 
         return str_replace($search, array_values($placeholders), $this->html_content);
     }

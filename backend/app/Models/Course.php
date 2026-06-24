@@ -27,6 +27,7 @@ class Course extends Model
         'max_offline_slots',
         'max_absent_allowed',
         'quiz_pass_threshold',
+        'certificate_template_id',
         'created_by',
         'updated_by',
         'deleted_by',
@@ -54,6 +55,11 @@ class Course extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function certificateTemplate(): BelongsTo
+    {
+        return $this->belongsTo(CertificateTemplate::class);
     }
 
     public function tags(): BelongsToMany

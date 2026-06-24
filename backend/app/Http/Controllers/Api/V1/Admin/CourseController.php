@@ -42,7 +42,7 @@ class CourseController extends BaseApiController
         $order = $request->query('order') === 'asc' ? 'asc' : 'desc';
 
         $courses = Course::query()
-            ->with(['creator:id,full_name,avatar', 'tags:id,name'])
+            ->with(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
             ->withCount([
                 'lessons as lessons_count',
                 'enrollments as enrollments_count',
@@ -89,6 +89,7 @@ class CourseController extends BaseApiController
             'max_offline_slots' => 'nullable|integer|min:1|max:1000',
             'max_absent_allowed' => 'nullable|integer|min:0|max:50',
             'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
+            'certificate_template_id' => 'nullable|integer|exists:certificate_templates,id',
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:tags,id',
@@ -118,6 +119,7 @@ class CourseController extends BaseApiController
                 'max_offline_slots' => $data['max_offline_slots'] ?? null,
                 'max_absent_allowed' => $data['max_absent_allowed'] ?? 1,
                 'quiz_pass_threshold' => $data['quiz_pass_threshold'] ?? 80,
+                'certificate_template_id' => $data['certificate_template_id'] ?? null,
                 'created_by' => $request->user()->id,
             ]);
 
@@ -128,7 +130,7 @@ class CourseController extends BaseApiController
             return $course;
         });
 
-        $course->load(['creator:id,full_name,avatar', 'tags:id,name'])
+        $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
             ->loadCount([
                 'lessons as lessons_count',
                 'enrollments as enrollments_count',
@@ -158,6 +160,7 @@ class CourseController extends BaseApiController
             'max_offline_slots' => 'nullable|integer|min:1|max:1000',
             'max_absent_allowed' => 'nullable|integer|min:0|max:50',
             'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
+            'certificate_template_id' => 'nullable|integer|exists:certificate_templates,id',
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:tags,id',
@@ -195,7 +198,7 @@ class CourseController extends BaseApiController
         });
 
         $course->refresh()
-            ->load(['creator:id,full_name,avatar', 'tags:id,name'])
+            ->load(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
             ->loadCount([
                 'lessons as lessons_count',
                 'enrollments as enrollments_count',
@@ -232,7 +235,7 @@ class CourseController extends BaseApiController
         $order = $request->query('order') === 'asc' ? 'asc' : 'desc';
 
         $courses = Course::onlyTrashed()
-            ->with(['creator:id,full_name,avatar', 'tags:id,name'])
+            ->with(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
             ->withCount($this->courseCounts())
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
             ->orderBy($sort, $order)
@@ -253,7 +256,7 @@ class CourseController extends BaseApiController
         $course->deleted_by = null;
         $course->save();
 
-        $course->load(['creator:id,full_name,avatar', 'tags:id,name'])
+        $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
             ->loadCount($this->courseCounts());
 
         return $this->successResponse(true, $this->transformCourse($course), 'Khôi phục khóa học thành công.');
@@ -281,7 +284,7 @@ class CourseController extends BaseApiController
      */
     public function show(Course $course): JsonResponse
     {
-        $course->load(['creator:id,full_name,avatar', 'tags:id,name'])
+        $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
             ->loadCount([
                 'lessons as lessons_count',
                 'enrollments as enrollments_count',
@@ -545,6 +548,10 @@ class CourseController extends BaseApiController
             'max_offline_slots' => $course->max_offline_slots,
             'max_absent_allowed' => $course->max_absent_allowed,
             'quiz_pass_threshold' => $course->quiz_pass_threshold,
+            'certificate_template' => $course->certificateTemplate ? [
+                'id' => $course->certificateTemplate->id,
+                'name' => $course->certificateTemplate->name,
+            ] : null,
             'creator' => $course->creator ? [
                 'id' => $course->creator->id,
                 'full_name' => $course->creator->full_name,
@@ -587,7 +594,10 @@ class CourseController extends BaseApiController
      */
     private function nullifyEmpty(Request $request): void
     {
-        $fields = ['description', 'enrollment_start', 'enrollment_deadline', 'course_end'];
+        $fields = [
+            'description', 'enrollment_start', 'enrollment_deadline', 'course_end',
+            'certificate_template_id',
+        ];
 
         $request->merge(
             collect($request->only($fields))

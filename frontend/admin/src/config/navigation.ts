@@ -214,6 +214,11 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/courses",
 				permission: "courses.view",
 			},
+			{
+				title: "Giấy chứng nhận",
+				url: "/certificate-templates",
+				permission: "courses.view",
+			},
 		],
 	},
 	{
@@ -316,6 +321,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/courses\/create$/, permission: "courses.manage" },
 	{ pattern: /^\/courses\/[^/]+$/, permission: "courses.view" },
 	{ pattern: /^\/courses\/[^/]+\/edit$/, permission: "courses.manage" },
+	{ pattern: /^\/certificate-templates$/, permission: "courses.view" },
 	{ pattern: /^\/events$/, permission: "events.view" },
 	{ pattern: /^\/events\/create$/, permission: "events.manage" },
 	{ pattern: /^\/events\/[^/]+\/edit$/, permission: "events.manage" },
