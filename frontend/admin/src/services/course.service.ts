@@ -38,6 +38,7 @@ export interface LessonFull {
 	video_url: string | null;
 	video_duration: number | null;
 	live_url: string | null;
+	live_duration: number | null;
 	document: string | null;
 	assignment_url: string | null;
 	assignment_deadline: string | null;

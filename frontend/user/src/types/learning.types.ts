@@ -230,6 +230,13 @@ export interface QuizSubmitResult {
 	results: Array<{ question_id: number; is_correct: boolean }>;
 }
 
+/** Chứng chỉ khoá học của user hiện tại */
+export interface CourseCertificateInfo {
+	cert_code: string;
+	cert_url: string;
+	issued_at: string | null;
+}
+
 export interface CourseListParams {
 	page?: number;
 	per_page?: number;

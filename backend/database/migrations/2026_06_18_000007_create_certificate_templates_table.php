@@ -18,10 +18,20 @@ return new class extends Migration
 
             $table->timestamps();
         });
+
+        // courses.certificate_template_id được khai báo (chưa có FK) ở create_courses_table vì
+        // bảng này chưa tồn tại lúc đó — gắn FK thật ở đây, sau khi certificate_templates đã có.
+        Schema::table('courses', function (Blueprint $table) {
+            $table->foreign('certificate_template_id')->references('id')->on('certificate_templates')->nullOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('courses', function (Blueprint $table) {
+            $table->dropForeign(['certificate_template_id']);
+        });
+
         Schema::dropIfExists('certificate_templates');
     }
 };

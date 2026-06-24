@@ -22,6 +22,8 @@ return new class extends Migration
             $table->unsignedSmallInteger('max_offline_slots')->nullable();
             $table->unsignedTinyInteger('max_absent_allowed')->default(1);
             $table->unsignedTinyInteger('quiz_pass_threshold')->default(80);
+            // FK thật được thêm ở migration create_certificate_templates_table (chạy sau, vì bảng đích chưa tồn tại ở đây).
+            $table->foreignId('certificate_template_id')->nullable();
             $table->foreignId('created_by')->constrained('users');
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete();

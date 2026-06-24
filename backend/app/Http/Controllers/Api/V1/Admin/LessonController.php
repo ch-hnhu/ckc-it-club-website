@@ -261,11 +261,16 @@ class LessonController extends BaseApiController
         $apiKey = config('services.youtube.key');
         abort_if(! $apiKey, 422, 'Chưa cấu hình YOUTUBE_API_KEY trên máy chủ.');
 
-        $response = Http::get('https://www.googleapis.com/youtube/v3/videos', [
-            'part' => 'contentDetails',
-            'id' => $videoId,
-            'key' => $apiKey,
-        ]);
+        // Máy dev Windows thường thiếu CA bundle → tắt verify SSL khi chạy local
+        // (giống OAuth). Production vẫn verify bình thường.
+        $verifySsl = filter_var(env('OAUTH_HTTP_VERIFY', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+
+        $response = Http::withOptions(['verify' => $verifySsl])
+            ->get('https://www.googleapis.com/youtube/v3/videos', [
+                'part' => 'contentDetails',
+                'id' => $videoId,
+                'key' => $apiKey,
+            ]);
 
         abort_if($response->failed(), 422, 'Không gọi được YouTube API. Kiểm tra lại API key.');
 
@@ -380,6 +385,7 @@ class LessonController extends BaseApiController
             'video_url' => 'nullable|url|max:2048',
             'video_duration' => 'nullable|integer|min:0|max:86400',
             'live_url' => 'nullable|url|max:2048',
+            'live_duration' => 'nullable|integer|min:0|max:86400',
             'document' => 'nullable|string',
             'assignment_url' => 'nullable|url|max:2048',
             'assignment_deadline' => 'nullable|date',
@@ -390,7 +396,7 @@ class LessonController extends BaseApiController
     {
         $fields = [
             'description', 'session_start', 'session_end', 'resource_url',
-            'video_url', 'video_duration', 'live_url', 'document', 'assignment_url', 'assignment_deadline',
+            'video_url', 'video_duration', 'live_url', 'live_duration', 'document', 'assignment_url', 'assignment_deadline',
         ];
 
         $request->merge(
@@ -435,6 +441,7 @@ class LessonController extends BaseApiController
             'video_url' => $lesson->video_url,
             'video_duration' => $lesson->video_duration,
             'live_url' => $lesson->live_url,
+            'live_duration' => $lesson->live_duration,
             'document' => $lesson->document,
             'assignment_url' => $lesson->assignment_url,
             'assignment_deadline' => $lesson->assignment_deadline?->toIso8601String(),

@@ -433,11 +433,23 @@ const SidebarCard: React.FC<{ children: React.ReactNode; className?: string }> =
 
 const Sidebar: React.FC<{
 	canClaimCertificate: boolean;
+	claimingCertificate: boolean;
+	certificateUrl: string | null;
+	onClaimCertificate: () => void;
 	stats: CourseProgressStats;
 	track: CourseTrack | null;
 	user: AuthUser | null;
 	canLearn: boolean;
-}> = ({ canClaimCertificate, stats, track, user, canLearn }) => {
+}> = ({
+	canClaimCertificate,
+	claimingCertificate,
+	certificateUrl,
+	onClaimCertificate,
+	stats,
+	track,
+	user,
+	canLearn,
+}) => {
 	const trackLabel =
 		track === "offline"
 			? "Hình thức học: Offline"
@@ -525,9 +537,15 @@ const Sidebar: React.FC<{
 					{canClaimCertificate && (
 						<button
 							type='button'
-							className='mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-3 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							onClick={onClaimCertificate}
+							disabled={claimingCertificate}
+							className='mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-3 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'>
 							<Award className='h-4 w-4' strokeWidth={2.5} />
-							Nhận chứng chỉ
+							{claimingCertificate
+								? "Đang xử lý..."
+								: certificateUrl
+									? "Xem chứng chỉ"
+									: "Nhận chứng chỉ"}
 						</button>
 					)}
 				</SidebarCard>
@@ -666,12 +684,15 @@ const CourseDetailPage: React.FC = () => {
 	// Buổi học đang mở modal vé QR; id buổi đang gọi API cấp vé.
 	const [ticketLesson, setTicketLesson] = useState<CourseLesson | null>(null);
 	const [creatingTicketId, setCreatingTicketId] = useState<number | null>(null);
+	const [claimingCertificate, setClaimingCertificate] = useState(false);
+	const [certificateUrl, setCertificateUrl] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!slug) return;
 		let cancelled = false;
 		setLoading(true);
 		setError(null);
+		setCertificateUrl(null);
 		learningService
 			.getCourse(slug)
 			.then((res) => {
@@ -813,6 +834,31 @@ const CourseDetailPage: React.FC = () => {
 
 	const handleShowTicket = (lesson: CourseLesson) => {
 		if (lesson.qr_ticket) setTicketLesson(lesson);
+	};
+
+	// Luồng 2 bước: bấm "Nhận chứng chỉ" → chỉ lấy link + báo thành công (chứng chỉ đã được hệ
+	// thống tự cấp khi hoàn thành khoá); nút đổi thành "Xem chứng chỉ" → bấm lần sau mới mở PDF.
+	const handleClaimCertificate = async () => {
+		if (!requireAuth() || !slug || claimingCertificate) return;
+
+		if (certificateUrl) {
+			window.open(certificateUrl, "_blank", "noopener,noreferrer");
+			return;
+		}
+
+		setClaimingCertificate(true);
+		try {
+			const res = await learningService.getCertificate(slug);
+			setCertificateUrl(res.data.cert_url);
+			toast.success("Nhận chứng chỉ thành công.");
+		} catch (err) {
+			toast.error(
+				(err as { response?: { data?: { message?: string } } })?.response?.data
+					?.message ?? "Không thể lấy chứng chỉ. Vui lòng thử lại.",
+			);
+		} finally {
+			setClaimingCertificate(false);
+		}
 	};
 
 	return (
@@ -1002,6 +1048,9 @@ const CourseDetailPage: React.FC = () => {
 								<aside className='lg:sticky lg:top-24 lg:self-start lg:pt-[calc(2rem+1rem)]'>
 									<Sidebar
 										canClaimCertificate={canClaimCertificate}
+										claimingCertificate={claimingCertificate}
+										certificateUrl={certificateUrl}
+										onClaimCertificate={handleClaimCertificate}
 										stats={course.stats}
 										track={effectiveTrack}
 										user={user}

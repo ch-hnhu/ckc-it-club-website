@@ -33,6 +33,7 @@ type LessonForm = {
 	video_url: string;
 	video_duration: string;
 	live_url: string;
+	live_duration: string;
 	resource_url: string;
 	assignment_url: string;
 	assignment_deadline: string;
@@ -49,6 +50,7 @@ const emptyForm = (): LessonForm => ({
 	video_url: "",
 	video_duration: "",
 	live_url: "",
+	live_duration: "",
 	resource_url: "",
 	assignment_url: "",
 	assignment_deadline: "",
@@ -143,6 +145,7 @@ function LessonFormPage() {
 					video_url: l.video_url ?? "",
 					video_duration: l.video_duration != null ? String(l.video_duration) : "",
 					live_url: l.live_url ?? "",
+					live_duration: l.live_duration != null ? String(l.live_duration) : "",
 					resource_url: l.resource_url ?? "",
 					assignment_url: l.assignment_url ?? "",
 					assignment_deadline: toLocalInput(l.assignment_deadline),
@@ -205,6 +208,7 @@ function LessonFormPage() {
 			video_url: form.video_url,
 			video_duration: form.video_duration,
 			live_url: form.live_url,
+			live_duration: form.live_duration,
 			resource_url: form.resource_url,
 			assignment_url: form.assignment_url,
 			assignment_deadline: toUtcIso(form.assignment_deadline),
@@ -353,25 +357,19 @@ function LessonFormPage() {
 									</div>
 									<div className='flex flex-col gap-2'>
 										<Label htmlFor='lesson-vid-dur'>Thời lượng video</Label>
-										<div
+										<Input
 											id='lesson-vid-dur'
-											className='flex h-9 items-center gap-2 rounded-md border border-input bg-muted/40 px-3 text-sm text-muted-foreground'>
-											{durationLoading ? (
-												<>
-													<Loader2 className='h-3.5 w-3.5 animate-spin' />
-													Đang lấy thời lượng…
-												</>
-											) : form.video_duration ? (
-												<span className='text-foreground'>
-													{formatDurationLabel(Number(form.video_duration))}
-												</span>
-											) : (
-												"Tự lấy từ link YouTube"
-											)}
-										</div>
-										<p className='text-xs text-muted-foreground'>
-											Thời lượng tự lấy từ link YouTube khi bạn dán URL video.
-										</p>
+											readOnly
+											disabled
+											value={
+												durationLoading
+													? "Đang lấy thời lượng…"
+													: form.video_duration
+														? formatDurationLabel(Number(form.video_duration))
+														: ""
+											}
+											placeholder='Tự lấy từ link YouTube'
+										/>
 									</div>
 								</div>
 								<div className='flex flex-col gap-2'>

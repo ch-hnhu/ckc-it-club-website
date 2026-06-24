@@ -15,6 +15,7 @@ use App\Models\LessonQrTicket;
 use App\Models\PointRule;
 use App\Models\PointTransaction;
 use App\Models\Tag;
+use App\Models\CourseCertificate;
 use App\Services\CourseCompletionService;
 use App\Services\CourseEnrollmentService;
 use App\Services\PointService;
@@ -401,6 +402,34 @@ class CourseController extends BaseApiController
             true,
             ['watch_percentage' => $progress->watch_percentage, 'is_completed' => $progress->is_completed],
             'Đã ghi nhận tiến độ xem video.',
+        );
+    }
+
+    /**
+     * Chứng chỉ khoá học của user hiện tại. 404 nếu chưa hoàn thành/chưa được cấp,
+     * hoặc đã bị thu hồi.
+     */
+    public function certificate(Request $request, Course $course): JsonResponse
+    {
+        $enrollment = $course->enrollmentFor($request->user()->id);
+        abort_if(! $enrollment, 404, 'Bạn chưa ghi danh khoá học này.');
+
+        $certificate = CourseCertificate::where([
+            'user_id' => $request->user()->id,
+            'course_id' => $course->id,
+            'track' => $enrollment->track,
+        ])->whereNull('revoked_at')->first();
+
+        abort_if(! $certificate, 404, 'Bạn chưa có chứng chỉ cho khoá học này.');
+
+        return $this->successResponse(
+            true,
+            [
+                'cert_code' => $certificate->cert_code,
+                'cert_url' => $certificate->cert_url,
+                'issued_at' => $certificate->issued_at?->toIso8601String(),
+            ],
+            'Lấy chứng chỉ thành công.',
         );
     }
 

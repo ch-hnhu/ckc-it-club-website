@@ -181,6 +181,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/courses/{course:slug}/follow', [UserCourseController::class, 'toggleFollow']);
             Route::post('/courses/{course:slug}/lessons/{lessonSlug}/qr-ticket', [UserCourseController::class, 'createQrTicket']);
             Route::post('/courses/{course:slug}/lessons/{lessonSlug}/progress', [UserCourseController::class, 'markVideoProgress']);
+            Route::get('/courses/{course:slug}/certificate', [UserCourseController::class, 'certificate']);
         });
     });
 
