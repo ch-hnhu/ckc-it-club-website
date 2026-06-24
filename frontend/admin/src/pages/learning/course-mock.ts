@@ -18,6 +18,11 @@ export interface AdminCourseCategory {
 	color: string | null;
 }
 
+export interface AdminCourseCertificateTemplate {
+	id: number;
+	name: string;
+}
+
 export interface AdminCourse {
 	id: number;
 	title: string;
@@ -33,6 +38,7 @@ export interface AdminCourse {
 	max_offline_slots: number | null;
 	max_absent_allowed: number;
 	quiz_pass_threshold: number;
+	certificate_template: AdminCourseCertificateTemplate | null;
 	creator: AdminCourseCreator | null;
 	categories: AdminCourseCategory[];
 	lessons_count: number;

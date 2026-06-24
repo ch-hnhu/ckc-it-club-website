@@ -33,7 +33,8 @@ class CourseCertificateService
             return $existing;
         }
 
-        $template = CertificateTemplate::where('is_default', true)->first()
+        $template = $enrollment->course->certificateTemplate
+            ?? CertificateTemplate::where('is_default', true)->first()
             ?? CertificateTemplate::first();
 
         if (! $template) {
@@ -59,7 +60,9 @@ class CourseCertificateService
      */
     public function reissue(CourseCertificate $certificate): CourseCertificate
     {
-        $template = $certificate->template ?? CertificateTemplate::where('is_default', true)->first();
+        $template = $certificate->template
+            ?? $certificate->course->certificateTemplate
+            ?? CertificateTemplate::where('is_default', true)->first();
         abort_if(! $template, 422, 'Chưa có mẫu chứng chỉ để cấp lại.');
 
         $enrollment = $certificate->course->enrollmentFor($certificate->user_id);
