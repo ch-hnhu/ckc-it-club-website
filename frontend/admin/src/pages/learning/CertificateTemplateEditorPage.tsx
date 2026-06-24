@@ -9,10 +9,12 @@ import {
 	Loader2,
 	Minus,
 	QrCode,
+	Redo2,
 	Save,
 	Square,
 	Trash2,
 	Type,
+	Undo2,
 } from "lucide-react";
 import type Konva from "konva";
 import {
@@ -132,20 +134,92 @@ function CertificateTemplateEditorPage() {
 
 	const [name, setName] = useState("Mẫu chứng chỉ mới");
 	const [design, setDesign] = useState<CertificateDesign>(emptyDesign());
+	const [past, setPast] = useState<CertificateDesign[]>([]);
+	const [future, setFuture] = useState<CertificateDesign[]>([]);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [loading, setLoading] = useState(isEdit);
 	const [saving, setSaving] = useState(false);
 	const [previewing, setPreviewing] = useState(false);
+	const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
 
 	const stageRef = useRef<Konva.Stage>(null);
 	const trRef = useRef<Konva.Transformer>(null);
 	const nodeRefs = useRef<Record<string, Konva.Node>>({});
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const bgInputRef = useRef<HTMLInputElement>(null);
+	const designRef = useRef(design);
+	designRef.current = design;
 
 	const bgImage = useCanvasImage(design.canvas.background.image);
+	const [, setFontsReady] = useState(false);
 
-	// Nạp mẫu khi sửa
+	// Nạp font web (Be Vietnam Pro, Roboto) cho canvas editor khớp với bản render PDF,
+	// rồi ép Konva vẽ lại (Konva không tự redraw khi font tải xong).
+	useEffect(() => {
+		const href =
+			"https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,700;1,400;1,700&family=Roboto:ital,wght@0,400;0,700;1,400;1,700&display=swap";
+		if (!document.querySelector(`link[href="${href}"]`)) {
+			const link = document.createElement("link");
+			link.rel = "stylesheet";
+			link.href = href;
+			document.head.appendChild(link);
+		}
+		Promise.all([
+			document.fonts.load('400 40px "Be Vietnam Pro"'),
+			document.fonts.load('700 40px "Be Vietnam Pro"'),
+			document.fonts.load('400 40px "Roboto"'),
+			document.fonts.load('700 40px "Roboto"'),
+		])
+			.then(() => setFontsReady(true))
+			.catch(() => undefined);
+	}, []);
+
+	// Mutator có lịch sử (undo/redo). Mọi thay đổi của người dùng đi qua đây.
+	const commit = useCallback(
+		(updater: CertificateDesign | ((d: CertificateDesign) => CertificateDesign)) => {
+			setPast((p) => [...p, designRef.current]);
+			setFuture([]);
+			setDesign((prev) => (typeof updater === "function" ? updater(prev) : updater));
+		},
+		[],
+	);
+
+	const undo = useCallback(() => {
+		setPast((p) => {
+			if (p.length === 0) return p;
+			setFuture((f) => [designRef.current, ...f]);
+			setDesign(p[p.length - 1]);
+			return p.slice(0, -1);
+		});
+	}, []);
+
+	const redo = useCallback(() => {
+		setFuture((f) => {
+			if (f.length === 0) return f;
+			setPast((p) => [...p, designRef.current]);
+			setDesign(f[0]);
+			return f.slice(1);
+		});
+	}, []);
+
+	// Phím tắt undo/redo (bỏ qua khi đang gõ trong input/textarea)
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			const tag = (e.target as HTMLElement)?.tagName;
+			if (tag === "INPUT" || tag === "TEXTAREA") return;
+			if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+				e.preventDefault();
+				e.shiftKey ? redo() : undo();
+			} else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+				e.preventDefault();
+				redo();
+			}
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [undo, redo]);
+
+	// Nạp mẫu khi sửa — reset lịch sử
 	useEffect(() => {
 		if (!isEdit) return;
 		let cancelled = false;
@@ -155,6 +229,8 @@ function CertificateTemplateEditorPage() {
 				if (cancelled) return;
 				setName(res.data.name);
 				setDesign(normalizeDesign(res.data.design));
+				setPast([]);
+				setFuture([]);
 			})
 			.catch(() => toast.error("Không tải được mẫu chứng chỉ."))
 			.finally(() => !cancelled && setLoading(false));
@@ -177,12 +253,15 @@ function CertificateTemplateEditorPage() {
 		[design.elements, selectedId],
 	);
 
-	const updateElement = useCallback((elId: string, patch: Partial<CertificateElement>) => {
-		setDesign((d) => ({
-			...d,
-			elements: d.elements.map((e) => (e.id === elId ? { ...e, ...patch } : e)),
-		}));
-	}, []);
+	const updateElement = useCallback(
+		(elId: string, patch: Partial<CertificateElement>) => {
+			commit((d) => ({
+				...d,
+				elements: d.elements.map((e) => (e.id === elId ? { ...e, ...patch } : e)),
+			}));
+		},
+		[commit],
+	);
 
 	const addElement = (type: CertificateElementType, extra: Partial<CertificateElement> = {}) => {
 		const base: CertificateElement = {
@@ -195,7 +274,7 @@ function CertificateTemplateEditorPage() {
 			rotation: 0,
 			...extra,
 		};
-		setDesign((d) => ({ ...d, elements: [...d.elements, base] }));
+		commit((d) => ({ ...d, elements: [...d.elements, base] }));
 		setSelectedId(base.id);
 	};
 
@@ -236,7 +315,7 @@ function CertificateTemplateEditorPage() {
 			const res = await certificateTemplateService.uploadAsset(file);
 			const url = res.data.url;
 			if (target === "background") {
-				setDesign((d) => ({
+				commit((d) => ({
 					...d,
 					canvas: { ...d.canvas, background: { ...d.canvas.background, image: url } },
 				}));
@@ -251,13 +330,13 @@ function CertificateTemplateEditorPage() {
 
 	const removeSelected = () => {
 		if (!selectedId) return;
-		setDesign((d) => ({ ...d, elements: d.elements.filter((e) => e.id !== selectedId) }));
+		commit((d) => ({ ...d, elements: d.elements.filter((e) => e.id !== selectedId) }));
 		setSelectedId(null);
 	};
 
 	const moveLayer = (dir: -1 | 1) => {
 		if (!selectedId) return;
-		setDesign((d) => {
+		commit((d) => {
 			const idx = d.elements.findIndex((e) => e.id === selectedId);
 			const to = idx + dir;
 			if (idx < 0 || to < 0 || to >= d.elements.length) return d;
@@ -306,19 +385,64 @@ function CertificateTemplateEditorPage() {
 		}
 	};
 
-	// Cập nhật element sau khi kéo/biến đổi trên canvas
+	// Cập nhật element sau khi biến đổi (resize/xoay) trên canvas
 	const commitTransform = (el: CertificateElement, node: Konva.Node) => {
 		const scaleX = node.scaleX();
 		const scaleY = node.scaleY();
 		node.scaleX(1);
 		node.scaleY(1);
-		updateElement(el.id, {
-			x: node.x(),
-			y: node.y(),
-			rotation: node.rotation(),
-			width: Math.max(5, node.width() * scaleX),
-			height: Math.max(el.type === "line" ? 0 : 5, node.height() * scaleY),
-		});
+		const width = Math.max(5, node.width() * scaleX);
+		const height = Math.max(el.type === "line" ? 0 : 5, node.height() * scaleY);
+		// Ellipse được vẽ theo tâm → quy về toạ độ góc trên-trái để nhất quán với renderer.
+		const x = el.type === "ellipse" ? node.x() - width / 2 : node.x();
+		const y = el.type === "ellipse" ? node.y() - height / 2 : node.y();
+		updateElement(el.id, { x, y, rotation: node.rotation(), width, height });
+	};
+
+	// ── Snap: gom các đường căn (mép/tâm canvas + mép/tâm các object khác) ──
+	const SNAP = 6;
+	const snapTargets = (excludeId: string) => {
+		const v = [0, CANVAS_W / 2, CANVAS_W];
+		const h = [0, CANVAS_H / 2, CANVAS_H];
+		for (const e of designRef.current.elements) {
+			if (e.id === excludeId) continue;
+			v.push(e.x, e.x + e.width / 2, e.x + e.width);
+			h.push(e.y, e.y + e.height / 2, e.y + e.height);
+		}
+		return { v, h };
+	};
+
+	const handleDragMove = (el: CertificateElement, node: Konva.Node) => {
+		const layer = node.getLayer();
+		if (!layer) return;
+		const box = node.getClientRect({ relativeTo: layer });
+		const { v, h } = snapTargets(el.id);
+		const vEdges = [box.x, box.x + box.width / 2, box.x + box.width];
+		const hEdges = [box.y, box.y + box.height / 2, box.y + box.height];
+
+		let bestV: { t: number; d: number; delta: number } | null = null;
+		for (const t of v)
+			for (const edge of vEdges) {
+				const d = Math.abs(edge - t);
+				if (d <= SNAP && (!bestV || d < bestV.d)) bestV = { t, d, delta: t - edge };
+			}
+		let bestH: { t: number; d: number; delta: number } | null = null;
+		for (const t of h)
+			for (const edge of hEdges) {
+				const d = Math.abs(edge - t);
+				if (d <= SNAP && (!bestH || d < bestH.d)) bestH = { t, d, delta: t - edge };
+			}
+
+		if (bestV) node.x(node.x() + bestV.delta);
+		if (bestH) node.y(node.y() + bestH.delta);
+		setGuides({ v: bestV ? [bestV.t] : [], h: bestH ? [bestH.t] : [] });
+	};
+
+	const handleDragEnd = (el: CertificateElement, node: Konva.Node) => {
+		setGuides({ v: [], h: [] });
+		const x = el.type === "ellipse" ? node.x() - el.width / 2 : node.x();
+		const y = el.type === "ellipse" ? node.y() - el.height / 2 : node.y();
+		updateElement(el.id, { x, y });
 	};
 
 	const registerNode = (elId: string) => (n: Konva.Node | null) => {
@@ -335,8 +459,8 @@ function CertificateTemplateEditorPage() {
 			draggable: true,
 			onClick: () => setSelectedId(el.id),
 			onTap: () => setSelectedId(el.id),
-			onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) =>
-				updateElement(el.id, { x: e.target.x(), y: e.target.y() }),
+			onDragMove: (e: Konva.KonvaEventObject<DragEvent>) => handleDragMove(el, e.target),
+			onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => handleDragEnd(el, e.target),
 			onTransformEnd: (e: Konva.KonvaEventObject<Event>) => commitTransform(el, e.target),
 		};
 
@@ -383,8 +507,8 @@ function CertificateTemplateEditorPage() {
 					<Ellipse
 						key={el.id}
 						{...common}
-						width={el.width}
-						height={el.height}
+						x={el.x + el.width / 2}
+						y={el.y + el.height / 2}
 						radiusX={el.width / 2}
 						radiusY={el.height / 2}
 						fill={el.fill === "transparent" ? undefined : el.fill}
@@ -442,6 +566,24 @@ function CertificateTemplateEditorPage() {
 					placeholder='Tên mẫu chứng chỉ'
 				/>
 				<div className='ml-auto flex gap-2'>
+					<Button
+						variant='outline'
+						size='icon'
+						className='h-8 w-8'
+						title='Hoàn tác (Ctrl+Z)'
+						onClick={undo}
+						disabled={past.length === 0}>
+						<Undo2 className='h-4 w-4' />
+					</Button>
+					<Button
+						variant='outline'
+						size='icon'
+						className='h-8 w-8'
+						title='Làm lại (Ctrl+Shift+Z)'
+						onClick={redo}
+						disabled={future.length === 0}>
+						<Redo2 className='h-4 w-4' />
+					</Button>
 					<Button variant='outline' size='sm' onClick={handlePreview} disabled={previewing}>
 						{previewing ? (
 							<Loader2 className='h-4 w-4 animate-spin' />
@@ -479,7 +621,7 @@ function CertificateTemplateEditorPage() {
 								type='color'
 								value={design.canvas.background.color}
 								onChange={(e) =>
-									setDesign((d) => ({
+									commit((d) => ({
 										...d,
 										canvas: {
 											...d.canvas,
@@ -500,7 +642,7 @@ function CertificateTemplateEditorPage() {
 							<button
 								type='button'
 								onClick={() =>
-									setDesign((d) => ({
+									commit((d) => ({
 										...d,
 										canvas: { ...d.canvas, background: { ...d.canvas.background, image: null } },
 									}))
@@ -545,20 +687,53 @@ function CertificateTemplateEditorPage() {
 							scaleX={SCALE}
 							scaleY={SCALE}
 							onMouseDown={(e) => {
-								if (e.target === e.target.getStage()) setSelectedId(null);
+								// Click vào vùng trống (stage) hoặc nền → bỏ chọn.
+								if (e.target === e.target.getStage() || e.target.name() === "bg")
+									setSelectedId(null);
 							}}>
 							<Layer>
+								{/* Nền không listening để click xuyên qua xuống stage → bỏ chọn được;
+								    đặt name="bg" để onMouseDown nhận diện vùng nền. */}
 								<Rect
+									name='bg'
 									x={0}
 									y={0}
 									width={CANVAS_W}
 									height={CANVAS_H}
 									fill={design.canvas.background.color}
+									listening={false}
 								/>
 								{bgImage && (
-									<KonvaImage image={bgImage} x={0} y={0} width={CANVAS_W} height={CANVAS_H} />
+									<KonvaImage
+										image={bgImage}
+										x={0}
+										y={0}
+										width={CANVAS_W}
+										height={CANVAS_H}
+										listening={false}
+									/>
 								)}
 								{design.elements.map(renderNode)}
+								{guides.v.map((x, i) => (
+									<Line
+										key={`gv${i}`}
+										points={[x, 0, x, CANVAS_H]}
+										stroke='#ec4899'
+										strokeWidth={1 / SCALE}
+										dash={[6, 4]}
+										listening={false}
+									/>
+								))}
+								{guides.h.map((y, i) => (
+									<Line
+										key={`gh${i}`}
+										points={[0, y, CANVAS_W, y]}
+										stroke='#ec4899'
+										strokeWidth={1 / SCALE}
+										dash={[6, 4]}
+										listening={false}
+									/>
+								))}
 								<Transformer
 									ref={trRef}
 									rotateEnabled

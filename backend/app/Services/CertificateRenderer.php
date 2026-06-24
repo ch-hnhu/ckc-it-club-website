@@ -35,7 +35,7 @@ class CertificateRenderer
             ->margins(0, 0, 0, 0)
             ->showBackground()
             ->waitUntilNetworkIdle()
-            ->waitForFunction('window.__certReady === true', 100, 15000);
+            ->waitForFunction('window.__certReady === true', null, 15000);
 
         // Production (Alpine): dùng Chromium hệ thống thay vì Chromium của puppeteer.
         if ($chromePath = env('BROWSERSHOT_CHROME_PATH')) {
@@ -139,7 +139,17 @@ function loadImage(src){
   return new Promise((resolve) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = () => resolve(null); im.src = src; });
 }
 (async () => {
-  try { await document.fonts.ready; } catch(e) {}
+  // Nạp tường minh các font được dùng (Google Fonts) trước khi Konva vẽ — nếu không
+  // Konva sẽ vẽ bằng font fallback (serif) vì @font-face chưa kịp tải.
+  try {
+    const families = [...new Set((scene.elements||[]).filter(e=>e.type==='text').map(e=>e.fontFamily||'Be Vietnam Pro'))];
+    await Promise.all(families.flatMap(f => [
+      document.fonts.load('400 40px "'+f+'"'),
+      document.fonts.load('700 40px "'+f+'"'),
+      document.fonts.load('italic 400 40px "'+f+'"'),
+    ]));
+    await document.fonts.ready;
+  } catch(e) {}
   const stage = new Konva.Stage({ container: 'stage', width: scene.canvas.width, height: scene.canvas.height });
   const layer = new Konva.Layer();
   stage.add(layer);
