@@ -61,11 +61,7 @@ function formatDate(value: string | null) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function CertificateTemplateListPage() {
-	useBreadcrumb([
-		{ title: "Dashboard", link: "/" },
-		{ title: "Trung tâm đào tạo" },
-		{ title: "Giấy chứng nhận" },
-	]);
+	useBreadcrumb([{ title: "Khoá học", link: "/courses" }, { title: "Giấy chứng nhận" }]);
 
 	const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -108,7 +104,7 @@ function CertificateTemplateListPage() {
 				setMeta((p) => ({ ...p, last_page: res.meta.last_page, total: res.meta.total }));
 			})
 			.catch(() => {
-				if (!cancelled) toast.error("Không thể tải danh sách mẫu chứng chỉ.");
+				if (!cancelled) toast.error("Không thể tải danh sách mẫu giấy chứng nhận.");
 			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
@@ -155,7 +151,7 @@ function CertificateTemplateListPage() {
 				<div className='flex flex-col gap-4'>
 					<div className='flex flex-col gap-3 md:flex-row md:items-center'>
 						<Input
-							placeholder='Tìm theo tên mẫu chứng chỉ...'
+							placeholder='Tìm theo tên mẫu giấy chứng nhận...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 min-w-0 flex-1 md:max-w-80'
@@ -314,7 +310,7 @@ function CertificateTemplateListPage() {
 														<DropdownMenuItem
 															onClick={() =>
 																toast.info(
-																	"Tính năng xem chi tiết mẫu chứng chỉ đang được phát triển.",
+																	"Tính năng xem chi tiết mẫu giấy chứng nhận đang được phát triển.",
 																)
 															}>
 															<Eye className='h-4 w-4' />
@@ -332,7 +328,7 @@ function CertificateTemplateListPage() {
 											className='h-32 text-center text-muted-foreground'>
 											<div className='flex flex-col items-center justify-center gap-2'>
 												<Award className='h-8 w-8 text-muted-foreground/50' />
-												Chưa có mẫu chứng chỉ nào.
+												Chưa có mẫu giấy chứng nhận nào.
 											</div>
 										</TableCell>
 									</TableRow>
@@ -345,7 +341,7 @@ function CertificateTemplateListPage() {
 										<div className='flex items-center justify-between px-2'>
 											<div className='flex flex-1 items-center gap-3 text-sm text-muted-foreground'>
 												Đang hiển thị {templates.length} trên tổng{" "}
-												{meta.total} mẫu chứng chỉ.
+												{meta.total} mẫu giấy chứng nhận.
 												{selectedIds.length > 0 && (
 													<>
 														<span className='text-border'>|</span>
