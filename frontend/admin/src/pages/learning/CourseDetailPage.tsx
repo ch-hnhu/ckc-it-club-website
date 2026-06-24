@@ -9,7 +9,6 @@ import {
 	BookOpen,
 	CalendarClock,
 	CheckCircle2,
-	FilePen,
 	Download,
 	GraduationCap,
 	ImageIcon,
@@ -22,6 +21,7 @@ import {
 	Trash2,
 	Users,
 	UserPlus,
+	FilePen,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -59,7 +59,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePaginationFooter } from "@/components/TablePaginationFooter";
-import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { cn } from "@/lib/utils";
@@ -75,6 +74,7 @@ import type { AdminCourseDetail, EnrollmentTrack } from "@/pages/learning/course
 import AssignmentGradeDialog from "@/pages/learning/AssignmentGradeDialog";
 import EnrollStudentDialog from "@/pages/learning/EnrollStudentDialog";
 import LessonCheckInDialog from "@/pages/learning/LessonCheckInDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -577,7 +577,8 @@ function CourseDetailPage() {
 														: "—"}
 												</TableCell>
 												<TableCell className='text-sm'>
-													{lesson.session_start && lesson.id === activeLessonId ? (
+													{lesson.session_start &&
+													lesson.id === activeLessonId ? (
 														<div className='flex items-center gap-2'>
 															<span className='flex items-center gap-1.5'>
 																<CheckCircle2 className='h-3.5 w-3.5 text-muted-foreground' />

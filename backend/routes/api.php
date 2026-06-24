@@ -492,6 +492,7 @@ Route::prefix('v1')->group(function () {
             Route::get('courses', [AdminCourseController::class, 'index']);
             Route::get('courses/trash', [AdminCourseController::class, 'trash']);
             Route::get('certificate-templates', [AdminCertificateTemplateController::class, 'index']);
+            Route::get('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'show']);
             Route::get('courses/{course}', [AdminCourseController::class, 'show']);
             Route::get('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'show']);
         });
@@ -515,6 +516,14 @@ Route::prefix('v1')->group(function () {
             Route::delete('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'removeEnrollment']);
             Route::post('courses/{course}/certificates/{certificate}/revoke', [AdminCourseController::class, 'revokeCertificate']);
             Route::post('courses/{course}/certificates/{certificate}/reissue', [AdminCourseController::class, 'reissueCertificate']);
+            // Quản lý mẫu chứng chỉ (editor canvas)
+            Route::post('certificate-templates', [AdminCertificateTemplateController::class, 'store']);
+            Route::post('certificate-templates/assets', [AdminCertificateTemplateController::class, 'uploadAsset']);
+            Route::post('certificate-templates/preview', [AdminCertificateTemplateController::class, 'preview']);
+            Route::put('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'update']);
+            Route::delete('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'destroy']);
+            Route::post('certificate-templates/{certificateTemplate}/default', [AdminCertificateTemplateController::class, 'setDefault']);
+            Route::post('certificate-templates/{certificateTemplate}/duplicate', [AdminCertificateTemplateController::class, 'duplicate']);
         });
         // quiz của buổi học — quyền riêng cho Trung tâm đào tạo
         Route::middleware('permission:quizzes.manage')->group(function () {
