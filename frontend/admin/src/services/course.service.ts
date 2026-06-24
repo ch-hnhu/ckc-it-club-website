@@ -228,6 +228,19 @@ const courseService = {
 		return api.post(`/courses/${courseSlug}/lessons/${lessonId}/check-in`, { qr_token: qrToken });
 	},
 
+	/** Điểm danh thủ công (toggle có mặt/vắng) một học viên cho buổi học offline. */
+	async toggleAttendance(
+		courseSlug: string,
+		lessonId: number,
+		userId: number,
+		present: boolean,
+	): Promise<ApiResponse<{ user_id: number; lesson_id: number; present: boolean }>> {
+		return api.post(`/courses/${courseSlug}/lessons/${lessonId}/attendance`, {
+			user_id: userId,
+			present,
+		});
+	},
+
 	/** Danh sách học viên + điểm bài tập hiện tại của buổi học. */
 	async getGrades(
 		courseSlug: string,

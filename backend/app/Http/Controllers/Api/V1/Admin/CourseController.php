@@ -327,6 +327,8 @@ class CourseController extends BaseApiController
                 fn (CourseEnrollment $e) => $this->transformEnrollment($e, $attendedByUser, $pastOfflineCount)
             )->all(),
             'certificates' => $certificates->map(fn (CourseCertificate $cert) => $this->transformCertificate($cert))->all(),
+            // Các cặp (học viên, buổi) đã điểm danh — dùng dựng ma trận điểm danh ở tab "Điểm danh".
+            'attendances' => $this->attendanceMatrix($lessons),
         ]);
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
@@ -480,6 +482,34 @@ class CourseController extends BaseApiController
             : [];
 
         return [$attendedByUser, $pastOfflineCount];
+    }
+
+    /**
+     * Các bản ghi điểm danh của những buổi offline (đã xếp lịch) trong khoá —
+     * mỗi phần tử là một ô đã điểm danh trong ma trận học viên × buổi.
+     *
+     * @param  \Illuminate\Support\Collection<int,Lesson>  $lessons
+     * @return array<int,array{user_id:int,lesson_id:int,type:string}>
+     */
+    private function attendanceMatrix($lessons): array
+    {
+        $offlineLessonIds = $lessons
+            ->filter(fn (Lesson $l) => $l->session_start)
+            ->pluck('id');
+
+        if ($offlineLessonIds->isEmpty()) {
+            return [];
+        }
+
+        return LessonAttendance::query()
+            ->whereIn('lesson_id', $offlineLessonIds)
+            ->get(['user_id', 'lesson_id', 'type'])
+            ->map(fn (LessonAttendance $a) => [
+                'user_id' => $a->user_id,
+                'lesson_id' => $a->lesson_id,
+                'type' => $a->type,
+            ])
+            ->all();
     }
 
     /**

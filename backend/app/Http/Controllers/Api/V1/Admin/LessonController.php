@@ -131,6 +131,43 @@ class LessonController extends BaseApiController
     }
 
     /**
+     * Điểm danh thủ công một học viên cho buổi học (dùng khi máy quét QR lỗi) — toggle
+     * trạng thái có mặt/vắng trực tiếp từ ma trận điểm danh. present=true → tạo bản ghi
+     * điểm danh thủ công; present=false → gỡ bỏ. Tính lại tiến độ hoàn thành khoá sau đó.
+     */
+    public function toggleAttendance(Request $request, Course $course, Lesson $lesson): JsonResponse
+    {
+        $this->assertBelongsTo($course, $lesson);
+
+        abort_if(! $lesson->session_start, 422, 'Chỉ điểm danh cho buổi học offline đã xếp lịch.');
+
+        $data = $request->validate([
+            'user_id' => 'required|integer',
+            'present' => 'required|boolean',
+        ]);
+
+        $enrollment = $course->enrollmentFor($data['user_id']);
+        abort_if(! $enrollment || $enrollment->track !== 'offline', 422, 'Học viên không thuộc lớp offline của khóa này.');
+
+        if ($data['present']) {
+            LessonAttendance::firstOrCreate(
+                ['user_id' => $data['user_id'], 'lesson_id' => $lesson->id],
+                ['type' => 'manual', 'attended_at' => now(), 'recorded_by' => $request->user()->id],
+            );
+        } else {
+            LessonAttendance::where(['user_id' => $data['user_id'], 'lesson_id' => $lesson->id])->delete();
+        }
+
+        app(CourseCompletionService::class)->recalc($enrollment);
+
+        return $this->successResponse(true, [
+            'user_id' => (int) $data['user_id'],
+            'lesson_id' => $lesson->id,
+            'present' => (bool) $data['present'],
+        ], $data['present'] ? 'Đã điểm danh.' : 'Đã bỏ điểm danh.');
+    }
+
+    /**
      * Danh sách học viên track offline đã ghi danh + điểm bài tập hiện tại (nếu có) của buổi học.
      * Chấm bài chỉ áp dụng cho track offline (online tính tiến độ theo % xem video).
      */

@@ -509,6 +509,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::delete('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'destroy']);
             Route::post('courses/{course}/lessons/{lesson}/check-in', [AdminLessonController::class, 'checkIn']);
+            Route::post('courses/{course}/lessons/{lesson}/attendance', [AdminLessonController::class, 'toggleAttendance']);
             Route::get('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'grades']);
             Route::put('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'saveGrades']);
             Route::get('courses/{course}/enrollable-users', [AdminCourseController::class, 'searchEnrollableUsers']);

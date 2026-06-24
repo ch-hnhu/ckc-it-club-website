@@ -45,8 +45,17 @@ export interface CourseCertificateRow {
 	revoked_at: string | null;
 }
 
+/** Một ô đã điểm danh trong ma trận học viên × buổi (chỉ buổi offline đã xếp lịch) */
+export interface AttendanceCell {
+	user_id: number;
+	lesson_id: number;
+	/** Cách điểm danh: qr (học viên tự quét) hoặc manual (admin điểm danh tay) */
+	type: "qr" | "manual";
+}
+
 export interface AdminCourseDetail extends AdminCourse {
 	lessons: CourseLessonRow[];
 	enrollments: CourseEnrollmentRow[];
 	certificates: CourseCertificateRow[];
+	attendances: AttendanceCell[];
 }
