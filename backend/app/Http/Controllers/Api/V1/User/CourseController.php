@@ -147,7 +147,7 @@ class CourseController extends BaseApiController
         $userId = auth('sanctum')->id();
         $enrollment = $course->enrollmentFor($userId);
 
-        $progress = $this->lessonProgressPercent($lesson, $userId);
+        $progress = $this->lessonProgressPercent($lesson, $userId, $enrollment?->track);
         $sections = $this->sectionCompletionMap($lesson, $userId);
 
         $prev = $idx > 0 ? $lessons[$idx - 1] : null;
@@ -448,7 +448,7 @@ class CourseController extends BaseApiController
     private function transformLessonRow(Lesson $lesson, ?int $userId, ?string $track): array
     {
         $sections = $this->sectionCompletionMap($lesson, $userId);
-        $isCompleted = $this->lessonProgressPercent($lesson, $userId) === 100;
+        $isCompleted = $this->lessonProgressPercent($lesson, $userId, $track) === 100;
 
         $qrTicket = null;
         $isAttended = false;
@@ -499,16 +499,19 @@ class CourseController extends BaseApiController
     }
 
     /**
-     * % tiến độ buổi học = số section đã hoàn thành / số section có mặt (video/assignment/quiz).
+     * % tiến độ buổi học = số section đã hoàn thành / số section có mặt.
+     * Online track: chỉ tính video (50%) + quiz (50%), bỏ assignment.
+     * Offline track / chưa ghi danh: tính video + assignment + quiz.
      * null nếu buổi học chưa có section nào để tính tiến độ.
      */
-    private function lessonProgressPercent(Lesson $lesson, ?int $userId): ?int
+    private function lessonProgressPercent(Lesson $lesson, ?int $userId, ?string $track = null): ?int
     {
         $present = [];
         if ($lesson->playableVideoUrl()) {
             $present[] = 'video';
         }
-        if ($lesson->assignment_url) {
+        // Assignment chỉ tính cho offline (online không cần nộp bài tập)
+        if ($track !== 'online' && $lesson->assignment_url) {
             $present[] = 'assignment';
         }
         $hasQuiz = $lesson->relationLoaded('quiz') ? (bool) $lesson->quiz : $lesson->quiz()->exists();

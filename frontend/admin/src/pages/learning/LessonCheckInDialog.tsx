@@ -28,6 +28,12 @@ const timeFormatter = new Intl.DateTimeFormat("vi-VN", {
 	second: "2-digit",
 });
 
+function formatLessonLabel(lesson: CourseLessonRow): string {
+	const title = lesson.title.trim();
+	if (/^bu[ổô]i\s*\d+/iu.test(title)) return title;
+	return `Buổi ${lesson.order}: ${title}`;
+}
+
 type ScanResult =
 	| { type: "success"; student: CheckInStudentDTO; already: boolean; at: Date }
 	| { type: "error"; message: string; at: Date };
@@ -198,7 +204,7 @@ function LessonCheckInDialog({
 					</DialogTitle>
 					<DialogDescription>
 						{lesson
-							? `Buổi ${lesson.order}: ${lesson.title}. Đưa mã QR trên vé của học viên vào khung hình để điểm danh.`
+							? `${formatLessonLabel(lesson)}. Đưa mã QR trên vé của học viên vào khung hình để điểm danh.`
 							: "Đưa mã QR vào khung hình để điểm danh."}
 					</DialogDescription>
 				</DialogHeader>

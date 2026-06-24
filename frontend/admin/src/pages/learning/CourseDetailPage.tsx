@@ -71,7 +71,11 @@ import {
 } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import type { AdminCourseDetail, EnrollmentTrack } from "@/pages/learning/course-detail-mock";
+import type {
+	AdminCourseDetail,
+	CourseLessonRow,
+	EnrollmentTrack,
+} from "@/pages/learning/course-detail-mock";
 import AssignmentGradeDialog from "@/pages/learning/AssignmentGradeDialog";
 import EnrollStudentDialog from "@/pages/learning/EnrollStudentDialog";
 import LessonCheckInDialog from "@/pages/learning/LessonCheckInDialog";
@@ -91,6 +95,12 @@ function formatDateTime(value: string | null) {
 	if (!value) return "--";
 	const d = new Date(value);
 	return Number.isNaN(d.getTime()) ? "--" : dateTimeFmt.format(d);
+}
+
+function formatLessonLabel(lesson: CourseLessonRow): string {
+	const title = lesson.title.trim();
+	if (/^bu[ổô]i\s*\d+/iu.test(title)) return title;
+	return `Buổi ${lesson.order}: ${title}`;
 }
 
 function statusBadge(status: CourseStatus) {
