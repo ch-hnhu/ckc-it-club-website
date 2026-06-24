@@ -113,7 +113,7 @@ const BlogCreatePage: React.FC = () => {
 
 		setIsSavingDraft(true);
 		try {
-			await blogService.createBlog({
+			const response = await blogService.createBlog({
 				title: title.trim(),
 				excerpt: excerpt.trim() || undefined,
 				content,
@@ -121,9 +121,17 @@ const BlogCreatePage: React.FC = () => {
 				featuredImage: coverImage,
 				status: "draft",
 			});
-			toast.success("Đã lưu nháp!", {
-				description: "Bạn có thể xem lại ở mục Nháp trong trang cá nhân.",
-			});
+
+			if (response.data.status === "draft") {
+				toast.success("Đã lưu nháp!", {
+					description: "Bạn có thể xem lại ở mục Nháp trong trang cá nhân.",
+				});
+			} else {
+				// Backend không lưu nháp (ví dụ tài khoản được tự động đăng) — phản ánh đúng kết quả.
+				toast.success("Blog đã được đăng.", {
+					description: "Bài viết của bạn đã được xuất bản.",
+				});
+			}
 			navigate("/blog");
 		} catch (error) {
 			setFormError(getErrorMessage(error));

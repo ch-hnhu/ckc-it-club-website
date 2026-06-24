@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { CalendarCheck, CalendarDays, Download, Loader2, MapPin, Star, Ticket, TicketX, Users, X } from "lucide-react";
+import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
+import { CalendarCheck, CalendarDays, Download, ExternalLink, Loader2, MapPin, MessageSquareText, Star, Ticket, TicketX, Users, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
 	Breadcrumb,
@@ -172,6 +172,14 @@ const EventDetailPage: React.FC = () => {
 	const [galleryVisible, setGalleryVisible] = useState(GALLERY_PAGE_SIZE);
 	const [lightbox, setLightbox] = useState<string | null>(null);
 
+	// Deep-link tới phản hồi của một người (mở từ trang admin: ?feedback_user=<id>)
+	const [searchParams, setSearchParams] = useSearchParams();
+	const focusFeedbackUserId = searchParams.get("feedback_user")
+		? Number(searchParams.get("feedback_user"))
+		: null;
+	const [highlightedFeedbackId, setHighlightedFeedbackId] = useState<number | null>(null);
+	const feedbackItemRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
 	useEffect(() => {
 		if (!slug) return;
 		let cancelled = false;
@@ -223,7 +231,7 @@ const EventDetailPage: React.FC = () => {
 		}
 	}, [event?.id, event?.status, event?.my_feedback, event?.feedback_summary?.total]);
 
-	const handleLoadMoreFeedbacks = async () => {
+	const handleLoadMoreFeedbacks = useCallback(async () => {
 		if (!event) return;
 		const next = feedbackPage + 1;
 		setLoadingMoreFeedback(true);
@@ -237,7 +245,69 @@ const EventDetailPage: React.FC = () => {
 		} finally {
 			setLoadingMoreFeedback(false);
 		}
-	};
+	}, [event, feedbackPage]);
+
+	const clearFeedbackParam = useCallback(() => {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete("feedback_user");
+				return next;
+			},
+			{ replace: true },
+		);
+	}, [setSearchParams]);
+
+	// Tự tải thêm trang phản hồi tới khi tìm thấy người được chỉ định, rồi cuộn + làm nổi
+	useEffect(() => {
+		if (focusFeedbackUserId == null) return;
+		if (!event || event.status !== "ended") return;
+
+		if ((event.feedback_summary?.total ?? 0) === 0) {
+			toast("Người này chưa có phản hồi cho sự kiện.");
+			clearFeedbackParam();
+			return;
+		}
+
+		if (feedbacks.length === 0) return; // đang tải trang đầu
+
+		const target = feedbacks.find((fb) => fb.user?.id === focusFeedbackUserId);
+		if (target) {
+			setHighlightedFeedbackId(target.id);
+			requestAnimationFrame(() => {
+				feedbackItemRefs.current[target.id]?.scrollIntoView({
+					behavior: "smooth",
+					block: "center",
+				});
+			});
+			clearFeedbackParam();
+			return;
+		}
+
+		if (feedbackHasMore && !loadingMoreFeedback) {
+			void handleLoadMoreFeedbacks();
+			return;
+		}
+
+		if (!feedbackHasMore) {
+			toast("Không tìm thấy phản hồi của người này.");
+			clearFeedbackParam();
+		}
+	}, [
+		focusFeedbackUserId,
+		event,
+		feedbacks,
+		feedbackHasMore,
+		loadingMoreFeedback,
+		handleLoadMoreFeedbacks,
+		clearFeedbackParam,
+	]);
+
+	useEffect(() => {
+		if (highlightedFeedbackId == null) return;
+		const timer = window.setTimeout(() => setHighlightedFeedbackId(null), 3000);
+		return () => window.clearTimeout(timer);
+	}, [highlightedFeedbackId]);
 
 	const handleSubmitFeedback = async () => {
 		if (!event) return;
@@ -602,6 +672,32 @@ const EventDetailPage: React.FC = () => {
 							</div>
 						)}
 
+						{/* Góp ý — chỉ hiển thị khi có link form góp ý và người dùng đã tham dự sự kiện */}
+						{event.feedback_form_url && event.my_attended && (
+							<div className='mt-6 flex flex-col gap-4 rounded-2xl border-2 border-black bg-white p-5 shadow-[3px_3px_0_#111] sm:flex-row sm:items-center sm:justify-between'>
+								<div className='flex flex-col gap-1'>
+									<div className='flex items-center gap-2'>
+										<MessageSquareText className='h-5 w-5 text-[var(--color-text-primary)]' />
+										<p className='font-heading text-sm font-extrabold text-black'>
+											Đóng góp ý kiến cho sự kiện
+										</p>
+									</div>
+									<p className='text-sm text-gray-700'>
+										Ý kiến của bạn giúp ban tổ chức cải thiện những sự kiện tiếp theo.
+									</p>
+								</div>
+								<a
+									href={event.feedback_form_url}
+									target='_blank'
+									rel='noopener noreferrer'
+									className='inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+									<MessageSquareText className='h-4 w-4' />
+									Gửi góp ý
+									<ExternalLink className='h-4 w-4' />
+								</a>
+							</div>
+						)}
+
 						{/* Gallery */}
 						{event.gallery && event.gallery.length > 0 && (
 							<section className='mt-10 border-t-2 border-gray-200 pt-8'>
@@ -731,7 +827,14 @@ const EventDetailPage: React.FC = () => {
 									{feedbacks.map((fb) => (
 										<div
 											key={fb.id}
-											className='rounded-2xl border-2 border-black bg-white p-4 shadow-[2px_2px_0_#111]'>
+											ref={(el) => {
+												feedbackItemRefs.current[fb.id] = el;
+											}}
+											className={`rounded-2xl border-2 border-black bg-white p-4 shadow-[2px_2px_0_#111] transition ${
+												highlightedFeedbackId === fb.id
+													? "ring-4 ring-[var(--color-primary)] ring-offset-2"
+													: ""
+											}`}>
 											<div className='flex items-center justify-between gap-2'>
 												<div className='flex items-center gap-2.5'>
 													{fb.user?.avatar ? (

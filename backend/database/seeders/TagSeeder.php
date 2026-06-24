@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\TagModelType;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -34,8 +35,9 @@ class TagSeeder extends Seeder
         foreach ($tags as $tag) {
             $slug = Str::slug($tag['name']);
             DB::table('tags')->updateOrInsert(
-                ['slug' => $slug],
+                ['slug' => $slug, 'model_type' => TagModelType::BLOG->value],
                 [
+                    'model_type'  => TagModelType::BLOG->value,
                     'name'        => $tag['name'],
                     'slug'        => $slug,
                     'description' => $tag['description'],

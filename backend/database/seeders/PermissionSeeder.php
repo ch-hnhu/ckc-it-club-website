@@ -50,6 +50,9 @@ class PermissionSeeder extends Seeder
         'community.reports.view' => 'Xem và xử lý báo cáo vi phạm từ cộng đồng',
         'mail_templates.view' => 'Xem danh sách loại mail và template',
         'mail_templates.manage' => 'Thêm, sửa, xóa, đặt mặc định mail template; bật/tắt auto-send',
+        'courses.view' => 'Xem danh sách và chi tiết khóa học',
+        'courses.manage' => 'Tạo, sửa, xóa, đổi trạng thái khóa học và nội dung buổi học',
+        'quizzes.manage' => 'Tạo và chỉnh sửa quiz cho buổi học',
         'events.view' => 'Xem danh sách và chi tiết sự kiện',
         'events.manage' => 'Tạo, sửa, xóa, đổi trạng thái sự kiện',
         'events.check_in' => 'Thực hiện điểm danh sự kiện',
@@ -86,6 +89,7 @@ class PermissionSeeder extends Seeder
             'community.skills.manage',
             'community.reports.view',
             'mail_templates.view', 'mail_templates.manage',
+            'courses.view', 'courses.manage', 'quizzes.manage',
             'events.view', 'events.manage', 'events.check_in',
             'gamification.view', 'gamification.manage',
         ],
@@ -115,6 +119,7 @@ class PermissionSeeder extends Seeder
             'community.skills.manage',
             'community.reports.view',
             'mail_templates.view', 'mail_templates.manage',
+            'courses.view', 'courses.manage', 'quizzes.manage',
             'events.view', 'events.manage', 'events.check_in',
             'gamification.view', 'gamification.manage',
         ],
@@ -144,14 +149,16 @@ class PermissionSeeder extends Seeder
             'community.skills.manage',
             'community.reports.view',
             'mail_templates.view', 'mail_templates.manage',
+            'courses.view', 'courses.manage', 'quizzes.manage',
             'events.view', 'events.manage', 'events.check_in',
             'gamification.view', 'gamification.manage',
         ],
 
-        // Trưởng ban Học thuật — chỉ dashboard (chưa có chức năng được giao)
+        // Trưởng ban Học thuật — quản lý Trung tâm đào tạo (khóa học)
         'academic-head' => [
             'admin_panel.access',
             'dashboard.view',
+            'courses.view', 'courses.manage', 'quizzes.manage',
         ],
 
         // Trưởng ban Truyền thông — toàn bộ chức năng quản lý cộng đồng

@@ -22,6 +22,15 @@ import { Link, useLocation } from "react-router-dom";
 import { logout, type AuthUser } from "../../services/auth.service";
 import { buildProfileUrl } from "@/lib/utils";
 import NotificationBell from "@/components/partials/NotificationBell";
+import { learningService } from "@/services/learning.service";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 type NavbarProps = {
 	user: AuthUser | null;
@@ -62,6 +71,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 	const [isProfileOpen, setIsProfileOpen] = useState(false);
 	const [isCommunityOpen, setIsCommunityOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const [breadcrumbLessonTitle, setBreadcrumbLessonTitle] = useState("");
 	const profileMenuRef = useRef<HTMLDivElement>(null);
 	const communityDropdownRef = useRef<HTMLDivElement>(null);
 	const location = useLocation();
@@ -72,10 +82,15 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 	const mobileNavItems = shouldShowApplyButton
 		? [...BASE_NAV_ITEMS, APPLY_NAV_ITEM]
 		: BASE_NAV_ITEMS;
-	const isCommunityPage =
-		location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
-	const navbarContainerClass = isCommunityPage ? "mx-0 max-w-none" : "";
-	const navbarPaddingX = isCommunityPage ? "px-4 md:px-5 lg:px-6" : "px-6";
+	const isLectureVideoPage = /^\/khoa-hoc\/[^/]+\/[^/]+\/[^/]+\/?$/.test(location.pathname);
+	const navbarContainerClass = isLectureVideoPage ? "mx-0 max-w-none" : "";
+	const navbarPaddingX = isLectureVideoPage ? "px-4 md:px-6 lg:px-8" : "px-6";
+	const lecturePathParts = location.pathname.split("/").filter(Boolean);
+	const lectureCourseSlug = lecturePathParts[1] ?? "";
+	const lectureLessonSlug = lecturePathParts[2] ?? "";
+	const lectureVideoSlug = lecturePathParts[3] ?? "";
+	// Trang làm quiz dùng chung layout breadcrumb với trang video (cùng cấp URL).
+	const isQuizPage = isLectureVideoPage && lectureVideoSlug === "quiz";
 	const userDisplayName = user?.name || user?.email || "CKC member";
 	const userAvatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(
 		userDisplayName,
@@ -85,6 +100,35 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 			? `${user.picture}${user.picture.includes("?") ? "&" : "?"}_t=${avatarTs}`
 			: user.picture
 		: userAvatarFallback;
+
+	useEffect(() => {
+		if (!isLectureVideoPage || !lectureCourseSlug || !lectureLessonSlug || !lectureVideoSlug) {
+			setBreadcrumbLessonTitle("");
+			return;
+		}
+
+		let cancelled = false;
+		// Trang quiz lấy tên buổi học qua getLesson (không có video để gọi getVideo).
+		const request = isQuizPage
+			? learningService
+					.getLesson(lectureCourseSlug, lectureLessonSlug)
+					.then((res) => res.data.title)
+			: learningService
+					.getVideo(lectureCourseSlug, lectureLessonSlug, lectureVideoSlug)
+					.then((res) => res.data.lesson.title);
+
+		request
+			.then((title) => {
+				if (!cancelled) setBreadcrumbLessonTitle(title);
+			})
+			.catch(() => {
+				if (!cancelled) setBreadcrumbLessonTitle("");
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [isLectureVideoPage, isQuizPage, lectureCourseSlug, lectureLessonSlug, lectureVideoSlug]);
 
 	useEffect(() => {
 		if (!isProfileOpen) return;
@@ -277,114 +321,136 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 							</span>
 						</Link>
 
-						<nav className='hidden min-w-0 items-center gap-1 xl:flex'>
-							{desktopNavItems.map((item) => {
-								const isActive = isNavItemActive(item.href);
-								const className = getNavItemClass(isActive);
+						{isLectureVideoPage ? (
+							<Breadcrumb className='hidden min-w-0 xl:block'>
+								<BreadcrumbList className='flex-nowrap text-base font-semibold'>
+									{lectureLessonSlug && (
+										<BreadcrumbItem className='min-w-0'>
+											<BreadcrumbLink asChild className='max-w-80 truncate'>
+												<Link to={`/khoa-hoc/${lectureCourseSlug}/${lectureLessonSlug}`}>
+													{breadcrumbLessonTitle || "Buổi học"}
+												</Link>
+											</BreadcrumbLink>
+										</BreadcrumbItem>
+									)}
+									<BreadcrumbSeparator />
+									<BreadcrumbItem className='min-w-0'>
+										<BreadcrumbPage className='font-bold text-black'>
+											{isQuizPage ? "Quiz" : "Video bài giảng"}
+										</BreadcrumbPage>
+									</BreadcrumbItem>
+								</BreadcrumbList>
+							</Breadcrumb>
+						) : (
+							<nav className='hidden min-w-0 items-center gap-1 xl:flex'>
+								{desktopNavItems.map((item) => {
+									const isActive = isNavItemActive(item.href);
+									const className = getNavItemClass(isActive);
 
-								if (item.dropdown) {
-									return (
-										<div
-											key={item.label}
-											ref={communityDropdownRef}
-											className='relative'>
-											<button
-												type='button'
-												onClick={() => setIsCommunityOpen((p) => !p)}
-												className={`${className} flex items-center gap-1`}
-												style={{ fontFamily: "var(--font-body)" }}
-												aria-haspopup='true'
-												aria-expanded={isCommunityOpen}>
+									if (item.dropdown) {
+										return (
+											<div
+												key={item.label}
+												ref={communityDropdownRef}
+												className='relative'>
+												<button
+													type='button'
+													onClick={() => setIsCommunityOpen((p) => !p)}
+													className={`${className} flex items-center gap-1`}
+													style={{ fontFamily: "var(--font-body)" }}
+													aria-haspopup='true'
+													aria-expanded={isCommunityOpen}>
+													{item.label}
+													<ChevronDown
+														className={`h-3.5 w-3.5 transition-transform duration-200 ${isCommunityOpen ? "rotate-180" : ""}`}
+													/>
+													<span
+														className={getNavIndicatorClass(isActive)}
+														style={{ background: "var(--color-primary)" }}
+													/>
+												</button>
+
+												{isCommunityOpen && (
+													<div className='absolute top-[calc(100%+10px)] left-0 z-50 flex w-56 flex-col gap-1.5 overflow-hidden rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
+														{COMMUNITY_DROPDOWN.map((sub) => {
+															const subActive =
+																(sub.id === "chat" &&
+																	location.pathname.startsWith(
+																		"/cong-dong/chat",
+																	)) ||
+																(sub.id === "leaderboard" &&
+																	location.pathname.startsWith(
+																		"/cong-dong/bang-xep-hang",
+																	)) ||
+																(sub.id === "home" &&
+																	location.pathname === "/cong-dong");
+															const SubIcon = sub.icon;
+															return (
+																<Link
+																	key={sub.id}
+																	to={sub.to}
+																	onClick={() =>
+																		setIsCommunityOpen(false)
+																	}
+																	className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition-colors ${
+																		subActive
+																			? "border-2 border-[var(--color-primary-dark)] bg-[var(--color-primary-100)] text-[var(--color-text-primary)]"
+																			: "border-2 border-transparent text-gray-700 hover:bg-gray-100"
+																	}`}
+																	style={{
+																		fontFamily: "var(--font-body)",
+																	}}>
+																	<SubIcon className='h-4 w-4 shrink-0' />
+																	{sub.label}
+																</Link>
+															);
+														})}
+													</div>
+												)}
+											</div>
+										);
+									}
+
+									if (item.highlight) {
+										return (
+											<Link
+												key={item.label}
+												to={item.href}
+												className='neo-btn neo-btn-primary px-4 py-2 text-sm'
+												style={{ fontFamily: "var(--font-body)" }}>
 												{item.label}
-												<ChevronDown
-													className={`h-3.5 w-3.5 transition-transform duration-200 ${isCommunityOpen ? "rotate-180" : ""}`}
-												/>
-												<span
-													className={getNavIndicatorClass(isActive)}
-													style={{ background: "var(--color-primary)" }}
-												/>
-											</button>
+											</Link>
+										);
+									}
 
-											{isCommunityOpen && (
-												<div className='absolute top-[calc(100%+10px)] left-0 z-50 flex w-56 flex-col gap-1.5 overflow-hidden rounded-[var(--neo-radius)] border-2 border-black bg-white p-2 shadow-[4px_4px_0_#111]'>
-													{COMMUNITY_DROPDOWN.map((sub) => {
-														const subActive =
-															(sub.id === "chat" &&
-																location.pathname.startsWith(
-																	"/cong-dong/chat",
-																)) ||
-															(sub.id === "leaderboard" &&
-																location.pathname.startsWith(
-																	"/cong-dong/bang-xep-hang",
-																)) ||
-															(sub.id === "home" &&
-																location.pathname === "/cong-dong");
-														const SubIcon = sub.icon;
-														return (
-															<Link
-																key={sub.id}
-																to={sub.to}
-																onClick={() =>
-																	setIsCommunityOpen(false)
-																}
-																className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition-colors ${
-																	subActive
-																		? "border-2 border-[var(--color-primary-dark)] bg-[var(--color-primary-100)] text-[var(--color-text-primary)]"
-																		: "border-2 border-transparent text-gray-700 hover:bg-gray-100"
-																}`}
-																style={{
-																	fontFamily: "var(--font-body)",
-																}}>
-																<SubIcon className='h-4 w-4 shrink-0' />
-																{sub.label}
-															</Link>
-														);
-													})}
-												</div>
-											)}
-										</div>
-									);
-								}
-
-								if (item.highlight) {
-									return (
+									return item.href.startsWith("/") ? (
 										<Link
 											key={item.label}
 											to={item.href}
-											className='neo-btn neo-btn-primary px-4 py-2 text-sm'
+											className={className}
 											style={{ fontFamily: "var(--font-body)" }}>
 											{item.label}
+											<span
+												className={getNavIndicatorClass(isActive)}
+												style={{ background: "var(--color-primary)" }}
+											/>
 										</Link>
+									) : (
+										<a
+											key={item.label}
+											href={item.href}
+											className={className}
+											style={{ fontFamily: "var(--font-body)" }}>
+											{item.label}
+											<span
+												className={getNavIndicatorClass(isActive)}
+												style={{ background: "var(--color-primary)" }}
+											/>
+										</a>
 									);
-								}
-
-								return item.href.startsWith("/") ? (
-									<Link
-										key={item.label}
-										to={item.href}
-										className={className}
-										style={{ fontFamily: "var(--font-body)" }}>
-										{item.label}
-										<span
-											className={getNavIndicatorClass(isActive)}
-											style={{ background: "var(--color-primary)" }}
-										/>
-									</Link>
-								) : (
-									<a
-										key={item.label}
-										href={item.href}
-										className={className}
-										style={{ fontFamily: "var(--font-body)" }}>
-										{item.label}
-										<span
-											className={getNavIndicatorClass(isActive)}
-											style={{ background: "var(--color-primary)" }}
-										/>
-									</a>
-								);
-							})}
-						</nav>
+								})}
+							</nav>
+						)}
 					</div>
 
 					<div className='hidden shrink-0 items-center gap-3 xl:flex'>

@@ -50,9 +50,11 @@
 - outlet content
 - footer
 - back-to-top control
+- the shell uses `min-h-[100dvh]` (with `min-h-screen` fallback) so its background and footer always reach the visual viewport edge.
+- lesson video pages (`/khoa-hoc/:slug/:lessonSlug/:videoSlug`) use an app-like split layout: fixed navbar with logo plus breadcrumb instead of the normal nav tabs; the breadcrumb shows the backend lesson title and `Video`, then two full-height main panes for lesson material and video, a fixed bottom learning navigation bar, and no global site footer/back-to-top control
 - `/cong-dong` is a dense community layout exception:
 - footer is hidden
-- navbar uses a full-width container, reduced horizontal padding, and a two-group `justify-between` layout for nav/profile alignment
+- navbar and footer use the standard centered container; only lesson video pages (`/khoa-hoc/:slug/:lessonSlug/:videoSlug`) stretch them full-width for the lecture viewing layout
 - community content fills the available desktop width up to a 76rem cap with reduced feed-side padding, and its right rail uses a custom `70rem` breakpoint so it remains visible below Tailwind `xl`
 - on mobile/tablet below `lg`, the community page shows a sticky community sub-header and turns the left sidebar into an overlay drawer
 - community channels are fetched in `CommunityPage` from public `GET /community/channels` through `communityService`; the page keeps a seeded local fallback list if the request fails.
@@ -218,6 +220,8 @@
 - Public and authenticated profile responses include gamification summary fields `total_points` and `current_rank` for the profile sidebar panel.
 - `/diem-cua-toi` loads point history from `/gamification/me/history` in pages of 5 entries and appends the next page through a “Tải thêm” button until the paginated response has no more pages.
 - The community leaderboard right rail links to the seeded blog slug `gioi-thieu-bang-xep-hang`; its teaser card fetches the blog detail to show cover image, title, reading time, and published date.
+- Learning course detail reads `enrollment_track` (`offline` or `online`) from the course detail contract. The progress sidebar renders offline track metrics as Điểm danh, Bài thực hành, Quiz, and Điểm XP; online track metrics render only Quiz and Điểm XP. The learner card displays the track label and shows the certificate claim CTA only when `progress >= 100`.
+- Learning course detail remains publicly reachable, but its lesson-content column is gated for guests with a dashboard-style login panel. It consumes `user` and `loadingUser` from `MainLayout`'s outlet context so the authentication state stays consistent with the navbar; the learning sidebar stays hidden until an authenticated user is available.
 
 ## Environment Variables
 
@@ -279,6 +283,8 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-22`: Quiz player feedback mirrors the admin preview exactly: after checking, correct options/blanks/positions/pairs turn green and wrong picks pink for every type. The bottom panel shows the question `explanation` below the verdict when present. It does NOT repeat the correct answer for types where it's already highlighted; only `fill_blank`/`word_bank_fill_blank` (text input, nothing to highlight) get an `Đáp án: …` reveal in the verdict line. Wrong-answer label is `Chưa đúng` (admin preview's label was also changed `Chưa chính xác` → `Chưa đúng`).
+- `2026-06-22`: Added the Duolingo-style quiz player at `/khoa-hoc/:slug/:lessonSlug/quiz` (`src/pages/learning/QuizPlayPage.tsx`, registered before the `:videoSlug` route). It fetches `GET /learning/courses/{slug}/lessons/{lessonSlug}/quiz` (auth-optional) via `learningService.getQuiz`, runs one question at a time with a progress bar, gives immediate correct/wrong feedback + explanation (graded locally with the option `is_correct`/metadata returned by the API), then a results screen (score %, correct count, pass vs `pass_threshold`). On finish, logged-in users submit all answers to `POST .../quiz/submit` via `learningService.submitQuiz` (server re-grades authoritatively and records progress); guests get a local-only score with a "đăng nhập để lưu" prompt. Supports all persisted question types: multiple_choice, multiple_select (+ true_false preset), fill_blank, word_bank_fill_blank, word_order, matching — all tap-based. `ordering` is not supported; use `word_order` as the sole ordering template. Style matches the neo-brutalist learning UI (bold borders, hard shadows, `--color-primary` lime, pastel accents). `LessonDetailPage` "Làm quiz" now links to `.../quiz` (was the broken `.../quiz/{quiz.slug}`). New types/service methods live in `learning.types.ts` / `learning.service.ts` (`QuizPlay`, `QuizQuestion`, `QuizSubmitResult`, etc.). Quiz/option images currently render whatever URL the API returns (admin image upload still not implemented).
 - `2026-06-13`: Event detail ticket modal now includes a `Tải QR` action that downloads the displayed ticket QR as a PNG file.
 - `2026-06-13`: Event detail QR ticket viewing now falls back to `GET /community/events/{event}/my-ticket` when a registered user's QR token is missing after reload.
 - `2026-06-10`: Blog detail reactions now support viewing the list of users who reacted, matching community post behavior.

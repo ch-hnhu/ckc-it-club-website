@@ -51,6 +51,7 @@ type FormState = {
 	title: string;
 	description: string;
 	location: string;
+	feedback_form_url: string;
 	start_at: string;
 	end_at: string;
 	registration_start_at: string;
@@ -116,6 +117,7 @@ function EventEditPage() {
 				title: e.title,
 				description: e.description ?? "",
 				location: e.location ?? "",
+				feedback_form_url: e.feedback_form_url ?? "",
 				start_at: toLocalInputValue(e.start_at),
 				end_at: toLocalInputValue(e.end_at),
 				registration_start_at: toLocalInputValue(e.registration_start_at),
@@ -217,6 +219,8 @@ function EventEditPage() {
 			formData.append("description", form.description.trim());
 			formData.append("content", content);
 			formData.append("location", form.location.trim());
+			// Chuỗi rỗng → null (xóa link form góp ý cũ)
+			formData.append("feedback_form_url", form.feedback_form_url.trim());
 			formData.append("max_attendees", form.max_attendees);
 			// Chuỗi rỗng → null (xóa giới hạn thời gian đăng ký cũ)
 			formData.append(
@@ -345,6 +349,25 @@ function EventEditPage() {
 									/>
 									{fieldErrors.location && (
 										<p className="text-sm text-destructive">{fieldErrors.location}</p>
+									)}
+								</div>
+
+								{/* Feedback form URL */}
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="event-feedback-form-url">Link form góp ý</Label>
+									<Input
+										id="event-feedback-form-url"
+										type="url"
+										placeholder="VD: https://docs.google.com/forms/..."
+										value={form.feedback_form_url}
+										onChange={(e) => setField("feedback_form_url", e.target.value)}
+										disabled={submitting}
+									/>
+									<p className="text-xs text-muted-foreground">
+										Link Google Form/Docs để người tham gia góp ý. Khi có link, nút góp ý sẽ hiển thị ở trang chi tiết sự kiện.
+									</p>
+									{fieldErrors.feedback_form_url && (
+										<p className="text-sm text-destructive">{fieldErrors.feedback_form_url}</p>
 									)}
 								</div>
 							</CardContent>

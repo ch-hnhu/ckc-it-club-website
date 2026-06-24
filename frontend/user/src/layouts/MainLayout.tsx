@@ -12,6 +12,7 @@ const MainLayout: React.FC = () => {
 	const [avatarTs, setAvatarTs] = useState(0);
 	const { pathname } = useLocation();
 	const isCommunityPage = pathname.startsWith("/cong-dong") || pathname.startsWith("/community");
+	const isLectureVideoPage = /^\/khoa-hoc\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname);
 
 	const refreshUser = useCallback(async () => {
 		const currentUser = await getCurrentUser();
@@ -39,7 +40,7 @@ const MainLayout: React.FC = () => {
 	}, [pathname]);
 
 	return (
-		<div className='min-h-screen bg-white text-black flex flex-col'>
+		<div className='flex min-h-screen min-h-[100dvh] flex-col bg-white text-black'>
 			{/* Fixed Navbar */}
 			<Navbar user={user} onAuthSuccess={refreshUser} avatarTs={avatarTs} />
 
@@ -48,10 +49,10 @@ const MainLayout: React.FC = () => {
 				<Outlet context={{ user, loadingUser, refreshUser }} />
 			</main>
 
-			{!isCommunityPage && <Footer />}
+			{!isCommunityPage && !isLectureVideoPage && <Footer />}
 
 			{/* Back to top button */}
-			<BackToTop />
+			{!isLectureVideoPage && <BackToTop />}
 
 			{/* Global toast notifications */}
 			<Toaster
