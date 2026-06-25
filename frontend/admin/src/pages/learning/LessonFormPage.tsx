@@ -102,7 +102,10 @@ function LessonFormPage() {
 	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
 	const [pendingStatus, setPendingStatus] = useState<CourseStatus | null>(null);
+	/** Trạng thái hiện tại của buổi học khi sửa — null khi tạo mới. */
+	const [currentStatus, setCurrentStatus] = useState<CourseStatus | null>(null);
 	const [durationLoading, setDurationLoading] = useState(false);
+	const [liveDurationLoading, setLiveDurationLoading] = useState(false);
 	const editorRef = useRef<StacksEditorHandle>(null);
 
 	useBreadcrumb([
@@ -151,6 +154,7 @@ function LessonFormPage() {
 					assignment_deadline: toLocalInput(l.assignment_deadline),
 					document: l.document ?? "",
 				});
+				setCurrentStatus(l.status);
 			})
 			.catch(() => {
 				if (cancelled) return;
@@ -172,16 +176,20 @@ function LessonFormPage() {
 	};
 
 	/** Tự lấy thời lượng video từ link YouTube (qua backend) khi rời ô nhập URL. */
-	const fetchVideoDuration = async (url: string) => {
+	const fetchDuration = async (
+		url: string,
+		durationKey: "video_duration" | "live_duration",
+		setLoading: (v: boolean) => void,
+	) => {
 		const trimmed = url.trim();
 		if (!trimmed) {
-			setField("video_duration", "");
+			setField(durationKey, "");
 			return;
 		}
-		setDurationLoading(true);
+		setLoading(true);
 		try {
 			const res = await courseService.getYoutubeDuration(trimmed);
-			setField("video_duration", String(res.data.seconds));
+			setField(durationKey, String(res.data.seconds));
 		} catch (err) {
 			const msg = axios.isAxiosError(err)
 				? ((err.response?.data as ApiErrorResponse | undefined)?.message ??
@@ -189,7 +197,7 @@ function LessonFormPage() {
 				: "Không lấy được thời lượng video.";
 			toast.error(msg, { position: "top-right" });
 		} finally {
-			setDurationLoading(false);
+			setLoading(false);
 		}
 	};
 
@@ -348,7 +356,13 @@ function LessonFormPage() {
 											placeholder='https://youtube.com/...'
 											value={form.video_url}
 											onChange={(e) => setField("video_url", e.target.value)}
-											onBlur={(e) => void fetchVideoDuration(e.target.value)}
+											onBlur={(e) =>
+												void fetchDuration(
+													e.target.value,
+													"video_duration",
+													setDurationLoading,
+												)
+											}
 											disabled={submitting}
 										/>
 										{fieldErrors.video_url && (
@@ -372,18 +386,47 @@ function LessonFormPage() {
 										/>
 									</div>
 								</div>
-								<div className='flex flex-col gap-2'>
-									<Label htmlFor='lesson-live'>Video bản ghi livestream (URL)</Label>
-									<Input
-										id='lesson-live'
-										placeholder='https://youtube.com/...'
-										value={form.live_url}
-										onChange={(e) => setField("live_url", e.target.value)}
-										disabled={submitting}
-									/>
-									{fieldErrors.live_url && (
-										<p className='text-sm text-destructive'>{fieldErrors.live_url}</p>
-									)}
+								<div className='grid gap-4 sm:grid-cols-2'>
+									<div className='flex flex-col gap-2'>
+										<Label htmlFor='lesson-live'>
+											Video bản ghi livestream (URL)
+										</Label>
+										<Input
+											id='lesson-live'
+											placeholder='https://youtube.com/...'
+											value={form.live_url}
+											onChange={(e) => setField("live_url", e.target.value)}
+											onBlur={(e) =>
+												void fetchDuration(
+													e.target.value,
+													"live_duration",
+													setLiveDurationLoading,
+												)
+											}
+											disabled={submitting}
+										/>
+										{fieldErrors.live_url && (
+											<p className='text-sm text-destructive'>
+												{fieldErrors.live_url}
+											</p>
+										)}
+									</div>
+									<div className='flex flex-col gap-2'>
+										<Label htmlFor='lesson-live-dur'>Thời lượng video</Label>
+										<Input
+											id='lesson-live-dur'
+											readOnly
+											disabled
+											value={
+												liveDurationLoading
+													? "Đang lấy thời lượng…"
+													: form.live_duration
+														? formatDurationLabel(Number(form.live_duration))
+														: ""
+											}
+											placeholder='Tự lấy từ link YouTube'
+										/>
+									</div>
 								</div>
 							</CardContent>
 						</Card>
@@ -477,7 +520,7 @@ function LessonFormPage() {
 										) : (
 											<Save className='h-4 w-4' />
 										)}
-										Lưu nháp
+										{currentStatus === "published" ? "Chuyển về nháp" : "Lưu nháp"}
 									</Button>
 									<Button
 										type='button'
@@ -488,7 +531,7 @@ function LessonFormPage() {
 										) : (
 											<Save className='h-4 w-4' />
 										)}
-										Xuất bản
+										{currentStatus === "published" ? "Lưu thay đổi" : "Xuất bản"}
 									</Button>
 								</div>
 								<Button

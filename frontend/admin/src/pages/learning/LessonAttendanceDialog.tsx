@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
-import { ClipboardCheck } from "lucide-react";
+import { CalendarCheck, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
 	Dialog,
 	DialogContent,
@@ -34,6 +35,8 @@ interface LessonAttendanceDialogProps {
 	students: CourseEnrollmentRow[];
 	/** ID học viên đã điểm danh buổi này (khởi tạo trạng thái switch). */
 	attendedUserIds: number[];
+	/** ID học viên đã đăng ký "sẽ tham gia" buổi này (dự kiến có mặt). */
+	registeredUserIds: number[];
 	/** Gọi khi đóng hộp thoại nếu có thay đổi — để parent refetch số liệu. */
 	onChanged: () => void;
 }
@@ -50,11 +53,25 @@ function LessonAttendanceDialog({
 	lesson,
 	students,
 	attendedUserIds,
+	registeredUserIds,
 	onChanged,
 }: LessonAttendanceDialogProps) {
 	const [present, setPresent] = useState<Set<number>>(new Set());
 	const [pending, setPending] = useState<Set<number>>(new Set());
 	const [dirty, setDirty] = useState(false);
+
+	const registeredSet = useMemo(() => new Set(registeredUserIds), [registeredUserIds]);
+
+	// Xếp học viên đã đăng ký "sẽ tham gia" lên đầu cho dễ theo dõi danh sách dự kiến.
+	const sortedStudents = useMemo(
+		() =>
+			[...students].sort((a, b) => {
+				const ra = registeredSet.has(a.user.id) ? 0 : 1;
+				const rb = registeredSet.has(b.user.id) ? 0 : 1;
+				return ra - rb;
+			}),
+		[students, registeredSet],
+	);
 
 	// Khởi tạo lại trạng thái mỗi khi mở hộp thoại cho một buổi khác. Không phụ thuộc
 	// attendedUserIds (parent tạo mảng mới mỗi render) để tránh reset giữa chừng.
@@ -119,41 +136,64 @@ function LessonAttendanceDialog({
 					</DialogDescription>
 				</DialogHeader>
 
-				<div className='flex items-center justify-between text-sm text-muted-foreground'>
-					<span>Có mặt</span>
-					<span className='font-medium text-foreground'>
-						{present.size}/{students.length}
+				<div className='flex items-center justify-between gap-4 text-sm text-muted-foreground'>
+					<span className='flex items-center gap-1.5'>
+						<CalendarCheck className='h-3.5 w-3.5' />
+						Đã đăng ký:{" "}
+						<span className='font-medium text-foreground'>
+							{registeredSet.size}
+						</span>
+					</span>
+					<span>
+						Có mặt:{" "}
+						<span className='font-medium text-foreground'>
+							{present.size}/{students.length}
+						</span>
 					</span>
 				</div>
 
 				{students.length > 0 ? (
 					<ScrollArea className='max-h-[52vh] pr-3'>
 						<div className='space-y-1'>
-							{students.map((s) => (
-								<label
-									key={s.id}
-									className='flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/60'>
-									<Avatar className='h-8 w-8'>
-										<AvatarImage src={s.user.avatar ?? undefined} />
-										<AvatarFallback className='text-xs'>
-											{s.user.full_name.charAt(0).toUpperCase()}
-										</AvatarFallback>
-									</Avatar>
-									<div className='min-w-0 flex-1'>
-										<p className='truncate text-sm font-medium leading-none'>
-											{s.user.full_name}
-										</p>
-										<p className='truncate text-xs text-muted-foreground'>
-											{s.user.email}
-										</p>
-									</div>
-									<Switch
-										checked={present.has(s.user.id)}
-										disabled={pending.has(s.user.id)}
-										onCheckedChange={(v) => void handleToggle(s.user.id, v)}
-									/>
-								</label>
-							))}
+							{sortedStudents.map((s) => {
+								const registered = registeredSet.has(s.user.id);
+								return (
+									<label
+										key={s.id}
+										className='flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/60'>
+										<Avatar className='h-8 w-8'>
+											<AvatarImage src={s.user.avatar ?? undefined} />
+											<AvatarFallback className='text-xs'>
+												{s.user.full_name.charAt(0).toUpperCase()}
+											</AvatarFallback>
+										</Avatar>
+										<div className='min-w-0 flex-1'>
+											<div className='flex items-center gap-2'>
+												<p className='truncate text-sm font-medium leading-none'>
+													{s.user.full_name}
+												</p>
+												{registered && (
+													<Badge
+														variant='outline'
+														className='shrink-0 border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-[10px] font-medium text-amber-700'>
+														Sẽ tham gia
+													</Badge>
+												)}
+											</div>
+											<p className='truncate text-xs text-muted-foreground'>
+												{s.user.email}
+											</p>
+										</div>
+										<Switch
+											checked={present.has(s.user.id)}
+											disabled={pending.has(s.user.id)}
+											onCheckedChange={(v) =>
+												void handleToggle(s.user.id, v)
+											}
+										/>
+									</label>
+								);
+							})}
 						</div>
 					</ScrollArea>
 				) : (

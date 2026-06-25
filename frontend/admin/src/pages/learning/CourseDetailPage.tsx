@@ -7,6 +7,7 @@ import {
 	Award,
 	Ban,
 	BookOpen,
+	CalendarCheck,
 	CalendarClock,
 	CheckCircle2,
 	ClipboardCheck,
@@ -265,6 +266,15 @@ function CourseDetailPage() {
 		const map = new Map<number, number>();
 		for (const a of course?.attendances ?? []) {
 			map.set(a.lesson_id, (map.get(a.lesson_id) ?? 0) + 1);
+		}
+		return map;
+	}, [course]);
+
+	/** Số học viên đã đăng ký "sẽ tham gia" từng buổi (dự kiến có mặt). */
+	const registeredByLesson = useMemo(() => {
+		const map = new Map<number, number>();
+		for (const r of course?.registrations ?? []) {
+			map.set(r.lesson_id, (map.get(r.lesson_id) ?? 0) + 1);
 		}
 		return map;
 	}, [course]);
@@ -615,11 +625,22 @@ function CourseDetailPage() {
 														{!isOffline ? (
 															<span className='text-muted-foreground'>—</span>
 														) : isActive || isPast ? (
-															<span className='flex items-center gap-1.5 text-muted-foreground'>
-																<CheckCircle2 className='h-3.5 w-3.5' />
-																{attendedByLesson.get(lesson.id) ?? 0}/
-																{course.offline_enrollments_count}
-															</span>
+															<div className='flex flex-col gap-0.5 text-muted-foreground'>
+																<span className='flex items-center gap-1.5'>
+																	<CheckCircle2 className='h-3.5 w-3.5' />
+																	{attendedByLesson.get(lesson.id) ??
+																		0}
+																	/{course.offline_enrollments_count}{" "}
+																	điểm danh
+																</span>
+																<span className='flex items-center gap-1.5 text-xs'>
+																	<CalendarCheck className='h-3 w-3' />
+																	{registeredByLesson.get(
+																		lesson.id,
+																	) ?? 0}{" "}
+																	sẽ tham gia
+																</span>
+															</div>
 														) : (
 															<span className='text-muted-foreground'>
 																Chưa diễn ra
@@ -653,7 +674,7 @@ function CourseDetailPage() {
 																			setCheckInLesson(lesson)
 																		}>
 																		<ScanLine className='h-4 w-4' />
-																		Quét QR điểm danh
+																		Quét QR
 																	</DropdownMenuItem>
 																)}
 	
@@ -665,7 +686,7 @@ function CourseDetailPage() {
 																			)
 																		}>
 																		<ClipboardCheck className='h-4 w-4' />
-																		Điểm danh thủ công
+																		{"Điểm danh thủ công"}
 																	</DropdownMenuItem>
 																)}
 	
@@ -1053,6 +1074,9 @@ function CourseDetailPage() {
 				attendedUserIds={course.attendances
 					.filter((a) => a.lesson_id === editAttendanceLesson?.id)
 					.map((a) => a.user_id)}
+				registeredUserIds={course.registrations
+					.filter((r) => r.lesson_id === editAttendanceLesson?.id)
+					.map((r) => r.user_id)}
 				onChanged={() => void loadCourse({ silent: true })}
 			/>
 

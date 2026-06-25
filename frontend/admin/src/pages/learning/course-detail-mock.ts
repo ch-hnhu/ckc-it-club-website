@@ -53,9 +53,16 @@ export interface AttendanceCell {
 	type: "qr" | "manual";
 }
 
+/** Một đăng ký "sẽ tham gia" (vé QR) của học viên cho một buổi offline */
+export interface RegistrationCell {
+	user_id: number;
+	lesson_id: number;
+}
+
 export interface AdminCourseDetail extends AdminCourse {
 	lessons: CourseLessonRow[];
 	enrollments: CourseEnrollmentRow[];
 	certificates: CourseCertificateRow[];
 	attendances: AttendanceCell[];
+	registrations: RegistrationCell[];
 }

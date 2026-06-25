@@ -9,6 +9,7 @@ use App\Models\CourseCertificate;
 use App\Models\CourseEnrollment;
 use App\Models\Lesson;
 use App\Models\LessonAttendance;
+use App\Models\LessonQrTicket;
 use App\Models\Tag;
 use App\Models\User;
 use App\Services\CourseCertificateService;
@@ -329,6 +330,8 @@ class CourseController extends BaseApiController
             'certificates' => $certificates->map(fn (CourseCertificate $cert) => $this->transformCertificate($cert))->all(),
             // Các cặp (học viên, buổi) đã điểm danh — dùng dựng ma trận điểm danh ở tab "Điểm danh".
             'attendances' => $this->attendanceMatrix($lessons),
+            // Các cặp (học viên, buổi) đã đăng ký "sẽ tham gia" (vé QR) — dùng hiển thị danh sách dự kiến.
+            'registrations' => $this->registrationMatrix($lessons),
         ]);
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
@@ -508,6 +511,33 @@ class CourseController extends BaseApiController
                 'user_id' => $a->user_id,
                 'lesson_id' => $a->lesson_id,
                 'type' => $a->type,
+            ])
+            ->all();
+    }
+
+    /**
+     * Các vé "sẽ tham gia" (lesson_qr_tickets) học viên đã đăng ký cho từng buổi offline —
+     * mỗi phần tử là một đăng ký dự kiến có mặt.
+     *
+     * @param  \Illuminate\Support\Collection<int,Lesson>  $lessons
+     * @return array<int,array{user_id:int,lesson_id:int}>
+     */
+    private function registrationMatrix($lessons): array
+    {
+        $offlineLessonIds = $lessons
+            ->filter(fn (Lesson $l) => $l->session_start)
+            ->pluck('id');
+
+        if ($offlineLessonIds->isEmpty()) {
+            return [];
+        }
+
+        return LessonQrTicket::query()
+            ->whereIn('lesson_id', $offlineLessonIds)
+            ->get(['user_id', 'lesson_id'])
+            ->map(fn (LessonQrTicket $t) => [
+                'user_id' => $t->user_id,
+                'lesson_id' => $t->lesson_id,
             ])
             ->all();
     }
