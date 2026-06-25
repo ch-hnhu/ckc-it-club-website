@@ -124,6 +124,7 @@ class CourseController extends BaseApiController
             'enrollment_start' => $course->enrollment_start?->toIso8601String(),
             'enrollment_deadline' => $course->enrollment_deadline?->toIso8601String(),
             'course_end' => $course->course_end?->toIso8601String(),
+            'max_offline_slots' => $course->max_offline_slots,
             'lessons' => $lessons->map(fn (Lesson $l) => $this->transformLessonRow($l, $userId, $enrollment?->track))->all(),
             'stats' => $this->buildStats($course, $lessons, $userId, $enrollment),
         ]);

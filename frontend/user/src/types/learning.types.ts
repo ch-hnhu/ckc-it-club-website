@@ -107,6 +107,8 @@ export interface CourseDetail extends Course {
 	enrollment_deadline: string | null;
 	/** Khoá học kết thúc hoàn toàn — sau mốc này content thành kho tự học */
 	course_end: string | null;
+	/** Số slot lớp offline; null nghĩa là khóa 100% online */
+	max_offline_slots: number | null;
 	/** User đang quan tâm khoá học này (chưa đăng ký, chưa có lesson) */
 	is_interested: boolean;
 	lessons: CourseLesson[];
