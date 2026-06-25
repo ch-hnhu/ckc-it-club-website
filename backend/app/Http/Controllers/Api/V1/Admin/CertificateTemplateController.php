@@ -131,7 +131,7 @@ class CertificateTemplateController extends BaseApiController
     public function duplicate(Request $request, CertificateTemplate $certificateTemplate): JsonResponse
     {
         $clone = CertificateTemplate::create([
-            'name' => $certificateTemplate->name . ' (sao chép)',
+            'name' => $certificateTemplate->name.' (sao chép)',
             'design' => $certificateTemplate->design,
             'html_content' => $certificateTemplate->html_content,
             'thumbnail' => $this->copyFile($certificateTemplate->thumbnail),
@@ -167,7 +167,7 @@ class CertificateTemplateController extends BaseApiController
         ]);
 
         $template = new CertificateTemplate(['design' => $request->input('design')]);
-        $code = 'CKC-2026-XEMTHU01';
+        $code = 'CKC-2026-PREVIEW01';
         $pdf = $renderer->renderPdf($template, [
             'name' => 'Nguyễn Văn Mẫu',
             'course' => 'Khoá học mẫu',
@@ -216,7 +216,7 @@ class CertificateTemplateController extends BaseApiController
             return null;
         }
 
-        $path = 'certificate-thumbnails/' . Str::uuid()->toString() . '.png';
+        $path = 'certificate-thumbnails/'.Str::uuid()->toString().'.png';
         Storage::disk('public')->put($path, $binary);
 
         return $path;
@@ -235,7 +235,7 @@ class CertificateTemplateController extends BaseApiController
             return null;
         }
 
-        $copy = 'certificate-thumbnails/' . Str::uuid()->toString() . '.' . pathinfo($path, PATHINFO_EXTENSION);
+        $copy = 'certificate-thumbnails/'.Str::uuid()->toString().'.'.pathinfo($path, PATHINFO_EXTENSION);
         Storage::disk('public')->copy($path, $copy);
 
         return $copy;

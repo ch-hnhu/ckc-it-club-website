@@ -27,9 +27,16 @@ import {
 	Text as KonvaText,
 	Transformer,
 } from "react-konva";
-import { useNavigate, useParams } from "react-router-dom";
+import { useBlocker, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -97,7 +104,7 @@ function useCanvasImage(src?: string | null) {
 			return;
 		}
 		const image = new window.Image();
-		image.src = src; // không set crossOrigin: ảnh khác origin vẫn hiển thị (chỉ ảnh hưởng export thumbnail)
+		image.src = src;
 		const onload = () => setImg(image);
 		image.addEventListener("load", onload);
 		return () => image.removeEventListener("load", onload);
@@ -107,13 +114,7 @@ function useCanvasImage(src?: string | null) {
 
 // ─── Node ảnh (cần hook nên tách riêng) ──────────────────────────────────────
 
-function ImageNode({
-	element,
-	...rest
-}: {
-	element: CertificateElement;
-	[key: string]: unknown;
-}) {
+function ImageNode({ element, ...rest }: { element: CertificateElement; [key: string]: unknown }) {
 	const img = useCanvasImage(element.src);
 	return <KonvaImage image={img} {...rest} />;
 }
@@ -126,8 +127,7 @@ function CertificateTemplateEditorPage() {
 	const navigate = useNavigate();
 
 	useBreadcrumb([
-		{ title: "Dashboard", link: "/" },
-		{ title: "Trung tâm đào tạo" },
+		{ title: "Khoá học", link: "/courses" },
 		{ title: "Giấy chứng nhận", link: "/certificate-templates" },
 		{ title: isEdit ? "Chỉnh sửa mẫu" : "Tạo mẫu" },
 	]);
@@ -140,6 +140,8 @@ function CertificateTemplateEditorPage() {
 	const [loading, setLoading] = useState(isEdit);
 	const [saving, setSaving] = useState(false);
 	const [previewing, setPreviewing] = useState(false);
+	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+	const [dirty, setDirty] = useState(false);
 	const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
 
 	const stageRef = useRef<Konva.Stage>(null);
@@ -179,6 +181,7 @@ function CertificateTemplateEditorPage() {
 		(updater: CertificateDesign | ((d: CertificateDesign) => CertificateDesign)) => {
 			setPast((p) => [...p, designRef.current]);
 			setFuture([]);
+			setDirty(true);
 			setDesign((prev) => (typeof updater === "function" ? updater(prev) : updater));
 		},
 		[],
@@ -189,6 +192,7 @@ function CertificateTemplateEditorPage() {
 			if (p.length === 0) return p;
 			setFuture((f) => [designRef.current, ...f]);
 			setDesign(p[p.length - 1]);
+			setDirty(true);
 			return p.slice(0, -1);
 		});
 	}, []);
@@ -198,6 +202,7 @@ function CertificateTemplateEditorPage() {
 			if (f.length === 0) return f;
 			setPast((p) => [...p, designRef.current]);
 			setDesign(f[0]);
+			setDirty(true);
 			return f.slice(1);
 		});
 	}, []);
@@ -219,6 +224,31 @@ function CertificateTemplateEditorPage() {
 		return () => window.removeEventListener("keydown", onKey);
 	}, [undo, redo]);
 
+	// Cảnh báo khi đóng/refresh/rời tab trình duyệt nếu có thay đổi chưa lưu.
+	useEffect(() => {
+		const onBeforeUnload = (e: BeforeUnloadEvent) => {
+			if (!dirty) return;
+			e.preventDefault();
+			e.returnValue = "";
+		};
+		window.addEventListener("beforeunload", onBeforeUnload);
+		return () => window.removeEventListener("beforeunload", onBeforeUnload);
+	}, [dirty]);
+
+	// Chặn điều hướng trong app (nút Quay lại, sidebar, link...) khi chưa lưu.
+	const blocker = useBlocker(
+		useCallback(
+			({
+				currentLocation,
+				nextLocation,
+			}: {
+				currentLocation: { pathname: string };
+				nextLocation: { pathname: string };
+			}) => dirty && currentLocation.pathname !== nextLocation.pathname,
+			[dirty],
+		),
+	);
+
 	// Nạp mẫu khi sửa — reset lịch sử
 	useEffect(() => {
 		if (!isEdit) return;
@@ -231,6 +261,7 @@ function CertificateTemplateEditorPage() {
 				setDesign(normalizeDesign(res.data.design));
 				setPast([]);
 				setFuture([]);
+				setDirty(false);
 			})
 			.catch(() => toast.error("Không tải được mẫu chứng chỉ."))
 			.finally(() => !cancelled && setLoading(false));
@@ -308,7 +339,8 @@ function CertificateTemplateEditorPage() {
 	const addEllipse = () =>
 		addElement("ellipse", { fill: "transparent", stroke: "#1d4ed8", strokeWidth: 4 });
 
-	const addQr = () => addElement("qr", { width: 120, height: 120, x: CANVAS_W - 180, y: CANVAS_H - 180 });
+	const addQr = () =>
+		addElement("qr", { width: 120, height: 120, x: CANVAS_W - 180, y: CANVAS_H - 180 });
 
 	const handleAssetUpload = async (file: File, target: "element" | "background") => {
 		try {
@@ -358,9 +390,11 @@ function CertificateTemplateEditorPage() {
 			const payload = { name, design, thumbnail };
 			if (isEdit) {
 				await certificateTemplateService.updateTemplate(Number(id), payload);
+				setDirty(false);
 				toast.success("Đã lưu mẫu chứng chỉ.");
 			} else {
 				const res = await certificateTemplateService.createTemplate(payload);
+				setDirty(false);
 				toast.success("Đã tạo mẫu chứng chỉ.");
 				navigate(`/certificate-templates/${res.data.id}/edit`, { replace: true });
 			}
@@ -375,11 +409,20 @@ function CertificateTemplateEditorPage() {
 		setPreviewing(true);
 		try {
 			const res = await certificateTemplateService.previewTemplate(design);
-			// data URI → blob → mở tab mới (tránh giới hạn độ dài data URI khi mở trực tiếp)
+			// data URI → blob → hiện trong Dialog (không dùng window.open vì hay bị chặn pop-up)
 			const blob = await (await fetch(res.data.pdf)).blob();
-			window.open(URL.createObjectURL(blob), "_blank");
-		} catch {
-			toast.error("Không tạo được bản xem trước.");
+			setPreviewUrl((old) => {
+				if (old) URL.revokeObjectURL(old);
+				return URL.createObjectURL(blob);
+			});
+		} catch (err: unknown) {
+			// Hiện lỗi thật để dễ chẩn đoán (status / message) thay vì nuốt lỗi.
+			const e = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+			const detail = e?.response?.status
+				? `HTTP ${e.response.status}${e.response.data?.message ? " – " + e.response.data.message : ""}`
+				: e?.message || "lỗi không xác định";
+			console.error("[Xem trước] lỗi:", err);
+			toast.error("Không tạo được bản xem trước: " + detail);
 		} finally {
 			setPreviewing(false);
 		}
@@ -533,8 +576,8 @@ function CertificateTemplateEditorPage() {
 						{...common}
 						width={el.width}
 						height={el.height}
-						fill="#e5e7eb"
-						stroke="#9ca3af"
+						fill='#e5e7eb'
+						stroke='#9ca3af'
 						strokeWidth={1}
 						dash={[6, 4]}
 					/>
@@ -556,12 +599,18 @@ function CertificateTemplateEditorPage() {
 		<div className='flex h-[calc(100vh-4rem)] flex-col'>
 			{/* Thanh trên */}
 			<div className='flex items-center gap-3 border-b px-4 py-2'>
-				<Button variant='ghost' size='sm' onClick={() => navigate("/certificate-templates")}>
+				<Button
+					variant='ghost'
+					size='sm'
+					onClick={() => navigate("/certificate-templates")}>
 					<ArrowLeft className='h-4 w-4' /> Quay lại
 				</Button>
 				<Input
 					value={name}
-					onChange={(e) => setName(e.target.value)}
+					onChange={(e) => {
+						setName(e.target.value);
+						setDirty(true);
+					}}
 					className='h-8 max-w-72'
 					placeholder='Tên mẫu chứng chỉ'
 				/>
@@ -584,7 +633,11 @@ function CertificateTemplateEditorPage() {
 						disabled={future.length === 0}>
 						<Redo2 className='h-4 w-4' />
 					</Button>
-					<Button variant='outline' size='sm' onClick={handlePreview} disabled={previewing}>
+					<Button
+						variant='outline'
+						size='sm'
+						onClick={handlePreview}
+						disabled={previewing}>
 						{previewing ? (
 							<Loader2 className='h-4 w-4 animate-spin' />
 						) : (
@@ -593,7 +646,11 @@ function CertificateTemplateEditorPage() {
 						Xem trước
 					</Button>
 					<Button size='sm' onClick={handleSave} disabled={saving}>
-						{saving ? <Loader2 className='h-4 w-4 animate-spin' /> : <Save className='h-4 w-4' />}
+						{saving ? (
+							<Loader2 className='h-4 w-4 animate-spin' />
+						) : (
+							<Save className='h-4 w-4' />
+						)}
 						Lưu
 					</Button>
 				</div>
@@ -602,17 +659,39 @@ function CertificateTemplateEditorPage() {
 			<div className='flex min-h-0 flex-1'>
 				{/* Toolbar trái */}
 				<div className='w-44 shrink-0 space-y-1 border-r p-2'>
-					<p className='px-2 py-1 text-xs font-medium text-muted-foreground'>Thêm phần tử</p>
-					<ToolButton icon={<Type className='h-4 w-4' />} label='Văn bản' onClick={addText} />
+					<p className='px-2 py-1 text-xs font-medium text-muted-foreground'>
+						Thêm phần tử
+					</p>
+					<ToolButton
+						icon={<Type className='h-4 w-4' />}
+						label='Văn bản'
+						onClick={addText}
+					/>
 					<ToolButton
 						icon={<ImageIcon className='h-4 w-4' />}
 						label='Ảnh / Logo'
 						onClick={() => fileInputRef.current?.click()}
 					/>
-					<ToolButton icon={<Square className='h-4 w-4' />} label='Khối / Viền' onClick={addRect} />
-					<ToolButton icon={<Minus className='h-4 w-4' />} label='Đường kẻ' onClick={addLine} />
-					<ToolButton icon={<CircleIcon className='h-4 w-4' />} label='Elip' onClick={addEllipse} />
-					<ToolButton icon={<QrCode className='h-4 w-4' />} label='Ô QR' onClick={addQr} />
+					<ToolButton
+						icon={<Square className='h-4 w-4' />}
+						label='Khối / Viền'
+						onClick={addRect}
+					/>
+					<ToolButton
+						icon={<Minus className='h-4 w-4' />}
+						label='Đường kẻ'
+						onClick={addLine}
+					/>
+					<ToolButton
+						icon={<CircleIcon className='h-4 w-4' />}
+						label='Elip'
+						onClick={addEllipse}
+					/>
+					<ToolButton
+						icon={<QrCode className='h-4 w-4' />}
+						label='Ô QR'
+						onClick={addQr}
+					/>
 
 					<div className='!mt-3 border-t pt-2'>
 						<p className='px-2 py-1 text-xs font-medium text-muted-foreground'>Nền</p>
@@ -625,7 +704,10 @@ function CertificateTemplateEditorPage() {
 										...d,
 										canvas: {
 											...d.canvas,
-											background: { ...d.canvas.background, color: e.target.value },
+											background: {
+												...d.canvas.background,
+												color: e.target.value,
+											},
 										},
 									}))
 								}
@@ -644,7 +726,10 @@ function CertificateTemplateEditorPage() {
 								onClick={() =>
 									commit((d) => ({
 										...d,
-										canvas: { ...d.canvas, background: { ...d.canvas.background, image: null } },
+										canvas: {
+											...d.canvas,
+											background: { ...d.canvas.background, image: null },
+										},
 									}))
 								}
 								className='w-full px-2 py-1 text-left text-xs text-destructive hover:underline'>
@@ -679,7 +764,9 @@ function CertificateTemplateEditorPage() {
 
 				{/* Canvas giữa */}
 				<div className='flex min-w-0 flex-1 items-center justify-center overflow-auto bg-muted/40 p-6'>
-					<div className='shadow-lg' style={{ width: DISPLAY_W, height: CANVAS_H * SCALE }}>
+					<div
+						className='shadow-lg'
+						style={{ width: DISPLAY_W, height: CANVAS_H * SCALE }}>
 						<Stage
 							ref={stageRef}
 							width={DISPLAY_W}
@@ -762,6 +849,60 @@ function CertificateTemplateEditorPage() {
 					)}
 				</div>
 			</div>
+
+			{/* Xem trước PDF ngay trong app (không dùng pop-up) */}
+			<Dialog
+				open={Boolean(previewUrl)}
+				onOpenChange={(o) => {
+					if (!o) {
+						setPreviewUrl((url) => {
+							if (url) URL.revokeObjectURL(url);
+							return null;
+						});
+					}
+				}}>
+				<DialogContent className='max-w-[90vw] sm:max-w-4xl'>
+					<DialogHeader>
+						<DialogTitle>Xem trước chứng chỉ</DialogTitle>
+					</DialogHeader>
+					{previewUrl && (
+						<iframe
+							title='Xem trước chứng chỉ'
+							src={previewUrl}
+							className='h-[70vh] w-full rounded-md border'
+						/>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			{/* Cảnh báo chưa lưu khi rời trang qua điều hướng trong app */}
+			<Dialog
+				open={blocker.state === "blocked"}
+				onOpenChange={(o) => {
+					if (!o && blocker.state === "blocked") blocker.reset();
+				}}>
+				<DialogContent className='sm:max-w-[440px]'>
+					<DialogHeader>
+						<DialogTitle>Thay đổi chưa được lưu</DialogTitle>
+					</DialogHeader>
+					<p className='text-sm text-muted-foreground'>
+						Bạn có thay đổi chưa lưu trên mẫu chứng chỉ. Nếu rời khỏi trang, các thay
+						đổi này sẽ bị mất.
+					</p>
+					<DialogFooter>
+						<Button
+							variant='outline'
+							onClick={() => blocker.state === "blocked" && blocker.reset()}>
+							Ở lại
+						</Button>
+						<Button
+							variant='destructive'
+							onClick={() => blocker.state === "blocked" && blocker.proceed()}>
+							Rời đi (bỏ thay đổi)
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
@@ -807,10 +948,18 @@ function PropertyPanel({
 			<div className='flex items-center justify-between'>
 				<span className='text-sm font-medium capitalize'>{element.type}</span>
 				<div className='flex gap-1'>
-					<Button variant='outline' size='icon' className='h-7 w-7' onClick={() => onLayer(1)}>
+					<Button
+						variant='outline'
+						size='icon'
+						className='h-7 w-7'
+						onClick={() => onLayer(1)}>
 						<ChevronUp className='h-4 w-4' />
 					</Button>
-					<Button variant='outline' size='icon' className='h-7 w-7' onClick={() => onLayer(-1)}>
+					<Button
+						variant='outline'
+						size='icon'
+						className='h-7 w-7'
+						onClick={() => onLayer(-1)}>
 						<ChevronDown className='h-4 w-4' />
 					</Button>
 					<Button variant='outline' size='icon' className='h-7 w-7' onClick={onDelete}>
@@ -822,21 +971,46 @@ function PropertyPanel({
 			{/* Vị trí & kích thước */}
 			<div className='grid grid-cols-2 gap-2'>
 				<Field label='X'>
-					<Input type='number' value={Math.round(element.x)} onChange={(e) => onChange({ x: num(e.target.value) })} className='h-8' />
+					<Input
+						type='number'
+						value={Math.round(element.x)}
+						onChange={(e) => onChange({ x: num(e.target.value) })}
+						className='h-8'
+					/>
 				</Field>
 				<Field label='Y'>
-					<Input type='number' value={Math.round(element.y)} onChange={(e) => onChange({ y: num(e.target.value) })} className='h-8' />
+					<Input
+						type='number'
+						value={Math.round(element.y)}
+						onChange={(e) => onChange({ y: num(e.target.value) })}
+						className='h-8'
+					/>
 				</Field>
 				<Field label='Rộng'>
-					<Input type='number' value={Math.round(element.width)} onChange={(e) => onChange({ width: num(e.target.value) })} className='h-8' />
+					<Input
+						type='number'
+						value={Math.round(element.width)}
+						onChange={(e) => onChange({ width: num(e.target.value) })}
+						className='h-8'
+					/>
 				</Field>
 				{element.type !== "line" && (
 					<Field label='Cao'>
-						<Input type='number' value={Math.round(element.height)} onChange={(e) => onChange({ height: num(e.target.value) })} className='h-8' />
+						<Input
+							type='number'
+							value={Math.round(element.height)}
+							onChange={(e) => onChange({ height: num(e.target.value) })}
+							className='h-8'
+						/>
 					</Field>
 				)}
 				<Field label='Xoay (°)'>
-					<Input type='number' value={Math.round(element.rotation ?? 0)} onChange={(e) => onChange({ rotation: num(e.target.value) })} className='h-8' />
+					<Input
+						type='number'
+						value={Math.round(element.rotation ?? 0)}
+						onChange={(e) => onChange({ rotation: num(e.target.value) })}
+						className='h-8'
+					/>
 				</Field>
 			</div>
 
@@ -852,7 +1026,8 @@ function PropertyPanel({
 						/>
 					</Field>
 					<Field label='Chèn placeholder'>
-						<Select onValueChange={(v) => onChange({ text: `${element.text ?? ""}${v}` })}>
+						<Select
+							onValueChange={(v) => onChange({ text: `${element.text ?? ""}${v}` })}>
 							<SelectTrigger className='h-8'>
 								<SelectValue placeholder='Chọn trường...' />
 							</SelectTrigger>
@@ -867,7 +1042,9 @@ function PropertyPanel({
 					</Field>
 					<div className='grid grid-cols-2 gap-2'>
 						<Field label='Font'>
-							<Select value={element.fontFamily ?? "Be Vietnam Pro"} onValueChange={(v) => onChange({ fontFamily: v })}>
+							<Select
+								value={element.fontFamily ?? "Be Vietnam Pro"}
+								onValueChange={(v) => onChange({ fontFamily: v })}>
 								<SelectTrigger className='h-8'>
 									<SelectValue />
 								</SelectTrigger>
@@ -881,10 +1058,19 @@ function PropertyPanel({
 							</Select>
 						</Field>
 						<Field label='Cỡ chữ'>
-							<Input type='number' value={element.fontSize ?? 28} onChange={(e) => onChange({ fontSize: num(e.target.value) })} className='h-8' />
+							<Input
+								type='number'
+								value={element.fontSize ?? 28}
+								onChange={(e) => onChange({ fontSize: num(e.target.value) })}
+								className='h-8'
+							/>
 						</Field>
 						<Field label='Canh lề'>
-							<Select value={element.align ?? "center"} onValueChange={(v) => onChange({ align: v as CertificateElement["align"] })}>
+							<Select
+								value={element.align ?? "center"}
+								onValueChange={(v) =>
+									onChange({ align: v as CertificateElement["align"] })
+								}>
 								<SelectTrigger className='h-8'>
 									<SelectValue />
 								</SelectTrigger>
@@ -896,7 +1082,9 @@ function PropertyPanel({
 							</Select>
 						</Field>
 						<Field label='Kiểu'>
-							<Select value={element.fontStyle ?? "normal"} onValueChange={(v) => onChange({ fontStyle: v })}>
+							<Select
+								value={element.fontStyle ?? "normal"}
+								onValueChange={(v) => onChange({ fontStyle: v })}>
 								<SelectTrigger className='h-8'>
 									<SelectValue />
 								</SelectTrigger>
@@ -909,29 +1097,53 @@ function PropertyPanel({
 							</Select>
 						</Field>
 					</div>
-					<ColorField label='Màu chữ' value={element.fill ?? "#111111"} onChange={(v) => onChange({ fill: v })} />
+					<ColorField
+						label='Màu chữ'
+						value={element.fill ?? "#111111"}
+						onChange={(v) => onChange({ fill: v })}
+					/>
 				</div>
 			)}
 
 			{/* Shape (rect/ellipse/line) */}
 			{(element.type === "rect" || element.type === "ellipse" || element.type === "line") && (
 				<div className='space-y-3 border-t pt-3'>
-					<ColorField label='Màu viền' value={element.stroke ?? "#1d4ed8"} onChange={(v) => onChange({ stroke: v })} />
+					<ColorField
+						label='Màu viền'
+						value={element.stroke ?? "#1d4ed8"}
+						onChange={(v) => onChange({ stroke: v })}
+					/>
 					<Field label='Độ dày viền'>
-						<Input type='number' value={element.strokeWidth ?? 2} onChange={(e) => onChange({ strokeWidth: num(e.target.value) })} className='h-8' />
+						<Input
+							type='number'
+							value={element.strokeWidth ?? 2}
+							onChange={(e) => onChange({ strokeWidth: num(e.target.value) })}
+							className='h-8'
+						/>
 					</Field>
 					{element.type !== "line" && (
 						<>
 							<ColorField
 								label='Màu nền'
-								value={element.fill && element.fill !== "transparent" ? element.fill : "#ffffff"}
+								value={
+									element.fill && element.fill !== "transparent"
+										? element.fill
+										: "#ffffff"
+								}
 								onChange={(v) => onChange({ fill: v })}
 								transparent
 								onTransparent={() => onChange({ fill: "transparent" })}
 							/>
 							{element.type === "rect" && (
 								<Field label='Bo góc'>
-									<Input type='number' value={element.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: num(e.target.value) })} className='h-8' />
+									<Input
+										type='number'
+										value={element.cornerRadius ?? 0}
+										onChange={(e) =>
+											onChange({ cornerRadius: num(e.target.value) })
+										}
+										className='h-8'
+									/>
 								</Field>
 							)}
 						</>

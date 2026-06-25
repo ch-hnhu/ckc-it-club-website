@@ -6,6 +6,7 @@ use App\Models\CertificateTemplate;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Browsershot\Browsershot;
 
 /**
@@ -25,17 +26,31 @@ class CertificateRenderer
         $design = $template->design;
         abort_if(! is_array($design) || empty($design['canvas']), 422, 'Mẫu chứng chỉ chưa có thiết kế.');
 
+        // Browsershot có thể chậm → nới giới hạn thời gian PHP để không bị kill giữa chừng.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(120);
+        }
+
         $scene = $this->prepareScene($design, $data);
         $html = $this->buildHtml($scene);
 
+        // KHÔNG dùng waitUntilNetworkIdle: nó chờ mạng (Google Fonts) nên có thể treo tới
+        // timeout. Thay vào đó renderScene() đã tự await xong font + ảnh rồi set __certReady,
+        // và bản thân renderScene có giới hạn thời gian nội bộ nên luôn kết thúc.
         $shot = Browsershot::html($html)
             ->setNodeModulePath(base_path('node_modules'))
             ->format('A4')
             ->landscape()
             ->margins(0, 0, 0, 0)
             ->showBackground()
-            ->waitUntilNetworkIdle()
-            ->waitForFunction('window.__certReady === true', null, 15000);
+            ->timeout(90)
+            ->waitForFunction('window.__certReady === true', null, 12000);
+
+        // Chỉ định node tường minh để KHÔNG phụ thuộc PATH của tiến trình `php artisan serve`
+        // (node thường cài qua nvm, không nằm trong PATH mặc định → Browsershot báo lỗi).
+        if ($nodePath = $this->resolveNodeBinary()) {
+            $shot->setNodeBinary($nodePath);
+        }
 
         // Production (Alpine): dùng Chromium hệ thống thay vì Chromium của puppeteer.
         if ($chromePath = env('BROWSERSHOT_CHROME_PATH')) {
@@ -63,6 +78,12 @@ class CertificateRenderer
 
         $qrDataUri = ! empty($data['verify_url']) ? $this->qrDataUri($data['verify_url']) : null;
 
+        // Nhúng ảnh nền thành data URI (đọc từ đĩa) — tránh Chrome gọi ngược localhost:8000
+        // (php artisan serve đơn luồng đang bận xử lý chính request này → deadlock → treo).
+        if (! empty($design['canvas']['background']['image'])) {
+            $design['canvas']['background']['image'] = $this->inlineAsset($design['canvas']['background']['image']);
+        }
+
         $design['elements'] = array_map(function (array $el) use ($map, $qrDataUri) {
             if (($el['type'] ?? null) === 'text') {
                 $el['text'] = strtr($el['text'] ?? '', $map);
@@ -70,11 +91,62 @@ class CertificateRenderer
             if (($el['type'] ?? null) === 'qr' && $qrDataUri) {
                 $el['src'] = $qrDataUri;
             }
+            if (($el['type'] ?? null) === 'image' && ! empty($el['src'])) {
+                $el['src'] = $this->inlineAsset($el['src']);
+            }
 
             return $el;
         }, $design['elements'] ?? []);
 
         return $design;
+    }
+
+    /**
+     * Đổi ảnh trên public storage thành data URI (đọc trực tiếp từ đĩa). Ảnh đã là data:/external
+     * (không thuộc /storage/) thì giữ nguyên.
+     */
+    private function inlineAsset(string $url): string
+    {
+        if (str_starts_with($url, 'data:')) {
+            return $url;
+        }
+
+        $marker = '/storage/';
+        $pos = strpos($url, $marker);
+        if ($pos === false) {
+            return $url;
+        }
+
+        $relative = substr($url, $pos + strlen($marker));
+        if (! Storage::disk('public')->exists($relative)) {
+            return $url;
+        }
+
+        $mime = Storage::disk('public')->mimeType($relative) ?: 'image/png';
+
+        return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($relative));
+    }
+
+    /**
+     * Tìm đường dẫn node binary. Ưu tiên env BROWSERSHOT_NODE_PATH, sau đó dò nvm + vị trí phổ biến.
+     */
+    private function resolveNodeBinary(): ?string
+    {
+        if ($env = env('BROWSERSHOT_NODE_PATH')) {
+            return is_executable($env) ? $env : null;
+        }
+
+        $home = $_SERVER['HOME'] ?? getenv('HOME') ?? '';
+        $nvm = $home ? (glob($home.'/.nvm/versions/node/*/bin/node') ?: []) : [];
+        rsort($nvm); // bản version cao trước (v22 > v14)
+
+        foreach (array_merge($nvm, ['/opt/homebrew/bin/node', '/usr/local/bin/node', '/usr/bin/node']) as $candidate) {
+            if (is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null; // để Browsershot tự dùng PATH (trường hợp node đã nằm sẵn trong PATH)
     }
 
     private function qrDataUri(string $url): string
@@ -136,42 +208,55 @@ function buildNode(el){
   return null; // image/qr xử lý async bên dưới
 }
 function loadImage(src){
-  return new Promise((resolve) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = () => resolve(null); im.src = src; });
+  return new Promise((resolve) => {
+    const im = new Image();
+    const done = (v) => resolve(v);
+    setTimeout(() => done(null), 6000); // không để ảnh treo vô hạn
+    im.onload = () => done(im);
+    im.onerror = () => done(null);
+    im.src = src;
+  });
 }
 (async () => {
-  // Nạp tường minh các font được dùng (Google Fonts) trước khi Konva vẽ — nếu không
-  // Konva sẽ vẽ bằng font fallback (serif) vì @font-face chưa kịp tải.
+  // Nạp font (Google Fonts) trước khi Konva vẽ — nếu không Konva dùng font fallback (serif).
+  // Có timeout cứng 4s: nếu mạng treo/không có internet thì vẫn vẽ (fallback) chứ KHÔNG treo.
+  const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
   try {
     const families = [...new Set((scene.elements||[]).filter(e=>e.type==='text').map(e=>e.fontFamily||'Be Vietnam Pro'))];
-    await Promise.all(families.flatMap(f => [
+    await withTimeout(Promise.all(families.flatMap(f => [
       document.fonts.load('400 40px "'+f+'"'),
       document.fonts.load('700 40px "'+f+'"'),
       document.fonts.load('italic 400 40px "'+f+'"'),
-    ]));
-    await document.fonts.ready;
+    ])), 4000);
+    await withTimeout(document.fonts.ready, 1000);
   } catch(e) {}
-  const stage = new Konva.Stage({ container: 'stage', width: scene.canvas.width, height: scene.canvas.height });
-  const layer = new Konva.Layer();
-  stage.add(layer);
-  // nền
-  layer.add(new Konva.Rect({ x:0, y:0, width: scene.canvas.width, height: scene.canvas.height, fill: (scene.canvas.background && scene.canvas.background.color) || '#ffffff' }));
-  if (scene.canvas.background && scene.canvas.background.image) {
-    const bg = await loadImage(scene.canvas.background.image);
-    if (bg) layer.add(new Konva.Image({ image: bg, x:0, y:0, width: scene.canvas.width, height: scene.canvas.height }));
-  }
-  for (const el of scene.elements) {
-    if (el.type === 'image' || el.type === 'qr') {
-      if (!el.src) continue;
-      const img = await loadImage(el.src);
-      if (img) layer.add(new Konva.Image({ image: img, x: el.x, y: el.y, width: el.width, height: el.height, rotation: el.rotation||0 }));
-      continue;
+  try {
+    const stage = new Konva.Stage({ container: 'stage', width: scene.canvas.width, height: scene.canvas.height });
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    // nền
+    layer.add(new Konva.Rect({ x:0, y:0, width: scene.canvas.width, height: scene.canvas.height, fill: (scene.canvas.background && scene.canvas.background.color) || '#ffffff' }));
+    if (scene.canvas.background && scene.canvas.background.image) {
+      const bg = await loadImage(scene.canvas.background.image);
+      if (bg) layer.add(new Konva.Image({ image: bg, x:0, y:0, width: scene.canvas.width, height: scene.canvas.height }));
     }
-    const node = buildNode(el);
-    if (node) layer.add(node);
+    // ảnh (image/qr) tải SONG SONG để không cộng dồn thời gian chờ
+    const imgEls = scene.elements.filter(e => (e.type === 'image' || e.type === 'qr') && e.src);
+    const imgs = await Promise.all(imgEls.map(e => loadImage(e.src)));
+    imgEls.forEach((el, i) => { if (imgs[i]) layer.add(new Konva.Image({ image: imgs[i], x: el.x, y: el.y, width: el.width, height: el.height, rotation: el.rotation||0 })); });
+    // các phần tử còn lại (text/shape)
+    for (const el of scene.elements) {
+      if (el.type === 'image' || el.type === 'qr') continue;
+      const node = buildNode(el);
+      if (node) layer.add(node);
+    }
+    layer.draw();
+  } catch (e) {
+    document.title = 'CERT_RENDER_ERROR: ' + (e && e.message ? e.message : e);
+  } finally {
+    // LUÔN báo sẵn sàng (không phụ thuộc requestAnimationFrame) để Browsershot không treo.
+    window.__certReady = true;
   }
-  layer.draw();
-  // chờ font vẽ lại 1 nhịp rồi báo sẵn sàng
-  requestAnimationFrame(() => { layer.draw(); window.__certReady = true; });
 })();
 </script>
 </body>
