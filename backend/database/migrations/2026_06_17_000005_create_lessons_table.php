@@ -22,13 +22,13 @@ return new class extends Migration
 
             // Phần 1: Tài nguyên
             $table->string('resource_url')->nullable();
-            $table->string('resource_label')->nullable();
 
             // Phần 2: Bài giảng (video nhúng) — tính vào progress
             $table->string('video_url')->nullable();
             $table->unsignedInteger('video_duration')->nullable(); // giây
             // YouTube live - fallback cho video_url khi mentor chưa up video bài giảng chính thức
             $table->string('live_url')->nullable();
+            $table->unsignedInteger('live_duration')->nullable(); // giây
 
             // Phần 3: Tài liệu (markdown)
             $table->longText('document')->nullable();

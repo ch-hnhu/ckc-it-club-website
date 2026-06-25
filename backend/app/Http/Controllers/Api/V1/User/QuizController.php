@@ -11,6 +11,7 @@ use App\Models\LessonProgress;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Services\CourseCompletionService;
+use App\Services\CourseEnrollmentService;
 use App\Services\PointService;
 use App\Services\QuizGradingService;
 use Illuminate\Http\JsonResponse;
@@ -166,9 +167,9 @@ class QuizController extends BaseApiController
             PointService::award($request->user(), 'learning_center.quiz_passed', $quizProgress);
         }
 
-        if ($enrollment = $course->enrollmentFor($userId)) {
-            app(CourseCompletionService::class)->recalc($enrollment);
-        }
+        // Làm quiz cũng là học → tự ghi danh (track online) nếu chưa, để tính tiến độ.
+        $enrollment = app(CourseEnrollmentService::class)->ensureEnrolledOnline($course, $request->user());
+        app(CourseCompletionService::class)->recalc($enrollment);
 
         return $this->successResponse(true, [
             'score' => $score,

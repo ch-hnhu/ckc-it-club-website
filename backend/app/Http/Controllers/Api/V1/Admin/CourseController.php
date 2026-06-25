@@ -9,6 +9,7 @@ use App\Models\CourseCertificate;
 use App\Models\CourseEnrollment;
 use App\Models\Lesson;
 use App\Models\LessonAttendance;
+use App\Models\LessonQrTicket;
 use App\Models\Tag;
 use App\Models\User;
 use App\Services\CourseCertificateService;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CourseController extends BaseApiController
 {
@@ -89,6 +91,7 @@ class CourseController extends BaseApiController
             'max_offline_slots' => 'nullable|integer|min:1|max:1000',
             'max_absent_allowed' => 'nullable|integer|min:0|max:50',
             'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
+            'total_lessons' => 'nullable|integer|min:1|max:200',
             'certificate_template_id' => 'nullable|integer|exists:certificate_templates,id',
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
@@ -119,6 +122,7 @@ class CourseController extends BaseApiController
                 'max_offline_slots' => $data['max_offline_slots'] ?? null,
                 'max_absent_allowed' => $data['max_absent_allowed'] ?? 1,
                 'quiz_pass_threshold' => $data['quiz_pass_threshold'] ?? 80,
+                'total_lessons' => $data['total_lessons'] ?? null,
                 'certificate_template_id' => $data['certificate_template_id'] ?? null,
                 'created_by' => $request->user()->id,
             ]);
@@ -160,11 +164,22 @@ class CourseController extends BaseApiController
             'max_offline_slots' => 'nullable|integer|min:1|max:1000',
             'max_absent_allowed' => 'nullable|integer|min:0|max:50',
             'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
+            'total_lessons' => 'nullable|integer|min:1|max:200',
             'certificate_template_id' => 'nullable|integer|exists:certificate_templates,id',
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:tags,id',
         ]);
+
+        // Không cho đặt số buổi dự kiến nhỏ hơn số buổi đã tạo.
+        if (array_key_exists('total_lessons', $data) && $data['total_lessons'] !== null) {
+            $lessonsCount = $course->lessons()->count();
+            if ($data['total_lessons'] < $lessonsCount) {
+                throw ValidationException::withMessages([
+                    'total_lessons' => "Khóa đã có {$lessonsCount} buổi học, số buổi dự kiến không được nhỏ hơn.",
+                ]);
+            }
+        }
 
         // Thumbnail: thay mới / gỡ bỏ / giữ nguyên
         if ($request->hasFile('thumbnail')) {
@@ -327,6 +342,10 @@ class CourseController extends BaseApiController
                 fn (CourseEnrollment $e) => $this->transformEnrollment($e, $attendedByUser, $pastOfflineCount)
             )->all(),
             'certificates' => $certificates->map(fn (CourseCertificate $cert) => $this->transformCertificate($cert))->all(),
+            // Các cặp (học viên, buổi) đã điểm danh — dùng dựng ma trận điểm danh ở tab "Điểm danh".
+            'attendances' => $this->attendanceMatrix($lessons),
+            // Các cặp (học viên, buổi) đã đăng ký "sẽ tham gia" (vé QR) — dùng hiển thị danh sách dự kiến.
+            'registrations' => $this->registrationMatrix($lessons),
         ]);
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
@@ -483,6 +502,61 @@ class CourseController extends BaseApiController
     }
 
     /**
+     * Các bản ghi điểm danh của những buổi offline (đã xếp lịch) trong khoá —
+     * mỗi phần tử là một ô đã điểm danh trong ma trận học viên × buổi.
+     *
+     * @param  \Illuminate\Support\Collection<int,Lesson>  $lessons
+     * @return array<int,array{user_id:int,lesson_id:int,type:string}>
+     */
+    private function attendanceMatrix($lessons): array
+    {
+        $offlineLessonIds = $lessons
+            ->filter(fn (Lesson $l) => $l->session_start)
+            ->pluck('id');
+
+        if ($offlineLessonIds->isEmpty()) {
+            return [];
+        }
+
+        return LessonAttendance::query()
+            ->whereIn('lesson_id', $offlineLessonIds)
+            ->get(['user_id', 'lesson_id', 'type'])
+            ->map(fn (LessonAttendance $a) => [
+                'user_id' => $a->user_id,
+                'lesson_id' => $a->lesson_id,
+                'type' => $a->type,
+            ])
+            ->all();
+    }
+
+    /**
+     * Các vé "sẽ tham gia" (lesson_qr_tickets) học viên đã đăng ký cho từng buổi offline —
+     * mỗi phần tử là một đăng ký dự kiến có mặt.
+     *
+     * @param  \Illuminate\Support\Collection<int,Lesson>  $lessons
+     * @return array<int,array{user_id:int,lesson_id:int}>
+     */
+    private function registrationMatrix($lessons): array
+    {
+        $offlineLessonIds = $lessons
+            ->filter(fn (Lesson $l) => $l->session_start)
+            ->pluck('id');
+
+        if ($offlineLessonIds->isEmpty()) {
+            return [];
+        }
+
+        return LessonQrTicket::query()
+            ->whereIn('lesson_id', $offlineLessonIds)
+            ->get(['user_id', 'lesson_id'])
+            ->map(fn (LessonQrTicket $t) => [
+                'user_id' => $t->user_id,
+                'lesson_id' => $t->lesson_id,
+            ])
+            ->all();
+    }
+
+    /**
      * Map CourseEnrollment → dòng trong tab "Học viên".
      */
     private function transformEnrollment(CourseEnrollment $e, array $attendedByUser, int $pastOfflineCount): array
@@ -548,6 +622,7 @@ class CourseController extends BaseApiController
             'max_offline_slots' => $course->max_offline_slots,
             'max_absent_allowed' => $course->max_absent_allowed,
             'quiz_pass_threshold' => $course->quiz_pass_threshold,
+            'total_lessons' => $course->total_lessons,
             'certificate_template' => $course->certificateTemplate ? [
                 'id' => $course->certificateTemplate->id,
                 'name' => $course->certificateTemplate->name,
@@ -596,7 +671,7 @@ class CourseController extends BaseApiController
     {
         $fields = [
             'description', 'enrollment_start', 'enrollment_deadline', 'course_end',
-            'certificate_template_id',
+            'total_lessons', 'certificate_template_id',
         ];
 
         $request->merge(

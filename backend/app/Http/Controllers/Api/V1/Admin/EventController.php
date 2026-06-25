@@ -10,6 +10,7 @@ use App\Models\EventCheckIn;
 use App\Models\EventFeedback;
 use App\Models\EventGalleryItem;
 use App\Models\EventRegistration;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -198,18 +199,23 @@ class EventController extends BaseApiController
             return $this->errorResponse(false, "{$registration->user?->full_name} đã điểm danh trước đó.", 422);
         }
 
-        DB::transaction(function () use ($event, $registration, $request, $data) {
-            EventCheckIn::create([
-                'event_id' => $event->id,
-                'registration_id' => $registration->id,
-                'user_id' => $registration->user_id,
-                'checked_in_by' => $request->user()->id,
-                'checked_in_at' => now(),
-                'method' => isset($data['qr_token']) ? 'qr' : 'manual',
-            ]);
+        try {
+            DB::transaction(function () use ($event, $registration, $request, $data) {
+                EventCheckIn::create([
+                    'event_id' => $event->id,
+                    'registration_id' => $registration->id,
+                    'user_id' => $registration->user_id,
+                    'checked_in_by' => $request->user()->id,
+                    'checked_in_at' => now(),
+                    'method' => isset($data['qr_token']) ? 'qr' : 'manual',
+                ]);
 
-            $registration->update(['status' => 'attended']);
-        });
+                $registration->update(['status' => 'attended']);
+            });
+        } catch (QueryException $e) {
+            // Hai lượt quét cùng một vé gần như đồng thời: lượt sau đụng unique(registration_id)
+            return $this->errorResponse(false, "{$registration->user?->full_name} đã điểm danh trước đó.", 422);
+        }
 
         $registration->refresh()->load([
             'user:id,full_name,email,avatar',

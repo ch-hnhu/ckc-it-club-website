@@ -64,6 +64,29 @@ class CourseEnrollmentService
     }
 
     /**
+     * Đảm bảo user đã ghi danh khoá (tự ghi danh track online nếu chưa) — dùng khi
+     * học viên bắt đầu học (xem video, làm quiz...): vào học là coi như đã ghi danh,
+     * không cần bước ghi danh thủ công.
+     *
+     * Khác với ghi danh chủ động: KHÔNG áp cửa sổ thời gian (vẫn cho ghi nhận tiến độ
+     * kể cả ngoài hạn ghi danh / sau khi khoá kết thúc, miễn user xem được nội dung).
+     * Vẫn giữ điều kiện tư cách (sinh viên Cao Thắng / thành viên CLB).
+     */
+    public function ensureEnrolledOnline(Course $course, User $user): CourseEnrollment
+    {
+        if ($existing = $course->enrollmentFor($user->id)) {
+            return $existing;
+        }
+
+        $this->assertEligible($user);
+
+        return CourseEnrollment::firstOrCreate(
+            ['user_id' => $user->id, 'course_id' => $course->id],
+            ['track' => 'online', 'progress' => 0],
+        );
+    }
+
+    /**
      * Đổi track của một ghi danh đã có. Áp cùng điều kiện cửa sổ thời gian/slot
      * như ghi danh mới cho track đích.
      */

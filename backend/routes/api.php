@@ -181,6 +181,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/courses/{course:slug}/follow', [UserCourseController::class, 'toggleFollow']);
             Route::post('/courses/{course:slug}/lessons/{lessonSlug}/qr-ticket', [UserCourseController::class, 'createQrTicket']);
             Route::post('/courses/{course:slug}/lessons/{lessonSlug}/progress', [UserCourseController::class, 'markVideoProgress']);
+            Route::get('/courses/{course:slug}/certificate', [UserCourseController::class, 'certificate']);
         });
     });
 
@@ -503,11 +504,13 @@ Route::prefix('v1')->group(function () {
             Route::put('courses/{course}', [AdminCourseController::class, 'update']);
             Route::patch('courses/{course}', [AdminCourseController::class, 'update']);
             Route::delete('courses/{course}', [AdminCourseController::class, 'destroy']);
+            Route::get('lessons/youtube-duration', [AdminLessonController::class, 'youtubeDuration']);
             Route::post('courses/{course}/lessons', [AdminLessonController::class, 'store']);
             Route::put('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::delete('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'destroy']);
             Route::post('courses/{course}/lessons/{lesson}/check-in', [AdminLessonController::class, 'checkIn']);
+            Route::post('courses/{course}/lessons/{lesson}/attendance', [AdminLessonController::class, 'toggleAttendance']);
             Route::get('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'grades']);
             Route::put('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'saveGrades']);
             Route::get('courses/{course}/enrollable-users', [AdminCourseController::class, 'searchEnrollableUsers']);

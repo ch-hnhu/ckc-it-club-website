@@ -57,7 +57,7 @@ import { useTableSelection } from "@/hooks/useTableSelection";
 import { cn } from "@/lib/utils";
 import { COURSE_LEVEL_MAP } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
-import type { AdminCourse, CourseSortKey } from "@/pages/learning/course-mock";
+import type { AdminCourse, CourseSortKey } from "@/pages/learning/course.types";
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" });
 

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import courseService, { type AssignmentGradeDTO } from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import type { CourseLessonRow } from "@/pages/learning/course-detail-mock";
+import type { CourseLessonRow } from "@/pages/learning/course-detail.types";
 
 interface AssignmentGradeDialogProps {
 	open: boolean;

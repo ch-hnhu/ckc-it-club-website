@@ -27,6 +27,7 @@ class Course extends Model
         'max_offline_slots',
         'max_absent_allowed',
         'quiz_pass_threshold',
+        'total_lessons',
         'certificate_template_id',
         'created_by',
         'updated_by',
@@ -44,6 +45,7 @@ class Course extends Model
             'max_offline_slots' => 'integer',
             'max_absent_allowed' => 'integer',
             'quiz_pass_threshold' => 'integer',
+            'total_lessons' => 'integer',
         ];
     }
 

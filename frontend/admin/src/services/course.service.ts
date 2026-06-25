@@ -1,12 +1,12 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
-import type { AdminCourse, CourseListParams } from "@/pages/learning/course-mock";
+import type { AdminCourse, CourseListParams } from "@/pages/learning/course.types";
 import type {
 	AdminCourseDetail,
 	CourseCertificateRow,
 	CourseEnrollmentRow,
 	EnrollmentTrack,
-} from "@/pages/learning/course-detail-mock";
+} from "@/pages/learning/course-detail.types";
 import type { CourseStatus } from "@/pages/learning/course-meta";
 
 /** Một user gợi ý khi tìm để ghi danh thay (chưa ghi danh khóa học). */
@@ -35,10 +35,10 @@ export interface LessonFull {
 	session_start: string | null;
 	session_end: string | null;
 	resource_url: string | null;
-	resource_label: string | null;
 	video_url: string | null;
 	video_duration: number | null;
 	live_url: string | null;
+	live_duration: number | null;
 	document: string | null;
 	assignment_url: string | null;
 	assignment_deadline: string | null;
@@ -154,6 +154,11 @@ const courseService = {
 		return api.get("/learning/categories");
 	},
 
+	/** Lấy thời lượng video YouTube (giây + nhãn "X tiếng Y phút") từ URL qua backend. */
+	async getYoutubeDuration(url: string): Promise<ApiResponse<{ seconds: number; label: string }>> {
+		return api.get("/lessons/youtube-duration", { url });
+	},
+
 	// ── Xóa / thùng rác ──
 	async deleteCourse(slug: string): Promise<ApiResponse<null>> {
 		return api.delete(`/courses/${slug}`);
@@ -221,6 +226,19 @@ const courseService = {
 		qrToken: string,
 	): Promise<ApiResponse<LessonCheckInResult>> {
 		return api.post(`/courses/${courseSlug}/lessons/${lessonId}/check-in`, { qr_token: qrToken });
+	},
+
+	/** Điểm danh thủ công (toggle có mặt/vắng) một học viên cho buổi học offline. */
+	async toggleAttendance(
+		courseSlug: string,
+		lessonId: number,
+		userId: number,
+		present: boolean,
+	): Promise<ApiResponse<{ user_id: number; lesson_id: number; present: boolean }>> {
+		return api.post(`/courses/${courseSlug}/lessons/${lessonId}/attendance`, {
+			user_id: userId,
+			present,
+		});
 	},
 
 	/** Danh sách học viên + điểm bài tập hiện tại của buổi học. */

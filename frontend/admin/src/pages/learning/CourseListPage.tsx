@@ -66,7 +66,7 @@ import {
 	type CourseStatus,
 } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
-import type { AdminCourse, CourseOfflineFilter, CourseSortKey } from "@/pages/learning/course-mock";
+import type { AdminCourse, CourseOfflineFilter, CourseSortKey } from "@/pages/learning/course.types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

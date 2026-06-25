@@ -7,8 +7,11 @@ import {
 	Award,
 	Ban,
 	BookOpen,
+	CalendarCheck,
 	CalendarClock,
 	CheckCircle2,
+	ClipboardCheck,
+	FilePen,
 	Download,
 	GraduationCap,
 	ImageIcon,
@@ -21,7 +24,6 @@ import {
 	Trash2,
 	Users,
 	UserPlus,
-	FilePen,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -42,8 +44,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePaginationFooter } from "@/components/TablePaginationFooter";
+import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { cn } from "@/lib/utils";
@@ -70,11 +71,14 @@ import {
 } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import type { AdminCourseDetail, EnrollmentTrack } from "@/pages/learning/course-detail-mock";
+import type {
+	AdminCourseDetail,
+	EnrollmentTrack,
+} from "@/pages/learning/course-detail.types";
 import AssignmentGradeDialog from "@/pages/learning/AssignmentGradeDialog";
 import EnrollStudentDialog from "@/pages/learning/EnrollStudentDialog";
+import LessonAttendanceDialog from "@/pages/learning/LessonAttendanceDialog";
 import LessonCheckInDialog from "@/pages/learning/LessonCheckInDialog";
-import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -188,6 +192,9 @@ function CourseDetailPage() {
 	>(null);
 	const [isRevokingCertificate, setIsRevokingCertificate] = useState(false);
 	const [reissuingCertificateId, setReissuingCertificateId] = useState<number | null>(null);
+	const [editAttendanceLesson, setEditAttendanceLesson] = useState<
+		AdminCourseDetail["lessons"][number] | null
+	>(null);
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
@@ -243,6 +250,34 @@ function CourseDetailPage() {
 			offlineLessons.find((l) => !l.session_end || new Date(l.session_end) > now)?.id ?? null
 		);
 	}, [offlineLessons]);
+
+	/** Các buổi offline đã kết thúc — chỉ những buổi này mới cho "Sửa điểm danh". */
+	const pastOfflineLessonIds = useMemo(() => {
+		const now = new Date();
+		return new Set(
+			offlineLessons
+				.filter((l) => l.session_end && new Date(l.session_end) < now)
+				.map((l) => l.id),
+		);
+	}, [offlineLessons]);
+
+	/** Số học viên đã điểm danh từng buổi (để hiện tiến độ ở cột Điểm danh). */
+	const attendedByLesson = useMemo(() => {
+		const map = new Map<number, number>();
+		for (const a of course?.attendances ?? []) {
+			map.set(a.lesson_id, (map.get(a.lesson_id) ?? 0) + 1);
+		}
+		return map;
+	}, [course]);
+
+	/** Số học viên đã đăng ký "sẽ tham gia" từng buổi (dự kiến có mặt). */
+	const registeredByLesson = useMemo(() => {
+		const map = new Map<number, number>();
+		for (const r of course?.registrations ?? []) {
+			map.set(r.lesson_id, (map.get(r.lesson_id) ?? 0) + 1);
+		}
+		return map;
+	}, [course]);
 
 	const lessonsPg = useClientPagination(course?.lessons ?? []);
 	const studentsPg = useClientPagination(filteredEnrollments);
@@ -531,6 +566,12 @@ function CourseDetailPage() {
 										<dd>{course.max_absent_allowed}</dd>
 										<dt className='text-muted-foreground'>Ngưỡng đạt quiz</dt>
 										<dd>{course.quiz_pass_threshold}%</dd>
+										<dt className='text-muted-foreground'>Số buổi dự kiến</dt>
+										<dd>
+											{course.total_lessons != null
+												? `${course.lessons_count}/${course.total_lessons} buổi`
+												: "Không giới hạn"}
+										</dd>
 										<dt className='text-muted-foreground'>Người tạo</dt>
 										<dd>{course.creator?.full_name ?? "--"}</dd>
 									</dl>
@@ -556,113 +597,142 @@ function CourseDetailPage() {
 										<TableHead className='min-w-[180px]'>
 											Lịch offline
 										</TableHead>
-										<TableHead className='w-[180px]'>Điểm danh</TableHead>
+										<TableHead className='w-[220px]'>Điểm danh</TableHead>
 										<TableHead className='w-[120px]'>Trạng thái</TableHead>
 										<TableHead className='w-[52px]' />
 									</TableRow>
 								</TableHeader>
 								<TableBody>
 									{course.lessons.length > 0 ? (
-										lessonsPg.pageItems.map((lesson) => (
-											<TableRow key={lesson.id}>
-												<TableCell className='font-medium text-muted-foreground'>
-													{lesson.order}
-												</TableCell>
-												<TableCell className='font-medium'>
-													{lesson.title}
-												</TableCell>
-												<TableCell className='text-sm text-muted-foreground'>
-													{lesson.session_start
-														? formatDateTime(lesson.session_start)
-														: "—"}
-												</TableCell>
-												<TableCell className='text-sm'>
-													{lesson.session_start &&
-													lesson.id === activeLessonId ? (
-														<div className='flex items-center gap-2'>
-															<span className='flex items-center gap-1.5'>
-																<CheckCircle2 className='h-3.5 w-3.5 text-muted-foreground' />
-																{lesson.attendances_count}/
-																{course.offline_enrollments_count}
+										lessonsPg.pageItems.map((lesson) => {
+											// Điểm danh chỉ áp với buổi offline có học viên offline.
+											// QR: chỉ buổi đang diễn ra. Thủ công: đang diễn ra hoặc đã qua.
+											const isOffline = !!lesson.session_start;
+											const isActive = lesson.id === activeLessonId;
+											const isPast = pastOfflineLessonIds.has(lesson.id);
+											const hasOfflineStudents = course.offline_enrollments_count > 0;
+											const canQr = isOffline && isActive && hasOfflineStudents;
+											const canManualAttendance =
+												isOffline && (isActive || isPast) && hasOfflineStudents;
+											return (
+												<TableRow key={lesson.id}>
+													<TableCell className='font-medium text-muted-foreground'>
+														{lesson.order}
+													</TableCell>
+													<TableCell className='font-medium'>
+														{lesson.title}
+													</TableCell>
+													<TableCell className='text-sm text-muted-foreground'>
+														{lesson.session_start
+															? formatDateTime(lesson.session_start)
+															: "—"}
+													</TableCell>
+													<TableCell className='text-sm'>
+														{!isOffline ? (
+															<span className='text-muted-foreground'>—</span>
+														) : isActive || isPast ? (
+															<div className='flex flex-col gap-0.5 text-muted-foreground'>
+																<span className='flex items-center gap-1.5'>
+																	<CheckCircle2 className='h-3.5 w-3.5' />
+																	{attendedByLesson.get(lesson.id) ??
+																		0}
+																	/{course.offline_enrollments_count}{" "}
+																	điểm danh
+																</span>
+																<span className='flex items-center gap-1.5 text-xs'>
+																	<CalendarCheck className='h-3 w-3' />
+																	{registeredByLesson.get(
+																		lesson.id,
+																	) ?? 0}{" "}
+																	sẽ tham gia
+																</span>
+															</div>
+														) : (
+															<span className='text-muted-foreground'>
+																Chưa diễn ra
 															</span>
-															<Button
-																size='sm'
-																variant='outline'
-																className='h-7'
-																disabled={
-																	course.offline_enrollments_count ===
-																	0
-																}
-																onClick={() =>
-																	setCheckInLesson(lesson)
-																}>
-																<ScanLine className='h-3.5 w-3.5' />
-																QR
-															</Button>
-														</div>
-													) : (
-														<span className='text-muted-foreground'>
-															—
-														</span>
-													)}
-												</TableCell>
-												<TableCell>{statusBadge(lesson.status)}</TableCell>
-												<TableCell>
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<Button
-																variant='ghost'
-																className='h-8 w-8 p-0 data-[state=open]:bg-muted'>
-																<MoreHorizontal className='h-4 w-4' />
-															</Button>
-														</DropdownMenuTrigger>
-														<DropdownMenuContent
-															align='end'
-															className='w-[160px]'>
-															<DropdownMenuItem
-																onClick={() =>
-																	openEditLesson(lesson.id)
-																}>
-																<Pencil className='h-4 w-4' />
-																Sửa
-															</DropdownMenuItem>
-
-															{canManageQuiz && (
+														)}
+													</TableCell>
+													<TableCell>{statusBadge(lesson.status)}</TableCell>
+													<TableCell>
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	variant='ghost'
+																	className='h-8 w-8 p-0 data-[state=open]:bg-muted'>
+																	<MoreHorizontal className='h-4 w-4' />
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent
+																align='end'
+																className='w-[160px]'>
 																<DropdownMenuItem
 																	onClick={() =>
-																		openQuizBuilder(lesson.id)
+																		openEditLesson(lesson.id)
 																	}>
-																	<FilePen className='h-4 w-4' />
-																	Quiz
+																	<Pencil className='h-4 w-4' />
+																	Sửa
 																</DropdownMenuItem>
-															)}
-
-															{lesson.has_assignment && (
+	
+																{canQr && (
+																	<DropdownMenuItem
+																		onClick={() =>
+																			setCheckInLesson(lesson)
+																		}>
+																		<ScanLine className='h-4 w-4' />
+																		Quét QR
+																	</DropdownMenuItem>
+																)}
+	
+																{canManualAttendance && (
+																	<DropdownMenuItem
+																		onClick={() =>
+																			setEditAttendanceLesson(
+																				lesson,
+																			)
+																		}>
+																		<ClipboardCheck className='h-4 w-4' />
+																		{"Điểm danh thủ công"}
+																	</DropdownMenuItem>
+																)}
+	
+																{canManageQuiz && (
+																	<DropdownMenuItem
+																		onClick={() =>
+																			openQuizBuilder(lesson.id)
+																		}>
+																		<FilePen className='h-4 w-4' />
+																		Quiz
+																	</DropdownMenuItem>
+																)}
+	
+																{lesson.has_assignment && (
+																	<DropdownMenuItem
+																		onClick={() =>
+																			setGradingLesson(lesson)
+																		}>
+																		<ListChecks className='h-4 w-4' />
+																		Chấm bài
+																	</DropdownMenuItem>
+																)}
 																<DropdownMenuItem
+																	className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 																	onClick={() =>
-																		setGradingLesson(lesson)
+																		setDeletingLesson(lesson)
 																	}>
-																	<ListChecks className='h-4 w-4' />
-																	Chấm bài
+																	<Trash2 className='h-4 w-4 text-destructive' />
+																	Xóa
 																</DropdownMenuItem>
-															)}
-															<DropdownMenuItem
-																className='text-destructive focus:bg-destructive/10 focus:text-destructive'
-																onClick={() =>
-																	setDeletingLesson(lesson)
-																}>
-																<Trash2 className='h-4 w-4 text-destructive' />
-																Xóa
-															</DropdownMenuItem>
-														</DropdownMenuContent>
-													</DropdownMenu>
-												</TableCell>
-											</TableRow>
-										))
+															</DropdownMenuContent>
+														</DropdownMenu>
+													</TableCell>
+												</TableRow>
+											);
+										})
 									) : (
 										<TableRow>
 											<TableCell
-												colSpan={7}
+												colSpan={6}
 												className='h-32 text-center text-muted-foreground'>
 												Khóa học chưa có buổi học nào. Nhấn "Thêm buổi học"
 												để bắt đầu.
@@ -672,7 +742,7 @@ function CourseDetailPage() {
 								</TableBody>
 								{course.lessons.length > 0 && (
 									<TablePaginationFooter
-										colSpan={7}
+										colSpan={6}
 										shown={lessonsPg.pageItems.length}
 										total={lessonsPg.total}
 										noun='buổi học'
@@ -716,42 +786,6 @@ function CourseDetailPage() {
 									<UserPlus className='h-4 w-4' />
 									Ghi danh
 								</Button>
-								{trackFilter === "offline" &&
-									course.offline_enrollments_count > 0 && (
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button size='sm' className='h-8'>
-													<ScanLine className='h-4 w-4' />
-													Điểm danh QR
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align='end' className='w-[280px]'>
-												<DropdownMenuLabel>
-													Chọn buổi để điểm danh
-												</DropdownMenuLabel>
-												<DropdownMenuSeparator />
-												{offlineLessons.length > 0 ? (
-													offlineLessons.map((l) => (
-														<DropdownMenuItem
-															key={l.id}
-															onClick={() => setCheckInLesson(l)}>
-															<span className='flex-1 truncate'>
-																Buổi {l.order}: {l.title}
-															</span>
-															<span className='ml-2 shrink-0 text-xs text-muted-foreground'>
-																{l.attendances_count}/
-																{course.offline_enrollments_count}
-															</span>
-														</DropdownMenuItem>
-													))
-												) : (
-													<div className='px-2 py-1.5 text-xs text-muted-foreground'>
-														Chưa có buổi offline nào được xếp lịch.
-													</div>
-												)}
-											</DropdownMenuContent>
-										</DropdownMenu>
-									)}
 							</div>
 						</div>
 						<div className='overflow-hidden rounded-md border'>
@@ -1035,6 +1069,21 @@ function CourseDetailPage() {
 				courseSlug={course.slug}
 				lesson={checkInLesson}
 				onCheckedIn={() => void loadCourse({ silent: true })}
+			/>
+
+			<LessonAttendanceDialog
+				open={editAttendanceLesson !== null}
+				onOpenChange={(o) => !o && setEditAttendanceLesson(null)}
+				courseSlug={course.slug}
+				lesson={editAttendanceLesson}
+				students={course.enrollments.filter((e) => e.track === "offline")}
+				attendedUserIds={course.attendances
+					.filter((a) => a.lesson_id === editAttendanceLesson?.id)
+					.map((a) => a.user_id)}
+				registeredUserIds={course.registrations
+					.filter((r) => r.lesson_id === editAttendanceLesson?.id)
+					.map((r) => r.user_id)}
+				onChanged={() => void loadCourse({ silent: true })}
 			/>
 
 			<AssignmentGradeDialog
