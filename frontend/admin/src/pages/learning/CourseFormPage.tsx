@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { ArrowLeft, CalendarClock, ImageIcon, ListChecks, Loader2, Save, UploadCloud, X } from "lucide-react";
+import {
+	ArrowLeft,
+	CalendarClock,
+	ImageIcon,
+	ListChecks,
+	Loader2,
+	Save,
+	UploadCloud,
+	X,
+} from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -172,7 +181,8 @@ function CourseFormPage() {
 					enrollment_start: toLocalInput(c.enrollment_start),
 					enrollment_deadline: toLocalInput(c.enrollment_deadline),
 					course_end: toLocalInput(c.course_end),
-					max_offline_slots: c.max_offline_slots != null ? String(c.max_offline_slots) : "30",
+					max_offline_slots:
+						c.max_offline_slots != null ? String(c.max_offline_slots) : "30",
 					max_absent_allowed: String(c.max_absent_allowed),
 					quiz_pass_threshold: String(c.quiz_pass_threshold),
 					total_lessons: c.total_lessons != null ? String(c.total_lessons) : "",
@@ -228,7 +238,9 @@ function CourseFormPage() {
 	};
 
 	const toggleTag = (id: number) =>
-		setSelectedTags((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+		setSelectedTags((prev) =>
+			prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
+		);
 
 	const openImageDialog = () => {
 		if (!imageInputRef.current) return;
@@ -291,7 +303,9 @@ function CourseFormPage() {
 			fd.append("total_lessons", form.total_lessons.trim());
 			fd.append(
 				"certificate_template_id",
-				form.certificate_template_id === NO_CERTIFICATE_TEMPLATE ? "" : form.certificate_template_id,
+				form.certificate_template_id === NO_CERTIFICATE_TEMPLATE
+					? ""
+					: form.certificate_template_id,
 			);
 			fd.append("has_offline", hasOffline ? "1" : "0");
 			if (hasOffline) {
@@ -357,7 +371,9 @@ function CourseFormPage() {
 						<Card className='shadow-sm'>
 							<CardHeader>
 								<CardTitle>Thông tin khóa học</CardTitle>
-								<CardDescription>Tên, mô tả và trình độ của khóa học.</CardDescription>
+								<CardDescription>
+									Tên, mô tả và trình độ của khóa học.
+								</CardDescription>
 							</CardHeader>
 							<CardContent className='flex flex-col gap-5'>
 								<div className='flex flex-col gap-2'>
@@ -377,7 +393,9 @@ function CourseFormPage() {
 										</p>
 									)}
 									{fieldErrors.title && (
-										<p className='text-sm text-destructive'>{fieldErrors.title}</p>
+										<p className='text-sm text-destructive'>
+											{fieldErrors.title}
+										</p>
 									)}
 								</div>
 
@@ -418,90 +436,147 @@ function CourseFormPage() {
 							<CardHeader>
 								<CardTitle className='flex items-center gap-2'>
 									<CalendarClock className='h-5 w-5 text-muted-foreground' />
-									Hình thức học & mốc thời gian
+									Mở lớp học trực tiếp
 								</CardTitle>
 								<CardDescription>
-									Mỗi khóa luôn có hình thức online. Bật thêm lớp offline nếu tổ chức học
-									trực tiếp song song.
+									Khoá học mặc định được tạo theo hình thức học online. Bật mở lớp
+									offline nếu tổ chức học trực tiếp song song.
 								</CardDescription>
 							</CardHeader>
 							<CardContent className='flex flex-col gap-5'>
 								<label className='flex items-start gap-3 rounded-md border p-3'>
 									<Checkbox
 										checked={hasOffline}
-										onCheckedChange={(c) => setHasOffline(c === true)}
+										onCheckedChange={(c) => {
+											const next = c === true;
+											setHasOffline(next);
+											// Khi tắt offline, xoá tất cả field liên quan để tránh gửi giá trị cũ
+											if (!next) {
+												setForm((prev) => ({
+													...prev,
+													max_offline_slots: "30",
+													max_absent_allowed: "1",
+													enrollment_start: "",
+													enrollment_deadline: "",
+													course_end: "",
+												}));
+											}
+										}}
 										disabled={submitting}
 										className='mt-0.5'
 									/>
 									<div className='space-y-0.5'>
 										<p className='text-sm font-medium'>Mở lớp học offline</p>
 										<p className='text-xs text-muted-foreground'>
-											Cho phép học viên đăng ký học trực tiếp (song song với online). Tắt
-											= khóa chỉ học online.
+											Cho phép học viên đăng ký học trực tiếp (song song với
+											khoá online). Tắt = khóa chỉ học online.
 										</p>
 									</div>
 								</label>
 
 								{hasOffline && (
 									<div className='flex flex-col gap-2'>
-										<Label htmlFor='course-slots'>Sức chứa lớp offline</Label>
-										<Input
-											id='course-slots'
-											type='number'
-											min={1}
-											value={form.max_offline_slots}
-											onChange={(e) => setField("max_offline_slots", e.target.value)}
-											disabled={submitting}
-											className='sm:w-60'
-										/>
-										{fieldErrors.max_offline_slots && (
-											<p className='text-sm text-destructive'>
-												{fieldErrors.max_offline_slots}
-											</p>
-										)}
+										<div className='grid gap-4 sm:grid-cols-2'>
+											<div className='flex flex-col gap-2'>
+												<Label htmlFor='course-slots'>
+													Sức chứa lớp offline
+												</Label>
+												<Input
+													id='course-slots'
+													type='number'
+													min={1}
+													value={form.max_offline_slots}
+													onChange={(e) =>
+														setField(
+															"max_offline_slots",
+															e.target.value,
+														)
+													}
+													disabled={submitting}
+												/>
+												{fieldErrors.max_offline_slots && (
+													<p className='text-sm text-destructive'>
+														{fieldErrors.max_offline_slots}
+													</p>
+												)}
+											</div>
+
+											<div className='flex flex-col gap-2'>
+												<Label htmlFor='course-absent'>
+													Số buổi vắng tối đa
+												</Label>
+												<Input
+													id='course-absent'
+													type='number'
+													min={0}
+													value={form.max_absent_allowed}
+													onChange={(e) =>
+														setField(
+															"max_absent_allowed",
+															e.target.value,
+														)
+													}
+													disabled={submitting}
+												/>
+											</div>
+										</div>
+										<div className='grid gap-4 sm:grid-cols-3'>
+											<div className='flex flex-col gap-2'>
+												<Label htmlFor='course-enr-start'>
+													Mở ghi danh
+												</Label>
+												<Input
+													id='course-enr-start'
+													type='datetime-local'
+													value={form.enrollment_start}
+													onChange={(e) =>
+														setField("enrollment_start", e.target.value)
+													}
+													disabled={submitting}
+												/>
+											</div>
+											<div className='flex flex-col gap-2'>
+												<Label htmlFor='course-enr-deadline'>
+													Hạn ghi danh offline
+												</Label>
+												<Input
+													id='course-enr-deadline'
+													type='datetime-local'
+													value={form.enrollment_deadline}
+													onChange={(e) =>
+														setField(
+															"enrollment_deadline",
+															e.target.value,
+														)
+													}
+													disabled={submitting}
+												/>
+												{fieldErrors.enrollment_deadline && (
+													<p className='text-sm text-destructive'>
+														{fieldErrors.enrollment_deadline}
+													</p>
+												)}
+											</div>
+											<div className='flex flex-col gap-2'>
+												<Label htmlFor='course-end'>Kết thúc khóa</Label>
+												<Input
+													id='course-end'
+													type='datetime-local'
+													value={form.course_end}
+													onChange={(e) =>
+														setField("course_end", e.target.value)
+													}
+													disabled={submitting}
+												/>
+												{fieldErrors.course_end && (
+													<p className='text-sm text-destructive'>
+														{fieldErrors.course_end}
+													</p>
+												)}
+											</div>
+										</div>
 									</div>
 								)}
-
-								<div className='grid gap-4 sm:grid-cols-3'>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='course-enr-start'>Mở ghi danh</Label>
-										<Input
-											id='course-enr-start'
-											type='datetime-local'
-											value={form.enrollment_start}
-											onChange={(e) => setField("enrollment_start", e.target.value)}
-											disabled={submitting}
-										/>
-									</div>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='course-enr-deadline'>Hạn ghi danh offline</Label>
-										<Input
-											id='course-enr-deadline'
-											type='datetime-local'
-											value={form.enrollment_deadline}
-											onChange={(e) => setField("enrollment_deadline", e.target.value)}
-											disabled={submitting}
-										/>
-										{fieldErrors.enrollment_deadline && (
-											<p className='text-sm text-destructive'>
-												{fieldErrors.enrollment_deadline}
-											</p>
-										)}
-									</div>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='course-end'>Kết thúc khóa</Label>
-										<Input
-											id='course-end'
-											type='datetime-local'
-											value={form.course_end}
-											onChange={(e) => setField("course_end", e.target.value)}
-											disabled={submitting}
-										/>
-										{fieldErrors.course_end && (
-											<p className='text-sm text-destructive'>{fieldErrors.course_end}</p>
-										)}
-									</div>
-								</div>
 							</CardContent>
 						</Card>
 
@@ -512,7 +587,9 @@ function CourseFormPage() {
 									<ImageIcon className='h-5 w-5 text-muted-foreground' />
 									Ảnh đại diện
 								</CardTitle>
-								<CardDescription>Thumbnail hiển thị ở danh sách khóa học (tuỳ chọn).</CardDescription>
+								<CardDescription>
+									Thumbnail hiển thị ở danh sách khóa học (tuỳ chọn).
+								</CardDescription>
 							</CardHeader>
 							<CardContent>
 								<input
@@ -556,7 +633,9 @@ function CourseFormPage() {
 													</button>
 												</div>
 											</div>
-											<p className='text-sm text-muted-foreground'>Nhấn để thay đổi ảnh</p>
+											<p className='text-sm text-muted-foreground'>
+												Nhấn để thay đổi ảnh
+											</p>
 										</div>
 									) : (
 										<>
@@ -571,7 +650,9 @@ function CourseFormPage() {
 									)}
 								</div>
 								{fieldErrors.thumbnail && (
-									<p className='mt-2 text-sm text-destructive'>{fieldErrors.thumbnail}</p>
+									<p className='mt-2 text-sm text-destructive'>
+										{fieldErrors.thumbnail}
+									</p>
 								)}
 							</CardContent>
 						</Card>
@@ -584,7 +665,7 @@ function CourseFormPage() {
 							<CardHeader>
 								<CardTitle className='flex items-center gap-2'>
 									<ListChecks className='h-5 w-5 text-muted-foreground' />
-									Cấu hình học tập
+									Cấu hình khoá học
 								</CardTitle>
 							</CardHeader>
 							<CardContent className='flex flex-col gap-5'>
@@ -596,7 +677,9 @@ function CourseFormPage() {
 										min={0}
 										max={100}
 										value={form.quiz_pass_threshold}
-										onChange={(e) => setField("quiz_pass_threshold", e.target.value)}
+										onChange={(e) =>
+											setField("quiz_pass_threshold", e.target.value)
+										}
 										disabled={submitting}
 									/>
 									<p className='text-xs text-muted-foreground'>
@@ -605,7 +688,9 @@ function CourseFormPage() {
 								</div>
 
 								<div className='flex flex-col gap-2'>
-									<Label htmlFor='course-total-lessons'>Số buổi học dự kiến</Label>
+									<Label htmlFor='course-total-lessons'>
+										Số buổi học dự kiến
+									</Label>
 									<Input
 										id='course-total-lessons'
 										type='number'
@@ -622,22 +707,30 @@ function CourseFormPage() {
 										</p>
 									)}
 									<p className='text-xs text-muted-foreground'>
-										Cố định số buổi của khóa. Khi đã đủ số buổi này sẽ không tạo thêm
-										được. Để trống = không giới hạn.
+										Cố định số buổi của khóa. Khi đã đủ số buổi này sẽ không tạo
+										thêm được. Để trống = không giới hạn.
 									</p>
 								</div>
 
 								<div className='flex flex-col gap-2'>
-									<Label htmlFor='course-certificate-template'>Mẫu chứng chỉ</Label>
+									<Label htmlFor='course-certificate-template'>
+										Mẫu chứng chỉ
+									</Label>
 									<Select
 										value={form.certificate_template_id}
-										onValueChange={(v) => setField("certificate_template_id", v)}
+										onValueChange={(v) =>
+											setField("certificate_template_id", v)
+										}
 										disabled={submitting || templatesLoading}>
-										<SelectTrigger id='course-certificate-template' className='w-full'>
+										<SelectTrigger
+											id='course-certificate-template'
+											className='w-full'>
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value={NO_CERTIFICATE_TEMPLATE}>Không sử dụng</SelectItem>
+											<SelectItem value={NO_CERTIFICATE_TEMPLATE}>
+												Không sử dụng
+											</SelectItem>
 											{certificateTemplates.map((t) => (
 												<SelectItem key={t.id} value={String(t.id)}>
 													{t.name}
@@ -649,24 +742,6 @@ function CourseFormPage() {
 										Mẫu chứng chỉ tự sinh khi học viên hoàn thành khóa học.
 									</p>
 								</div>
-
-								{hasOffline && (
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='course-absent'>Số buổi vắng tối đa</Label>
-										<Input
-											id='course-absent'
-											type='number'
-											min={0}
-											value={form.max_absent_allowed}
-											onChange={(e) => setField("max_absent_allowed", e.target.value)}
-											disabled={submitting}
-										/>
-										<p className='text-xs text-muted-foreground'>
-											Số buổi vắng tối đa cho phép ở lớp offline trước khi bị loại khỏi khóa
-											học.
-										</p>
-									</div>
-								)}
 							</CardContent>
 						</Card>
 
@@ -674,13 +749,19 @@ function CourseFormPage() {
 						<Card className='shadow-sm'>
 							<CardHeader>
 								<CardTitle>Danh mục</CardTitle>
-								<CardDescription>Gắn danh mục giúp học viên dễ tìm khóa học.</CardDescription>
+								<CardDescription>
+									Gắn danh mục giúp học viên dễ tìm khóa học.
+								</CardDescription>
 							</CardHeader>
 							<CardContent>
 								{categoriesLoading ? (
-									<p className='text-sm text-muted-foreground'>Đang tải danh mục...</p>
+									<p className='text-sm text-muted-foreground'>
+										Đang tải danh mục...
+									</p>
 								) : categories.length === 0 ? (
-									<p className='text-sm text-muted-foreground'>Chưa có danh mục nào.</p>
+									<p className='text-sm text-muted-foreground'>
+										Chưa có danh mục nào.
+									</p>
 								) : (
 									<div className='flex flex-wrap gap-2'>
 										{categories.map((cat) => {
@@ -711,9 +792,9 @@ function CourseFormPage() {
 						</Card>
 
 						{/* Actions */}
-						<Card className='shadow-sm'>
-							<CardFooter className='flex flex-col gap-3 pt-6'>
-								<div className='grid w-full grid-cols-2 gap-3'>
+						<Card className='shadow-sm py-6'>
+							<CardFooter className='flex flex-col gap-3'>
+								<div className='grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3'>
 									<Button
 										type='button'
 										variant='outline'
@@ -724,7 +805,9 @@ function CourseFormPage() {
 										) : (
 											<Save className='h-4 w-4' />
 										)}
-										{currentStatus === "published" ? "Chuyển về nháp" : "Lưu nháp"}
+										{currentStatus === "published"
+											? "Chuyển về nháp"
+											: "Lưu nháp"}
 									</Button>
 									<Button
 										type='button'
@@ -735,14 +818,18 @@ function CourseFormPage() {
 										) : (
 											<Save className='h-4 w-4' />
 										)}
-										{currentStatus === "published" ? "Lưu thay đổi" : "Xuất bản"}
+										{currentStatus === "published"
+											? "Lưu thay đổi"
+											: "Xuất bản"}
 									</Button>
 								</div>
 								<Button
 									type='button'
 									variant='outline'
 									className='w-full'
-									onClick={() => navigate(isEdit ? `/courses/${slugParam}` : "/courses")}
+									onClick={() =>
+										navigate(isEdit ? `/courses/${slugParam}` : "/courses")
+									}
 									disabled={submitting}>
 									Hủy
 								</Button>

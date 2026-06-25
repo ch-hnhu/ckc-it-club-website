@@ -98,9 +98,13 @@ class CourseController extends BaseApiController
             'tag_ids.*' => 'integer|exists:tags,id',
         ]);
 
-        // Không mở lớp offline → khoá chỉ online
+        // Không mở lớp offline → khoá chỉ online; xoá luôn các trường liên quan
         if ($request->has('has_offline') && ! $request->boolean('has_offline')) {
-            $data['max_offline_slots'] = null;
+            $data['max_offline_slots']    = null;
+            $data['max_absent_allowed']   = null;
+            $data['enrollment_start']     = null;
+            $data['enrollment_deadline']  = null;
+            $data['course_end']           = null;
         }
 
         $thumbnailPath = null;
@@ -196,9 +200,13 @@ class CourseController extends BaseApiController
             unset($data['thumbnail']);
         }
 
-        // Không mở lớp offline → khoá chỉ online
+        // Không mở lớp offline → khoá chỉ online; xoá luôn các trường liên quan
         if ($request->has('has_offline') && ! $request->boolean('has_offline')) {
-            $data['max_offline_slots'] = null;
+            $data['max_offline_slots']    = null;
+            $data['max_absent_allowed']   = null;
+            $data['enrollment_start']     = null;
+            $data['enrollment_deadline']  = null;
+            $data['course_end']           = null;
         }
 
         $tagIds = $data['tag_ids'] ?? null;

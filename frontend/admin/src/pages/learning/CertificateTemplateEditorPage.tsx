@@ -94,6 +94,41 @@ const normalizeDesign = (d: Partial<CertificateDesign> | null | undefined): Cert
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+/**
+ * Tính vùng crop kiểu "cover": phủ kín khung frameW×frameH, giữ tỉ lệ ảnh, căn giữa, cắt phần thừa.
+ * Trả về crop (toạ độ trên ảnh gốc) để gắn vào Konva.Image có width=frameW, height=frameH.
+ */
+const coverCrop = (img: HTMLImageElement, frameW: number, frameH: number) => {
+	const iw = img.naturalWidth || img.width;
+	const ih = img.naturalHeight || img.height;
+	if (!iw || !ih) return undefined;
+	const frameAR = frameW / frameH;
+	const imgAR = iw / ih;
+	let cw = iw;
+	let ch = ih;
+	let cx = 0;
+	let cy = 0;
+	if (imgAR > frameAR) {
+		// ảnh rộng hơn khung → cắt 2 bên
+		cw = ih * frameAR;
+		cx = (iw - cw) / 2;
+	} else {
+		// ảnh cao hơn khung → cắt trên/dưới
+		ch = iw / frameAR;
+		cy = (ih - ch) / 2;
+	}
+	return { x: cx, y: cy, width: cw, height: ch };
+};
+
+/** Đọc kích thước gốc (px) của ảnh từ URL để giữ đúng tỉ lệ khi thêm vào canvas. */
+const loadImageSize = (src: string) =>
+	new Promise<{ width: number; height: number }>((resolve) => {
+		const img = new window.Image();
+		img.onload = () => resolve({ width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+		img.onerror = () => resolve({ width: 160, height: 160 });
+		img.src = src;
+	});
+
 // ─── Hook nạp ảnh cho canvas ─────────────────────────────────────────────────
 
 function useCanvasImage(src?: string | null) {
@@ -352,7 +387,14 @@ function CertificateTemplateEditorPage() {
 					canvas: { ...d.canvas, background: { ...d.canvas.background, image: url } },
 				}));
 			} else {
-				addElement("image", { src: url, width: 160, height: 160 });
+				// Giữ đúng tỉ lệ gốc; chỉ thu nhỏ nếu cạnh lớn hơn 320px (không phóng to ảnh nhỏ).
+				const { width, height } = await loadImageSize(url);
+				const scale = Math.min(1, 320 / Math.max(width, height));
+				addElement("image", {
+					src: url,
+					width: Math.round(width * scale),
+					height: Math.round(height * scale),
+				});
 			}
 			toast.success("Đã tải ảnh lên.");
 		} catch {
@@ -793,6 +835,7 @@ function CertificateTemplateEditorPage() {
 										y={0}
 										width={CANVAS_W}
 										height={CANVAS_H}
+										crop={coverCrop(bgImage, CANVAS_W, CANVAS_H)}
 										listening={false}
 									/>
 								)}
@@ -820,6 +863,18 @@ function CertificateTemplateEditorPage() {
 								<Transformer
 									ref={trRef}
 									rotateEnabled
+									// Ảnh: giữ tỉ lệ, chỉ cho kéo 4 góc để không bị méo.
+									keepRatio={selected?.type === "image"}
+									enabledAnchors={
+										selected?.type === "image"
+											? [
+													"top-left",
+													"top-right",
+													"bottom-left",
+													"bottom-right",
+											  ]
+											: undefined
+									}
 									boundBoxFunc={(oldBox, newBox) =>
 										newBox.width < 5 || newBox.height < 5 ? oldBox : newBox
 									}

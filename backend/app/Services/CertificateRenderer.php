@@ -291,7 +291,15 @@ function loadImage(src){
     layer.add(new Konva.Rect({ x:0, y:0, width: scene.canvas.width, height: scene.canvas.height, fill: (scene.canvas.background && scene.canvas.background.color) || '#ffffff' }));
     if (scene.canvas.background && scene.canvas.background.image) {
       const bg = await loadImage(scene.canvas.background.image);
-      if (bg) layer.add(new Konva.Image({ image: bg, x:0, y:0, width: scene.canvas.width, height: scene.canvas.height }));
+      if (bg) {
+        // "cover": phủ kín khung, giữ tỉ lệ ảnh, căn giữa, cắt phần thừa.
+        const iw = bg.naturalWidth || bg.width, ih = bg.naturalHeight || bg.height;
+        const frameAR = scene.canvas.width / scene.canvas.height, imgAR = iw / ih;
+        let cw = iw, ch = ih, cx = 0, cy = 0;
+        if (imgAR > frameAR) { cw = ih * frameAR; cx = (iw - cw) / 2; }
+        else { ch = iw / frameAR; cy = (ih - ch) / 2; }
+        layer.add(new Konva.Image({ image: bg, x:0, y:0, width: scene.canvas.width, height: scene.canvas.height, crop: { x: cx, y: cy, width: cw, height: ch } }));
+      }
     }
     // ảnh (image/qr) tải SONG SONG để không cộng dồn thời gian chờ
     const imgEls = scene.elements.filter(e => (e.type === 'image' || e.type === 'qr') && e.src);

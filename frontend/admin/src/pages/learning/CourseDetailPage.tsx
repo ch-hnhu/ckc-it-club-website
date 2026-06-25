@@ -84,6 +84,7 @@ import LessonCheckInDialog from "@/pages/learning/LessonCheckInDialog";
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" });
 const dateTimeFmt = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" });
+const compactCardClassName = "gap-0 py-0";
 
 function formatDate(value: string | null) {
 	if (!value) return "--";
@@ -143,7 +144,7 @@ function StatCard({
 	hint?: string;
 }) {
 	return (
-		<Card>
+		<Card className={compactCardClassName}>
 			<CardContent className='flex items-center gap-3 p-4'>
 				<div className='flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground'>
 					{icon}
@@ -520,7 +521,7 @@ function CourseDetailPage() {
 					{/* ─── Tổng quan ─── */}
 					<TabsContent value='overview' className='mt-4'>
 						<div className='grid gap-4 lg:grid-cols-2'>
-							<Card>
+							<Card className={compactCardClassName}>
 								<CardContent className='space-y-3 p-5'>
 									<h3 className='flex items-center gap-2 font-semibold'>
 										<CalendarClock className='h-4 w-4' />
@@ -544,7 +545,7 @@ function CourseDetailPage() {
 								</CardContent>
 							</Card>
 
-							<Card>
+							<Card className={compactCardClassName}>
 								<CardContent className='space-y-3 p-5'>
 									<h3 className='flex items-center gap-2 font-semibold'>
 										<ListChecks className='h-4 w-4' />
