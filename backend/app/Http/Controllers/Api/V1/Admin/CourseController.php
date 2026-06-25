@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CourseController extends BaseApiController
 {
@@ -90,6 +91,7 @@ class CourseController extends BaseApiController
             'max_offline_slots' => 'nullable|integer|min:1|max:1000',
             'max_absent_allowed' => 'nullable|integer|min:0|max:50',
             'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
+            'total_lessons' => 'nullable|integer|min:1|max:200',
             'certificate_template_id' => 'nullable|integer|exists:certificate_templates,id',
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
@@ -120,6 +122,7 @@ class CourseController extends BaseApiController
                 'max_offline_slots' => $data['max_offline_slots'] ?? null,
                 'max_absent_allowed' => $data['max_absent_allowed'] ?? 1,
                 'quiz_pass_threshold' => $data['quiz_pass_threshold'] ?? 80,
+                'total_lessons' => $data['total_lessons'] ?? null,
                 'certificate_template_id' => $data['certificate_template_id'] ?? null,
                 'created_by' => $request->user()->id,
             ]);
@@ -161,11 +164,22 @@ class CourseController extends BaseApiController
             'max_offline_slots' => 'nullable|integer|min:1|max:1000',
             'max_absent_allowed' => 'nullable|integer|min:0|max:50',
             'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
+            'total_lessons' => 'nullable|integer|min:1|max:200',
             'certificate_template_id' => 'nullable|integer|exists:certificate_templates,id',
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:tags,id',
         ]);
+
+        // Không cho đặt số buổi dự kiến nhỏ hơn số buổi đã tạo.
+        if (array_key_exists('total_lessons', $data) && $data['total_lessons'] !== null) {
+            $lessonsCount = $course->lessons()->count();
+            if ($data['total_lessons'] < $lessonsCount) {
+                throw ValidationException::withMessages([
+                    'total_lessons' => "Khóa đã có {$lessonsCount} buổi học, số buổi dự kiến không được nhỏ hơn.",
+                ]);
+            }
+        }
 
         // Thumbnail: thay mới / gỡ bỏ / giữ nguyên
         if ($request->hasFile('thumbnail')) {
@@ -608,6 +622,7 @@ class CourseController extends BaseApiController
             'max_offline_slots' => $course->max_offline_slots,
             'max_absent_allowed' => $course->max_absent_allowed,
             'quiz_pass_threshold' => $course->quiz_pass_threshold,
+            'total_lessons' => $course->total_lessons,
             'certificate_template' => $course->certificateTemplate ? [
                 'id' => $course->certificateTemplate->id,
                 'name' => $course->certificateTemplate->name,
@@ -656,7 +671,7 @@ class CourseController extends BaseApiController
     {
         $fields = [
             'description', 'enrollment_start', 'enrollment_deadline', 'course_end',
-            'certificate_template_id',
+            'total_lessons', 'certificate_template_id',
         ];
 
         $request->merge(

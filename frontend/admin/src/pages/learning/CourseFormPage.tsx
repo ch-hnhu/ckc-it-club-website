@@ -45,6 +45,7 @@ type FormState = {
 	max_offline_slots: string;
 	max_absent_allowed: string;
 	quiz_pass_threshold: string;
+	total_lessons: string;
 	certificate_template_id: string;
 };
 
@@ -60,6 +61,7 @@ const getInitialForm = (): FormState => ({
 	max_offline_slots: "30",
 	max_absent_allowed: "1",
 	quiz_pass_threshold: "80",
+	total_lessons: "",
 	certificate_template_id: NO_CERTIFICATE_TEMPLATE,
 });
 
@@ -111,6 +113,10 @@ function CourseFormPage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [pendingStatus, setPendingStatus] = useState<CourseStatus | null>(null);
 	const [loading, setLoading] = useState(isEdit);
+	/** Số buổi học hiện có (khi sửa) — chặn đặt số buổi dự kiến nhỏ hơn. */
+	const [existingLessonsCount, setExistingLessonsCount] = useState(0);
+	/** Trạng thái hiện tại của khóa khi sửa — null khi tạo mới. */
+	const [currentStatus, setCurrentStatus] = useState<CourseStatus | null>(null);
 
 	// Categories (tags)
 	const [categories, setCategories] = useState<CourseCategoryOption[]>([]);
@@ -169,6 +175,7 @@ function CourseFormPage() {
 					max_offline_slots: c.max_offline_slots != null ? String(c.max_offline_slots) : "30",
 					max_absent_allowed: String(c.max_absent_allowed),
 					quiz_pass_threshold: String(c.quiz_pass_threshold),
+					total_lessons: c.total_lessons != null ? String(c.total_lessons) : "",
 					certificate_template_id: c.certificate_template
 						? String(c.certificate_template.id)
 						: NO_CERTIFICATE_TEMPLATE,
@@ -177,6 +184,8 @@ function CourseFormPage() {
 				setHasOffline(c.max_offline_slots != null);
 				setSelectedTags(c.categories.map((cat) => cat.id));
 				setExistingThumbnail(c.thumbnail);
+				setExistingLessonsCount(c.lessons_count);
+				setCurrentStatus(c.status);
 			})
 			.catch((err) => {
 				if (cancelled) return;
@@ -251,6 +260,14 @@ function CourseFormPage() {
 			if (!Number.isFinite(slots) || slots < 1)
 				errors.max_offline_slots = "Sức chứa lớp offline phải ≥ 1.";
 		}
+		if (form.total_lessons.trim()) {
+			const total = Number(form.total_lessons);
+			if (!Number.isInteger(total) || total < 1) {
+				errors.total_lessons = "Số buổi dự kiến phải là số nguyên ≥ 1.";
+			} else if (isEdit && total < existingLessonsCount) {
+				errors.total_lessons = `Khóa đã có ${existingLessonsCount} buổi học, số buổi dự kiến không được nhỏ hơn.`;
+			}
+		}
 		setFieldErrors(errors);
 		return Object.keys(errors).length === 0;
 	};
@@ -271,6 +288,7 @@ function CourseFormPage() {
 			fd.append("enrollment_deadline", toUtcIso(form.enrollment_deadline));
 			fd.append("course_end", toUtcIso(form.course_end));
 			fd.append("quiz_pass_threshold", form.quiz_pass_threshold);
+			fd.append("total_lessons", form.total_lessons.trim());
 			fd.append(
 				"certificate_template_id",
 				form.certificate_template_id === NO_CERTIFICATE_TEMPLATE ? "" : form.certificate_template_id,
@@ -587,6 +605,29 @@ function CourseFormPage() {
 								</div>
 
 								<div className='flex flex-col gap-2'>
+									<Label htmlFor='course-total-lessons'>Số buổi học dự kiến</Label>
+									<Input
+										id='course-total-lessons'
+										type='number'
+										min={1}
+										max={200}
+										placeholder='Để trống nếu không giới hạn'
+										value={form.total_lessons}
+										onChange={(e) => setField("total_lessons", e.target.value)}
+										disabled={submitting}
+									/>
+									{fieldErrors.total_lessons && (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.total_lessons}
+										</p>
+									)}
+									<p className='text-xs text-muted-foreground'>
+										Cố định số buổi của khóa. Khi đã đủ số buổi này sẽ không tạo thêm
+										được. Để trống = không giới hạn.
+									</p>
+								</div>
+
+								<div className='flex flex-col gap-2'>
 									<Label htmlFor='course-certificate-template'>Mẫu chứng chỉ</Label>
 									<Select
 										value={form.certificate_template_id}
@@ -683,7 +724,7 @@ function CourseFormPage() {
 										) : (
 											<Save className='h-4 w-4' />
 										)}
-										Lưu nháp
+										{currentStatus === "published" ? "Chuyển về nháp" : "Lưu nháp"}
 									</Button>
 									<Button
 										type='button'
@@ -694,7 +735,7 @@ function CourseFormPage() {
 										) : (
 											<Save className='h-4 w-4' />
 										)}
-										Xuất bản
+										{currentStatus === "published" ? "Lưu thay đổi" : "Xuất bản"}
 									</Button>
 								</div>
 								<Button

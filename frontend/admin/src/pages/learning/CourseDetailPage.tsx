@@ -566,6 +566,12 @@ function CourseDetailPage() {
 										<dd>{course.max_absent_allowed}</dd>
 										<dt className='text-muted-foreground'>Ngưỡng đạt quiz</dt>
 										<dd>{course.quiz_pass_threshold}%</dd>
+										<dt className='text-muted-foreground'>Số buổi dự kiến</dt>
+										<dd>
+											{course.total_lessons != null
+												? `${course.lessons_count}/${course.total_lessons} buổi`
+												: "Không giới hạn"}
+										</dd>
 										<dt className='text-muted-foreground'>Người tạo</dt>
 										<dd>{course.creator?.full_name ?? "--"}</dd>
 									</dl>

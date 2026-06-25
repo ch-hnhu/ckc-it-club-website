@@ -38,6 +38,8 @@ export interface AdminCourse {
 	max_offline_slots: number | null;
 	max_absent_allowed: number;
 	quiz_pass_threshold: number;
+	/** Số buổi học dự kiến của khóa; null = không giới hạn số buổi tạo được */
+	total_lessons: number | null;
 	certificate_template: AdminCourseCertificateTemplate | null;
 	creator: AdminCourseCreator | null;
 	categories: AdminCourseCategory[];

@@ -37,6 +37,13 @@ class LessonController extends BaseApiController
      */
     public function store(Request $request, Course $course): JsonResponse
     {
+        // Khóa có khai báo số buổi dự kiến (total_lessons) thì không cho tạo vượt quá.
+        abort_if(
+            $course->total_lessons !== null && $course->lessons()->count() >= $course->total_lessons,
+            422,
+            "Khóa học đã đủ {$course->total_lessons} buổi học dự kiến. Tăng số buổi dự kiến của khóa nếu muốn thêm.",
+        );
+
         $this->nullifyEmpty($request);
         $data = $this->validateData($request);
 
