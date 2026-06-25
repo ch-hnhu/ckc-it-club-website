@@ -1,12 +1,12 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
-import type { AdminCourse, CourseListParams } from "@/pages/learning/course-mock";
+import type { AdminCourse, CourseListParams } from "@/pages/learning/course.types";
 import type {
 	AdminCourseDetail,
 	CourseCertificateRow,
 	CourseEnrollmentRow,
 	EnrollmentTrack,
-} from "@/pages/learning/course-detail-mock";
+} from "@/pages/learning/course-detail.types";
 import type { CourseStatus } from "@/pages/learning/course-meta";
 
 /** Một user gợi ý khi tìm để ghi danh thay (chưa ghi danh khóa học). */

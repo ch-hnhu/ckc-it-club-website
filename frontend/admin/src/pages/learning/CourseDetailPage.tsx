@@ -74,7 +74,7 @@ import type { ApiErrorResponse } from "@/types/api.types";
 import type {
 	AdminCourseDetail,
 	EnrollmentTrack,
-} from "@/pages/learning/course-detail-mock";
+} from "@/pages/learning/course-detail.types";
 import AssignmentGradeDialog from "@/pages/learning/AssignmentGradeDialog";
 import EnrollStudentDialog from "@/pages/learning/EnrollStudentDialog";
 import LessonAttendanceDialog from "@/pages/learning/LessonAttendanceDialog";

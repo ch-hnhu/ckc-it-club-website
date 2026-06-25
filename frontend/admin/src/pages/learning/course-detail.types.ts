@@ -1,4 +1,4 @@
-import type { AdminCourse } from "@/pages/learning/course-mock";
+import type { AdminCourse } from "@/pages/learning/course.types";
 import type { CourseStatus } from "@/pages/learning/course-meta";
 
 // Types cho trang chi tiết khóa học (admin). Dữ liệu lấy từ course.service.ts.

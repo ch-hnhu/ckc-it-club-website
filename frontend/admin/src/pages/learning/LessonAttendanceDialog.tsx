@@ -18,7 +18,7 @@ import type { ApiErrorResponse } from "@/types/api.types";
 import type {
 	CourseEnrollmentRow,
 	CourseLessonRow,
-} from "@/pages/learning/course-detail-mock";
+} from "@/pages/learning/course-detail.types";
 
 function formatLessonLabel(lesson: CourseLessonRow): string {
 	const title = lesson.title.trim();

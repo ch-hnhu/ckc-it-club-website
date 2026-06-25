@@ -14,10 +14,10 @@ import {
 } from "@/components/ui/dialog";
 import courseService, { type CheckInStudentDTO } from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import type { CourseLessonRow } from "@/pages/learning/course-detail-mock";
+import type { CourseLessonRow } from "@/pages/learning/course-detail.types";
 
-// UI-first mock: tái dùng đúng pattern QR của Event (EventCheckInDialog).
-// Khi có backend, thay handleDecoded bằng lessonService.checkIn(lessonId, { qr_token }).
+// Tái dùng đúng pattern QR của Event (EventCheckInDialog).
+// Điểm danh qua courseService.checkInLesson(lessonId, { qr_token }) trong handleDecoded.
 
 const QR_REGION_ID_PREFIX = "lesson-check-in-qr-reader";
 const SAME_TOKEN_COOLDOWN_MS = 4000;
