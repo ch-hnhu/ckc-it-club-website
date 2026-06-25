@@ -15,6 +15,7 @@ use App\Models\LessonQrTicket;
 use App\Models\PointRule;
 use App\Models\PointTransaction;
 use App\Models\Tag;
+use App\Models\CourseCertificate;
 use App\Services\CourseCompletionService;
 use App\Services\CourseEnrollmentService;
 use App\Services\PointService;
@@ -147,7 +148,7 @@ class CourseController extends BaseApiController
         $userId = auth('sanctum')->id();
         $enrollment = $course->enrollmentFor($userId);
 
-        $progress = $this->lessonProgressPercent($lesson, $userId);
+        $progress = $this->lessonProgressPercent($lesson, $userId, $enrollment?->track);
         $sections = $this->sectionCompletionMap($lesson, $userId);
 
         $prev = $idx > 0 ? $lessons[$idx - 1] : null;
@@ -182,7 +183,7 @@ class CourseController extends BaseApiController
             ] : null,
             'reference' => $lesson->resource_url ? [
                 'id' => $lesson->id,
-                'title' => $lesson->resource_label ?: 'Tài nguyên tham khảo',
+                'title' => 'Tài nguyên tham khảo',
                 'meta' => 'Tài liệu',
                 'url' => $lesson->resource_url,
                 'completed' => false,
@@ -362,8 +363,8 @@ class CourseController extends BaseApiController
         abort_if(! $lesson->playableVideoUrl(), 422, 'Buổi học này chưa có video bài giảng.');
 
         $userId = $request->user()->id;
-        $enrollment = $course->enrollmentFor($userId);
-        abort_if(! $enrollment, 403, 'Bạn cần ghi danh khoá học trước khi xem video.');
+        // Vào học là tự ghi danh (track online) — không cần bước ghi danh thủ công.
+        $enrollment = app(CourseEnrollmentService::class)->ensureEnrolledOnline($course, $request->user());
 
         $validated = $request->validate([
             'watch_percentage' => ['required', 'integer', 'min:0', 'max:100'],
@@ -401,6 +402,34 @@ class CourseController extends BaseApiController
             true,
             ['watch_percentage' => $progress->watch_percentage, 'is_completed' => $progress->is_completed],
             'Đã ghi nhận tiến độ xem video.',
+        );
+    }
+
+    /**
+     * Chứng chỉ khoá học của user hiện tại. 404 nếu chưa hoàn thành/chưa được cấp,
+     * hoặc đã bị thu hồi.
+     */
+    public function certificate(Request $request, Course $course): JsonResponse
+    {
+        $enrollment = $course->enrollmentFor($request->user()->id);
+        abort_if(! $enrollment, 404, 'Bạn chưa ghi danh khoá học này.');
+
+        $certificate = CourseCertificate::where([
+            'user_id' => $request->user()->id,
+            'course_id' => $course->id,
+            'track' => $enrollment->track,
+        ])->whereNull('revoked_at')->first();
+
+        abort_if(! $certificate, 404, 'Bạn chưa có chứng chỉ cho khoá học này.');
+
+        return $this->successResponse(
+            true,
+            [
+                'cert_code' => $certificate->cert_code,
+                'cert_url' => $certificate->cert_url,
+                'issued_at' => $certificate->issued_at?->toIso8601String(),
+            ],
+            'Lấy chứng chỉ thành công.',
         );
     }
 
@@ -448,7 +477,7 @@ class CourseController extends BaseApiController
     private function transformLessonRow(Lesson $lesson, ?int $userId, ?string $track): array
     {
         $sections = $this->sectionCompletionMap($lesson, $userId);
-        $isCompleted = $this->lessonProgressPercent($lesson, $userId) === 100;
+        $isCompleted = $this->lessonProgressPercent($lesson, $userId, $track) === 100;
 
         $qrTicket = null;
         $isAttended = false;
@@ -499,16 +528,19 @@ class CourseController extends BaseApiController
     }
 
     /**
-     * % tiến độ buổi học = số section đã hoàn thành / số section có mặt (video/assignment/quiz).
+     * % tiến độ buổi học = số section đã hoàn thành / số section có mặt.
+     * Online track: chỉ tính video (50%) + quiz (50%), bỏ assignment.
+     * Offline track / chưa ghi danh: tính video + assignment + quiz.
      * null nếu buổi học chưa có section nào để tính tiến độ.
      */
-    private function lessonProgressPercent(Lesson $lesson, ?int $userId): ?int
+    private function lessonProgressPercent(Lesson $lesson, ?int $userId, ?string $track = null): ?int
     {
         $present = [];
         if ($lesson->playableVideoUrl()) {
             $present[] = 'video';
         }
-        if ($lesson->assignment_url) {
+        // Assignment chỉ tính cho offline (online không cần nộp bài tập)
+        if ($track !== 'online' && $lesson->assignment_url) {
             $present[] = 'assignment';
         }
         $hasQuiz = $lesson->relationLoaded('quiz') ? (bool) $lesson->quiz : $lesson->quiz()->exists();

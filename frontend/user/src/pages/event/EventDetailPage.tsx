@@ -69,54 +69,186 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 }) => {
 	const qrRef = useRef<SVGSVGElement | null>(null);
 
-	const handleDownloadQr = () => {
+	const handleDownloadQr = async () => {
 		const svg = qrRef.current;
-
 		if (!svg) {
 			toast.error("Không thể tải mã QR. Vui lòng thử lại.");
 			return;
 		}
 
-		const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
-		clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-		clonedSvg.setAttribute("width", "512");
-		clonedSvg.setAttribute("height", "512");
+		try {
+			// Đảm bảo web-font đã sẵn sàng để vẽ chữ đúng kiểu thiết kế.
+			if (document.fonts?.ready) await document.fonts.ready;
 
-		const svgText = new XMLSerializer().serializeToString(clonedSvg);
-		const svgBlob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
-		const svgUrl = URL.createObjectURL(svgBlob);
-		const image = new Image();
+			// 1. Render QR (SVG) ra ảnh để vẽ lên vé.
+			const qrImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+				const cloned = svg.cloneNode(true) as SVGSVGElement;
+				cloned.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+				cloned.setAttribute("width", "480");
+				cloned.setAttribute("height", "480");
+				const url = URL.createObjectURL(
+					new Blob([new XMLSerializer().serializeToString(cloned)], {
+						type: "image/svg+xml;charset=utf-8",
+					}),
+				);
+				const img = new Image();
+				img.onload = () => {
+					URL.revokeObjectURL(url);
+					resolve(img);
+				};
+				img.onerror = () => {
+					URL.revokeObjectURL(url);
+					reject(new Error("qr render failed"));
+				};
+				img.src = url;
+			});
 
-		image.onload = () => {
+			// 2. Bố cục vé (giống modal trên web): card trắng, viền đen, bóng đổ.
+			const HEADING = '"Be Vietnam Pro", sans-serif';
+			const BODY = '"Inter", sans-serif';
+			const W = 600;
+			const shadow = 14;
+			const pad = 48;
+			const cardW = W - shadow;
+			const contentW = cardW - pad * 2;
+			const cx = cardW / 2;
+
+			const measure = document.createElement("canvas").getContext("2d")!;
+			const wrap = (text: string, font: string, maxW: number): string[] => {
+				measure.font = font;
+				const lines: string[] = [];
+				let line = "";
+				for (const word of text.split(/\s+/)) {
+					const test = line ? `${line} ${word}` : word;
+					if (measure.measureText(test).width > maxW && line) {
+						lines.push(line);
+						line = word;
+					} else {
+						line = test;
+					}
+				}
+				if (line) lines.push(line);
+				return lines;
+			};
+
+			const titleFont = `600 22px ${HEADING}`;
+			const detailFont = `500 15px ${BODY}`;
+			const noteFont = `500 13px ${BODY}`;
+			const note = "Xuất trình mã QR này tại bàn check-in để điểm danh tham dự.";
+
+			const titleLines = wrap(event.title, titleFont, contentW);
+			const detailLines: string[] = [];
+			const dateText = formatEventDateTime(event.start_at);
+			if (dateText) detailLines.push(...wrap(dateText, detailFont, contentW));
+			if (event.location) detailLines.push(...wrap(event.location, detailFont, contentW));
+			const noteLines = wrap(note, noteFont, contentW);
+			const qrBox = 300;
+
+			// Tính chiều cao động theo số dòng (mỗi mốc là baseline / cạnh trên).
+			let y = 52;
+			const headingY = y + 24; // baseline tiêu đề (~28px)
+			y += 44; // hết chữ tiêu đề
+			const accentY = y; // cạnh trên thanh accent
+			y += 7 + 26; // chiều cao thanh + khoảng cách xuống tên sự kiện
+			const titleY = y + 18; // baseline dòng tên sự kiện đầu tiên
+			y += titleLines.length * 30 + 4;
+			const detailY = y + 15;
+			y += detailLines.length ? detailLines.length * 22 + 24 : 10;
+			const qrY = y;
+			y += qrBox + 28;
+			const noteY = y + 13;
+			y += noteLines.length * 20 + 44;
+			const H = y;
+
+			// 3. Vẽ lên canvas hi-res (2x).
+			const scale = 2;
 			const canvas = document.createElement("canvas");
-			canvas.width = 512;
-			canvas.height = 512;
-			const context = canvas.getContext("2d");
-
-			if (!context) {
-				URL.revokeObjectURL(svgUrl);
+			canvas.width = W * scale;
+			canvas.height = H * scale;
+			const ctx = canvas.getContext("2d");
+			if (!ctx) {
 				toast.error("Không thể tải mã QR. Vui lòng thử lại.");
 				return;
 			}
+			ctx.scale(scale, scale);
+			ctx.textBaseline = "alphabetic";
 
-			context.fillStyle = "#ffffff";
-			context.fillRect(0, 0, canvas.width, canvas.height);
-			context.drawImage(image, 0, 0, canvas.width, canvas.height);
-			URL.revokeObjectURL(svgUrl);
+			const roundRect = (x: number, ry: number, w: number, h: number, r: number) => {
+				ctx.beginPath();
+				ctx.moveTo(x + r, ry);
+				ctx.arcTo(x + w, ry, x + w, ry + h, r);
+				ctx.arcTo(x + w, ry + h, x, ry + h, r);
+				ctx.arcTo(x, ry + h, x, ry, r);
+				ctx.arcTo(x, ry, x + w, ry, r);
+				ctx.closePath();
+			};
+
+			// Nền trong suốt → fill toàn canvas trắng cho ảnh PNG.
+			ctx.fillStyle = "#ffffff";
+			ctx.fillRect(0, 0, W, H);
+
+			// Bóng đổ neo-brutalist.
+			ctx.fillStyle = "#111111";
+			roundRect(shadow, shadow, cardW, H - shadow - 2, 26);
+			ctx.fill();
+			// Card trắng + viền đen.
+			ctx.fillStyle = "#ffffff";
+			roundRect(0, 0, cardW, H - shadow - 2, 26);
+			ctx.fill();
+			ctx.lineWidth = 4;
+			ctx.strokeStyle = "#111111";
+			roundRect(0, 0, cardW, H - shadow - 2, 26);
+			ctx.stroke();
+
+			ctx.textAlign = "center";
+
+			// Tiêu đề.
+			ctx.fillStyle = "#111111";
+			ctx.font = `800 28px ${HEADING}`;
+			ctx.fillText("Vé tham dự sự kiện", cx, headingY);
+
+			// Thanh accent lime.
+			ctx.fillStyle = "#a3e635";
+			roundRect(cx - 32, accentY, 64, 7, 4);
+			ctx.fill();
+
+			// Tên sự kiện.
+			ctx.fillStyle = "#374151";
+			ctx.font = titleFont;
+			titleLines.forEach((line, i) => ctx.fillText(line, cx, titleY + i * 30));
+
+			// Thời gian & địa điểm.
+			if (detailLines.length) {
+				ctx.fillStyle = "#6b7280";
+				ctx.font = detailFont;
+				detailLines.forEach((line, i) => ctx.fillText(line, cx, detailY + i * 22));
+			}
+
+			// Khung QR.
+			const boxX = cx - qrBox / 2;
+			ctx.fillStyle = "#ffffff";
+			roundRect(boxX, qrY, qrBox, qrBox, 18);
+			ctx.fill();
+			ctx.lineWidth = 4;
+			ctx.strokeStyle = "#111111";
+			roundRect(boxX, qrY, qrBox, qrBox, 18);
+			ctx.stroke();
+			const qrInner = qrBox - 40;
+			ctx.drawImage(qrImg, cx - qrInner / 2, qrY + 20, qrInner, qrInner);
+
+			// Ghi chú.
+			ctx.fillStyle = "#9ca3af";
+			ctx.font = noteFont;
+			noteLines.forEach((line, i) => ctx.fillText(line, cx, noteY + i * 20));
 
 			const link = document.createElement("a");
 			link.href = canvas.toDataURL("image/png");
 			link.download = `ve-qr-${toSafeFileName(event.title)}.png`;
 			link.click();
 			toast.success("Đã tải mã QR vé sự kiện.");
-		};
-
-		image.onerror = () => {
-			URL.revokeObjectURL(svgUrl);
+		} catch {
 			toast.error("Không thể tải mã QR. Vui lòng thử lại.");
-		};
-
-		image.src = svgUrl;
+		}
 	};
 
 	return (
