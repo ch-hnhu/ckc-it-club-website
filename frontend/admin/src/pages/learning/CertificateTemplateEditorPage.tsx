@@ -380,14 +380,10 @@ function CertificateTemplateEditorPage() {
 
 	const handleSave = async () => {
 		setSaving(true);
-		let thumbnail: string | null = null;
 		try {
-			thumbnail = stageRef.current?.toDataURL({ pixelRatio: 0.4 }) ?? null;
-		} catch {
-			thumbnail = null; // canvas bị "taint" do ảnh khác origin — bỏ qua thumbnail
-		}
-		try {
-			const payload = { name, design, thumbnail };
+			// Thumbnail được render server-side (Browsershot) để khớp đúng thiết kế và tránh
+			// lỗi "tainted canvas" khi thiết kế có ảnh khác origin.
+			const payload = { name, design };
 			if (isEdit) {
 				await certificateTemplateService.updateTemplate(Number(id), payload);
 				setDirty(false);

@@ -19,9 +19,42 @@ use Spatie\Browsershot\Browsershot;
 class CertificateRenderer
 {
     /**
+     * Render mẫu thành PDF (A4 ngang).
+     *
      * @param  array<string,string>  $data  name, course, issued_at, cert_code, verify_url
      */
     public function renderPdf(CertificateTemplate $template, array $data): string
+    {
+        return $this->makeShot($template, $data)
+            ->format('A4')
+            ->landscape()
+            ->margins(0, 0, 0, 0)
+            ->showBackground()
+            ->pdf();
+    }
+
+    /**
+     * Render mẫu thành ảnh PNG thu nhỏ (cho thumbnail danh sách) — chụp đúng canvas rồi resize.
+     *
+     * @param  array<string,string>  $data
+     */
+    public function renderThumbnail(CertificateTemplate $template, array $data, int $width = 480): string
+    {
+        $design = $template->design;
+        $w = (int) ($design['canvas']['width'] ?? 1123);
+        $h = (int) ($design['canvas']['height'] ?? 794);
+
+        $png = $this->makeShot($template, $data)->windowSize($w, $h)->screenshot();
+
+        return $this->downscalePng($png, $width);
+    }
+
+    /**
+     * Dựng Browsershot đã cấu hình sẵn (html + node + chrome + chờ render xong). Dùng chung cho PDF/PNG.
+     *
+     * @param  array<string,string>  $data
+     */
+    private function makeShot(CertificateTemplate $template, array $data): Browsershot
     {
         $design = $template->design;
         abort_if(! is_array($design) || empty($design['canvas']), 422, 'Mẫu chứng chỉ chưa có thiết kế.');
@@ -35,19 +68,13 @@ class CertificateRenderer
         $html = $this->buildHtml($scene);
 
         // KHÔNG dùng waitUntilNetworkIdle: nó chờ mạng (Google Fonts) nên có thể treo tới
-        // timeout. Thay vào đó renderScene() đã tự await xong font + ảnh rồi set __certReady,
-        // và bản thân renderScene có giới hạn thời gian nội bộ nên luôn kết thúc.
+        // timeout. renderScene() tự await font + ảnh (đã nhúng base64) rồi set __certReady.
         $shot = Browsershot::html($html)
             ->setNodeModulePath(base_path('node_modules'))
-            ->format('A4')
-            ->landscape()
-            ->margins(0, 0, 0, 0)
-            ->showBackground()
             ->timeout(90)
             ->waitForFunction('window.__certReady === true', null, 12000);
 
-        // Chỉ định node tường minh để KHÔNG phụ thuộc PATH của tiến trình `php artisan serve`
-        // (node thường cài qua nvm, không nằm trong PATH mặc định → Browsershot báo lỗi).
+        // Chỉ định node tường minh để KHÔNG phụ thuộc PATH tiến trình (node thường cài qua nvm).
         if ($nodePath = $this->resolveNodeBinary()) {
             $shot->setNodeBinary($nodePath);
         }
@@ -57,7 +84,31 @@ class CertificateRenderer
             $shot->setChromePath($chromePath)->noSandbox();
         }
 
-        return $shot->pdf();
+        return $shot;
+    }
+
+    /**
+     * Thu nhỏ ảnh PNG về bề rộng cho trước bằng GD (giảm dung lượng thumbnail).
+     */
+    private function downscalePng(string $png, int $width): string
+    {
+        if (! function_exists('imagecreatefromstring')) {
+            return $png;
+        }
+        $src = @imagecreatefromstring($png);
+        if (! $src) {
+            return $png;
+        }
+        $scaled = imagescale($src, $width);
+        ob_start();
+        imagepng($scaled ?: $src);
+        $out = ob_get_clean();
+        imagedestroy($src);
+        if ($scaled) {
+            imagedestroy($scaled);
+        }
+
+        return $out !== false && $out !== '' ? $out : $png;
     }
 
     /**
@@ -164,6 +215,10 @@ class CertificateRenderer
     private function buildHtml(array $scene): string
     {
         $konva = File::get(public_path('vendor/konva.min.js'));
+        // Font tự host (woff2 nhúng base64) — render đúng font, KHÔNG phụ thuộc mạng/Google Fonts.
+        $fontCss = File::exists(public_path('vendor/fonts/cert-fonts.css'))
+            ? File::get(public_path('vendor/fonts/cert-fonts.css'))
+            : '';
         $sceneJson = json_encode($scene, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $w = (int) $scene['canvas']['width'];
         $h = (int) $scene['canvas']['height'];
@@ -173,9 +228,7 @@ class CertificateRenderer
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,700;1,400;1,700&family=Roboto:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>{$fontCss}</style>
 <style>html,body{margin:0;padding:0}#stage{width:{$w}px;height:{$h}px}</style>
 <script>{$konva}</script>
 </head>
