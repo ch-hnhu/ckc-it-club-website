@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
+use App\Enums\CourseAudience;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Course;
 use App\Models\CourseCertificate;
 use App\Models\CourseEnrollment;
 use App\Models\Lesson;
 use App\Models\LessonAttendance;
+use App\Models\LessonQrTicket;
 use App\Models\Tag;
 use App\Models\User;
 use App\Services\CourseCertificateService;
@@ -32,10 +34,11 @@ class CourseController extends BaseApiController
         $search = $request->query('search');
         $status = $request->query('status');
         $level = $request->query('level');
+        $audience = $request->query('audience');
         $offline = $request->query('offline'); // all | has_offline | online_only
 
         $sortable = [
-            'id', 'title', 'level', 'status', 'max_offline_slots',
+            'id', 'title', 'level', 'status', 'audience', 'max_offline_slots',
             'lessons_count', 'enrollments_count', 'enrollment_deadline', 'created_at', 'creator',
         ];
         $sort = in_array($request->query('sort'), $sortable, true) ? $request->query('sort') : 'created_at';
@@ -53,6 +56,7 @@ class CourseController extends BaseApiController
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
             ->when($status && $status !== 'all', fn ($q) => $q->where('status', $status))
             ->when($level && $level !== 'all', fn ($q) => $q->where('level', $level))
+            ->when($audience && $audience !== 'all', fn ($q) => $q->where('audience', $audience))
             ->when($offline === 'has_offline', fn ($q) => $q->whereNotNull('max_offline_slots'))
             ->when($offline === 'online_only', fn ($q) => $q->whereNull('max_offline_slots'))
             ->when(
@@ -83,6 +87,7 @@ class CourseController extends BaseApiController
             'description' => 'nullable|string|max:5000',
             'level' => 'required|in:beginner,intermediate,advanced',
             'status' => 'nullable|in:draft,published',
+            'audience' => 'nullable|in:' . implode(',', CourseAudience::values()),
             'enrollment_start' => 'nullable|date',
             'enrollment_deadline' => 'nullable|date|after_or_equal:enrollment_start',
             'course_end' => 'nullable|date|after_or_equal:enrollment_deadline',
@@ -95,9 +100,18 @@ class CourseController extends BaseApiController
             'tag_ids.*' => 'integer|exists:tags,id',
         ]);
 
-        // Không mở lớp offline → khoá chỉ online
+        // Không mở lớp offline → khoá chỉ online; xoá luôn các trường liên quan
         if ($request->has('has_offline') && ! $request->boolean('has_offline')) {
-            $data['max_offline_slots'] = null;
+            $data['max_offline_slots']    = null;
+            $data['max_absent_allowed']   = null;
+            $data['enrollment_start']     = null;
+            $data['enrollment_deadline']  = null;
+            $data['course_end']           = null;
+        } elseif ($data['max_offline_slots'] !== null) {
+            // Offline course bắt buộc phải có max_absent_allowed
+            if (! isset($data['max_absent_allowed']) || $data['max_absent_allowed'] === null) {
+                $data['max_absent_allowed'] = 3;
+            }
         }
 
         $thumbnailPath = null;
@@ -113,6 +127,7 @@ class CourseController extends BaseApiController
                 'thumbnail' => $thumbnailPath,
                 'level' => $data['level'],
                 'status' => $data['status'] ?? 'draft',
+                'audience' => $data['audience'] ?? CourseAudience::CAO_THANG_STUDENT->value,
                 'enrollment_start' => $data['enrollment_start'] ?? null,
                 'enrollment_deadline' => $data['enrollment_deadline'] ?? null,
                 'course_end' => $data['course_end'] ?? null,
@@ -154,6 +169,7 @@ class CourseController extends BaseApiController
             'description' => 'nullable|string|max:5000',
             'level' => 'sometimes|required|in:beginner,intermediate,advanced',
             'status' => 'sometimes|required|in:draft,published',
+            'audience' => 'sometimes|required|in:' . implode(',', CourseAudience::values()),
             'enrollment_start' => 'nullable|date',
             'enrollment_deadline' => 'nullable|date|after_or_equal:enrollment_start',
             'course_end' => 'nullable|date|after_or_equal:enrollment_deadline',
@@ -181,9 +197,21 @@ class CourseController extends BaseApiController
             unset($data['thumbnail']);
         }
 
-        // Không mở lớp offline → khoá chỉ online
+        // Không mở lớp offline → khoá chỉ online; xoá luôn các trường liên quan
         if ($request->has('has_offline') && ! $request->boolean('has_offline')) {
-            $data['max_offline_slots'] = null;
+            $data['max_offline_slots']    = null;
+            $data['max_absent_allowed']   = null;
+            $data['enrollment_start']     = null;
+            $data['enrollment_deadline']  = null;
+            $data['course_end']           = null;
+        } else {
+            // Nếu set max_offline_slots, bắt buộc phải có max_absent_allowed
+            $maxOfflineSlots = $data['max_offline_slots'] ?? $course->max_offline_slots;
+            if ($maxOfflineSlots !== null) {
+                if (! isset($data['max_absent_allowed']) || $data['max_absent_allowed'] === null) {
+                    $data['max_absent_allowed'] = $course->max_absent_allowed ?? 3;
+                }
+            }
         }
 
         $tagIds = $data['tag_ids'] ?? null;
@@ -327,6 +355,10 @@ class CourseController extends BaseApiController
                 fn (CourseEnrollment $e) => $this->transformEnrollment($e, $attendedByUser, $pastOfflineCount)
             )->all(),
             'certificates' => $certificates->map(fn (CourseCertificate $cert) => $this->transformCertificate($cert))->all(),
+            // Các cặp (học viên, buổi) đã điểm danh — dùng dựng ma trận điểm danh ở tab "Điểm danh".
+            'attendances' => $this->attendanceMatrix($lessons),
+            // Các cặp (học viên, buổi) đã đăng ký "sẽ tham gia" (vé QR) — dùng hiển thị danh sách dự kiến.
+            'registrations' => $this->registrationMatrix($lessons),
         ]);
 
         return $this->successResponse(true, $data, ApiMessage::RETRIEVED);
@@ -483,6 +515,71 @@ class CourseController extends BaseApiController
     }
 
     /**
+     * Các bản ghi điểm danh của những buổi offline (đã xếp lịch) trong khoá —
+     * mỗi phần tử là một ô đã điểm danh trong ma trận học viên × buổi.
+     *
+     * @param  \Illuminate\Support\Collection<int,Lesson>  $lessons
+     * @return array<int,array{user_id:int,lesson_id:int,type:string}>
+     */
+    private function attendanceMatrix($lessons): array
+    {
+        $offlineLessonIds = $lessons
+            ->filter(fn (Lesson $l) => $l->session_start)
+            ->pluck('id');
+
+        if ($offlineLessonIds->isEmpty()) {
+            return [];
+        }
+
+        $recorderNames = collect();
+        $attendances = LessonAttendance::query()
+            ->whereIn('lesson_id', $offlineLessonIds)
+            ->get(['user_id', 'lesson_id', 'type', 'note', 'attended_at', 'recorded_by']);
+
+        $recorderIds = $attendances->pluck('recorded_by')->filter()->unique()->values();
+        if ($recorderIds->isNotEmpty()) {
+            $recorderNames = \App\Models\User::whereIn('id', $recorderIds)
+                ->pluck('full_name', 'id');
+        }
+
+        return $attendances->map(fn (LessonAttendance $a) => [
+            'user_id'           => $a->user_id,
+            'lesson_id'         => $a->lesson_id,
+            'type'              => $a->type,
+            'note'              => $a->note,
+            'attended_at'       => $a->attended_at?->toISOString(),
+            'recorded_by_name'  => $a->recorded_by ? ($recorderNames[$a->recorded_by] ?? null) : null,
+        ])->all();
+    }
+
+    /**
+     * Các vé "sẽ tham gia" (lesson_qr_tickets) học viên đã đăng ký cho từng buổi offline —
+     * mỗi phần tử là một đăng ký dự kiến có mặt.
+     *
+     * @param  \Illuminate\Support\Collection<int,Lesson>  $lessons
+     * @return array<int,array{user_id:int,lesson_id:int}>
+     */
+    private function registrationMatrix($lessons): array
+    {
+        $offlineLessonIds = $lessons
+            ->filter(fn (Lesson $l) => $l->session_start)
+            ->pluck('id');
+
+        if ($offlineLessonIds->isEmpty()) {
+            return [];
+        }
+
+        return LessonQrTicket::query()
+            ->whereIn('lesson_id', $offlineLessonIds)
+            ->get(['user_id', 'lesson_id'])
+            ->map(fn (LessonQrTicket $t) => [
+                'user_id' => $t->user_id,
+                'lesson_id' => $t->lesson_id,
+            ])
+            ->all();
+    }
+
+    /**
      * Map CourseEnrollment → dòng trong tab "Học viên".
      */
     private function transformEnrollment(CourseEnrollment $e, array $attendedByUser, int $pastOfflineCount): array
@@ -542,6 +639,7 @@ class CourseController extends BaseApiController
             'thumbnail' => $this->resolveUrl($course->thumbnail),
             'level' => $course->level->value,
             'status' => $course->status->value,
+            'audience' => $course->audience->value,
             'enrollment_start' => $course->enrollment_start?->toIso8601String(),
             'enrollment_deadline' => $course->enrollment_deadline?->toIso8601String(),
             'course_end' => $course->course_end?->toIso8601String(),

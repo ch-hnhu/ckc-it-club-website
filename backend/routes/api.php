@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
+use App\Http\Controllers\Api\V1\Admin\CourseCategoryController as AdminCourseCategoryController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Api\V1\Admin\CertificateTemplateController as AdminCertificateTemplateController;
 use App\Http\Controllers\Api\V1\Admin\LessonController as AdminLessonController;
@@ -181,6 +182,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/courses/{course:slug}/follow', [UserCourseController::class, 'toggleFollow']);
             Route::post('/courses/{course:slug}/lessons/{lessonSlug}/qr-ticket', [UserCourseController::class, 'createQrTicket']);
             Route::post('/courses/{course:slug}/lessons/{lessonSlug}/progress', [UserCourseController::class, 'markVideoProgress']);
+            Route::get('/courses/{course:slug}/certificate', [UserCourseController::class, 'certificate']);
         });
     });
 
@@ -492,21 +494,29 @@ Route::prefix('v1')->group(function () {
             Route::get('courses', [AdminCourseController::class, 'index']);
             Route::get('courses/trash', [AdminCourseController::class, 'trash']);
             Route::get('certificate-templates', [AdminCertificateTemplateController::class, 'index']);
+            Route::get('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'show']);
+            Route::get('course-categories', [AdminCourseCategoryController::class, 'index']);
             Route::get('courses/{course}', [AdminCourseController::class, 'show']);
             Route::get('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'show']);
         });
         Route::middleware('permission:courses.manage')->group(function () {
             Route::post('courses', [AdminCourseController::class, 'store']);
+            Route::post('course-categories', [AdminCourseCategoryController::class, 'store']);
+            Route::put('course-categories/{tag}', [AdminCourseCategoryController::class, 'update']);
+            Route::patch('course-categories/{tag}', [AdminCourseCategoryController::class, 'update']);
+            Route::delete('course-categories/{tag}', [AdminCourseCategoryController::class, 'destroy']);
             Route::patch('courses/trash/{id}/restore', [AdminCourseController::class, 'restore']);
             Route::delete('courses/trash/{id}/force', [AdminCourseController::class, 'forceDelete']);
             Route::put('courses/{course}', [AdminCourseController::class, 'update']);
             Route::patch('courses/{course}', [AdminCourseController::class, 'update']);
             Route::delete('courses/{course}', [AdminCourseController::class, 'destroy']);
+            Route::get('lessons/youtube-duration', [AdminLessonController::class, 'youtubeDuration']);
             Route::post('courses/{course}/lessons', [AdminLessonController::class, 'store']);
             Route::put('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::delete('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'destroy']);
             Route::post('courses/{course}/lessons/{lesson}/check-in', [AdminLessonController::class, 'checkIn']);
+            Route::post('courses/{course}/lessons/{lesson}/attendance', [AdminLessonController::class, 'toggleAttendance']);
             Route::get('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'grades']);
             Route::put('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'saveGrades']);
             Route::get('courses/{course}/enrollable-users', [AdminCourseController::class, 'searchEnrollableUsers']);
@@ -515,6 +525,14 @@ Route::prefix('v1')->group(function () {
             Route::delete('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'removeEnrollment']);
             Route::post('courses/{course}/certificates/{certificate}/revoke', [AdminCourseController::class, 'revokeCertificate']);
             Route::post('courses/{course}/certificates/{certificate}/reissue', [AdminCourseController::class, 'reissueCertificate']);
+            // Quản lý mẫu chứng chỉ (editor canvas)
+            Route::post('certificate-templates', [AdminCertificateTemplateController::class, 'store']);
+            Route::post('certificate-templates/assets', [AdminCertificateTemplateController::class, 'uploadAsset']);
+            Route::post('certificate-templates/preview', [AdminCertificateTemplateController::class, 'preview']);
+            Route::put('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'update']);
+            Route::delete('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'destroy']);
+            Route::post('certificate-templates/{certificateTemplate}/default', [AdminCertificateTemplateController::class, 'setDefault']);
+            Route::post('certificate-templates/{certificateTemplate}/duplicate', [AdminCertificateTemplateController::class, 'duplicate']);
         });
         // quiz của buổi học — quyền riêng cho Trung tâm đào tạo
         Route::middleware('permission:quizzes.manage')->group(function () {

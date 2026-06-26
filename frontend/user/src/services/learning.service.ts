@@ -3,6 +3,7 @@ import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type {
 	Course,
 	CourseCategory,
+	CourseCertificateInfo,
 	CourseDetail,
 	CourseListParams,
 	LessonDetail,
@@ -61,6 +62,10 @@ export const learningService = {
 			`/learning/courses/${courseSlug}/lessons/${lessonSlug}/progress`,
 			{ watch_percentage: watchPercentage },
 		),
+
+	// Chứng chỉ khoá học của user hiện tại (yêu cầu đăng nhập). 404 nếu chưa có.
+	getCertificate: (slug: string) =>
+		api.get<ApiResponse<CourseCertificateInfo>>(`/learning/courses/${slug}/certificate`),
 
 	getQuiz: (courseSlug: string, lessonSlug: string) =>
 		api.get<ApiResponse<QuizPlay>>(

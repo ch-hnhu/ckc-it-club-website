@@ -1,7 +1,7 @@
 import React from "react";
-import { ArrowRight, BarChart3 } from "lucide-react";
+import { ArrowRight, BarChart3, Globe2, School, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { Course, CourseLevel } from "@/types/learning.types";
+import type { Course, CourseAudience, CourseLevel } from "@/types/learning.types";
 
 interface CourseCardProps {
 	course: Course;
@@ -14,6 +14,31 @@ const LEVEL_LABEL: Record<CourseLevel, string> = {
 	beginner: "Cơ bản",
 	intermediate: "Trung cấp",
 	advanced: "Nâng cao",
+};
+
+const AUDIENCE_META: Record<
+	CourseAudience,
+	{
+		label: string;
+		icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+		className: string;
+	}
+> = {
+	club_member: {
+		label: "Thành viên CLB",
+		icon: Users,
+		className: "bg-[var(--color-pastel-green)]",
+	},
+	cao_thang_student: {
+		label: "Sinh viên Cao Thắng",
+		icon: School,
+		className: "bg-[var(--color-pastel-blue)]",
+	},
+	public: {
+		label: "Công khai",
+		icon: Globe2,
+		className: "bg-[var(--color-pastel-purple)]",
+	},
 };
 
 const Placeholder: React.FC<{ title: string; size?: string }> = ({ title, size = "text-6xl" }) => (
@@ -30,6 +55,19 @@ const LevelPill: React.FC<{ level: CourseLevel }> = ({ level }) => (
 		{LEVEL_LABEL[level]}
 	</span>
 );
+
+const AudiencePill: React.FC<{ audience: CourseAudience }> = ({ audience }) => {
+	const meta = AUDIENCE_META[audience];
+	const Icon = meta.icon;
+
+	return (
+		<span
+			className={`inline-flex items-center gap-2 rounded-full border-2 border-black px-3.5 py-1.5 font-heading text-[11px] font-extrabold uppercase tracking-[0.1em] text-black shadow-[2px_2px_0_#111] ${meta.className}`}>
+			<Icon className='h-3.5 w-3.5' strokeWidth={2.5} />
+			{meta.label}
+		</span>
+	);
+};
 
 // Card light theme giống blog card: nền trắng, viền đen, shadow cứng, hover dịch nhẹ
 const CARD_BASE =
@@ -82,6 +120,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, featured = false
 								<ArrowRight className='h-4 w-4' />
 							</span>
 							<LevelPill level={course.level} />
+							<AudiencePill audience={course.audience} />
 						</div>
 					</div>
 				</div>
@@ -118,7 +157,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, featured = false
 				<div className='min-h-4 flex-1' />
 
 				<div className='mt-6'>
-					<LevelPill level={course.level} />
+					<div className='flex flex-wrap gap-2'>
+						<LevelPill level={course.level} />
+						<AudiencePill audience={course.audience} />
+					</div>
 				</div>
 			</div>
 		</Link>

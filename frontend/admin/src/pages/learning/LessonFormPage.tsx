@@ -1,30 +1,14 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { ArrowLeft, FileText, Link as LinkIcon, ListChecks, Loader2, Save, Video } from "lucide-react";
+import { ArrowLeft, FileText, Link as LinkIcon, Loader2, Save, Video } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import StacksEditorWrapper, {
-	type StacksEditorHandle,
-} from "@/components/ui/StacksEditorWrapper";
+import StacksEditorWrapper, { type StacksEditorHandle } from "@/components/ui/StacksEditorWrapper";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import courseService, { type LessonPayload } from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
@@ -34,15 +18,14 @@ import type { CourseStatus } from "@/pages/learning/course-meta";
 
 type LessonForm = {
 	title: string;
-	status: CourseStatus;
 	description: string;
 	session_start: string;
 	session_end: string;
 	video_url: string;
 	video_duration: string;
 	live_url: string;
+	live_duration: string;
 	resource_url: string;
-	resource_label: string;
 	assignment_url: string;
 	assignment_deadline: string;
 	document: string;
@@ -52,19 +35,33 @@ type FieldErrors = Partial<Record<keyof LessonForm, string>>;
 
 const emptyForm = (): LessonForm => ({
 	title: "",
-	status: "draft",
 	description: "",
 	session_start: "",
 	session_end: "",
 	video_url: "",
 	video_duration: "",
 	live_url: "",
+	live_duration: "",
 	resource_url: "",
-	resource_label: "",
 	assignment_url: "",
 	assignment_deadline: "",
 	document: "",
 });
+
+/** Số giây → nhãn "X tiếng Y phút" (làm tròn phút lên, bỏ phần 0). */
+function formatDurationLabel(seconds: number): string {
+	if (!Number.isFinite(seconds) || seconds <= 0) return "—";
+	let hours = Math.floor(seconds / 3600);
+	let minutes = Math.round((seconds % 3600) / 60);
+	if (minutes === 60) {
+		hours += 1;
+		minutes = 0;
+	}
+	const parts: string[] = [];
+	if (hours > 0) parts.push(`${hours} tiếng`);
+	if (minutes > 0 || hours === 0) parts.push(`${minutes} phút`);
+	return parts.join(" ");
+}
 
 /** ISO8601 → giá trị input datetime-local (giờ địa phương) */
 function toLocalInput(iso: string | null): string {
@@ -91,17 +88,24 @@ function LessonFormPage() {
 	const lessonId = lessonIdParam ? Number(lessonIdParam) : null;
 
 	const [courseTitle, setCourseTitle] = useState<string | null>(null);
+	/** Khoá học có mở lớp offline hay chỉ online — null = chưa biết (đang tải). */
+	const [hasOffline, setHasOffline] = useState<boolean | null>(null);
 	const [form, setForm] = useState<LessonForm>(emptyForm);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
+	const [pendingStatus, setPendingStatus] = useState<CourseStatus | null>(null);
+	/** Trạng thái hiện tại của buổi học khi sửa — null khi tạo mới. */
+	const [currentStatus, setCurrentStatus] = useState<CourseStatus | null>(null);
+	const [durationLoading, setDurationLoading] = useState(false);
+	const [liveDurationLoading, setLiveDurationLoading] = useState(false);
 	const editorRef = useRef<StacksEditorHandle>(null);
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
 		{ title: "Khóa học", link: "/courses" },
 		{ title: courseTitle ?? slug, link: `/courses/${slug}` },
-		{ title: isEdit ? "Sửa buổi học" : "Thêm buổi học" },
+		{ title: isEdit ? "Chỉnh sửa buổi học" : "Thêm buổi học" },
 	]);
 
 	// `loading` đảm bảo chỉ render (mount) StacksEditor sau khi form đã đúng — tránh
@@ -113,7 +117,10 @@ function LessonFormPage() {
 		courseService
 			.getCourse(slug)
 			.then((res) => {
-				if (!cancelled) setCourseTitle(res.data.title);
+				if (!cancelled) {
+					setCourseTitle(res.data.title);
+					setHasOffline(res.data.max_offline_slots != null);
+				}
 			})
 			.catch(() => undefined);
 
@@ -131,19 +138,19 @@ function LessonFormPage() {
 				const l = res.data;
 				setForm({
 					title: l.title,
-					status: l.status,
 					description: l.description ?? "",
 					session_start: toLocalInput(l.session_start),
 					session_end: toLocalInput(l.session_end),
 					video_url: l.video_url ?? "",
 					video_duration: l.video_duration != null ? String(l.video_duration) : "",
 					live_url: l.live_url ?? "",
+					live_duration: l.live_duration != null ? String(l.live_duration) : "",
 					resource_url: l.resource_url ?? "",
-					resource_label: l.resource_label ?? "",
 					assignment_url: l.assignment_url ?? "",
 					assignment_deadline: toLocalInput(l.assignment_deadline),
 					document: l.document ?? "",
 				});
+				setCurrentStatus(l.status);
 			})
 			.catch(() => {
 				if (cancelled) return;
@@ -164,8 +171,33 @@ function LessonFormPage() {
 		setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
 	};
 
-	const handleSubmit = async (e: FormEvent) => {
-		e.preventDefault();
+	/** Tự lấy thời lượng video từ link YouTube (qua backend) khi rời ô nhập URL. */
+	const fetchDuration = async (
+		url: string,
+		durationKey: "video_duration" | "live_duration",
+		setLoading: (v: boolean) => void,
+	) => {
+		const trimmed = url.trim();
+		if (!trimmed) {
+			setField(durationKey, "");
+			return;
+		}
+		setLoading(true);
+		try {
+			const res = await courseService.getYoutubeDuration(trimmed);
+			setField(durationKey, String(res.data.seconds));
+		} catch (err) {
+			const msg = axios.isAxiosError(err)
+				? ((err.response?.data as ApiErrorResponse | undefined)?.message ??
+					"Không lấy được thời lượng video.")
+				: "Không lấy được thời lượng video.";
+			toast.error(msg, { position: "top-right" });
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleSubmit = async (status: CourseStatus) => {
 		if (!form.title.trim()) {
 			setFieldErrors({ title: "Vui lòng nhập tên buổi học." });
 			return;
@@ -173,21 +205,22 @@ function LessonFormPage() {
 
 		const payload: LessonPayload = {
 			title: form.title.trim(),
-			status: form.status,
+			status,
 			description: form.description,
 			session_start: toUtcIso(form.session_start),
 			session_end: toUtcIso(form.session_end),
 			video_url: form.video_url,
 			video_duration: form.video_duration,
 			live_url: form.live_url,
+			live_duration: form.live_duration,
 			resource_url: form.resource_url,
-			resource_label: form.resource_label,
-			assignment_url: form.assignment_url,
-			assignment_deadline: toUtcIso(form.assignment_deadline),
+			assignment_url: hasOffline ? form.assignment_url : "",
+			assignment_deadline: hasOffline ? toUtcIso(form.assignment_deadline) : "",
 			document: editorRef.current?.getContent() ?? "",
 		};
 
 		setSubmitting(true);
+		setPendingStatus(status);
 		try {
 			if (isEdit && lessonId !== null) {
 				await courseService.updateLesson(slug, lessonId, payload);
@@ -203,7 +236,9 @@ function LessonFormPage() {
 				if (data?.errors) {
 					const mapped: FieldErrors = {};
 					for (const [key, msgs] of Object.entries(data.errors)) {
-						mapped[key as keyof FieldErrors] = Array.isArray(msgs) ? msgs[0] : String(msgs);
+						mapped[key as keyof FieldErrors] = Array.isArray(msgs)
+							? msgs[0]
+							: String(msgs);
 					}
 					setFieldErrors(mapped);
 					return;
@@ -214,6 +249,7 @@ function LessonFormPage() {
 			}
 		} finally {
 			setSubmitting(false);
+			setPendingStatus(null);
 		}
 	};
 
@@ -234,269 +270,286 @@ function LessonFormPage() {
 				</Link>
 			</Button>
 
-			<form onSubmit={(e) => void handleSubmit(e)}>
-				<div className='grid gap-6 lg:grid-cols-3'>
-					{/* ── Main ── */}
-					<div className='flex flex-col gap-6 lg:col-span-2'>
-						{/* Thông tin */}
-						<Card className='shadow-sm'>
-							<CardHeader>
-								<CardTitle>Thông tin buổi học</CardTitle>
-								<CardDescription>Tên, mô tả và lịch học offline (nếu có).</CardDescription>
-							</CardHeader>
-							<CardContent className='flex flex-col gap-5'>
+			<form onSubmit={(e) => e.preventDefault()} className='flex flex-col gap-6'>
+				{/* Thông tin */}
+				<Card className='shadow-sm'>
+					<CardHeader>
+						<CardTitle>Thông tin buổi học</CardTitle>
+						<CardDescription>
+							Tên, mô tả và lịch học offline (chỉ với khóa có lớp offline).
+						</CardDescription>
+					</CardHeader>
+					<CardContent className='flex flex-col gap-5'>
+						<div className='flex flex-col gap-2'>
+							<Label htmlFor='lesson-title'>
+								Tên buổi học <span className='text-destructive'>*</span>
+							</Label>
+							<Input
+								id='lesson-title'
+								placeholder='VD: Buổi 1 — Giới thiệu & cài đặt'
+								value={form.title}
+								onChange={(e) => setField("title", e.target.value)}
+								disabled={submitting}
+							/>
+							{fieldErrors.title && (
+								<p className='text-sm text-destructive'>{fieldErrors.title}</p>
+							)}
+						</div>
+
+						<div className='flex flex-col gap-2'>
+							<Label htmlFor='lesson-desc'>Mô tả ngắn</Label>
+							<Textarea
+								id='lesson-desc'
+								rows={2}
+								className='resize-none'
+								value={form.description}
+								onChange={(e) => setField("description", e.target.value)}
+								disabled={submitting}
+							/>
+						</div>
+
+						{/* Lịch offline — chỉ hiện khi khoá có mở lớp offline */}
+						{hasOffline && (
+							<div className='grid gap-4 sm:grid-cols-2'>
 								<div className='flex flex-col gap-2'>
-									<Label htmlFor='lesson-title'>
-										Tên buổi học <span className='text-destructive'>*</span>
-									</Label>
+									<Label htmlFor='lesson-start'>Bắt đầu (buổi offline)</Label>
 									<Input
-										id='lesson-title'
-										placeholder='VD: Buổi 1 — Giới thiệu & cài đặt'
-										value={form.title}
-										onChange={(e) => setField("title", e.target.value)}
+										id='lesson-start'
+										type='datetime-local'
+										value={form.session_start}
+										onChange={(e) => setField("session_start", e.target.value)}
 										disabled={submitting}
 									/>
-									{fieldErrors.title && (
-										<p className='text-sm text-destructive'>{fieldErrors.title}</p>
+								</div>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='lesson-end'>Kết thúc (buổi offline)</Label>
+									<Input
+										id='lesson-end'
+										type='datetime-local'
+										value={form.session_end}
+										onChange={(e) => setField("session_end", e.target.value)}
+										disabled={submitting}
+									/>
+									{fieldErrors.session_end && (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.session_end}
+										</p>
 									)}
 								</div>
+							</div>
+						)}
+					</CardContent>
+				</Card>
 
-								<div className='flex flex-col gap-2'>
-									<Label htmlFor='lesson-desc'>Mô tả ngắn</Label>
-									<Textarea
-										id='lesson-desc'
-										rows={2}
-										className='resize-none'
-										value={form.description}
-										onChange={(e) => setField("description", e.target.value)}
-										disabled={submitting}
-									/>
-								</div>
-
-								<div className='grid gap-4 sm:grid-cols-2'>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='lesson-start'>Bắt đầu (buổi offline)</Label>
-										<Input
-											id='lesson-start'
-											type='datetime-local'
-											value={form.session_start}
-											onChange={(e) => setField("session_start", e.target.value)}
-											disabled={submitting}
-										/>
-									</div>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='lesson-end'>Kết thúc (buổi offline)</Label>
-										<Input
-											id='lesson-end'
-											type='datetime-local'
-											value={form.session_end}
-											onChange={(e) => setField("session_end", e.target.value)}
-											disabled={submitting}
-										/>
-										{fieldErrors.session_end && (
-											<p className='text-sm text-destructive'>{fieldErrors.session_end}</p>
-										)}
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-
-						{/* Video */}
-						<Card className='shadow-sm'>
-							<CardHeader>
-								<CardTitle className='flex items-center gap-2'>
-									<Video className='h-5 w-5 text-muted-foreground' />
-									Video bài giảng
-								</CardTitle>
-							</CardHeader>
-							<CardContent className='flex flex-col gap-5'>
-								<div className='grid gap-4 sm:grid-cols-2'>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='lesson-video'>Video bài giảng (URL)</Label>
-										<Input
-											id='lesson-video'
-											placeholder='https://youtube.com/...'
-											value={form.video_url}
-											onChange={(e) => setField("video_url", e.target.value)}
-											disabled={submitting}
-										/>
-										{fieldErrors.video_url && (
-											<p className='text-sm text-destructive'>{fieldErrors.video_url}</p>
-										)}
-									</div>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='lesson-vid-dur'>Thời lượng video (giây)</Label>
-										<Input
-											id='lesson-vid-dur'
-											type='number'
-											min={0}
-											placeholder='VD: 1800'
-											value={form.video_duration}
-											onChange={(e) => setField("video_duration", e.target.value)}
-											disabled={submitting}
-										/>
-									</div>
-								</div>
-								<div className='flex flex-col gap-2'>
-									<Label htmlFor='lesson-live'>Video bản ghi livestream (URL)</Label>
-									<Input
-										id='lesson-live'
-										placeholder='https://youtube.com/...'
-										value={form.live_url}
-										onChange={(e) => setField("live_url", e.target.value)}
-										disabled={submitting}
-									/>
-									{fieldErrors.live_url && (
-										<p className='text-sm text-destructive'>{fieldErrors.live_url}</p>
-									)}
-								</div>
-							</CardContent>
-						</Card>
-
-						{/* Tài nguyên & bài tập */}
-						<Card className='shadow-sm'>
-							<CardHeader>
-								<CardTitle className='flex items-center gap-2'>
-									<LinkIcon className='h-5 w-5 text-muted-foreground' />
-									Tài nguyên & bài tập
-								</CardTitle>
-							</CardHeader>
-							<CardContent className='flex flex-col gap-5'>
-								<div className='grid gap-4 sm:grid-cols-2'>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='lesson-res-url'>Tài nguyên (URL)</Label>
-										<Input
-											id='lesson-res-url'
-											placeholder='Google Drive...'
-											value={form.resource_url}
-											onChange={(e) => setField("resource_url", e.target.value)}
-											disabled={submitting}
-										/>
-										{fieldErrors.resource_url && (
-											<p className='text-sm text-destructive'>{fieldErrors.resource_url}</p>
-										)}
-									</div>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='lesson-res-label'>Nhãn tài nguyên</Label>
-										<Input
-											id='lesson-res-label'
-											placeholder='VD: Slide buổi 1'
-											value={form.resource_label}
-											onChange={(e) => setField("resource_label", e.target.value)}
-											disabled={submitting}
-										/>
-									</div>
-								</div>
-								<div className='grid gap-4 sm:grid-cols-2'>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='lesson-assign-url'>Bài tập (URL)</Label>
-										<Input
-											id='lesson-assign-url'
-											placeholder='Google Forms...'
-											value={form.assignment_url}
-											onChange={(e) => setField("assignment_url", e.target.value)}
-											disabled={submitting}
-										/>
-										{fieldErrors.assignment_url && (
-											<p className='text-sm text-destructive'>{fieldErrors.assignment_url}</p>
-										)}
-									</div>
-									<div className='flex flex-col gap-2'>
-										<Label htmlFor='lesson-assign-deadline'>Hạn nộp bài</Label>
-										<Input
-											id='lesson-assign-deadline'
-											type='datetime-local'
-											value={form.assignment_deadline}
-											onChange={(e) => setField("assignment_deadline", e.target.value)}
-											disabled={submitting}
-										/>
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-
-						{/* Tài liệu markdown — StacksEditor */}
-						<Card className='shadow-sm'>
-							<CardHeader>
-								<CardTitle className='flex items-center gap-2'>
-									<FileText className='h-5 w-5 text-muted-foreground' />
-									Tài liệu (Markdown)
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div
-									className='overflow-hidden rounded-md border bg-background'
-									onClick={() => editorRef.current?.focus()}
-									style={{ cursor: "text" }}>
-									<StacksEditorWrapper
-										ref={editorRef}
-										initialContent={form.document}
-										placeholder='Nội dung tài liệu buổi học (hỗ trợ Markdown)...'
-									/>
-								</div>
-							</CardContent>
-						</Card>
-					</div>
-
-					{/* ── Sidebar ── */}
-					<div className='flex flex-col gap-6'>
-						{/* Xuất bản */}
-						<Card className='shadow-sm'>
-							<CardHeader>
-								<CardTitle>Xuất bản</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div className='flex flex-col gap-2'>
-									<Label htmlFor='lesson-status'>Trạng thái</Label>
-									<Select
-										value={form.status}
-										onValueChange={(v) => setField("status", v as CourseStatus)}
-										disabled={submitting}>
-										<SelectTrigger id='lesson-status' className='w-full'>
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value='draft'>Bản nháp</SelectItem>
-											<SelectItem value='published'>Xuất bản ngay</SelectItem>
-										</SelectContent>
-									</Select>
-									<p className='text-xs text-muted-foreground'>
-										{form.status === "draft"
-											? "Lưu nháp, chưa hiển thị với học viên."
-											: "Xuất bản ngay và hiển thị công khai."}
+				{/* Video */}
+				<Card className='shadow-sm'>
+					<CardHeader>
+						<CardTitle className='flex items-center gap-2'>
+							<Video className='h-5 w-5 text-muted-foreground' />
+							Video bài giảng
+						</CardTitle>
+					</CardHeader>
+					<CardContent className='flex flex-col gap-5'>
+						<div className='grid gap-4 sm:grid-cols-2'>
+							<div className='flex flex-col gap-2'>
+								<Label htmlFor='lesson-video'>Video bài giảng (URL)</Label>
+								<Input
+									id='lesson-video'
+									placeholder='https://youtube.com/...'
+									value={form.video_url}
+									onChange={(e) => setField("video_url", e.target.value)}
+									onBlur={(e) =>
+										void fetchDuration(
+											e.target.value,
+											"video_duration",
+											setDurationLoading,
+										)
+									}
+									disabled={submitting}
+								/>
+								{fieldErrors.video_url && (
+									<p className='text-sm text-destructive'>
+										{fieldErrors.video_url}
 									</p>
-								</div>
-							</CardContent>
-						</Card>
+								)}
+							</div>
+							<div className='flex flex-col gap-2'>
+								<Label htmlFor='lesson-vid-dur'>Thời lượng video</Label>
+								<Input
+									id='lesson-vid-dur'
+									readOnly
+									disabled
+									value={
+										durationLoading
+											? "Đang lấy thời lượng…"
+											: form.video_duration
+												? formatDurationLabel(Number(form.video_duration))
+												: ""
+									}
+									placeholder='Tự lấy từ link YouTube'
+								/>
+							</div>
+						</div>
+						<div className='grid gap-4 sm:grid-cols-2'>
+							<div className='flex flex-col gap-2'>
+								<Label htmlFor='lesson-live'>Video bản ghi livestream (URL)</Label>
+								<Input
+									id='lesson-live'
+									placeholder='https://youtube.com/...'
+									value={form.live_url}
+									onChange={(e) => setField("live_url", e.target.value)}
+									onBlur={(e) =>
+										void fetchDuration(
+											e.target.value,
+											"live_duration",
+											setLiveDurationLoading,
+										)
+									}
+									disabled={submitting}
+								/>
+								{fieldErrors.live_url && (
+									<p className='text-sm text-destructive'>
+										{fieldErrors.live_url}
+									</p>
+								)}
+							</div>
+							<div className='flex flex-col gap-2'>
+								<Label htmlFor='lesson-live-dur'>Thời lượng video</Label>
+								<Input
+									id='lesson-live-dur'
+									readOnly
+									disabled
+									value={
+										liveDurationLoading
+											? "Đang lấy thời lượng…"
+											: form.live_duration
+												? formatDurationLabel(Number(form.live_duration))
+												: ""
+									}
+									placeholder='Tự lấy từ link YouTube'
+								/>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
 
-						{/* Actions */}
-						<Card className='shadow-sm'>
-							<CardHeader>
-								<CardTitle className='flex items-center gap-2'>
-									<ListChecks className='h-5 w-5 text-muted-foreground' />
-									Hoàn tất
-								</CardTitle>
-							</CardHeader>
-							<CardFooter className='flex flex-col gap-3'>
-								<Button type='submit' className='w-full' disabled={submitting}>
-									{submitting ? (
-										<Loader2 className='h-4 w-4 animate-spin' />
-									) : (
-										<Save className='h-4 w-4' />
+				{/* Tài nguyên & bài tập */}
+				<Card className='shadow-sm'>
+					<CardHeader>
+						<CardTitle className='flex items-center gap-2'>
+							<LinkIcon className='h-5 w-5 text-muted-foreground' />
+							Tài nguyên & bài tập
+						</CardTitle>
+					</CardHeader>
+					<CardContent className='flex flex-col gap-5'>
+						<div className='flex flex-col gap-2'>
+							<Label htmlFor='lesson-res-url'>Tài nguyên (URL)</Label>
+							<Input
+								id='lesson-res-url'
+								placeholder='Google Drive...'
+								value={form.resource_url}
+								onChange={(e) => setField("resource_url", e.target.value)}
+								disabled={submitting}
+							/>
+							{fieldErrors.resource_url && (
+								<p className='text-sm text-destructive'>
+									{fieldErrors.resource_url}
+								</p>
+							)}
+						</div>
+						{hasOffline && (
+							<div className='grid gap-4 sm:grid-cols-2'>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='lesson-assign-url'>Bài tập (URL)</Label>
+									<Input
+										id='lesson-assign-url'
+										placeholder='Google Forms...'
+										value={form.assignment_url}
+										onChange={(e) =>
+											setField("assignment_url", e.target.value)
+										}
+										disabled={submitting}
+									/>
+									{fieldErrors.assignment_url && (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.assignment_url}
+										</p>
 									)}
-									{submitting ? "Đang lưu..." : isEdit ? "Lưu thay đổi" : "Thêm buổi học"}
-								</Button>
-								<Button
-									type='button'
-									variant='outline'
-									className='w-full'
-									onClick={() => navigate(`/courses/${slug}?tab=lessons`)}
-									disabled={submitting}>
-									Hủy
-								</Button>
-							</CardFooter>
-						</Card>
-					</div>
+								</div>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='lesson-assign-deadline'>Hạn nộp bài</Label>
+									<Input
+										id='lesson-assign-deadline'
+										type='datetime-local'
+										value={form.assignment_deadline}
+										onChange={(e) =>
+											setField("assignment_deadline", e.target.value)
+										}
+										disabled={submitting}
+									/>
+								</div>
+							</div>
+						)}
+					</CardContent>
+				</Card>
+
+				{/* Tài liệu markdown — StacksEditor */}
+				<Card className='shadow-sm'>
+					<CardHeader>
+						<CardTitle className='flex items-center gap-2'>
+							<FileText className='h-5 w-5 text-muted-foreground' />
+							Tài liệu (Markdown)
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div
+							className='overflow-hidden rounded-md border bg-background'
+							onClick={() => editorRef.current?.focus()}
+							style={{ cursor: "text" }}>
+							<StacksEditorWrapper
+								ref={editorRef}
+								initialContent={form.document}
+								placeholder='Nội dung tài liệu buổi học (hỗ trợ Markdown)...'
+							/>
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Actions */}
+				<div className='flex flex-col-reverse sm:flex-row justify-end items-stretch sm:items-center gap-3 mt-4'>
+					<Button
+						type='button'
+						variant='outline'
+						className='w-full sm:w-auto'
+						onClick={() => navigate(`/courses/${slug}?tab=lessons`)}
+						disabled={submitting}>
+						Hủy
+					</Button>
+					<Button
+						type='button'
+						variant='outline'
+						className='w-full sm:w-auto'
+						disabled={submitting}
+						onClick={() => void handleSubmit("draft")}>
+						{submitting && pendingStatus === "draft" ? (
+							<Loader2 className='h-4 w-4 animate-spin' />
+						) : (
+							<Save className='h-4 w-4' />
+						)}
+						{currentStatus === "published" ? "Chuyển về nháp" : "Lưu nháp"}
+					</Button>
+					<Button
+						type='button'
+						className='w-full sm:w-auto'
+						disabled={submitting}
+						onClick={() => void handleSubmit("published")}>
+						{submitting && pendingStatus === "published" ? (
+							<Loader2 className='h-4 w-4 animate-spin' />
+						) : (
+							<Save className='h-4 w-4' />
+						)}
+						{currentStatus === "published" ? "Lưu" : "Xuất bản"}
+					</Button>
 				</div>
 			</form>
 		</div>

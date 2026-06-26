@@ -14,10 +14,10 @@ import {
 } from "@/components/ui/dialog";
 import courseService, { type CheckInStudentDTO } from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import type { CourseLessonRow } from "@/pages/learning/course-detail-mock";
+import type { CourseLessonRow } from "@/pages/learning/course-detail.types";
 
-// UI-first mock: tái dùng đúng pattern QR của Event (EventCheckInDialog).
-// Khi có backend, thay handleDecoded bằng lessonService.checkIn(lessonId, { qr_token }).
+// Tái dùng đúng pattern QR của Event (EventCheckInDialog).
+// Điểm danh qua courseService.checkInLesson(lessonId, { qr_token }) trong handleDecoded.
 
 const QR_REGION_ID_PREFIX = "lesson-check-in-qr-reader";
 const SAME_TOKEN_COOLDOWN_MS = 4000;
@@ -27,6 +27,12 @@ const timeFormatter = new Intl.DateTimeFormat("vi-VN", {
 	minute: "2-digit",
 	second: "2-digit",
 });
+
+function formatLessonLabel(lesson: CourseLessonRow): string {
+	const title = lesson.title.trim();
+	if (/^bu[ổô]i\s*\d+/iu.test(title)) return title;
+	return `Buổi ${lesson.order}: ${title}`;
+}
 
 type ScanResult =
 	| { type: "success"; student: CheckInStudentDTO; already: boolean; at: Date }
@@ -198,7 +204,7 @@ function LessonCheckInDialog({
 					</DialogTitle>
 					<DialogDescription>
 						{lesson
-							? `Buổi ${lesson.order}: ${lesson.title}. Đưa mã QR trên vé của học viên vào khung hình để điểm danh.`
+							? `${formatLessonLabel(lesson)}. Đưa mã QR trên vé của học viên vào khung hình để điểm danh.`
 							: "Đưa mã QR vào khung hình để điểm danh."}
 					</DialogDescription>
 				</DialogHeader>

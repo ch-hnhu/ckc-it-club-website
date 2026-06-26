@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string('cert_url')->nullable(); // URL file PDF
             $table->boolean('has_physical')->default(false);
             $table->timestamp('issued_at');
+            $table->timestamp('revoked_at')->nullable();
+            $table->foreignId('revoked_by')->nullable()->constrained('users')->nullOnDelete();
 
             $table->timestamps();
 
