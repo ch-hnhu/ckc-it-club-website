@@ -300,6 +300,10 @@ function CourseDetailPage() {
 		navigate(`/courses/${slug}/lessons/${id}/edit`);
 	};
 
+	const openLessonDetail = (id: number) => {
+		navigate(`/courses/${slug}/lessons/${id}`);
+	};
+
 	const openQuizBuilder = (id: number) => {
 		navigate(`/learning/courses/${course?.slug ?? slug}/lessons/${id}/quiz/create`);
 	};
@@ -634,7 +638,14 @@ function CourseDetailPage() {
 														{lesson.order}
 													</TableCell>
 													<TableCell className='font-medium'>
-														{lesson.title}
+														<button
+															type='button'
+															className='text-left hover:text-primary hover:underline'
+															onClick={() =>
+																openLessonDetail(lesson.id)
+															}>
+															{lesson.title}
+														</button>
 													</TableCell>
 													{hasOffline && (
 														<TableCell className='text-sm text-muted-foreground'>
@@ -694,6 +705,13 @@ function CourseDetailPage() {
 															<DropdownMenuContent
 																align='end'
 																className='w-[160px]'>
+																<DropdownMenuItem
+																	onClick={() =>
+																		openLessonDetail(lesson.id)
+																	}>
+																	<BookOpen className='h-4 w-4' />
+																	Xem chi tiết
+																</DropdownMenuItem>
 																<DropdownMenuItem
 																	onClick={() =>
 																		openEditLesson(lesson.id)
