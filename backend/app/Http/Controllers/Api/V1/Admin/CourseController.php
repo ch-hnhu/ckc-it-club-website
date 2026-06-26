@@ -107,6 +107,11 @@ class CourseController extends BaseApiController
             $data['enrollment_start']     = null;
             $data['enrollment_deadline']  = null;
             $data['course_end']           = null;
+        } elseif ($data['max_offline_slots'] !== null) {
+            // Offline course bắt buộc phải có max_absent_allowed
+            if (! isset($data['max_absent_allowed']) || $data['max_absent_allowed'] === null) {
+                $data['max_absent_allowed'] = 3;
+            }
         }
 
         $thumbnailPath = null;
@@ -199,6 +204,14 @@ class CourseController extends BaseApiController
             $data['enrollment_start']     = null;
             $data['enrollment_deadline']  = null;
             $data['course_end']           = null;
+        } else {
+            // Nếu set max_offline_slots, bắt buộc phải có max_absent_allowed
+            $maxOfflineSlots = $data['max_offline_slots'] ?? $course->max_offline_slots;
+            if ($maxOfflineSlots !== null) {
+                if (! isset($data['max_absent_allowed']) || $data['max_absent_allowed'] === null) {
+                    $data['max_absent_allowed'] = $course->max_absent_allowed ?? 3;
+                }
+            }
         }
 
         $tagIds = $data['tag_ids'] ?? null;
