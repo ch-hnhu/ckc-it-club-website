@@ -327,6 +327,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/courses\/create$/, permission: "courses.manage" },
 	{ pattern: /^\/courses\/[^/]+$/, permission: "courses.view" },
 	{ pattern: /^\/courses\/[^/]+\/edit$/, permission: "courses.manage" },
+	{ pattern: /^\/courses\/[^/]+\/lessons\/[^/]+$/, permission: "courses.view" },
 	{ pattern: /^\/certificate-templates$/, permission: "courses.view" },
 	{ pattern: /^\/certificate-templates\/create$/, permission: "courses.manage" },
 	{ pattern: /^\/certificate-templates\/[^/]+\/edit$/, permission: "courses.manage" },
