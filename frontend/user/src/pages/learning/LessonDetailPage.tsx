@@ -10,6 +10,7 @@ import {
 	ExternalLink,
 	GraduationCap,
 	ListChecks,
+	Lock,
 	PlayCircle,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -393,21 +394,37 @@ const LessonDetailPage: React.FC = () => {
 									) : (
 										<span />
 									)}
-									{lesson.next && (
-										<Link
-											to={`/khoa-hoc/${slug}/${lesson.next.slug}`}
-											className='group inline-flex max-w-full items-center gap-3 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-3 text-right shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:ml-auto'>
-											<span className='min-w-0'>
-												<span className='block text-[11px] font-bold uppercase tracking-wide text-black/60'>
-													Buổi tiếp theo
+									{lesson.next &&
+										(lesson.next.locked ? (
+											<div
+												aria-disabled
+												title='Hoàn thành buổi học này để mở khoá buổi tiếp theo'
+												className='inline-flex max-w-full cursor-not-allowed items-center gap-3 rounded-xl border-2 border-gray-300 bg-gray-100 px-4 py-3 text-right sm:ml-auto'>
+												<span className='min-w-0'>
+													<span className='block text-[11px] font-bold uppercase tracking-wide text-gray-400'>
+														Buổi tiếp theo
+													</span>
+													<span className='block truncate font-heading text-sm font-extrabold text-gray-400'>
+														{lesson.next.title}
+													</span>
 												</span>
-												<span className='block truncate font-heading text-sm font-extrabold text-black'>
-													{lesson.next.title}
+												<Lock className='h-5 w-5 shrink-0 text-gray-400' />
+											</div>
+										) : (
+											<Link
+												to={`/khoa-hoc/${slug}/${lesson.next.slug}`}
+												className='group inline-flex max-w-full items-center gap-3 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-3 text-right shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:ml-auto'>
+												<span className='min-w-0'>
+													<span className='block text-[11px] font-bold uppercase tracking-wide text-black/60'>
+														Buổi tiếp theo
+													</span>
+													<span className='block truncate font-heading text-sm font-extrabold text-black'>
+														{lesson.next.title}
+													</span>
 												</span>
-											</span>
-											<ChevronRight className='h-5 w-5 shrink-0' />
-										</Link>
-									)}
+												<ChevronRight className='h-5 w-5 shrink-0' />
+											</Link>
+										))}
 								</div>
 							</>
 						)}

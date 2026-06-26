@@ -2,12 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ArrowLeft,
 	ChevronDown,
+	ChevronsDown,
+	ChevronsUp,
 	ChevronUp,
 	Circle as CircleIcon,
 	Eye,
 	Image as ImageIcon,
+	Layers,
 	Loader2,
+	Maximize,
 	Minus,
+	Plus,
 	QrCode,
 	Redo2,
 	Save,
@@ -27,9 +32,16 @@ import {
 	Text as KonvaText,
 	Transformer,
 } from "react-konva";
-import { useNavigate, useParams } from "react-router-dom";
+import { useBlocker, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -87,6 +99,41 @@ const normalizeDesign = (d: Partial<CertificateDesign> | null | undefined): Cert
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+/**
+ * Tính vùng crop kiểu "cover": phủ kín khung frameW×frameH, giữ tỉ lệ ảnh, căn giữa, cắt phần thừa.
+ * Trả về crop (toạ độ trên ảnh gốc) để gắn vào Konva.Image có width=frameW, height=frameH.
+ */
+const coverCrop = (img: HTMLImageElement, frameW: number, frameH: number) => {
+	const iw = img.naturalWidth || img.width;
+	const ih = img.naturalHeight || img.height;
+	if (!iw || !ih) return undefined;
+	const frameAR = frameW / frameH;
+	const imgAR = iw / ih;
+	let cw = iw;
+	let ch = ih;
+	let cx = 0;
+	let cy = 0;
+	if (imgAR > frameAR) {
+		// ảnh rộng hơn khung → cắt 2 bên
+		cw = ih * frameAR;
+		cx = (iw - cw) / 2;
+	} else {
+		// ảnh cao hơn khung → cắt trên/dưới
+		ch = iw / frameAR;
+		cy = (ih - ch) / 2;
+	}
+	return { x: cx, y: cy, width: cw, height: ch };
+};
+
+/** Đọc kích thước gốc (px) của ảnh từ URL để giữ đúng tỉ lệ khi thêm vào canvas. */
+const loadImageSize = (src: string) =>
+	new Promise<{ width: number; height: number }>((resolve) => {
+		const img = new window.Image();
+		img.onload = () => resolve({ width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+		img.onerror = () => resolve({ width: 160, height: 160 });
+		img.src = src;
+	});
+
 // ─── Hook nạp ảnh cho canvas ─────────────────────────────────────────────────
 
 function useCanvasImage(src?: string | null) {
@@ -97,7 +144,7 @@ function useCanvasImage(src?: string | null) {
 			return;
 		}
 		const image = new window.Image();
-		image.src = src; // không set crossOrigin: ảnh khác origin vẫn hiển thị (chỉ ảnh hưởng export thumbnail)
+		image.src = src;
 		const onload = () => setImg(image);
 		image.addEventListener("load", onload);
 		return () => image.removeEventListener("load", onload);
@@ -107,13 +154,7 @@ function useCanvasImage(src?: string | null) {
 
 // ─── Node ảnh (cần hook nên tách riêng) ──────────────────────────────────────
 
-function ImageNode({
-	element,
-	...rest
-}: {
-	element: CertificateElement;
-	[key: string]: unknown;
-}) {
+function ImageNode({ element, ...rest }: { element: CertificateElement; [key: string]: unknown }) {
 	const img = useCanvasImage(element.src);
 	return <KonvaImage image={img} {...rest} />;
 }
@@ -126,8 +167,7 @@ function CertificateTemplateEditorPage() {
 	const navigate = useNavigate();
 
 	useBreadcrumb([
-		{ title: "Dashboard", link: "/" },
-		{ title: "Trung tâm đào tạo" },
+		{ title: "Khoá học", link: "/courses" },
 		{ title: "Giấy chứng nhận", link: "/certificate-templates" },
 		{ title: isEdit ? "Chỉnh sửa mẫu" : "Tạo mẫu" },
 	]);
@@ -140,15 +180,86 @@ function CertificateTemplateEditorPage() {
 	const [loading, setLoading] = useState(isEdit);
 	const [saving, setSaving] = useState(false);
 	const [previewing, setPreviewing] = useState(false);
+	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+	const [dirty, setDirty] = useState(false);
 	const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
+
+	// Zoom / pan canvas (kiểu app vẽ)
+	const [viewport, setViewport] = useState({ width: 800, height: 560 });
+	const [zoom, setZoom] = useState(SCALE);
+	const [stagePos, setStagePos] = useState({ x: 40, y: 40 });
 
 	const stageRef = useRef<Konva.Stage>(null);
 	const trRef = useRef<Konva.Transformer>(null);
 	const nodeRefs = useRef<Record<string, Konva.Node>>({});
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const bgInputRef = useRef<HTMLInputElement>(null);
+	const canvasAreaRef = useRef<HTMLDivElement>(null);
 	const designRef = useRef(design);
 	designRef.current = design;
+
+	// Đo vùng chứa canvas để Stage lấp đầy + tính "khít" (fit)
+	useEffect(() => {
+		const el = canvasAreaRef.current;
+		if (!el) return;
+		const ro = new ResizeObserver(([entry]) => {
+			const { width, height } = entry.contentRect;
+			setViewport({ width: Math.max(1, width), height: Math.max(1, height) });
+		});
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, []);
+
+	const ZOOM_MIN = 0.1;
+	const ZOOM_MAX = 5;
+	const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+
+	// Đưa canvas về vừa khung và căn giữa
+	const fitToScreen = useCallback(() => {
+		const pad = 48;
+		const z = clampZoom(
+			Math.min((viewport.width - pad) / CANVAS_W, (viewport.height - pad) / CANVAS_H),
+		);
+		setZoom(z);
+		setStagePos({ x: (viewport.width - CANVAS_W * z) / 2, y: (viewport.height - CANVAS_H * z) / 2 });
+	}, [viewport]);
+
+	const zoomAtCenter = (factor: number) => {
+		const cx = viewport.width / 2;
+		const cy = viewport.height / 2;
+		const newZoom = clampZoom(zoom * factor);
+		const mx = (cx - stagePos.x) / zoom;
+		const my = (cy - stagePos.y) / zoom;
+		setZoom(newZoom);
+		setStagePos({ x: cx - mx * newZoom, y: cy - my * newZoom });
+	};
+
+	// Cuộn = pan; Ctrl/Cmd + cuộn = zoom vào con trỏ (giống Figma)
+	const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
+		e.evt.preventDefault();
+		const stage = stageRef.current;
+		if (!stage) return;
+		if (e.evt.ctrlKey || e.evt.metaKey) {
+			const pointer = stage.getPointerPosition();
+			if (!pointer) return;
+			const mx = (pointer.x - stagePos.x) / zoom;
+			const my = (pointer.y - stagePos.y) / zoom;
+			const newZoom = clampZoom(zoom * (e.evt.deltaY > 0 ? 0.92 : 1.08));
+			setZoom(newZoom);
+			setStagePos({ x: pointer.x - mx * newZoom, y: pointer.y - my * newZoom });
+		} else {
+			setStagePos((p) => ({ x: p.x - e.evt.deltaX, y: p.y - e.evt.deltaY }));
+		}
+	};
+
+	// Khít canvas vào khung 1 lần khi đã đo được vùng chứa + tải xong
+	const fittedRef = useRef(false);
+	useEffect(() => {
+		if (!loading && viewport.width > 1 && !fittedRef.current) {
+			fittedRef.current = true;
+			fitToScreen();
+		}
+	}, [loading, viewport, fitToScreen]);
 
 	const bgImage = useCanvasImage(design.canvas.background.image);
 	const [, setFontsReady] = useState(false);
@@ -179,6 +290,7 @@ function CertificateTemplateEditorPage() {
 		(updater: CertificateDesign | ((d: CertificateDesign) => CertificateDesign)) => {
 			setPast((p) => [...p, designRef.current]);
 			setFuture([]);
+			setDirty(true);
 			setDesign((prev) => (typeof updater === "function" ? updater(prev) : updater));
 		},
 		[],
@@ -189,6 +301,7 @@ function CertificateTemplateEditorPage() {
 			if (p.length === 0) return p;
 			setFuture((f) => [designRef.current, ...f]);
 			setDesign(p[p.length - 1]);
+			setDirty(true);
 			return p.slice(0, -1);
 		});
 	}, []);
@@ -198,6 +311,7 @@ function CertificateTemplateEditorPage() {
 			if (f.length === 0) return f;
 			setPast((p) => [...p, designRef.current]);
 			setDesign(f[0]);
+			setDirty(true);
 			return f.slice(1);
 		});
 	}, []);
@@ -219,6 +333,31 @@ function CertificateTemplateEditorPage() {
 		return () => window.removeEventListener("keydown", onKey);
 	}, [undo, redo]);
 
+	// Cảnh báo khi đóng/refresh/rời tab trình duyệt nếu có thay đổi chưa lưu.
+	useEffect(() => {
+		const onBeforeUnload = (e: BeforeUnloadEvent) => {
+			if (!dirty) return;
+			e.preventDefault();
+			e.returnValue = "";
+		};
+		window.addEventListener("beforeunload", onBeforeUnload);
+		return () => window.removeEventListener("beforeunload", onBeforeUnload);
+	}, [dirty]);
+
+	// Chặn điều hướng trong app (nút Quay lại, sidebar, link...) khi chưa lưu.
+	const blocker = useBlocker(
+		useCallback(
+			({
+				currentLocation,
+				nextLocation,
+			}: {
+				currentLocation: { pathname: string };
+				nextLocation: { pathname: string };
+			}) => dirty && currentLocation.pathname !== nextLocation.pathname,
+			[dirty],
+		),
+	);
+
 	// Nạp mẫu khi sửa — reset lịch sử
 	useEffect(() => {
 		if (!isEdit) return;
@@ -231,6 +370,7 @@ function CertificateTemplateEditorPage() {
 				setDesign(normalizeDesign(res.data.design));
 				setPast([]);
 				setFuture([]);
+				setDirty(false);
 			})
 			.catch(() => toast.error("Không tải được mẫu chứng chỉ."))
 			.finally(() => !cancelled && setLoading(false));
@@ -308,7 +448,8 @@ function CertificateTemplateEditorPage() {
 	const addEllipse = () =>
 		addElement("ellipse", { fill: "transparent", stroke: "#1d4ed8", strokeWidth: 4 });
 
-	const addQr = () => addElement("qr", { width: 120, height: 120, x: CANVAS_W - 180, y: CANVAS_H - 180 });
+	const addQr = () =>
+		addElement("qr", { width: 120, height: 120, x: CANVAS_W - 180, y: CANVAS_H - 180 });
 
 	const handleAssetUpload = async (file: File, target: "element" | "background") => {
 		try {
@@ -320,7 +461,14 @@ function CertificateTemplateEditorPage() {
 					canvas: { ...d.canvas, background: { ...d.canvas.background, image: url } },
 				}));
 			} else {
-				addElement("image", { src: url, width: 160, height: 160 });
+				// Giữ đúng tỉ lệ gốc; chỉ thu nhỏ nếu cạnh lớn hơn 320px (không phóng to ảnh nhỏ).
+				const { width, height } = await loadImageSize(url);
+				const scale = Math.min(1, 320 / Math.max(width, height));
+				addElement("image", {
+					src: url,
+					width: Math.round(width * scale),
+					height: Math.round(height * scale),
+				});
 			}
 			toast.success("Đã tải ảnh lên.");
 		} catch {
@@ -328,16 +476,20 @@ function CertificateTemplateEditorPage() {
 		}
 	};
 
-	const removeSelected = () => {
-		if (!selectedId) return;
-		commit((d) => ({ ...d, elements: d.elements.filter((e) => e.id !== selectedId) }));
-		setSelectedId(null);
+	const removeElement = (elId: string) => {
+		commit((d) => ({ ...d, elements: d.elements.filter((e) => e.id !== elId) }));
+		setSelectedId((cur) => (cur === elId ? null : cur));
 	};
 
-	const moveLayer = (dir: -1 | 1) => {
-		if (!selectedId) return;
+	const removeSelected = () => {
+		if (selectedId) removeElement(selectedId);
+	};
+
+	// dir: -1 = xuống dưới 1 lớp, +1 = lên trên 1 lớp (cuối mảng = lớp trên cùng)
+	const moveLayer = (dir: -1 | 1, elId: string | null = selectedId) => {
+		if (!elId) return;
 		commit((d) => {
-			const idx = d.elements.findIndex((e) => e.id === selectedId);
+			const idx = d.elements.findIndex((e) => e.id === elId);
 			const to = idx + dir;
 			if (idx < 0 || to < 0 || to >= d.elements.length) return d;
 			const next = [...d.elements];
@@ -346,21 +498,31 @@ function CertificateTemplateEditorPage() {
 		});
 	};
 
+	// Đưa lên trên cùng / xuống dưới cùng
+	const moveLayerToEnd = (elId: string, top: boolean) => {
+		commit((d) => {
+			const idx = d.elements.findIndex((e) => e.id === elId);
+			if (idx < 0) return d;
+			const next = [...d.elements];
+			const [item] = next.splice(idx, 1);
+			top ? next.push(item) : next.unshift(item);
+			return { ...d, elements: next };
+		});
+	};
+
 	const handleSave = async () => {
 		setSaving(true);
-		let thumbnail: string | null = null;
 		try {
-			thumbnail = stageRef.current?.toDataURL({ pixelRatio: 0.4 }) ?? null;
-		} catch {
-			thumbnail = null; // canvas bị "taint" do ảnh khác origin — bỏ qua thumbnail
-		}
-		try {
-			const payload = { name, design, thumbnail };
+			// Thumbnail được render server-side (Browsershot) để khớp đúng thiết kế và tránh
+			// lỗi "tainted canvas" khi thiết kế có ảnh khác origin.
+			const payload = { name, design };
 			if (isEdit) {
 				await certificateTemplateService.updateTemplate(Number(id), payload);
+				setDirty(false);
 				toast.success("Đã lưu mẫu chứng chỉ.");
 			} else {
 				const res = await certificateTemplateService.createTemplate(payload);
+				setDirty(false);
 				toast.success("Đã tạo mẫu chứng chỉ.");
 				navigate(`/certificate-templates/${res.data.id}/edit`, { replace: true });
 			}
@@ -375,11 +537,20 @@ function CertificateTemplateEditorPage() {
 		setPreviewing(true);
 		try {
 			const res = await certificateTemplateService.previewTemplate(design);
-			// data URI → blob → mở tab mới (tránh giới hạn độ dài data URI khi mở trực tiếp)
+			// data URI → blob → hiện trong Dialog (không dùng window.open vì hay bị chặn pop-up)
 			const blob = await (await fetch(res.data.pdf)).blob();
-			window.open(URL.createObjectURL(blob), "_blank");
-		} catch {
-			toast.error("Không tạo được bản xem trước.");
+			setPreviewUrl((old) => {
+				if (old) URL.revokeObjectURL(old);
+				return URL.createObjectURL(blob);
+			});
+		} catch (err: unknown) {
+			// Hiện lỗi thật để dễ chẩn đoán (status / message) thay vì nuốt lỗi.
+			const e = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+			const detail = e?.response?.status
+				? `HTTP ${e.response.status}${e.response.data?.message ? " – " + e.response.data.message : ""}`
+				: e?.message || "lỗi không xác định";
+			console.error("[Xem trước] lỗi:", err);
+			toast.error("Không tạo được bản xem trước: " + detail);
 		} finally {
 			setPreviewing(false);
 		}
@@ -533,8 +704,8 @@ function CertificateTemplateEditorPage() {
 						{...common}
 						width={el.width}
 						height={el.height}
-						fill="#e5e7eb"
-						stroke="#9ca3af"
+						fill='#e5e7eb'
+						stroke='#9ca3af'
 						strokeWidth={1}
 						dash={[6, 4]}
 					/>
@@ -556,12 +727,18 @@ function CertificateTemplateEditorPage() {
 		<div className='flex h-[calc(100vh-4rem)] flex-col'>
 			{/* Thanh trên */}
 			<div className='flex items-center gap-3 border-b px-4 py-2'>
-				<Button variant='ghost' size='sm' onClick={() => navigate("/certificate-templates")}>
+				<Button
+					variant='ghost'
+					size='sm'
+					onClick={() => navigate("/certificate-templates")}>
 					<ArrowLeft className='h-4 w-4' /> Quay lại
 				</Button>
 				<Input
 					value={name}
-					onChange={(e) => setName(e.target.value)}
+					onChange={(e) => {
+						setName(e.target.value);
+						setDirty(true);
+					}}
 					className='h-8 max-w-72'
 					placeholder='Tên mẫu chứng chỉ'
 				/>
@@ -584,7 +761,11 @@ function CertificateTemplateEditorPage() {
 						disabled={future.length === 0}>
 						<Redo2 className='h-4 w-4' />
 					</Button>
-					<Button variant='outline' size='sm' onClick={handlePreview} disabled={previewing}>
+					<Button
+						variant='outline'
+						size='sm'
+						onClick={handlePreview}
+						disabled={previewing}>
 						{previewing ? (
 							<Loader2 className='h-4 w-4 animate-spin' />
 						) : (
@@ -593,7 +774,11 @@ function CertificateTemplateEditorPage() {
 						Xem trước
 					</Button>
 					<Button size='sm' onClick={handleSave} disabled={saving}>
-						{saving ? <Loader2 className='h-4 w-4 animate-spin' /> : <Save className='h-4 w-4' />}
+						{saving ? (
+							<Loader2 className='h-4 w-4 animate-spin' />
+						) : (
+							<Save className='h-4 w-4' />
+						)}
 						Lưu
 					</Button>
 				</div>
@@ -602,17 +787,39 @@ function CertificateTemplateEditorPage() {
 			<div className='flex min-h-0 flex-1'>
 				{/* Toolbar trái */}
 				<div className='w-44 shrink-0 space-y-1 border-r p-2'>
-					<p className='px-2 py-1 text-xs font-medium text-muted-foreground'>Thêm phần tử</p>
-					<ToolButton icon={<Type className='h-4 w-4' />} label='Văn bản' onClick={addText} />
+					<p className='px-2 py-1 text-xs font-medium text-muted-foreground'>
+						Thêm phần tử
+					</p>
+					<ToolButton
+						icon={<Type className='h-4 w-4' />}
+						label='Văn bản'
+						onClick={addText}
+					/>
 					<ToolButton
 						icon={<ImageIcon className='h-4 w-4' />}
 						label='Ảnh / Logo'
 						onClick={() => fileInputRef.current?.click()}
 					/>
-					<ToolButton icon={<Square className='h-4 w-4' />} label='Khối / Viền' onClick={addRect} />
-					<ToolButton icon={<Minus className='h-4 w-4' />} label='Đường kẻ' onClick={addLine} />
-					<ToolButton icon={<CircleIcon className='h-4 w-4' />} label='Elip' onClick={addEllipse} />
-					<ToolButton icon={<QrCode className='h-4 w-4' />} label='Ô QR' onClick={addQr} />
+					<ToolButton
+						icon={<Square className='h-4 w-4' />}
+						label='Khối / Viền'
+						onClick={addRect}
+					/>
+					<ToolButton
+						icon={<Minus className='h-4 w-4' />}
+						label='Đường kẻ'
+						onClick={addLine}
+					/>
+					<ToolButton
+						icon={<CircleIcon className='h-4 w-4' />}
+						label='Elip'
+						onClick={addEllipse}
+					/>
+					<ToolButton
+						icon={<QrCode className='h-4 w-4' />}
+						label='Ô QR'
+						onClick={addQr}
+					/>
 
 					<div className='!mt-3 border-t pt-2'>
 						<p className='px-2 py-1 text-xs font-medium text-muted-foreground'>Nền</p>
@@ -625,7 +832,10 @@ function CertificateTemplateEditorPage() {
 										...d,
 										canvas: {
 											...d.canvas,
-											background: { ...d.canvas.background, color: e.target.value },
+											background: {
+												...d.canvas.background,
+												color: e.target.value,
+											},
 										},
 									}))
 								}
@@ -644,7 +854,10 @@ function CertificateTemplateEditorPage() {
 								onClick={() =>
 									commit((d) => ({
 										...d,
-										canvas: { ...d.canvas, background: { ...d.canvas.background, image: null } },
+										canvas: {
+											...d.canvas,
+											background: { ...d.canvas.background, image: null },
+										},
 									}))
 								}
 								className='w-full px-2 py-1 text-left text-xs text-destructive hover:underline'>
@@ -677,92 +890,340 @@ function CertificateTemplateEditorPage() {
 					/>
 				</div>
 
-				{/* Canvas giữa */}
-				<div className='flex min-w-0 flex-1 items-center justify-center overflow-auto bg-muted/40 p-6'>
-					<div className='shadow-lg' style={{ width: DISPLAY_W, height: CANVAS_H * SCALE }}>
-						<Stage
-							ref={stageRef}
-							width={DISPLAY_W}
-							height={CANVAS_H * SCALE}
-							scaleX={SCALE}
-							scaleY={SCALE}
-							onMouseDown={(e) => {
-								// Click vào vùng trống (stage) hoặc nền → bỏ chọn.
-								if (e.target === e.target.getStage() || e.target.name() === "bg")
-									setSelectedId(null);
-							}}>
-							<Layer>
-								{/* Nền không listening để click xuyên qua xuống stage → bỏ chọn được;
-								    đặt name="bg" để onMouseDown nhận diện vùng nền. */}
-								<Rect
-									name='bg'
+				{/* Canvas giữa — zoom/pan tự do */}
+				<div
+					ref={canvasAreaRef}
+					className='relative min-w-0 flex-1 overflow-hidden bg-muted/40'>
+					<Stage
+						ref={stageRef}
+						width={viewport.width}
+						height={viewport.height}
+						scaleX={zoom}
+						scaleY={zoom}
+						x={stagePos.x}
+						y={stagePos.y}
+						onWheel={handleWheel}
+						onMouseDown={(e) => {
+							// Click vào vùng trống (stage) hoặc nền → bỏ chọn.
+							if (e.target === e.target.getStage() || e.target.name() === "bg")
+								setSelectedId(null);
+						}}>
+						<Layer>
+							{/* Nền không listening để click xuyên qua xuống stage → bỏ chọn được;
+							    đặt name="bg" để onMouseDown nhận diện vùng nền. */}
+							<Rect
+								name='bg'
+								x={0}
+								y={0}
+								width={CANVAS_W}
+								height={CANVAS_H}
+								fill={design.canvas.background.color}
+								shadowColor='#000'
+								shadowBlur={12 / zoom}
+								shadowOpacity={0.25}
+								listening={false}
+							/>
+							{bgImage && (
+								<KonvaImage
+									image={bgImage}
 									x={0}
 									y={0}
 									width={CANVAS_W}
 									height={CANVAS_H}
-									fill={design.canvas.background.color}
+									crop={coverCrop(bgImage, CANVAS_W, CANVAS_H)}
 									listening={false}
 								/>
-								{bgImage && (
-									<KonvaImage
-										image={bgImage}
-										x={0}
-										y={0}
-										width={CANVAS_W}
-										height={CANVAS_H}
-										listening={false}
-									/>
-								)}
-								{design.elements.map(renderNode)}
-								{guides.v.map((x, i) => (
-									<Line
-										key={`gv${i}`}
-										points={[x, 0, x, CANVAS_H]}
-										stroke='#ec4899'
-										strokeWidth={1 / SCALE}
-										dash={[6, 4]}
-										listening={false}
-									/>
-								))}
-								{guides.h.map((y, i) => (
-									<Line
-										key={`gh${i}`}
-										points={[0, y, CANVAS_W, y]}
-										stroke='#ec4899'
-										strokeWidth={1 / SCALE}
-										dash={[6, 4]}
-										listening={false}
-									/>
-								))}
-								<Transformer
-									ref={trRef}
-									rotateEnabled
-									boundBoxFunc={(oldBox, newBox) =>
-										newBox.width < 5 || newBox.height < 5 ? oldBox : newBox
-									}
+							)}
+							{design.elements.map(renderNode)}
+							{guides.v.map((x, i) => (
+								<Line
+									key={`gv${i}`}
+									points={[x, 0, x, CANVAS_H]}
+									stroke='#ec4899'
+									strokeWidth={1 / zoom}
+									dash={[6, 4]}
+									listening={false}
 								/>
-							</Layer>
-						</Stage>
+							))}
+							{guides.h.map((y, i) => (
+								<Line
+									key={`gh${i}`}
+									points={[0, y, CANVAS_W, y]}
+									stroke='#ec4899'
+									strokeWidth={1 / zoom}
+									dash={[6, 4]}
+									listening={false}
+								/>
+							))}
+							<Transformer
+								ref={trRef}
+								rotateEnabled
+								anchorSize={9 / zoom}
+								anchorStrokeWidth={1 / zoom}
+								borderStrokeWidth={1 / zoom}
+								ignoreStroke
+								// Ảnh: giữ tỉ lệ, chỉ cho kéo 4 góc để không bị méo.
+								keepRatio={selected?.type === "image"}
+								enabledAnchors={
+									selected?.type === "image"
+										? [
+												"top-left",
+												"top-right",
+												"bottom-left",
+												"bottom-right",
+										  ]
+										: undefined
+								}
+								boundBoxFunc={(oldBox, newBox) =>
+									newBox.width < 5 || newBox.height < 5 ? oldBox : newBox
+								}
+							/>
+						</Layer>
+					</Stage>
+
+					{/* Điều khiển zoom */}
+					<div className='absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-background/95 px-2 py-1 shadow-md'>
+						<Button
+							variant='ghost'
+							size='icon'
+							className='h-7 w-7'
+							onClick={() => zoomAtCenter(0.9)}
+							title='Thu nhỏ'>
+							<Minus className='h-4 w-4' />
+						</Button>
+						<button
+							type='button'
+							onClick={fitToScreen}
+							className='min-w-14 rounded px-2 text-xs font-medium tabular-nums hover:bg-muted'
+							title='Khít vào khung'>
+							{Math.round(zoom * 100)}%
+						</button>
+						<Button
+							variant='ghost'
+							size='icon'
+							className='h-7 w-7'
+							onClick={() => zoomAtCenter(1.1)}
+							title='Phóng to'>
+							<Plus className='h-4 w-4' />
+						</Button>
+						<span className='mx-1 h-4 w-px bg-border' />
+						<Button
+							variant='ghost'
+							size='icon'
+							className='h-7 w-7'
+							onClick={fitToScreen}
+							title='Khít vào khung'>
+							<Maximize className='h-4 w-4' />
+						</Button>
 					</div>
 				</div>
 
-				{/* Panel thuộc tính phải */}
-				<div className='w-72 shrink-0 overflow-y-auto border-l p-3'>
-					{selected ? (
-						<PropertyPanel
-							element={selected}
-							onChange={(patch) => updateElement(selected.id, patch)}
-							onDelete={removeSelected}
-							onLayer={moveLayer}
-						/>
-					) : (
-						<p className='px-1 py-6 text-center text-sm text-muted-foreground'>
-							Chọn một phần tử trên canvas để chỉnh sửa thuộc tính.
-						</p>
-					)}
+				{/* Panel phải: Lớp + Thuộc tính */}
+				<div className='flex w-72 shrink-0 flex-col border-l'>
+					<LayersPanel
+						elements={design.elements}
+						selectedId={selectedId}
+						onSelect={setSelectedId}
+						onMove={moveLayer}
+						onMoveEnd={moveLayerToEnd}
+						onDelete={removeElement}
+					/>
+					<div className='min-h-0 flex-1 overflow-y-auto border-t p-3'>
+						{selected ? (
+							<PropertyPanel
+								element={selected}
+								onChange={(patch) => updateElement(selected.id, patch)}
+								onDelete={removeSelected}
+								onLayer={(dir) => moveLayer(dir)}
+							/>
+						) : (
+							<p className='px-1 py-6 text-center text-sm text-muted-foreground'>
+								Chọn một phần tử trên canvas để chỉnh sửa thuộc tính.
+							</p>
+						)}
+					</div>
 				</div>
 			</div>
+
+			{/* Xem trước PDF ngay trong app (không dùng pop-up) */}
+			<Dialog
+				open={Boolean(previewUrl)}
+				onOpenChange={(o) => {
+					if (!o) {
+						setPreviewUrl((url) => {
+							if (url) URL.revokeObjectURL(url);
+							return null;
+						});
+					}
+				}}>
+				<DialogContent className='max-w-[90vw] sm:max-w-4xl'>
+					<DialogHeader>
+						<DialogTitle>Xem trước chứng chỉ</DialogTitle>
+					</DialogHeader>
+					{previewUrl && (
+						<iframe
+							title='Xem trước chứng chỉ'
+							src={previewUrl}
+							className='h-[70vh] w-full rounded-md border'
+						/>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			{/* Cảnh báo chưa lưu khi rời trang qua điều hướng trong app */}
+			<Dialog
+				open={blocker.state === "blocked"}
+				onOpenChange={(o) => {
+					if (!o && blocker.state === "blocked") blocker.reset();
+				}}>
+				<DialogContent className='sm:max-w-[440px]'>
+					<DialogHeader>
+						<DialogTitle>Thay đổi chưa được lưu</DialogTitle>
+					</DialogHeader>
+					<p className='text-sm text-muted-foreground'>
+						Bạn có thay đổi chưa lưu trên mẫu chứng chỉ. Nếu rời khỏi trang, các thay
+						đổi này sẽ bị mất.
+					</p>
+					<DialogFooter>
+						<Button
+							variant='outline'
+							onClick={() => blocker.state === "blocked" && blocker.reset()}>
+							Ở lại
+						</Button>
+						<Button
+							variant='destructive'
+							onClick={() => blocker.state === "blocked" && blocker.proceed()}>
+							Rời đi (bỏ thay đổi)
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
+	);
+}
+
+// ─── Panel Lớp (Layers) ──────────────────────────────────────────────────────
+
+const layerIcon = (type: CertificateElementType) => {
+	const cls = "h-3.5 w-3.5";
+	switch (type) {
+		case "text":
+			return <Type className={cls} />;
+		case "image":
+			return <ImageIcon className={cls} />;
+		case "qr":
+			return <QrCode className={cls} />;
+		case "line":
+			return <Minus className={cls} />;
+		case "ellipse":
+			return <CircleIcon className={cls} />;
+		default:
+			return <Square className={cls} />;
+	}
+};
+
+const layerLabel = (el: CertificateElement) => {
+	switch (el.type) {
+		case "text":
+			return el.text?.trim() || "Văn bản";
+		case "image":
+			return "Ảnh / Logo";
+		case "qr":
+			return "Mã QR";
+		case "line":
+			return "Đường kẻ";
+		case "ellipse":
+			return "Elip";
+		default:
+			return "Khối / Viền";
+	}
+};
+
+function LayersPanel({
+	elements,
+	selectedId,
+	onSelect,
+	onMove,
+	onMoveEnd,
+	onDelete,
+}: {
+	elements: CertificateElement[];
+	selectedId: string | null;
+	onSelect: (id: string) => void;
+	onMove: (dir: -1 | 1, id: string) => void;
+	onMoveEnd: (id: string, top: boolean) => void;
+	onDelete: (id: string) => void;
+}) {
+	// Hiển thị lớp trên cùng (cuối mảng) ở đầu danh sách.
+	const rows = [...elements].reverse();
+	return (
+		<div className='flex shrink-0 flex-col'>
+			<div className='flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground'>
+				<Layers className='h-4 w-4' /> Lớp ({elements.length})
+			</div>
+			<div className='max-h-52 min-h-0 overflow-y-auto px-2 pb-2'>
+				{rows.length === 0 ? (
+					<p className='px-1 py-4 text-center text-xs text-muted-foreground'>
+						Chưa có phần tử nào.
+					</p>
+				) : (
+					rows.map((el) => (
+						<div
+							key={el.id}
+							onClick={() => onSelect(el.id)}
+							className={cn(
+								"group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+								selectedId === el.id ? "bg-muted" : "hover:bg-muted/60",
+							)}>
+							<span className='shrink-0 text-muted-foreground'>
+								{layerIcon(el.type)}
+							</span>
+							<span className='min-w-0 flex-1 truncate'>{layerLabel(el)}</span>
+							<div className='flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100'>
+								<LayerBtn title='Lên trên cùng' onClick={() => onMoveEnd(el.id, true)}>
+									<ChevronsUp className='h-3.5 w-3.5' />
+								</LayerBtn>
+								<LayerBtn title='Lên 1 lớp' onClick={() => onMove(1, el.id)}>
+									<ChevronUp className='h-3.5 w-3.5' />
+								</LayerBtn>
+								<LayerBtn title='Xuống 1 lớp' onClick={() => onMove(-1, el.id)}>
+									<ChevronDown className='h-3.5 w-3.5' />
+								</LayerBtn>
+								<LayerBtn title='Xuống dưới cùng' onClick={() => onMoveEnd(el.id, false)}>
+									<ChevronsDown className='h-3.5 w-3.5' />
+								</LayerBtn>
+								<LayerBtn title='Xoá' onClick={() => onDelete(el.id)}>
+									<Trash2 className='h-3.5 w-3.5 text-destructive' />
+								</LayerBtn>
+							</div>
+						</div>
+					))
+				)}
+			</div>
+		</div>
+	);
+}
+
+function LayerBtn({
+	title,
+	onClick,
+	children,
+}: {
+	title: string;
+	onClick: () => void;
+	children: React.ReactNode;
+}) {
+	return (
+		<button
+			type='button'
+			title={title}
+			onClick={(e) => {
+				e.stopPropagation();
+				onClick();
+			}}
+			className='rounded p-0.5 hover:bg-background'>
+			{children}
+		</button>
 	);
 }
 
@@ -807,10 +1268,18 @@ function PropertyPanel({
 			<div className='flex items-center justify-between'>
 				<span className='text-sm font-medium capitalize'>{element.type}</span>
 				<div className='flex gap-1'>
-					<Button variant='outline' size='icon' className='h-7 w-7' onClick={() => onLayer(1)}>
+					<Button
+						variant='outline'
+						size='icon'
+						className='h-7 w-7'
+						onClick={() => onLayer(1)}>
 						<ChevronUp className='h-4 w-4' />
 					</Button>
-					<Button variant='outline' size='icon' className='h-7 w-7' onClick={() => onLayer(-1)}>
+					<Button
+						variant='outline'
+						size='icon'
+						className='h-7 w-7'
+						onClick={() => onLayer(-1)}>
 						<ChevronDown className='h-4 w-4' />
 					</Button>
 					<Button variant='outline' size='icon' className='h-7 w-7' onClick={onDelete}>
@@ -822,21 +1291,46 @@ function PropertyPanel({
 			{/* Vị trí & kích thước */}
 			<div className='grid grid-cols-2 gap-2'>
 				<Field label='X'>
-					<Input type='number' value={Math.round(element.x)} onChange={(e) => onChange({ x: num(e.target.value) })} className='h-8' />
+					<Input
+						type='number'
+						value={Math.round(element.x)}
+						onChange={(e) => onChange({ x: num(e.target.value) })}
+						className='h-8'
+					/>
 				</Field>
 				<Field label='Y'>
-					<Input type='number' value={Math.round(element.y)} onChange={(e) => onChange({ y: num(e.target.value) })} className='h-8' />
+					<Input
+						type='number'
+						value={Math.round(element.y)}
+						onChange={(e) => onChange({ y: num(e.target.value) })}
+						className='h-8'
+					/>
 				</Field>
 				<Field label='Rộng'>
-					<Input type='number' value={Math.round(element.width)} onChange={(e) => onChange({ width: num(e.target.value) })} className='h-8' />
+					<Input
+						type='number'
+						value={Math.round(element.width)}
+						onChange={(e) => onChange({ width: num(e.target.value) })}
+						className='h-8'
+					/>
 				</Field>
 				{element.type !== "line" && (
 					<Field label='Cao'>
-						<Input type='number' value={Math.round(element.height)} onChange={(e) => onChange({ height: num(e.target.value) })} className='h-8' />
+						<Input
+							type='number'
+							value={Math.round(element.height)}
+							onChange={(e) => onChange({ height: num(e.target.value) })}
+							className='h-8'
+						/>
 					</Field>
 				)}
 				<Field label='Xoay (°)'>
-					<Input type='number' value={Math.round(element.rotation ?? 0)} onChange={(e) => onChange({ rotation: num(e.target.value) })} className='h-8' />
+					<Input
+						type='number'
+						value={Math.round(element.rotation ?? 0)}
+						onChange={(e) => onChange({ rotation: num(e.target.value) })}
+						className='h-8'
+					/>
 				</Field>
 			</div>
 
@@ -852,7 +1346,8 @@ function PropertyPanel({
 						/>
 					</Field>
 					<Field label='Chèn placeholder'>
-						<Select onValueChange={(v) => onChange({ text: `${element.text ?? ""}${v}` })}>
+						<Select
+							onValueChange={(v) => onChange({ text: `${element.text ?? ""}${v}` })}>
 							<SelectTrigger className='h-8'>
 								<SelectValue placeholder='Chọn trường...' />
 							</SelectTrigger>
@@ -867,7 +1362,9 @@ function PropertyPanel({
 					</Field>
 					<div className='grid grid-cols-2 gap-2'>
 						<Field label='Font'>
-							<Select value={element.fontFamily ?? "Be Vietnam Pro"} onValueChange={(v) => onChange({ fontFamily: v })}>
+							<Select
+								value={element.fontFamily ?? "Be Vietnam Pro"}
+								onValueChange={(v) => onChange({ fontFamily: v })}>
 								<SelectTrigger className='h-8'>
 									<SelectValue />
 								</SelectTrigger>
@@ -881,10 +1378,19 @@ function PropertyPanel({
 							</Select>
 						</Field>
 						<Field label='Cỡ chữ'>
-							<Input type='number' value={element.fontSize ?? 28} onChange={(e) => onChange({ fontSize: num(e.target.value) })} className='h-8' />
+							<Input
+								type='number'
+								value={element.fontSize ?? 28}
+								onChange={(e) => onChange({ fontSize: num(e.target.value) })}
+								className='h-8'
+							/>
 						</Field>
 						<Field label='Canh lề'>
-							<Select value={element.align ?? "center"} onValueChange={(v) => onChange({ align: v as CertificateElement["align"] })}>
+							<Select
+								value={element.align ?? "center"}
+								onValueChange={(v) =>
+									onChange({ align: v as CertificateElement["align"] })
+								}>
 								<SelectTrigger className='h-8'>
 									<SelectValue />
 								</SelectTrigger>
@@ -896,7 +1402,9 @@ function PropertyPanel({
 							</Select>
 						</Field>
 						<Field label='Kiểu'>
-							<Select value={element.fontStyle ?? "normal"} onValueChange={(v) => onChange({ fontStyle: v })}>
+							<Select
+								value={element.fontStyle ?? "normal"}
+								onValueChange={(v) => onChange({ fontStyle: v })}>
 								<SelectTrigger className='h-8'>
 									<SelectValue />
 								</SelectTrigger>
@@ -909,29 +1417,53 @@ function PropertyPanel({
 							</Select>
 						</Field>
 					</div>
-					<ColorField label='Màu chữ' value={element.fill ?? "#111111"} onChange={(v) => onChange({ fill: v })} />
+					<ColorField
+						label='Màu chữ'
+						value={element.fill ?? "#111111"}
+						onChange={(v) => onChange({ fill: v })}
+					/>
 				</div>
 			)}
 
 			{/* Shape (rect/ellipse/line) */}
 			{(element.type === "rect" || element.type === "ellipse" || element.type === "line") && (
 				<div className='space-y-3 border-t pt-3'>
-					<ColorField label='Màu viền' value={element.stroke ?? "#1d4ed8"} onChange={(v) => onChange({ stroke: v })} />
+					<ColorField
+						label='Màu viền'
+						value={element.stroke ?? "#1d4ed8"}
+						onChange={(v) => onChange({ stroke: v })}
+					/>
 					<Field label='Độ dày viền'>
-						<Input type='number' value={element.strokeWidth ?? 2} onChange={(e) => onChange({ strokeWidth: num(e.target.value) })} className='h-8' />
+						<Input
+							type='number'
+							value={element.strokeWidth ?? 2}
+							onChange={(e) => onChange({ strokeWidth: num(e.target.value) })}
+							className='h-8'
+						/>
 					</Field>
 					{element.type !== "line" && (
 						<>
 							<ColorField
 								label='Màu nền'
-								value={element.fill && element.fill !== "transparent" ? element.fill : "#ffffff"}
+								value={
+									element.fill && element.fill !== "transparent"
+										? element.fill
+										: "#ffffff"
+								}
 								onChange={(v) => onChange({ fill: v })}
 								transparent
 								onTransparent={() => onChange({ fill: "transparent" })}
 							/>
 							{element.type === "rect" && (
 								<Field label='Bo góc'>
-									<Input type='number' value={element.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: num(e.target.value) })} className='h-8' />
+									<Input
+										type='number'
+										value={element.cornerRadius ?? 0}
+										onChange={(e) =>
+											onChange({ cornerRadius: num(e.target.value) })
+										}
+										className='h-8'
+									/>
 								</Field>
 							)}
 						</>

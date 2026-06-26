@@ -67,12 +67,13 @@ class CertificateTemplateController extends BaseApiController
             'name' => $data['name'],
             // Dùng input() (không phải mảng validated đã bị lược các key không có rule như canvas.background)
             'design' => $request->input('design'),
-            'thumbnail' => $this->storeThumbnail($data['thumbnail'] ?? null),
             'is_default' => false,
             'created_by' => $request->user()->id,
         ]);
 
-        return $this->createdResponse($this->transformDetail($template), 'Tạo mẫu chứng chỉ thành công.');
+        $this->generateThumbnail($template);
+
+        return $this->createdResponse($this->transformDetail($template->refresh()), 'Tạo mẫu chứng chỉ thành công.');
     }
 
     /**
@@ -82,17 +83,13 @@ class CertificateTemplateController extends BaseApiController
     {
         $data = $this->validatePayload($request);
 
-        $payload = [
+        $certificateTemplate->update([
             'name' => $data['name'],
             'design' => $request->input('design'),
-        ];
+        ]);
 
-        if (array_key_exists('thumbnail', $data) && $data['thumbnail']) {
-            $this->deleteFile($certificateTemplate->thumbnail);
-            $payload['thumbnail'] = $this->storeThumbnail($data['thumbnail']);
-        }
-
-        $certificateTemplate->update($payload);
+        // Render lại thumbnail theo thiết kế mới.
+        $this->generateThumbnail($certificateTemplate);
 
         return $this->successResponse(true, $this->transformDetail($certificateTemplate->refresh()), 'Đã cập nhật mẫu chứng chỉ.');
     }
@@ -131,7 +128,7 @@ class CertificateTemplateController extends BaseApiController
     public function duplicate(Request $request, CertificateTemplate $certificateTemplate): JsonResponse
     {
         $clone = CertificateTemplate::create([
-            'name' => $certificateTemplate->name . ' (sao chép)',
+            'name' => $certificateTemplate->name.' (sao chép)',
             'design' => $certificateTemplate->design,
             'html_content' => $certificateTemplate->html_content,
             'thumbnail' => $this->copyFile($certificateTemplate->thumbnail),
@@ -167,14 +164,7 @@ class CertificateTemplateController extends BaseApiController
         ]);
 
         $template = new CertificateTemplate(['design' => $request->input('design')]);
-        $code = 'CKC-2026-XEMTHU01';
-        $pdf = $renderer->renderPdf($template, [
-            'name' => 'Nguyễn Văn Mẫu',
-            'course' => 'Khoá học mẫu',
-            'cert_code' => $code,
-            'issued_at' => now()->format('d/m/Y'),
-            'verify_url' => rtrim((string) config('app.url'), '/').'/verify/'.$code,
-        ]);
+        $pdf = $renderer->renderPdf($template, $this->sampleData());
 
         return $this->successResponse(
             true,
@@ -186,7 +176,7 @@ class CertificateTemplateController extends BaseApiController
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
-     * @return array{name:string,design:array,thumbnail?:string|null}
+     * @return array{name:string,design:array}
      */
     private function validatePayload(Request $request): array
     {
@@ -197,29 +187,47 @@ class CertificateTemplateController extends BaseApiController
             'design.canvas.width' => 'required|numeric|min:1',
             'design.canvas.height' => 'required|numeric|min:1',
             'design.elements' => 'present|array',
-            'thumbnail' => 'nullable|string', // data URL (data:image/png;base64,...)
         ]);
     }
 
     /**
-     * Lưu thumbnail dạng data URL (base64) thành file PNG trên disk public. Trả path đã lưu.
+     * Sinh thumbnail server-side từ chính bản render (Browsershot chụp PNG) để khớp đúng thiết kế.
+     * Xoá thumbnail cũ (nếu có) rồi cập nhật path mới. Không làm hỏng request nếu render lỗi.
      */
-    private function storeThumbnail(?string $dataUrl): ?string
+    private function generateThumbnail(CertificateTemplate $template): void
     {
-        if (! $dataUrl || ! Str::startsWith($dataUrl, 'data:image')) {
-            return null;
+        if (empty($template->design)) {
+            return;
         }
 
-        [, $encoded] = array_pad(explode(',', $dataUrl, 2), 2, '');
-        $binary = base64_decode($encoded, true);
-        if ($binary === false) {
-            return null;
+        try {
+            $png = app(CertificateRenderer::class)->renderThumbnail($template, $this->sampleData());
+            $path = 'certificate-thumbnails/'.Str::uuid()->toString().'.png';
+            Storage::disk('public')->put($path, $png);
+
+            $this->deleteFile($template->thumbnail);
+            $template->update(['thumbnail' => $path]);
+        } catch (\Throwable $e) {
+            report($e); // thumbnail là phụ — không chặn lưu mẫu
         }
+    }
 
-        $path = 'certificate-thumbnails/' . Str::uuid()->toString() . '.png';
-        Storage::disk('public')->put($path, $binary);
+    /**
+     * Dữ liệu mẫu để render preview/thumbnail (chung cho cả preview()).
+     *
+     * @return array<string,string>
+     */
+    private function sampleData(): array
+    {
+        $code = 'CKC-2026-PREVIEW01';
 
-        return $path;
+        return [
+            'name' => 'Nguyễn Văn Mẫu',
+            'course' => 'Khoá học mẫu',
+            'cert_code' => $code,
+            'issued_at' => now()->format('d/m/Y'),
+            'verify_url' => rtrim((string) config('app.url'), '/').'/verify/'.$code,
+        ];
     }
 
     private function deleteFile(?string $path): void
@@ -235,7 +243,7 @@ class CertificateTemplateController extends BaseApiController
             return null;
         }
 
-        $copy = 'certificate-thumbnails/' . Str::uuid()->toString() . '.' . pathinfo($path, PATHINFO_EXTENSION);
+        $copy = 'certificate-thumbnails/'.Str::uuid()->toString().'.'.pathinfo($path, PATHINFO_EXTENSION);
         Storage::disk('public')->copy($path, $copy);
 
         return $copy;

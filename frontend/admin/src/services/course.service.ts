@@ -122,6 +122,7 @@ const courseService = {
 		if (params.search) query.search = params.search;
 		if (params.status && params.status !== "all") query.status = params.status;
 		if (params.level && params.level !== "all") query.level = params.level;
+		if (params.audience && params.audience !== "all") query.audience = params.audience;
 		if (params.offline && params.offline !== "all") query.offline = params.offline;
 		if (params.sort) query.sort = params.sort;
 		if (params.order) query.order = params.order;

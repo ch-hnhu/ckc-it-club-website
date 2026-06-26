@@ -83,8 +83,12 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 		? [...BASE_NAV_ITEMS, APPLY_NAV_ITEM]
 		: BASE_NAV_ITEMS;
 	const isLectureVideoPage = /^\/khoa-hoc\/[^/]+\/[^/]+\/[^/]+\/?$/.test(location.pathname);
-	const navbarContainerClass = isLectureVideoPage ? "mx-0 max-w-none" : "";
-	const navbarPaddingX = isLectureVideoPage ? "px-4 md:px-6 lg:px-8" : "px-6";
+	const isCommunityPage =
+		location.pathname.startsWith("/cong-dong") ||
+		location.pathname.startsWith("/community");
+	const isFullWidthPage = isLectureVideoPage || isCommunityPage;
+	const navbarContainerClass = isFullWidthPage ? "mx-0 max-w-none" : "";
+	const navbarPaddingX = isFullWidthPage ? "px-4 md:px-6 lg:px-8" : "px-6";
 	const lecturePathParts = location.pathname.split("/").filter(Boolean);
 	const lectureCourseSlug = lecturePathParts[1] ?? "";
 	const lectureLessonSlug = lecturePathParts[2] ?? "";

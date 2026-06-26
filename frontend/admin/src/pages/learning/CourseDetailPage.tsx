@@ -65,7 +65,9 @@ import { useClientPagination } from "@/hooks/useClientPagination";
 import { cn } from "@/lib/utils";
 import {
 	COURSE_LEVEL_MAP,
+	COURSE_AUDIENCE_MAP,
 	COURSE_STATUS_MAP,
+	type CourseAudience,
 	type CourseLevel,
 	type CourseStatus,
 } from "@/pages/learning/course-meta";
@@ -84,6 +86,7 @@ import LessonCheckInDialog from "@/pages/learning/LessonCheckInDialog";
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" });
 const dateTimeFmt = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" });
+const compactCardClassName = "gap-0 py-0";
 
 function formatDate(value: string | null) {
 	if (!value) return "--";
@@ -108,6 +111,15 @@ function statusBadge(status: CourseStatus) {
 
 function levelBadge(level: CourseLevel) {
 	const { label, className } = COURSE_LEVEL_MAP[level];
+	return (
+		<Badge variant='outline' className={cn("rounded-full px-3 py-1", className)}>
+			{label}
+		</Badge>
+	);
+}
+
+function audienceBadge(audience: CourseAudience) {
+	const { label, className } = COURSE_AUDIENCE_MAP[audience];
 	return (
 		<Badge variant='outline' className={cn("rounded-full px-3 py-1", className)}>
 			{label}
@@ -143,7 +155,7 @@ function StatCard({
 	hint?: string;
 }) {
 	return (
-		<Card>
+		<Card className={compactCardClassName}>
 			<CardContent className='flex items-center gap-3 p-4'>
 				<div className='flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground'>
 					{icon}
@@ -289,6 +301,10 @@ function CourseDetailPage() {
 
 	const openEditLesson = (id: number) => {
 		navigate(`/courses/${slug}/lessons/${id}/edit`);
+	};
+
+	const openLessonDetail = (id: number) => {
+		navigate(`/courses/${slug}/lessons/${id}`);
 	};
 
 	const openQuizBuilder = (id: number) => {
@@ -450,6 +466,7 @@ function CourseDetailPage() {
 						<div className='flex flex-wrap items-center gap-2'>
 							{statusBadge(course.status)}
 							{levelBadge(course.level)}
+							{audienceBadge(course.audience)}
 							{course.categories.map((c) => (
 								<Badge
 									key={c.id}
@@ -520,7 +537,7 @@ function CourseDetailPage() {
 					{/* ─── Tổng quan ─── */}
 					<TabsContent value='overview' className='mt-4'>
 						<div className='grid gap-4 lg:grid-cols-2'>
-							<Card>
+							<Card className={compactCardClassName}>
 								<CardContent className='space-y-3 p-5'>
 									<h3 className='flex items-center gap-2 font-semibold'>
 										<CalendarClock className='h-4 w-4' />
@@ -544,7 +561,7 @@ function CourseDetailPage() {
 								</CardContent>
 							</Card>
 
-							<Card>
+							<Card className={compactCardClassName}>
 								<CardContent className='space-y-3 p-5'>
 									<h3 className='flex items-center gap-2 font-semibold'>
 										<ListChecks className='h-4 w-4' />
@@ -552,26 +569,22 @@ function CourseDetailPage() {
 									</h3>
 									<Separator />
 									<dl className='grid grid-cols-[180px_1fr] gap-y-2 text-sm'>
-										<dt className='text-muted-foreground'>
-											Sức chứa lớp offline
-										</dt>
-										<dd>
-											{hasOffline
-												? course.max_offline_slots
-												: "Không mở offline"}
-										</dd>
-										<dt className='text-muted-foreground'>
-											Số buổi vắng tối đa
-										</dt>
-										<dd>{course.max_absent_allowed}</dd>
+										{hasOffline && (
+											<>
+												<dt className='text-muted-foreground'>
+													Sức chứa lớp offline
+												</dt>
+												<dd>{course.max_offline_slots}</dd>
+												<dt className='text-muted-foreground'>
+													Số buổi vắng tối đa
+												</dt>
+												<dd>{course.max_absent_allowed}</dd>
+											</>
+										)}
 										<dt className='text-muted-foreground'>Ngưỡng đạt quiz</dt>
 										<dd>{course.quiz_pass_threshold}%</dd>
-										<dt className='text-muted-foreground'>Số buổi dự kiến</dt>
-										<dd>
-											{course.total_lessons != null
-												? `${course.lessons_count}/${course.total_lessons} buổi`
-												: "Không giới hạn"}
-										</dd>
+										<dt className='text-muted-foreground'>Đối tượng học</dt>
+										<dd>{COURSE_AUDIENCE_MAP[course.audience].label}</dd>
 										<dt className='text-muted-foreground'>Người tạo</dt>
 										<dd>{course.creator?.full_name ?? "--"}</dd>
 									</dl>
@@ -620,7 +633,14 @@ function CourseDetailPage() {
 														{lesson.order}
 													</TableCell>
 													<TableCell className='font-medium'>
-														{lesson.title}
+														<button
+															type='button'
+															className='text-left hover:text-primary hover:underline'
+															onClick={() =>
+																openLessonDetail(lesson.id)
+															}>
+															{lesson.title}
+														</button>
 													</TableCell>
 													<TableCell className='text-sm text-muted-foreground'>
 														{lesson.session_start
@@ -666,6 +686,13 @@ function CourseDetailPage() {
 															<DropdownMenuContent
 																align='end'
 																className='w-[160px]'>
+																<DropdownMenuItem
+																	onClick={() =>
+																		openLessonDetail(lesson.id)
+																	}>
+																	<BookOpen className='h-4 w-4' />
+																	Xem chi tiết
+																</DropdownMenuItem>
 																<DropdownMenuItem
 																	onClick={() =>
 																		openEditLesson(lesson.id)

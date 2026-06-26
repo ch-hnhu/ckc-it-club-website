@@ -24,6 +24,7 @@ interface VideoTab {
 }
 
 const isEmbedUrl = (url: string) => url.includes("youtube") || url.includes("/embed");
+const isFutureDate = (value?: string | null) => Boolean(value && new Date(value) > new Date());
 
 // ─── Skeleton ───────────────────────────────────────────────────────────────────
 
@@ -67,8 +68,13 @@ const VideoDetailPage: React.FC = () => {
 				// Ưu tiên video bài giảng; nếu chưa có thì mở bản ghi livestream
 				setActiveTab(res.data.lecture_url ? "lecture" : "live");
 			})
-			.catch(() => {
-				if (!cancelled) setError("Không tìm thấy video này.");
+			.catch((err) => {
+				if (!cancelled) {
+					setError(
+						(err as { response?: { data?: { message?: string } } })?.response?.data
+							?.message ?? "Không tìm thấy video này.",
+					);
+				}
 			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
@@ -121,6 +127,8 @@ const VideoDetailPage: React.FC = () => {
 	const nextHref = video?.next_lesson
 		? `/khoa-hoc/${slug}/${video.next_lesson.slug}/video`
 		: null;
+	const nextLessonLocked =
+		Boolean(video?.next_lesson?.locked) || isFutureDate(video?.next_lesson?.session_start);
 
 	return (
 		<div className='flex min-h-screen w-full flex-col bg-white pt-16 pb-28 lg:h-screen lg:overflow-hidden lg:pb-[74px]'>
@@ -269,7 +277,7 @@ const VideoDetailPage: React.FC = () => {
 								<ArrowLeft className='h-4 w-4' />
 								<span className='hidden sm:inline'>Trước</span>
 							</Link>
-							{nextHref ? (
+							{nextHref && !nextLessonLocked ? (
 								<Link
 									to={nextHref}
 									className='inline-flex items-center gap-1.5 rounded-xl border-2 border-black bg-white px-4 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
