@@ -97,11 +97,7 @@ function RoleList() {
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
 	}, [debouncedSearch, sortConfig]);
 
-	useEffect(() => {
-		fetchRoles();
-	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
-
-	const fetchRoles = async () => {
+	async function fetchRoles() {
 		try {
 			const response = await roleService.getRoles({
 				page: meta.current_page,
@@ -120,7 +116,12 @@ function RoleList() {
 		} catch (error) {
 			console.error("Đã có lỗi xảy ra:", error);
 		}
-	};
+	}
+
+	useEffect(() => {
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		fetchRoles();
+	}, [meta.current_page, meta.per_page, debouncedSearch, sortConfig]);
 
 	const handleSort = (key: string) => {
 		let order: "asc" | "desc" | null = "asc";

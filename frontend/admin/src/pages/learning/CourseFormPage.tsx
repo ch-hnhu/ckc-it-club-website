@@ -72,7 +72,7 @@ const getInitialForm = (): FormState => ({
 	enrollment_deadline: "",
 	course_end: "",
 	max_offline_slots: "30",
-	max_absent_allowed: "1",
+	max_absent_allowed: "3",
 	quiz_pass_threshold: "80",
 	certificate_template_id: "",
 });
@@ -454,7 +454,7 @@ function CourseFormPage() {
 												setForm((prev) => ({
 													...prev,
 													max_offline_slots: "30",
-													max_absent_allowed: "1",
+													max_absent_allowed: "3",
 													enrollment_start: "",
 													enrollment_deadline: "",
 													course_end: "",

@@ -760,10 +760,10 @@ const CourseDetailPage: React.FC = () => {
 	const audienceMeta = AUDIENCE_META[audience];
 	const viewerCanLearn = Boolean(
 		user &&
-			(isEnrolled ||
-				audience === "public" ||
-				(audience === "club_member" && isClubMember) ||
-				(audience === "cao_thang_student" && isSchoolStudent)),
+		(isEnrolled ||
+			audience === "public" ||
+			(audience === "club_member" && isClubMember) ||
+			(audience === "cao_thang_student" && isSchoolStudent)),
 	);
 	const now = new Date();
 	const firstLesson = lessons[0] ?? null;
@@ -841,7 +841,7 @@ const CourseDetailPage: React.FC = () => {
 	);
 	const ctaSupportText = (() => {
 		if (shouldWaitForUser) return "Đang đồng bộ phiên đăng nhập của bạn.";
-		if (!user) return "Đăng nhập để học online hoặc đăng ký lớp offline khi đủ điều kiện.";
+		if (!user) return "Đăng nhập ngay để tham gia lớp học.";
 		if (!viewerCanLearn) return audienceMeta.notice;
 		if (canRegisterOffline) return "Đăng ký để tham gia lớp học trực tiếp cùng mentor.";
 		if (showInterestCta) {
@@ -1026,7 +1026,7 @@ const CourseDetailPage: React.FC = () => {
 								<div className='absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/20' />
 							</div>
 
-							<div className='relative max-w-2xl p-6 md:p-10'>
+							<div className='relative max-w-3xl p-6 md:p-10'>
 								<span className='inline-flex w-fit items-center gap-2 rounded-full border-2 border-black bg-[var(--color-primary)] px-3 py-1 font-heading text-[11px] font-extrabold uppercase tracking-[0.1em] text-black shadow-[2px_2px_0_#111]'>
 									<BarChart3 className='h-3.5 w-3.5' strokeWidth={2.5} />
 									{LEVEL_LABEL[course.level]} · Khóa học
@@ -1110,7 +1110,7 @@ const CourseDetailPage: React.FC = () => {
 										</span>
 									)}
 									{ctaSupportText && !canStartLearning && (
-										<span className='max-w-sm text-xs font-semibold leading-5 text-white/85'>
+										<span className='max-w-sm text-xs align-text-bottom font-semibold leading-5 text-white/85'>
 											{ctaSupportText}
 										</span>
 									)}

@@ -143,16 +143,21 @@ export function listenOAuthAuthMessage(options: {
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
 	const token = getAccessToken();
+	if (!token) return null;
+
 	const response = await fetch(`${API_URL}/auth/me`, {
 		method: "GET",
 		credentials: "include",
 		headers: {
 			Accept: "application/json",
-			...(token ? { Authorization: `Bearer ${token}` } : {}),
+			Authorization: `Bearer ${token}`,
 		},
 	});
 
-	if (response.status === 401) return null;
+	if (response.status === 401) {
+		clearAccessToken();
+		return null;
+	}
 
 	const data = await parseJsonSafe(response);
 	if (!response.ok) return null;
