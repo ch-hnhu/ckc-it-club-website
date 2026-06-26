@@ -32,6 +32,8 @@ class QuizController extends BaseApiController
     public function show(Request $request, Course $course, string $lessonSlug): JsonResponse
     {
         $lesson = $this->resolveLesson($course, $lessonSlug);
+        app(CourseEnrollmentService::class)->assertCanLearn($course, auth('sanctum')->user());
+        $this->assertLessonContentOpen($lesson);
         $quiz = $lesson->quiz()->with(['questions.options', 'questions.type'])->first();
 
         abort_if(! $quiz || $quiz->questions->isEmpty(), 404, 'Buổi học này chưa có quiz.');
@@ -84,6 +86,8 @@ class QuizController extends BaseApiController
     public function submit(Request $request, Course $course, string $lessonSlug): JsonResponse
     {
         $lesson = $this->resolveLesson($course, $lessonSlug);
+        app(CourseEnrollmentService::class)->assertCanLearn($course, $request->user());
+        $this->assertLessonContentOpen($lesson);
         $quiz = $lesson->quiz()->with(['questions.options', 'questions.type'])->first();
         abort_if(! $quiz || $quiz->questions->isEmpty(), 404, 'Buổi học này chưa có quiz.');
 
@@ -198,5 +202,12 @@ class QuizController extends BaseApiController
         abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
 
         return $lesson;
+    }
+
+    private function assertLessonContentOpen(Lesson $lesson): void
+    {
+        if ($lesson->session_start && now()->lt($lesson->session_start)) {
+            abort(403, 'Buổi học chưa bắt đầu. Vui lòng quay lại vào ngày ' . $lesson->session_start->format('d/m/Y') . '.');
+        }
     }
 }

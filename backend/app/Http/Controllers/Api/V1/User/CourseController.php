@@ -146,8 +146,18 @@ class CourseController extends BaseApiController
         /** @var Lesson $lesson */
         $lesson = $lessons[$idx];
         $lesson->load('quiz.questions');
+        app(CourseEnrollmentService::class)->assertCanLearn($course, auth('sanctum')->user());
+
         $userId = auth('sanctum')->id();
         $enrollment = $course->enrollmentFor($userId);
+
+        // Chặn truy cập buổi học đang bị khoá (kể cả khi gõ URL trực tiếp).
+        $lockedIds = $this->lockedLessonIds($course, $lessons, $userId, $enrollment?->track);
+        abort_if(
+            in_array($lesson->id, $lockedIds, true),
+            403,
+            'Buổi học này đang bị khoá. Hãy hoàn thành buổi học trước để mở khoá.'
+        );
 
         $progress = $this->lessonProgressPercent($lesson, $userId, $enrollment?->track);
         $sections = $this->sectionCompletionMap($lesson, $userId);
@@ -172,8 +182,16 @@ class CourseController extends BaseApiController
                 'title' => $course->title,
                 'level' => $course->level->value,
             ],
-            'prev' => $prev ? ['slug' => $prev->slug, 'title' => $prev->title] : null,
-            'next' => $next ? ['slug' => $next->slug, 'title' => $next->title] : null,
+            'prev' => $prev ? [
+                'slug' => $prev->slug,
+                'title' => $prev->title,
+                'locked' => in_array($prev->id, $lockedIds, true),
+            ] : null,
+            'next' => $next ? [
+                'slug' => $next->slug,
+                'title' => $next->title,
+                'locked' => in_array($next->id, $lockedIds, true),
+            ] : null,
             'video' => $videoUrl ? [
                 'id' => $lesson->id,
                 'slug' => 'video',
@@ -227,8 +245,20 @@ class CourseController extends BaseApiController
         $lesson = $lessons[$idx];
         $videoUrl = $lesson->playableVideoUrl();
         abort_if(! $videoUrl, 404, 'Buổi học này chưa có video bài giảng.');
+        app(CourseEnrollmentService::class)->assertCanLearn($course, auth('sanctum')->user());
+        $this->assertLessonContentOpen($lesson);
 
         $userId = auth('sanctum')->id();
+        $enrollment = $course->enrollmentFor($userId);
+
+        // Chặn xem video của buổi học đang bị khoá (kể cả khi gõ URL trực tiếp).
+        $lockedIds = $this->lockedLessonIds($course, $lessons, $userId, $enrollment?->track);
+        abort_if(
+            in_array($lesson->id, $lockedIds, true),
+            403,
+            'Buổi học này đang bị khoá. Hãy hoàn thành buổi học trước để mở khoá.'
+        );
+
         $completed = ($this->sectionCompletionMap($lesson, $userId)['video'] ?? false);
         $prev = $idx > 0 ? $lessons[$idx - 1] : null;
         $next = $idx < $lessons->count() - 1 ? $lessons[$idx + 1] : null;
@@ -247,8 +277,18 @@ class CourseController extends BaseApiController
             'completed' => $completed,
             'course' => ['slug' => $course->slug, 'title' => $course->title],
             'lesson' => ['slug' => $lesson->slug, 'title' => $lesson->title, 'order' => $lesson->order],
-            'prev_lesson' => $prev ? ['slug' => $prev->slug, 'title' => $prev->title] : null,
-            'next_lesson' => $next ? ['slug' => $next->slug, 'title' => $next->title] : null,
+            'prev_lesson' => $prev ? [
+                'slug' => $prev->slug,
+                'title' => $prev->title,
+                'session_start' => $prev->session_start?->toIso8601String(),
+                'locked' => in_array($prev->id, $lockedIds, true),
+            ] : null,
+            'next_lesson' => $next ? [
+                'slug' => $next->slug,
+                'title' => $next->title,
+                'session_start' => $next->session_start?->toIso8601String(),
+                'locked' => in_array($next->id, $lockedIds, true),
+            ] : null,
         ];
 
         return $this->successResponse(true, $data, 'Lấy thông tin video thành công.');
@@ -318,6 +358,8 @@ class CourseController extends BaseApiController
             ->first();
         abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
 
+        app(CourseEnrollmentService::class)->assertCanLearn($course, $request->user());
+
         $userId = $request->user()->id;
 
         // Vé QR chỉ dành cho học viên đã ghi danh lớp offline.
@@ -362,6 +404,8 @@ class CourseController extends BaseApiController
             ->first();
         abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
         abort_if(! $lesson->playableVideoUrl(), 422, 'Buổi học này chưa có video bài giảng.');
+        app(CourseEnrollmentService::class)->assertCanLearn($course, $request->user());
+        $this->assertLessonContentOpen($lesson);
 
         $userId = $request->user()->id;
         // Vào học là tự ghi danh (track online) — không cần bước ghi danh thủ công.
@@ -450,6 +494,7 @@ class CourseController extends BaseApiController
             'excerpt' => $course->description ? mb_substr($course->description, 0, 160) : null,
             'thumbnail' => $this->resolveUrl($course->thumbnail),
             'level' => $course->level->value,
+            'audience' => $course->audience->value,
             'instructor' => $course->creator ? [
                 'id' => $course->creator->id,
                 'full_name' => $course->creator->full_name,
@@ -526,6 +571,60 @@ class CourseController extends BaseApiController
                 $type instanceof LessonSectionType ? $type->value : $type => true,
             ])
             ->all();
+    }
+
+    /**
+     * Tập id các buổi học đang bị khoá với user hiện tại — phản chiếu logic khoá ở
+     * frontend (CourseDetailPage::frontendLockedIds). Dùng để chặn điều hướng
+     * "Buổi tiếp theo" vượt khoá, cả ở UI lẫn ở API.
+     *
+     * - Khoá 100% online (max_offline_slots === null): mở tuần tự, chỉ buổi chưa
+     *   hoàn thành đầu tiên được mở; các buổi chưa hoàn thành phía sau bị khoá.
+     * - Khoá có lớp offline: mở buổi đã hoàn thành, buổi đã tới giờ, và buổi sắp
+     *   diễn ra gần nhất; các buổi tương lai còn lại bị khoá.
+     *
+     * @param  \Illuminate\Support\Collection<int,Lesson>  $lessons  đã sắp theo thứ tự
+     * @return array<int,int>  danh sách lesson id bị khoá
+     */
+    private function lockedLessonIds(Course $course, $lessons, ?int $userId, ?string $track): array
+    {
+        $isCompleted = fn (Lesson $l) => $this->lessonProgressPercent($l, $userId, $track) === 100;
+
+        if ($course->max_offline_slots === null) {
+            $nextOpenId = $lessons->first(fn (Lesson $l) => ! $isCompleted($l))?->id;
+
+            return $lessons
+                ->filter(fn (Lesson $l) => ! $isCompleted($l) && $l->id !== $nextOpenId)
+                ->pluck('id')
+                ->all();
+        }
+
+        $now = now();
+        $nearestUpcomingId = $lessons
+            ->filter(fn (Lesson $l) => $l->session_start && $l->session_start->gt($now))
+            ->sortBy('session_start')
+            ->first()?->id;
+
+        return $lessons
+            ->filter(function (Lesson $l) use ($isCompleted, $now, $nearestUpcomingId) {
+                if ($isCompleted($l)) {
+                    return false;
+                }
+                if ($l->session_start && $l->session_start->lte($now)) {
+                    return false;
+                }
+
+                return $l->id !== $nearestUpcomingId;
+            })
+            ->pluck('id')
+            ->all();
+    }
+
+    private function assertLessonContentOpen(Lesson $lesson): void
+    {
+        if ($lesson->session_start && now()->lt($lesson->session_start)) {
+            abort(403, 'Buổi học chưa bắt đầu. Vui lòng quay lại vào ngày ' . $lesson->session_start->format('d/m/Y') . '.');
+        }
     }
 
     /**

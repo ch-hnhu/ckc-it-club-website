@@ -65,7 +65,9 @@ import { useClientPagination } from "@/hooks/useClientPagination";
 import { cn } from "@/lib/utils";
 import {
 	COURSE_LEVEL_MAP,
+	COURSE_AUDIENCE_MAP,
 	COURSE_STATUS_MAP,
+	type CourseAudience,
 	type CourseLevel,
 	type CourseStatus,
 } from "@/pages/learning/course-meta";
@@ -109,6 +111,15 @@ function statusBadge(status: CourseStatus) {
 
 function levelBadge(level: CourseLevel) {
 	const { label, className } = COURSE_LEVEL_MAP[level];
+	return (
+		<Badge variant='outline' className={cn("rounded-full px-3 py-1", className)}>
+			{label}
+		</Badge>
+	);
+}
+
+function audienceBadge(audience: CourseAudience) {
+	const { label, className } = COURSE_AUDIENCE_MAP[audience];
 	return (
 		<Badge variant='outline' className={cn("rounded-full px-3 py-1", className)}>
 			{label}
@@ -451,6 +462,7 @@ function CourseDetailPage() {
 						<div className='flex flex-wrap items-center gap-2'>
 							{statusBadge(course.status)}
 							{levelBadge(course.level)}
+							{audienceBadge(course.audience)}
 							{course.categories.map((c) => (
 								<Badge
 									key={c.id}
@@ -553,26 +565,22 @@ function CourseDetailPage() {
 									</h3>
 									<Separator />
 									<dl className='grid grid-cols-[180px_1fr] gap-y-2 text-sm'>
-										<dt className='text-muted-foreground'>
-											Sức chứa lớp offline
-										</dt>
-										<dd>
-											{hasOffline
-												? course.max_offline_slots
-												: "Không mở offline"}
-										</dd>
-										<dt className='text-muted-foreground'>
-											Số buổi vắng tối đa
-										</dt>
-										<dd>{course.max_absent_allowed}</dd>
+										{hasOffline && (
+											<>
+												<dt className='text-muted-foreground'>
+													Sức chứa lớp offline
+												</dt>
+												<dd>{course.max_offline_slots}</dd>
+												<dt className='text-muted-foreground'>
+													Số buổi vắng tối đa
+												</dt>
+												<dd>{course.max_absent_allowed}</dd>
+											</>
+										)}
 										<dt className='text-muted-foreground'>Ngưỡng đạt quiz</dt>
 										<dd>{course.quiz_pass_threshold}%</dd>
-										<dt className='text-muted-foreground'>Số buổi dự kiến</dt>
-										<dd>
-											{course.total_lessons != null
-												? `${course.lessons_count}/${course.total_lessons} buổi`
-												: "Không giới hạn"}
-										</dd>
+										<dt className='text-muted-foreground'>Đối tượng học</dt>
+										<dd>{COURSE_AUDIENCE_MAP[course.audience].label}</dd>
 										<dt className='text-muted-foreground'>Người tạo</dt>
 										<dd>{course.creator?.full_name ?? "--"}</dd>
 									</dl>

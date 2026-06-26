@@ -2,12 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ArrowLeft,
 	ChevronDown,
+	ChevronsDown,
+	ChevronsUp,
 	ChevronUp,
 	Circle as CircleIcon,
 	Eye,
 	Image as ImageIcon,
+	Layers,
 	Loader2,
+	Maximize,
 	Minus,
+	Plus,
 	QrCode,
 	Redo2,
 	Save,
@@ -179,13 +184,82 @@ function CertificateTemplateEditorPage() {
 	const [dirty, setDirty] = useState(false);
 	const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
 
+	// Zoom / pan canvas (kiểu app vẽ)
+	const [viewport, setViewport] = useState({ width: 800, height: 560 });
+	const [zoom, setZoom] = useState(SCALE);
+	const [stagePos, setStagePos] = useState({ x: 40, y: 40 });
+
 	const stageRef = useRef<Konva.Stage>(null);
 	const trRef = useRef<Konva.Transformer>(null);
 	const nodeRefs = useRef<Record<string, Konva.Node>>({});
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const bgInputRef = useRef<HTMLInputElement>(null);
+	const canvasAreaRef = useRef<HTMLDivElement>(null);
 	const designRef = useRef(design);
 	designRef.current = design;
+
+	// Đo vùng chứa canvas để Stage lấp đầy + tính "khít" (fit)
+	useEffect(() => {
+		const el = canvasAreaRef.current;
+		if (!el) return;
+		const ro = new ResizeObserver(([entry]) => {
+			const { width, height } = entry.contentRect;
+			setViewport({ width: Math.max(1, width), height: Math.max(1, height) });
+		});
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, []);
+
+	const ZOOM_MIN = 0.1;
+	const ZOOM_MAX = 5;
+	const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+
+	// Đưa canvas về vừa khung và căn giữa
+	const fitToScreen = useCallback(() => {
+		const pad = 48;
+		const z = clampZoom(
+			Math.min((viewport.width - pad) / CANVAS_W, (viewport.height - pad) / CANVAS_H),
+		);
+		setZoom(z);
+		setStagePos({ x: (viewport.width - CANVAS_W * z) / 2, y: (viewport.height - CANVAS_H * z) / 2 });
+	}, [viewport]);
+
+	const zoomAtCenter = (factor: number) => {
+		const cx = viewport.width / 2;
+		const cy = viewport.height / 2;
+		const newZoom = clampZoom(zoom * factor);
+		const mx = (cx - stagePos.x) / zoom;
+		const my = (cy - stagePos.y) / zoom;
+		setZoom(newZoom);
+		setStagePos({ x: cx - mx * newZoom, y: cy - my * newZoom });
+	};
+
+	// Cuộn = pan; Ctrl/Cmd + cuộn = zoom vào con trỏ (giống Figma)
+	const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
+		e.evt.preventDefault();
+		const stage = stageRef.current;
+		if (!stage) return;
+		if (e.evt.ctrlKey || e.evt.metaKey) {
+			const pointer = stage.getPointerPosition();
+			if (!pointer) return;
+			const mx = (pointer.x - stagePos.x) / zoom;
+			const my = (pointer.y - stagePos.y) / zoom;
+			const newZoom = clampZoom(zoom * (e.evt.deltaY > 0 ? 0.92 : 1.08));
+			setZoom(newZoom);
+			setStagePos({ x: pointer.x - mx * newZoom, y: pointer.y - my * newZoom });
+		} else {
+			setStagePos((p) => ({ x: p.x - e.evt.deltaX, y: p.y - e.evt.deltaY }));
+		}
+	};
+
+	// Khít canvas vào khung 1 lần khi đã đo được vùng chứa + tải xong
+	const fittedRef = useRef(false);
+	useEffect(() => {
+		if (!loading && viewport.width > 1 && !fittedRef.current) {
+			fittedRef.current = true;
+			fitToScreen();
+		}
+	}, [loading, viewport, fitToScreen]);
 
 	const bgImage = useCanvasImage(design.canvas.background.image);
 	const [, setFontsReady] = useState(false);
@@ -402,20 +476,36 @@ function CertificateTemplateEditorPage() {
 		}
 	};
 
-	const removeSelected = () => {
-		if (!selectedId) return;
-		commit((d) => ({ ...d, elements: d.elements.filter((e) => e.id !== selectedId) }));
-		setSelectedId(null);
+	const removeElement = (elId: string) => {
+		commit((d) => ({ ...d, elements: d.elements.filter((e) => e.id !== elId) }));
+		setSelectedId((cur) => (cur === elId ? null : cur));
 	};
 
-	const moveLayer = (dir: -1 | 1) => {
-		if (!selectedId) return;
+	const removeSelected = () => {
+		if (selectedId) removeElement(selectedId);
+	};
+
+	// dir: -1 = xuống dưới 1 lớp, +1 = lên trên 1 lớp (cuối mảng = lớp trên cùng)
+	const moveLayer = (dir: -1 | 1, elId: string | null = selectedId) => {
+		if (!elId) return;
 		commit((d) => {
-			const idx = d.elements.findIndex((e) => e.id === selectedId);
+			const idx = d.elements.findIndex((e) => e.id === elId);
 			const to = idx + dir;
 			if (idx < 0 || to < 0 || to >= d.elements.length) return d;
 			const next = [...d.elements];
 			[next[idx], next[to]] = [next[to], next[idx]];
+			return { ...d, elements: next };
+		});
+	};
+
+	// Đưa lên trên cùng / xuống dưới cùng
+	const moveLayerToEnd = (elId: string, top: boolean) => {
+		commit((d) => {
+			const idx = d.elements.findIndex((e) => e.id === elId);
+			if (idx < 0) return d;
+			const next = [...d.elements];
+			const [item] = next.splice(idx, 1);
+			top ? next.push(item) : next.unshift(item);
 			return { ...d, elements: next };
 		});
 	};
@@ -800,104 +890,158 @@ function CertificateTemplateEditorPage() {
 					/>
 				</div>
 
-				{/* Canvas giữa */}
-				<div className='flex min-w-0 flex-1 items-center justify-center overflow-auto bg-muted/40 p-6'>
-					<div
-						className='shadow-lg'
-						style={{ width: DISPLAY_W, height: CANVAS_H * SCALE }}>
-						<Stage
-							ref={stageRef}
-							width={DISPLAY_W}
-							height={CANVAS_H * SCALE}
-							scaleX={SCALE}
-							scaleY={SCALE}
-							onMouseDown={(e) => {
-								// Click vào vùng trống (stage) hoặc nền → bỏ chọn.
-								if (e.target === e.target.getStage() || e.target.name() === "bg")
-									setSelectedId(null);
-							}}>
-							<Layer>
-								{/* Nền không listening để click xuyên qua xuống stage → bỏ chọn được;
-								    đặt name="bg" để onMouseDown nhận diện vùng nền. */}
-								<Rect
-									name='bg'
+				{/* Canvas giữa — zoom/pan tự do */}
+				<div
+					ref={canvasAreaRef}
+					className='relative min-w-0 flex-1 overflow-hidden bg-muted/40'>
+					<Stage
+						ref={stageRef}
+						width={viewport.width}
+						height={viewport.height}
+						scaleX={zoom}
+						scaleY={zoom}
+						x={stagePos.x}
+						y={stagePos.y}
+						onWheel={handleWheel}
+						onMouseDown={(e) => {
+							// Click vào vùng trống (stage) hoặc nền → bỏ chọn.
+							if (e.target === e.target.getStage() || e.target.name() === "bg")
+								setSelectedId(null);
+						}}>
+						<Layer>
+							{/* Nền không listening để click xuyên qua xuống stage → bỏ chọn được;
+							    đặt name="bg" để onMouseDown nhận diện vùng nền. */}
+							<Rect
+								name='bg'
+								x={0}
+								y={0}
+								width={CANVAS_W}
+								height={CANVAS_H}
+								fill={design.canvas.background.color}
+								shadowColor='#000'
+								shadowBlur={12 / zoom}
+								shadowOpacity={0.25}
+								listening={false}
+							/>
+							{bgImage && (
+								<KonvaImage
+									image={bgImage}
 									x={0}
 									y={0}
 									width={CANVAS_W}
 									height={CANVAS_H}
-									fill={design.canvas.background.color}
+									crop={coverCrop(bgImage, CANVAS_W, CANVAS_H)}
 									listening={false}
 								/>
-								{bgImage && (
-									<KonvaImage
-										image={bgImage}
-										x={0}
-										y={0}
-										width={CANVAS_W}
-										height={CANVAS_H}
-										crop={coverCrop(bgImage, CANVAS_W, CANVAS_H)}
-										listening={false}
-									/>
-								)}
-								{design.elements.map(renderNode)}
-								{guides.v.map((x, i) => (
-									<Line
-										key={`gv${i}`}
-										points={[x, 0, x, CANVAS_H]}
-										stroke='#ec4899'
-										strokeWidth={1 / SCALE}
-										dash={[6, 4]}
-										listening={false}
-									/>
-								))}
-								{guides.h.map((y, i) => (
-									<Line
-										key={`gh${i}`}
-										points={[0, y, CANVAS_W, y]}
-										stroke='#ec4899'
-										strokeWidth={1 / SCALE}
-										dash={[6, 4]}
-										listening={false}
-									/>
-								))}
-								<Transformer
-									ref={trRef}
-									rotateEnabled
-									// Ảnh: giữ tỉ lệ, chỉ cho kéo 4 góc để không bị méo.
-									keepRatio={selected?.type === "image"}
-									enabledAnchors={
-										selected?.type === "image"
-											? [
-													"top-left",
-													"top-right",
-													"bottom-left",
-													"bottom-right",
-											  ]
-											: undefined
-									}
-									boundBoxFunc={(oldBox, newBox) =>
-										newBox.width < 5 || newBox.height < 5 ? oldBox : newBox
-									}
+							)}
+							{design.elements.map(renderNode)}
+							{guides.v.map((x, i) => (
+								<Line
+									key={`gv${i}`}
+									points={[x, 0, x, CANVAS_H]}
+									stroke='#ec4899'
+									strokeWidth={1 / zoom}
+									dash={[6, 4]}
+									listening={false}
 								/>
-							</Layer>
-						</Stage>
+							))}
+							{guides.h.map((y, i) => (
+								<Line
+									key={`gh${i}`}
+									points={[0, y, CANVAS_W, y]}
+									stroke='#ec4899'
+									strokeWidth={1 / zoom}
+									dash={[6, 4]}
+									listening={false}
+								/>
+							))}
+							<Transformer
+								ref={trRef}
+								rotateEnabled
+								anchorSize={9 / zoom}
+								anchorStrokeWidth={1 / zoom}
+								borderStrokeWidth={1 / zoom}
+								ignoreStroke
+								// Ảnh: giữ tỉ lệ, chỉ cho kéo 4 góc để không bị méo.
+								keepRatio={selected?.type === "image"}
+								enabledAnchors={
+									selected?.type === "image"
+										? [
+												"top-left",
+												"top-right",
+												"bottom-left",
+												"bottom-right",
+										  ]
+										: undefined
+								}
+								boundBoxFunc={(oldBox, newBox) =>
+									newBox.width < 5 || newBox.height < 5 ? oldBox : newBox
+								}
+							/>
+						</Layer>
+					</Stage>
+
+					{/* Điều khiển zoom */}
+					<div className='absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-background/95 px-2 py-1 shadow-md'>
+						<Button
+							variant='ghost'
+							size='icon'
+							className='h-7 w-7'
+							onClick={() => zoomAtCenter(0.9)}
+							title='Thu nhỏ'>
+							<Minus className='h-4 w-4' />
+						</Button>
+						<button
+							type='button'
+							onClick={fitToScreen}
+							className='min-w-14 rounded px-2 text-xs font-medium tabular-nums hover:bg-muted'
+							title='Khít vào khung'>
+							{Math.round(zoom * 100)}%
+						</button>
+						<Button
+							variant='ghost'
+							size='icon'
+							className='h-7 w-7'
+							onClick={() => zoomAtCenter(1.1)}
+							title='Phóng to'>
+							<Plus className='h-4 w-4' />
+						</Button>
+						<span className='mx-1 h-4 w-px bg-border' />
+						<Button
+							variant='ghost'
+							size='icon'
+							className='h-7 w-7'
+							onClick={fitToScreen}
+							title='Khít vào khung'>
+							<Maximize className='h-4 w-4' />
+						</Button>
 					</div>
 				</div>
 
-				{/* Panel thuộc tính phải */}
-				<div className='w-72 shrink-0 overflow-y-auto border-l p-3'>
-					{selected ? (
-						<PropertyPanel
-							element={selected}
-							onChange={(patch) => updateElement(selected.id, patch)}
-							onDelete={removeSelected}
-							onLayer={moveLayer}
-						/>
-					) : (
-						<p className='px-1 py-6 text-center text-sm text-muted-foreground'>
-							Chọn một phần tử trên canvas để chỉnh sửa thuộc tính.
-						</p>
-					)}
+				{/* Panel phải: Lớp + Thuộc tính */}
+				<div className='flex w-72 shrink-0 flex-col border-l'>
+					<LayersPanel
+						elements={design.elements}
+						selectedId={selectedId}
+						onSelect={setSelectedId}
+						onMove={moveLayer}
+						onMoveEnd={moveLayerToEnd}
+						onDelete={removeElement}
+					/>
+					<div className='min-h-0 flex-1 overflow-y-auto border-t p-3'>
+						{selected ? (
+							<PropertyPanel
+								element={selected}
+								onChange={(patch) => updateElement(selected.id, patch)}
+								onDelete={removeSelected}
+								onLayer={(dir) => moveLayer(dir)}
+							/>
+						) : (
+							<p className='px-1 py-6 text-center text-sm text-muted-foreground'>
+								Chọn một phần tử trên canvas để chỉnh sửa thuộc tính.
+							</p>
+						)}
+					</div>
 				</div>
 			</div>
 
@@ -955,6 +1099,131 @@ function CertificateTemplateEditorPage() {
 				</DialogContent>
 			</Dialog>
 		</div>
+	);
+}
+
+// ─── Panel Lớp (Layers) ──────────────────────────────────────────────────────
+
+const layerIcon = (type: CertificateElementType) => {
+	const cls = "h-3.5 w-3.5";
+	switch (type) {
+		case "text":
+			return <Type className={cls} />;
+		case "image":
+			return <ImageIcon className={cls} />;
+		case "qr":
+			return <QrCode className={cls} />;
+		case "line":
+			return <Minus className={cls} />;
+		case "ellipse":
+			return <CircleIcon className={cls} />;
+		default:
+			return <Square className={cls} />;
+	}
+};
+
+const layerLabel = (el: CertificateElement) => {
+	switch (el.type) {
+		case "text":
+			return el.text?.trim() || "Văn bản";
+		case "image":
+			return "Ảnh / Logo";
+		case "qr":
+			return "Mã QR";
+		case "line":
+			return "Đường kẻ";
+		case "ellipse":
+			return "Elip";
+		default:
+			return "Khối / Viền";
+	}
+};
+
+function LayersPanel({
+	elements,
+	selectedId,
+	onSelect,
+	onMove,
+	onMoveEnd,
+	onDelete,
+}: {
+	elements: CertificateElement[];
+	selectedId: string | null;
+	onSelect: (id: string) => void;
+	onMove: (dir: -1 | 1, id: string) => void;
+	onMoveEnd: (id: string, top: boolean) => void;
+	onDelete: (id: string) => void;
+}) {
+	// Hiển thị lớp trên cùng (cuối mảng) ở đầu danh sách.
+	const rows = [...elements].reverse();
+	return (
+		<div className='flex shrink-0 flex-col'>
+			<div className='flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground'>
+				<Layers className='h-4 w-4' /> Lớp ({elements.length})
+			</div>
+			<div className='max-h-52 min-h-0 overflow-y-auto px-2 pb-2'>
+				{rows.length === 0 ? (
+					<p className='px-1 py-4 text-center text-xs text-muted-foreground'>
+						Chưa có phần tử nào.
+					</p>
+				) : (
+					rows.map((el) => (
+						<div
+							key={el.id}
+							onClick={() => onSelect(el.id)}
+							className={cn(
+								"group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+								selectedId === el.id ? "bg-muted" : "hover:bg-muted/60",
+							)}>
+							<span className='shrink-0 text-muted-foreground'>
+								{layerIcon(el.type)}
+							</span>
+							<span className='min-w-0 flex-1 truncate'>{layerLabel(el)}</span>
+							<div className='flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100'>
+								<LayerBtn title='Lên trên cùng' onClick={() => onMoveEnd(el.id, true)}>
+									<ChevronsUp className='h-3.5 w-3.5' />
+								</LayerBtn>
+								<LayerBtn title='Lên 1 lớp' onClick={() => onMove(1, el.id)}>
+									<ChevronUp className='h-3.5 w-3.5' />
+								</LayerBtn>
+								<LayerBtn title='Xuống 1 lớp' onClick={() => onMove(-1, el.id)}>
+									<ChevronDown className='h-3.5 w-3.5' />
+								</LayerBtn>
+								<LayerBtn title='Xuống dưới cùng' onClick={() => onMoveEnd(el.id, false)}>
+									<ChevronsDown className='h-3.5 w-3.5' />
+								</LayerBtn>
+								<LayerBtn title='Xoá' onClick={() => onDelete(el.id)}>
+									<Trash2 className='h-3.5 w-3.5 text-destructive' />
+								</LayerBtn>
+							</div>
+						</div>
+					))
+				)}
+			</div>
+		</div>
+	);
+}
+
+function LayerBtn({
+	title,
+	onClick,
+	children,
+}: {
+	title: string;
+	onClick: () => void;
+	children: React.ReactNode;
+}) {
+	return (
+		<button
+			type='button'
+			title={title}
+			onClick={(e) => {
+				e.stopPropagation();
+				onClick();
+			}}
+			className='rounded p-0.5 hover:bg-background'>
+			{children}
+		</button>
 	);
 }
 

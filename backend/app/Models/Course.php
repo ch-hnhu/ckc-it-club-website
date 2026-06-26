@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CourseLevel;
+use App\Enums\CourseAudience;
 use App\Enums\CourseStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,13 +22,13 @@ class Course extends Model
         'thumbnail',
         'level',
         'status',
+        'audience',
         'enrollment_start',
         'enrollment_deadline',
         'course_end',
         'max_offline_slots',
         'max_absent_allowed',
         'quiz_pass_threshold',
-        'total_lessons',
         'certificate_template_id',
         'created_by',
         'updated_by',
@@ -39,13 +40,13 @@ class Course extends Model
         return [
             'level' => CourseLevel::class,
             'status' => CourseStatus::class,
+            'audience' => CourseAudience::class,
             'enrollment_start' => 'datetime',
             'enrollment_deadline' => 'datetime',
             'course_end' => 'datetime',
             'max_offline_slots' => 'integer',
             'max_absent_allowed' => 'integer',
             'quiz_pass_threshold' => 'integer',
-            'total_lessons' => 'integer',
         ];
     }
 

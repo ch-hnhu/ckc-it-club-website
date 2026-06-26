@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
+use App\Enums\CourseAudience;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Course;
 use App\Models\CourseCertificate;
@@ -19,7 +20,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 
 class CourseController extends BaseApiController
 {
@@ -34,10 +34,11 @@ class CourseController extends BaseApiController
         $search = $request->query('search');
         $status = $request->query('status');
         $level = $request->query('level');
+        $audience = $request->query('audience');
         $offline = $request->query('offline'); // all | has_offline | online_only
 
         $sortable = [
-            'id', 'title', 'level', 'status', 'max_offline_slots',
+            'id', 'title', 'level', 'status', 'audience', 'max_offline_slots',
             'lessons_count', 'enrollments_count', 'enrollment_deadline', 'created_at', 'creator',
         ];
         $sort = in_array($request->query('sort'), $sortable, true) ? $request->query('sort') : 'created_at';
@@ -55,6 +56,7 @@ class CourseController extends BaseApiController
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
             ->when($status && $status !== 'all', fn ($q) => $q->where('status', $status))
             ->when($level && $level !== 'all', fn ($q) => $q->where('level', $level))
+            ->when($audience && $audience !== 'all', fn ($q) => $q->where('audience', $audience))
             ->when($offline === 'has_offline', fn ($q) => $q->whereNotNull('max_offline_slots'))
             ->when($offline === 'online_only', fn ($q) => $q->whereNull('max_offline_slots'))
             ->when(
@@ -85,13 +87,13 @@ class CourseController extends BaseApiController
             'description' => 'nullable|string|max:5000',
             'level' => 'required|in:beginner,intermediate,advanced',
             'status' => 'nullable|in:draft,published',
+            'audience' => 'nullable|in:' . implode(',', CourseAudience::values()),
             'enrollment_start' => 'nullable|date',
             'enrollment_deadline' => 'nullable|date|after_or_equal:enrollment_start',
             'course_end' => 'nullable|date|after_or_equal:enrollment_deadline',
             'max_offline_slots' => 'nullable|integer|min:1|max:1000',
             'max_absent_allowed' => 'nullable|integer|min:0|max:50',
             'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
-            'total_lessons' => 'nullable|integer|min:1|max:200',
             'certificate_template_id' => 'nullable|integer|exists:certificate_templates,id',
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
@@ -120,13 +122,13 @@ class CourseController extends BaseApiController
                 'thumbnail' => $thumbnailPath,
                 'level' => $data['level'],
                 'status' => $data['status'] ?? 'draft',
+                'audience' => $data['audience'] ?? CourseAudience::CAO_THANG_STUDENT->value,
                 'enrollment_start' => $data['enrollment_start'] ?? null,
                 'enrollment_deadline' => $data['enrollment_deadline'] ?? null,
                 'course_end' => $data['course_end'] ?? null,
                 'max_offline_slots' => $data['max_offline_slots'] ?? null,
                 'max_absent_allowed' => $data['max_absent_allowed'] ?? 1,
                 'quiz_pass_threshold' => $data['quiz_pass_threshold'] ?? 80,
-                'total_lessons' => $data['total_lessons'] ?? null,
                 'certificate_template_id' => $data['certificate_template_id'] ?? null,
                 'created_by' => $request->user()->id,
             ]);
@@ -162,28 +164,18 @@ class CourseController extends BaseApiController
             'description' => 'nullable|string|max:5000',
             'level' => 'sometimes|required|in:beginner,intermediate,advanced',
             'status' => 'sometimes|required|in:draft,published',
+            'audience' => 'sometimes|required|in:' . implode(',', CourseAudience::values()),
             'enrollment_start' => 'nullable|date',
             'enrollment_deadline' => 'nullable|date|after_or_equal:enrollment_start',
             'course_end' => 'nullable|date|after_or_equal:enrollment_deadline',
             'max_offline_slots' => 'nullable|integer|min:1|max:1000',
             'max_absent_allowed' => 'nullable|integer|min:0|max:50',
             'quiz_pass_threshold' => 'nullable|integer|min:0|max:100',
-            'total_lessons' => 'nullable|integer|min:1|max:200',
             'certificate_template_id' => 'nullable|integer|exists:certificate_templates,id',
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:tags,id',
         ]);
-
-        // Không cho đặt số buổi dự kiến nhỏ hơn số buổi đã tạo.
-        if (array_key_exists('total_lessons', $data) && $data['total_lessons'] !== null) {
-            $lessonsCount = $course->lessons()->count();
-            if ($data['total_lessons'] < $lessonsCount) {
-                throw ValidationException::withMessages([
-                    'total_lessons' => "Khóa đã có {$lessonsCount} buổi học, số buổi dự kiến không được nhỏ hơn.",
-                ]);
-            }
-        }
 
         // Thumbnail: thay mới / gỡ bỏ / giữ nguyên
         if ($request->hasFile('thumbnail')) {
@@ -624,13 +616,13 @@ class CourseController extends BaseApiController
             'thumbnail' => $this->resolveUrl($course->thumbnail),
             'level' => $course->level->value,
             'status' => $course->status->value,
+            'audience' => $course->audience->value,
             'enrollment_start' => $course->enrollment_start?->toIso8601String(),
             'enrollment_deadline' => $course->enrollment_deadline?->toIso8601String(),
             'course_end' => $course->course_end?->toIso8601String(),
             'max_offline_slots' => $course->max_offline_slots,
             'max_absent_allowed' => $course->max_absent_allowed,
             'quiz_pass_threshold' => $course->quiz_pass_threshold,
-            'total_lessons' => $course->total_lessons,
             'certificate_template' => $course->certificateTemplate ? [
                 'id' => $course->certificateTemplate->id,
                 'name' => $course->certificateTemplate->name,
@@ -679,7 +671,7 @@ class CourseController extends BaseApiController
     {
         $fields = [
             'description', 'enrollment_start', 'enrollment_deadline', 'course_end',
-            'total_lessons', 'certificate_template_id',
+            'certificate_template_id',
         ];
 
         $request->merge(

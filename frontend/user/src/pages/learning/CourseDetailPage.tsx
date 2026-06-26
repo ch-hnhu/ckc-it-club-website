@@ -11,13 +11,16 @@ import {
 	Clock,
 	Download,
 	Dumbbell,
+	Globe2,
 	Info,
 	GraduationCap,
 	ListChecks,
 	Lock,
 	MessagesSquare,
 	QrCode,
+	School,
 	Sparkles,
+	Users,
 	X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -27,6 +30,7 @@ import { learningService } from "@/services/learning.service";
 import type { AuthUser } from "@/services/auth.service";
 import type {
 	CourseDetail,
+	CourseAudience,
 	CourseLesson,
 	CourseLevel,
 	CourseProgressStats,
@@ -38,6 +42,38 @@ const LEVEL_LABEL: Record<CourseLevel, string> = {
 	intermediate: "Trung cấp",
 	advanced: "Nâng cao",
 };
+
+const AUDIENCE_META: Record<
+	CourseAudience,
+	{
+		label: string;
+		notice: string;
+		icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+		className: string;
+	}
+> = {
+	club_member: {
+		label: "Thành viên CLB",
+		notice: "Chỉ thành viên câu lạc bộ được học khóa này.",
+		icon: Users,
+		className: "bg-[var(--color-pastel-green)]",
+	},
+	cao_thang_student: {
+		label: "Sinh viên Cao Thắng",
+		notice: "Chỉ tài khoản sinh viên Cao Thắng được học khóa này.",
+		icon: School,
+		className: "bg-[var(--color-pastel-blue)]",
+	},
+	public: {
+		label: "Công khai",
+		notice: "Đăng nhập để học khóa học công khai này.",
+		icon: Globe2,
+		className: "bg-[var(--color-pastel-purple)]",
+	},
+};
+
+const isCaoThangStudentEmail = (email?: string | null) =>
+	Boolean(email && /^\d{10}@caothang\.edu\.vn$/i.test(email));
 
 const isFutureDate = (value?: string | null, now = new Date()) =>
 	Boolean(value && new Date(value) > now);
@@ -555,7 +591,8 @@ const Sidebar: React.FC<{
 							Bị khóa
 						</span>
 					)}
-					<div className={`space-y-4 ${canLearn ? "" : "pointer-events-none opacity-45 grayscale"}`}>
+					<div
+						className={`space-y-4 ${canLearn ? "" : "pointer-events-none opacity-45 grayscale"}`}>
 						{progressItems.map((item) => (
 							<MiniProgress
 								key={item.label}
@@ -718,10 +755,16 @@ const CourseDetailPage: React.FC = () => {
 	const showSidebar = Boolean(user) && !shouldWaitForUser;
 	const canClaimCertificate = (course?.progress ?? 0) >= 100;
 	const isClubMember = Boolean(user?.roles?.some((role) => role !== "user"));
-	const isSchoolStudent =
-		user?.is_school_student === true ||
-		Boolean(user?.email?.toLowerCase().endsWith("@caothang.edu.vn"));
-	const viewerCanLearn = Boolean(user && (isEnrolled || isClubMember || isSchoolStudent));
+	const isSchoolStudent = user?.is_school_student === true || isCaoThangStudentEmail(user?.email);
+	const audience = course?.audience ?? "cao_thang_student";
+	const audienceMeta = AUDIENCE_META[audience];
+	const viewerCanLearn = Boolean(
+		user &&
+			(isEnrolled ||
+				audience === "public" ||
+				(audience === "club_member" && isClubMember) ||
+				(audience === "cao_thang_student" && isSchoolStudent)),
+	);
 	const now = new Date();
 	const firstLesson = lessons[0] ?? null;
 	const firstLessonHasNotStarted = Boolean(
@@ -732,19 +775,19 @@ const CourseDetailPage: React.FC = () => {
 	);
 	const registrationOpen = Boolean(
 		hasOfflineClass &&
-			(!course?.enrollment_start || !isFutureDate(course.enrollment_start, now)) &&
-			(!course?.enrollment_deadline || new Date(course.enrollment_deadline) >= now),
+		(!course?.enrollment_start || !isFutureDate(course.enrollment_start, now)) &&
+		(!course?.enrollment_deadline || new Date(course.enrollment_deadline) >= now),
 	);
 	const registrationClosedBeforeFirstLesson = Boolean(
 		hasOfflineClass &&
-			course?.enrollment_deadline &&
-			new Date(course.enrollment_deadline) <= now &&
-			firstLessonHasNotStarted,
+		course?.enrollment_deadline &&
+		new Date(course.enrollment_deadline) <= now &&
+		firstLessonHasNotStarted,
 	);
 	const showInterestCta = Boolean(
 		!isEnrolled &&
-			hasOfflineClass &&
-			(registrationNotStarted || registrationClosedBeforeFirstLesson),
+		hasOfflineClass &&
+		(registrationNotStarted || registrationClosedBeforeFirstLesson),
 	);
 	const canRegisterOffline = Boolean(
 		user && viewerCanLearn && hasOfflineClass && !isEnrolled && registrationOpen,
@@ -763,9 +806,7 @@ const CourseDetailPage: React.FC = () => {
 		if (!hasOfflineClass) {
 			const nextLessonId = lessons.find((l) => !l.completed)?.id ?? null;
 			return new Set(
-				lessons
-					.filter((l) => !l.completed && l.id !== nextLessonId)
-					.map((l) => l.id),
+				lessons.filter((l) => !l.completed && l.id !== nextLessonId).map((l) => l.id),
 			);
 		}
 
@@ -793,15 +834,15 @@ const CourseDetailPage: React.FC = () => {
 		lessons[0];
 	const canStartLearning = Boolean(
 		viewerCanLearn &&
-			resumeLesson &&
-			!frontendLockedIds.has(resumeLesson.id) &&
-			!canRegisterOffline &&
-			!showInterestCta,
+		resumeLesson &&
+		!frontendLockedIds.has(resumeLesson.id) &&
+		!canRegisterOffline &&
+		!showInterestCta,
 	);
 	const ctaSupportText = (() => {
 		if (shouldWaitForUser) return "Đang đồng bộ phiên đăng nhập của bạn.";
 		if (!user) return "Đăng nhập để học online hoặc đăng ký lớp offline khi đủ điều kiện.";
-		if (!viewerCanLearn) return "Chỉ tài khoản sinh viên Cao Thắng hoặc thành viên CLB được học khóa này.";
+		if (!viewerCanLearn) return audienceMeta.notice;
 		if (canRegisterOffline) return "Đăng ký để tham gia lớp học trực tiếp cùng mentor.";
 		if (showInterestCta) {
 			return registrationNotStarted
@@ -809,7 +850,11 @@ const CourseDetailPage: React.FC = () => {
 				: "Khóa học đã qua hạn đăng ký lớp offline; buổi đầu tiên chưa diễn ra.";
 		}
 		if (canStartLearning && resumeLesson) {
-			if (hasOfflineClass && course?.enrollment_track === "offline" && isFutureDate(resumeLesson.session_start, now)) {
+			if (
+				hasOfflineClass &&
+				course?.enrollment_track === "offline" &&
+				isFutureDate(resumeLesson.session_start, now)
+			) {
 				return "Bạn có thể xem thông tin buổi sắp diễn ra trước khi lớp bắt đầu.";
 			}
 			if (hasOfflineClass && course?.enrollment_track !== "offline") {
@@ -832,6 +877,7 @@ const CourseDetailPage: React.FC = () => {
 			})?.id ?? null
 		);
 	})();
+	const AudienceIcon = audienceMeta.icon;
 
 	// ─── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -879,8 +925,8 @@ const CourseDetailPage: React.FC = () => {
 			});
 		} catch (err) {
 			toast.error(
-				(err as { response?: { data?: { message?: string } } })?.response?.data
-					?.message ?? "Không thể đăng ký học offline. Vui lòng thử lại.",
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+					"Không thể đăng ký học offline. Vui lòng thử lại.",
 			);
 		} finally {
 			setEnrollingOffline(false);
@@ -900,8 +946,8 @@ const CourseDetailPage: React.FC = () => {
 			toast.success("Đã đăng ký tham gia buổi học.");
 		} catch (err) {
 			toast.error(
-				(err as { response?: { data?: { message?: string } } })?.response?.data
-					?.message ?? "Không thể đăng ký tham gia. Vui lòng thử lại.",
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+					"Không thể đăng ký tham gia. Vui lòng thử lại.",
 			);
 		} finally {
 			setCreatingTicketId(null);
@@ -929,8 +975,8 @@ const CourseDetailPage: React.FC = () => {
 			toast.success("Nhận chứng chỉ thành công.");
 		} catch (err) {
 			toast.error(
-				(err as { response?: { data?: { message?: string } } })?.response?.data
-					?.message ?? "Không thể lấy chứng chỉ. Vui lòng thử lại.",
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+					"Không thể lấy chứng chỉ. Vui lòng thử lại.",
 			);
 		} finally {
 			setClaimingCertificate(false);
@@ -985,6 +1031,11 @@ const CourseDetailPage: React.FC = () => {
 									<BarChart3 className='h-3.5 w-3.5' strokeWidth={2.5} />
 									{LEVEL_LABEL[course.level]} · Khóa học
 								</span>
+								<span
+									className={`mt-2 inline-flex w-fit items-center gap-2 rounded-full border-2 border-black px-3 py-1 font-heading text-[11px] font-extrabold uppercase tracking-[0.1em] text-black shadow-[2px_2px_0_#111] ${audienceMeta.className}`}>
+									<AudienceIcon className='h-3.5 w-3.5' strokeWidth={2.5} />
+									{audienceMeta.label}
+								</span>
 
 								<h1 className='mt-4 font-heading text-4xl font-extrabold leading-tight text-white drop-shadow-[2px_2px_0_#111] md:text-5xl'>
 									{course.title}
@@ -1011,8 +1062,11 @@ const CourseDetailPage: React.FC = () => {
 										</Link>
 									) : !viewerCanLearn ? (
 										<span className='inline-flex max-w-full items-start gap-2 rounded-xl border-2 border-black bg-[var(--color-pastel-pink)] px-5 py-3 font-heading text-sm font-extrabold leading-6 text-red-700 shadow-[4px_4px_0_#111]'>
-											<Info className='mt-0.5 h-4 w-4 shrink-0' strokeWidth={2.5} />
-											Chỉ dành cho sinh viên Cao Thắng hoặc thành viên CLB
+											<Info
+												className='mt-0.5 h-4 w-4 shrink-0'
+												strokeWidth={2.5}
+											/>
+											{audienceMeta.notice}
 										</span>
 									) : canRegisterOffline ? (
 										<button
@@ -1021,21 +1075,32 @@ const CourseDetailPage: React.FC = () => {
 											disabled={enrollingOffline}
 											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-70'>
 											<CalendarCheck className='h-4 w-4' strokeWidth={2.5} />
-											{enrollingOffline ? "Đang đăng ký..." : "Đăng ký học offline"}
+											{enrollingOffline
+												? "Đang đăng ký..."
+												: "Đăng ký học offline"}
 										</button>
 									) : canStartLearning && resumeLesson ? (
 										<Link
 											to={`/khoa-hoc/${course.slug}/${resumeLesson.slug}`}
 											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 											<GraduationCap className='h-4 w-4' strokeWidth={2.5} />
-											{(course.progress ?? 0) > 0 ? "Tiếp tục học" : "Bắt đầu học"}
+											{(course.progress ?? 0) > 0
+												? "Tiếp tục học"
+												: "Bắt đầu học"}
 										</Link>
 									) : showInterestCta ? (
 										<button
 											type='button'
 											onClick={handleToggleInterest}
 											className={`inline-flex items-center gap-2 rounded-xl border-2 border-black px-6 py-3 font-heading text-sm font-extrabold shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${interested ? "bg-white text-black shadow-none translate-x-[1px] translate-y-[1px]" : "bg-[var(--color-primary)] text-black"}`}>
-											{interested ? <BookmarkCheck className='h-4 w-4' strokeWidth={2.5} /> : <Bookmark className='h-4 w-4' strokeWidth={2.5} />}
+											{interested ? (
+												<BookmarkCheck
+													className='h-4 w-4'
+													strokeWidth={2.5}
+												/>
+											) : (
+												<Bookmark className='h-4 w-4' strokeWidth={2.5} />
+											)}
 											{interested ? "Đã quan tâm" : "Quan tâm"}
 										</button>
 									) : (
@@ -1045,7 +1110,7 @@ const CourseDetailPage: React.FC = () => {
 										</span>
 									)}
 									{ctaSupportText && !canStartLearning && (
-										<span className='max-w-sm rounded-xl bg-black/35 px-3 py-2 text-xs font-semibold leading-5 text-white/85 backdrop-blur-sm'>
+										<span className='max-w-sm text-xs font-semibold leading-5 text-white/85'>
 											{ctaSupportText}
 										</span>
 									)}
@@ -1092,26 +1157,35 @@ const CourseDetailPage: React.FC = () => {
 									<div className='space-y-4'>
 										{!viewerCanLearn && (
 											<div className='flex items-start gap-3 rounded-2xl border-2 border-black bg-[var(--color-pastel-pink)] px-4 py-3 shadow-[3px_3px_0_#111]'>
-												<Info className='mt-0.5 h-5 w-5 shrink-0 text-red-700' strokeWidth={2.5} />
+												<Info
+													className='mt-0.5 h-5 w-5 shrink-0 text-red-700'
+													strokeWidth={2.5}
+												/>
 												<p className='text-sm font-semibold leading-6 text-red-700'>
-													Nội dung khóa học chỉ dành cho sinh viên Cao Thắng hoặc thành viên CLB. Bạn vẫn có thể xem danh sách buổi học, nhưng chưa thể mở nội dung.
+													{audienceMeta.notice} Bạn vẫn có thể xem danh
+													sách buổi học, nhưng chưa thể mở nội dung.
 												</p>
 											</div>
 										)}
-										<div className={`overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111] divide-y-2 divide-black ${viewerCanLearn ? "" : "opacity-55 grayscale"}`}>
-										{lessons.map((lesson) => (
-											<LessonRow
-												key={lesson.id}
-												courseSlug={course.slug}
-												lesson={lesson}
-												track={effectiveTrack}
-												isActiveQrLesson={lesson.id === activeQrLessonId}
-												isFrontendLocked={frontendLockedIds.has(lesson.id)}
-												creatingTicket={creatingTicketId === lesson.id}
-												onCreateTicket={handleCreateTicket}
-												onShowTicket={handleShowTicket}
-											/>
-										))}
+										<div
+											className={`overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111] divide-y-2 divide-black ${viewerCanLearn ? "" : "opacity-55 grayscale"}`}>
+											{lessons.map((lesson) => (
+												<LessonRow
+													key={lesson.id}
+													courseSlug={course.slug}
+													lesson={lesson}
+													track={effectiveTrack}
+													isActiveQrLesson={
+														lesson.id === activeQrLessonId
+													}
+													isFrontendLocked={frontendLockedIds.has(
+														lesson.id,
+													)}
+													creatingTicket={creatingTicketId === lesson.id}
+													onCreateTicket={handleCreateTicket}
+													onShowTicket={handleShowTicket}
+												/>
+											))}
 										</div>
 									</div>
 								) : (

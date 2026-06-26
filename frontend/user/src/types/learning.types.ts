@@ -1,5 +1,6 @@
 export type CourseLevel = "beginner" | "intermediate" | "advanced";
 export type CourseTrack = "offline" | "online";
+export type CourseAudience = "club_member" | "cao_thang_student" | "public";
 
 export interface CourseInstructor {
 	id: number;
@@ -21,6 +22,8 @@ export interface Course {
 	excerpt: string | null;
 	thumbnail: string | null;
 	level: CourseLevel;
+	/** Đối tượng được học khóa này; public = tài khoản đã đăng nhập bất kỳ */
+	audience: CourseAudience;
 	instructor: CourseInstructor | null;
 	lessons_count: number;
 	/** Tổng thời lượng (phút) */
@@ -133,8 +136,8 @@ export interface LessonDetail {
 		title: string;
 		level: CourseLevel;
 	};
-	prev: { slug: string; title: string } | null;
-	next: { slug: string; title: string } | null;
+	prev: { slug: string; title: string; locked?: boolean } | null;
+	next: { slug: string; title: string; locked?: boolean } | null;
 	/** 1 video bài giảng */
 	video: CourseContentItem | null;
 	/** 1 link tài nguyên (Google Drive) */
@@ -162,9 +165,19 @@ export interface VideoDetail {
 	course: { slug: string; title: string };
 	lesson: { slug: string; title: string; order: number };
 	/** Buổi trước (điều hướng) */
-	prev_lesson: { slug: string; title: string } | null;
+	prev_lesson: {
+		slug: string;
+		title: string;
+		session_start?: string | null;
+		locked?: boolean;
+	} | null;
 	/** Buổi kế tiếp (điều hướng) */
-	next_lesson: { slug: string; title: string } | null;
+	next_lesson: {
+		slug: string;
+		title: string;
+		session_start?: string | null;
+		locked?: boolean;
+	} | null;
 }
 
 // ─── Quiz (làm bài kiểu Duolingo) ────────────────────────────────────────────

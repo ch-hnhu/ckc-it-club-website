@@ -38,9 +38,12 @@ import certificateTemplateService from "@/services/certificate-template.service"
 import courseService, { type CourseCategoryOption } from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
 import type { CertificateTemplate } from "@/types/certificate-template.type";
-import type { CourseLevel, CourseStatus } from "@/pages/learning/course-meta";
-
-const NO_CERTIFICATE_TEMPLATE = "none";
+import {
+	COURSE_AUDIENCE_MAP,
+	type CourseAudience,
+	type CourseLevel,
+	type CourseStatus,
+} from "@/pages/learning/course-meta";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -48,13 +51,13 @@ type FormState = {
 	title: string;
 	description: string;
 	level: CourseLevel;
+	audience: CourseAudience;
 	enrollment_start: string;
 	enrollment_deadline: string;
 	course_end: string;
 	max_offline_slots: string;
 	max_absent_allowed: string;
 	quiz_pass_threshold: string;
-	total_lessons: string;
 	certificate_template_id: string;
 };
 
@@ -64,14 +67,14 @@ const getInitialForm = (): FormState => ({
 	title: "",
 	description: "",
 	level: "beginner",
+	audience: "cao_thang_student",
 	enrollment_start: "",
 	enrollment_deadline: "",
 	course_end: "",
 	max_offline_slots: "30",
 	max_absent_allowed: "1",
 	quiz_pass_threshold: "80",
-	total_lessons: "",
-	certificate_template_id: NO_CERTIFICATE_TEMPLATE,
+	certificate_template_id: "",
 });
 
 function slugify(text: string): string {
@@ -122,8 +125,6 @@ function CourseFormPage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [pendingStatus, setPendingStatus] = useState<CourseStatus | null>(null);
 	const [loading, setLoading] = useState(isEdit);
-	/** Số buổi học hiện có (khi sửa) — chặn đặt số buổi dự kiến nhỏ hơn. */
-	const [existingLessonsCount, setExistingLessonsCount] = useState(0);
 	/** Trạng thái hiện tại của khóa khi sửa — null khi tạo mới. */
 	const [currentStatus, setCurrentStatus] = useState<CourseStatus | null>(null);
 
@@ -145,6 +146,16 @@ function CourseFormPage() {
 
 	const previewUrl = newImageUrl ?? (removeThumbnail ? null : existingThumbnail);
 
+	// Refs dùng để tránh stale closure trong async callbacks
+	const formRef = useRef(form);
+	useEffect(() => {
+		formRef.current = form;
+	}, [form]);
+	const certificateTemplatesRef = useRef<CertificateTemplate[]>([]);
+	useEffect(() => {
+		certificateTemplatesRef.current = certificateTemplates;
+	}, [certificateTemplates]);
+
 	// ── Load categories ──
 	useEffect(() => {
 		courseService
@@ -158,7 +169,21 @@ function CourseFormPage() {
 	useEffect(() => {
 		certificateTemplateService
 			.getTemplates({ per_page: 50 })
-			.then((res) => setCertificateTemplates(res.data))
+			.then((res) => {
+				const templates = res.data;
+				setCertificateTemplates(templates);
+				// Nếu form chưa có cert, chọn mẫu mặc định ngay khi templates vừa load
+				const currentId = formRef.current.certificate_template_id;
+				if (!currentId) {
+					const defaultTpl = templates.find((t) => t.is_default);
+					if (defaultTpl) {
+						setForm((prev) => ({
+							...prev,
+							certificate_template_id: String(defaultTpl.id),
+						}));
+					}
+				}
+			})
 			.catch(() => toast.error("Không thể tải mẫu chứng chỉ."))
 			.finally(() => setTemplatesLoading(false));
 	}, []);
@@ -178,6 +203,7 @@ function CourseFormPage() {
 					title: c.title,
 					description: c.description ?? "",
 					level: c.level,
+					audience: c.audience,
 					enrollment_start: toLocalInput(c.enrollment_start),
 					enrollment_deadline: toLocalInput(c.enrollment_deadline),
 					course_end: toLocalInput(c.course_end),
@@ -185,16 +211,17 @@ function CourseFormPage() {
 						c.max_offline_slots != null ? String(c.max_offline_slots) : "30",
 					max_absent_allowed: String(c.max_absent_allowed),
 					quiz_pass_threshold: String(c.quiz_pass_threshold),
-					total_lessons: c.total_lessons != null ? String(c.total_lessons) : "",
-					certificate_template_id: c.certificate_template
-						? String(c.certificate_template.id)
-						: NO_CERTIFICATE_TEMPLATE,
+					certificate_template_id: (() => {
+						if (c.certificate_template) return String(c.certificate_template.id);
+						// Khóa không có cert → thử auto-chọn mặc định nếu templates đã load
+						const defaultTpl = certificateTemplatesRef.current.find((t) => t.is_default);
+						return defaultTpl ? String(defaultTpl.id) : "";
+					})(),
 				});
 				setSlug(c.slug);
 				setHasOffline(c.max_offline_slots != null);
 				setSelectedTags(c.categories.map((cat) => cat.id));
 				setExistingThumbnail(c.thumbnail);
-				setExistingLessonsCount(c.lessons_count);
 				setCurrentStatus(c.status);
 			})
 			.catch((err) => {
@@ -272,14 +299,6 @@ function CourseFormPage() {
 			if (!Number.isFinite(slots) || slots < 1)
 				errors.max_offline_slots = "Sức chứa lớp offline phải ≥ 1.";
 		}
-		if (form.total_lessons.trim()) {
-			const total = Number(form.total_lessons);
-			if (!Number.isInteger(total) || total < 1) {
-				errors.total_lessons = "Số buổi dự kiến phải là số nguyên ≥ 1.";
-			} else if (isEdit && total < existingLessonsCount) {
-				errors.total_lessons = `Khóa đã có ${existingLessonsCount} buổi học, số buổi dự kiến không được nhỏ hơn.`;
-			}
-		}
 		setFieldErrors(errors);
 		return Object.keys(errors).length === 0;
 	};
@@ -294,19 +313,16 @@ function CourseFormPage() {
 			const fd = new FormData();
 			fd.append("title", form.title.trim());
 			fd.append("level", form.level);
+			fd.append("audience", form.audience);
 			fd.append("status", status);
 			fd.append("description", form.description.trim());
 			fd.append("enrollment_start", toUtcIso(form.enrollment_start));
 			fd.append("enrollment_deadline", toUtcIso(form.enrollment_deadline));
 			fd.append("course_end", toUtcIso(form.course_end));
 			fd.append("quiz_pass_threshold", form.quiz_pass_threshold);
-			fd.append("total_lessons", form.total_lessons.trim());
-			fd.append(
-				"certificate_template_id",
-				form.certificate_template_id === NO_CERTIFICATE_TEMPLATE
-					? ""
-					: form.certificate_template_id,
-			);
+			if (form.certificate_template_id) {
+				fd.append("certificate_template_id", form.certificate_template_id);
+			}
 			fd.append("has_offline", hasOffline ? "1" : "0");
 			if (hasOffline) {
 				fd.append("max_offline_slots", form.max_offline_slots);
@@ -372,7 +388,7 @@ function CourseFormPage() {
 							<CardHeader>
 								<CardTitle>Thông tin khóa học</CardTitle>
 								<CardDescription>
-									Tên, mô tả và trình độ của khóa học.
+									Tên và mô tả của khóa học.
 								</CardDescription>
 							</CardHeader>
 							<CardContent className='flex flex-col gap-5'>
@@ -397,23 +413,6 @@ function CourseFormPage() {
 											{fieldErrors.title}
 										</p>
 									)}
-								</div>
-
-								<div className='flex flex-col gap-2'>
-									<Label htmlFor='course-level'>Trình độ</Label>
-									<Select
-										value={form.level}
-										onValueChange={(v) => setField("level", v as CourseLevel)}
-										disabled={submitting}>
-										<SelectTrigger id='course-level' className='w-full sm:w-60'>
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value='beginner'>Cơ bản</SelectItem>
-											<SelectItem value='intermediate'>Trung cấp</SelectItem>
-											<SelectItem value='advanced'>Nâng cao</SelectItem>
-										</SelectContent>
-									</Select>
 								</div>
 
 								<div className='flex flex-col gap-2'>
@@ -670,6 +669,53 @@ function CourseFormPage() {
 							</CardHeader>
 							<CardContent className='flex flex-col gap-5'>
 								<div className='flex flex-col gap-2'>
+									<Label htmlFor='course-level'>Trình độ</Label>
+									<Select
+										value={form.level}
+										onValueChange={(v) => setField("level", v as CourseLevel)}
+										disabled={submitting}>
+										<SelectTrigger id='course-level' className='w-full'>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value='beginner'>Cơ bản</SelectItem>
+											<SelectItem value='intermediate'>Trung cấp</SelectItem>
+											<SelectItem value='advanced'>Nâng cao</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='course-audience'>Đối tượng học</Label>
+									<Select
+										value={form.audience}
+										onValueChange={(v) =>
+											setField("audience", v as CourseAudience)
+										}
+										disabled={submitting}>
+										<SelectTrigger id='course-audience' className='w-full'>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{(
+												[
+													"club_member",
+													"cao_thang_student",
+													"public",
+												] as CourseAudience[]
+											).map((audience) => (
+												<SelectItem key={audience} value={audience}>
+													{COURSE_AUDIENCE_MAP[audience].label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<p className='text-xs text-muted-foreground'>
+										{COURSE_AUDIENCE_MAP[form.audience].description}
+									</p>
+								</div>
+
+								<div className='flex flex-col gap-2'>
 									<Label htmlFor='course-quiz'>Ngưỡng đạt quiz (%)</Label>
 									<Input
 										id='course-quiz'
@@ -688,35 +734,11 @@ function CourseFormPage() {
 								</div>
 
 								<div className='flex flex-col gap-2'>
-									<Label htmlFor='course-total-lessons'>
-										Số buổi học dự kiến
-									</Label>
-									<Input
-										id='course-total-lessons'
-										type='number'
-										min={1}
-										max={200}
-										placeholder='Để trống nếu không giới hạn'
-										value={form.total_lessons}
-										onChange={(e) => setField("total_lessons", e.target.value)}
-										disabled={submitting}
-									/>
-									{fieldErrors.total_lessons && (
-										<p className='text-sm text-destructive'>
-											{fieldErrors.total_lessons}
-										</p>
-									)}
-									<p className='text-xs text-muted-foreground'>
-										Cố định số buổi của khóa. Khi đã đủ số buổi này sẽ không tạo
-										thêm được. Để trống = không giới hạn.
-									</p>
-								</div>
-
-								<div className='flex flex-col gap-2'>
 									<Label htmlFor='course-certificate-template'>
 										Mẫu chứng chỉ
 									</Label>
 									<Select
+										key={templatesLoading ? "loading" : "loaded"}
 										value={form.certificate_template_id}
 										onValueChange={(v) =>
 											setField("certificate_template_id", v)
@@ -725,15 +747,12 @@ function CourseFormPage() {
 										<SelectTrigger
 											id='course-certificate-template'
 											className='w-full'>
-											<SelectValue />
+											<SelectValue placeholder={templatesLoading ? "Đang tải..." : "Chọn mẫu chứng chỉ"} />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value={NO_CERTIFICATE_TEMPLATE}>
-												Không sử dụng
-											</SelectItem>
 											{certificateTemplates.map((t) => (
 												<SelectItem key={t.id} value={String(t.id)}>
-													{t.name}
+													{t.is_default ? `${t.name} (mặc định)` : t.name}
 												</SelectItem>
 											))}
 										</SelectContent>
