@@ -49,6 +49,7 @@ import EventCreatePage from "@/pages/event/EventCreatePage";
 import EventEditPage from "@/pages/event/EventEditPage";
 import EventDetailPage from "@/pages/event/EventDetailPage";
 import CourseListPage from "@/pages/learning/CourseListPage";
+import CourseCategoryListPage from "@/pages/learning/CourseCategoryListPage";
 import CourseFormPage from "@/pages/learning/CourseFormPage";
 import CourseDetailPage from "@/pages/learning/CourseDetailPage";
 import CourseTrashPage from "@/pages/learning/CourseTrashPage";
@@ -448,6 +449,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='courses.view'>
 						<CourseTrashPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "course-categories",
+				element: (
+					<PermissionRoute permission='courses.view'>
+						<CourseCategoryListPage />
 					</PermissionRoute>
 				),
 			},

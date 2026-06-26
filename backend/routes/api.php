@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
+use App\Http\Controllers\Api\V1\Admin\CourseCategoryController as AdminCourseCategoryController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Api\V1\Admin\CertificateTemplateController as AdminCertificateTemplateController;
 use App\Http\Controllers\Api\V1\Admin\LessonController as AdminLessonController;
@@ -494,11 +495,16 @@ Route::prefix('v1')->group(function () {
             Route::get('courses/trash', [AdminCourseController::class, 'trash']);
             Route::get('certificate-templates', [AdminCertificateTemplateController::class, 'index']);
             Route::get('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'show']);
+            Route::get('course-categories', [AdminCourseCategoryController::class, 'index']);
             Route::get('courses/{course}', [AdminCourseController::class, 'show']);
             Route::get('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'show']);
         });
         Route::middleware('permission:courses.manage')->group(function () {
             Route::post('courses', [AdminCourseController::class, 'store']);
+            Route::post('course-categories', [AdminCourseCategoryController::class, 'store']);
+            Route::put('course-categories/{tag}', [AdminCourseCategoryController::class, 'update']);
+            Route::patch('course-categories/{tag}', [AdminCourseCategoryController::class, 'update']);
+            Route::delete('course-categories/{tag}', [AdminCourseCategoryController::class, 'destroy']);
             Route::patch('courses/trash/{id}/restore', [AdminCourseController::class, 'restore']);
             Route::delete('courses/trash/{id}/force', [AdminCourseController::class, 'forceDelete']);
             Route::put('courses/{course}', [AdminCourseController::class, 'update']);
