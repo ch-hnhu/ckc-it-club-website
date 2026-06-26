@@ -365,6 +365,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-06-27`: Course lesson detail and assignment grading are offline-only in admin UI. `CourseDetailPage` only links lesson titles and shows lesson-row "Xem chi tiết" / "Chấm bài" actions when the course opens an offline class (`max_offline_slots != null`), `LessonFormPage` only shows/submits assignment URL/deadline for offline courses, and `LessonDetailPage` only loads/renders assignment grading controls for offline courses with an assignment.
 - `2026-06-26`: Course create/edit audience helper text is now dynamic and changes with the selected audience option (`club_member`, `cao_thang_student`, `public`).
 - `2026-06-26`: Course detail "Cấu hình khóa" only shows offline-specific rows ("Sức chứa lớp offline", "Số buổi vắng tối đa") when the course actually opens an offline class (`max_offline_slots != null`).
 - `2026-06-26`: Course create and edit forms now automatically pre-select the default certificate template on load if no template is currently selected, avoiding unselected/empty template state.

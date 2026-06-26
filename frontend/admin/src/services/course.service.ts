@@ -235,10 +235,12 @@ const courseService = {
 		lessonId: number,
 		userId: number,
 		present: boolean,
+		note?: string,
 	): Promise<ApiResponse<{ user_id: number; lesson_id: number; present: boolean }>> {
 		return api.post(`/courses/${courseSlug}/lessons/${lessonId}/attendance`, {
 			user_id: userId,
 			present,
+			...(note ? { note } : {}),
 		});
 	},
 

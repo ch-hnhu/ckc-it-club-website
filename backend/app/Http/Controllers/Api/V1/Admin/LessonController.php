@@ -144,6 +144,7 @@ class LessonController extends BaseApiController
         $data = $request->validate([
             'user_id' => 'required|integer',
             'present' => 'required|boolean',
+            'note'    => 'nullable|string|max:500',
         ]);
 
         $enrollment = $course->enrollmentFor($data['user_id']);
@@ -152,7 +153,7 @@ class LessonController extends BaseApiController
         if ($data['present']) {
             LessonAttendance::firstOrCreate(
                 ['user_id' => $data['user_id'], 'lesson_id' => $lesson->id],
-                ['type' => 'manual', 'attended_at' => now(), 'recorded_by' => $request->user()->id],
+                ['type' => 'manual', 'note' => $data['note'] ?? null, 'attended_at' => now(), 'recorded_by' => $request->user()->id],
             );
         } else {
             LessonAttendance::where(['user_id' => $data['user_id'], 'lesson_id' => $lesson->id])->delete();

@@ -10,7 +10,6 @@ import {
 	CalendarCheck,
 	CalendarClock,
 	CheckCircle2,
-	ClipboardCheck,
 	FilePen,
 	Download,
 	GraduationCap,
@@ -491,7 +490,6 @@ function CourseDetailPage() {
 						icon={<Users className='h-5 w-5' />}
 						label='Học viên'
 						value={course.enrollments_count}
-						hint={`${course.offline_enrollments_count} offline · ${course.online_enrollments_count} online`}
 					/>
 					<StatCard
 						icon={<CalendarClock className='h-5 w-5' />}
@@ -501,7 +499,6 @@ function CourseDetailPage() {
 								? `${course.offline_enrollments_count}/${course.max_offline_slots}`
 								: "Chỉ online"
 						}
-						hint={hasOffline ? "đã đăng ký / sức chứa" : undefined}
 					/>
 					<StatCard
 						icon={<Award className='h-5 w-5' />}
@@ -628,24 +625,24 @@ function CourseDetailPage() {
 												course.offline_enrollments_count > 0;
 											const canQr =
 												isOffline && isActive && hasOfflineStudents;
-											const canManualAttendance =
-												isOffline &&
-												(isActive || isPast) &&
-												hasOfflineStudents;
 											return (
 												<TableRow key={lesson.id}>
 													<TableCell className='font-medium text-muted-foreground'>
 														{lesson.order}
 													</TableCell>
 													<TableCell className='font-medium'>
-														<button
-															type='button'
-															className='text-left hover:text-primary hover:underline'
-															onClick={() =>
-																openLessonDetail(lesson.id)
-															}>
-															{lesson.title}
-														</button>
+														{hasOffline ? (
+															<button
+																type='button'
+																className='text-left hover:text-primary hover:underline'
+																onClick={() =>
+																	openLessonDetail(lesson.id)
+																}>
+																{lesson.title}
+															</button>
+														) : (
+															<span>{lesson.title}</span>
+														)}
 													</TableCell>
 													{hasOffline && (
 														<TableCell className='text-sm text-muted-foreground'>
@@ -705,13 +702,17 @@ function CourseDetailPage() {
 															<DropdownMenuContent
 																align='end'
 																className='w-[160px]'>
-																<DropdownMenuItem
-																	onClick={() =>
-																		openLessonDetail(lesson.id)
-																	}>
-																	<BookOpen className='h-4 w-4' />
-																	Xem chi tiết
-																</DropdownMenuItem>
+																	{hasOffline && (
+																		<DropdownMenuItem
+																			onClick={() =>
+																				openLessonDetail(
+																					lesson.id,
+																				)
+																			}>
+																			<BookOpen className='h-4 w-4' />
+																			Xem chi tiết
+																		</DropdownMenuItem>
+																	)}
 																<DropdownMenuItem
 																	onClick={() =>
 																		openEditLesson(lesson.id)
@@ -726,19 +727,7 @@ function CourseDetailPage() {
 																			setCheckInLesson(lesson)
 																		}>
 																		<ScanLine className='h-4 w-4' />
-																		Quét QR
-																	</DropdownMenuItem>
-																)}
-
-																{canManualAttendance && (
-																	<DropdownMenuItem
-																		onClick={() =>
-																			setEditAttendanceLesson(
-																				lesson,
-																			)
-																		}>
-																		<ClipboardCheck className='h-4 w-4' />
-																		{"Điểm danh thủ công"}
+																		Điểm danh
 																	</DropdownMenuItem>
 																)}
 
@@ -754,15 +743,19 @@ function CourseDetailPage() {
 																	</DropdownMenuItem>
 																)}
 
-																{lesson.has_assignment && (
-																	<DropdownMenuItem
-																		onClick={() =>
-																			setGradingLesson(lesson)
-																		}>
-																		<ListChecks className='h-4 w-4' />
-																		Chấm bài
-																	</DropdownMenuItem>
-																)}
+																{hasOffline &&
+																	lesson.has_assignment &&
+																	(isActive || isPast) && (
+																		<DropdownMenuItem
+																			onClick={() =>
+																				setGradingLesson(
+																					lesson,
+																				)
+																			}>
+																			<ListChecks className='h-4 w-4' />
+																			Chấm bài
+																		</DropdownMenuItem>
+																	)}
 																<DropdownMenuItem
 																	className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 																	onClick={() =>

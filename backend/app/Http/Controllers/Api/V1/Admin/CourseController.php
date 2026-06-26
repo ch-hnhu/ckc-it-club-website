@@ -531,15 +531,25 @@ class CourseController extends BaseApiController
             return [];
         }
 
-        return LessonAttendance::query()
+        $recorderNames = collect();
+        $attendances = LessonAttendance::query()
             ->whereIn('lesson_id', $offlineLessonIds)
-            ->get(['user_id', 'lesson_id', 'type'])
-            ->map(fn (LessonAttendance $a) => [
-                'user_id' => $a->user_id,
-                'lesson_id' => $a->lesson_id,
-                'type' => $a->type,
-            ])
-            ->all();
+            ->get(['user_id', 'lesson_id', 'type', 'note', 'attended_at', 'recorded_by']);
+
+        $recorderIds = $attendances->pluck('recorded_by')->filter()->unique()->values();
+        if ($recorderIds->isNotEmpty()) {
+            $recorderNames = \App\Models\User::whereIn('id', $recorderIds)
+                ->pluck('full_name', 'id');
+        }
+
+        return $attendances->map(fn (LessonAttendance $a) => [
+            'user_id'           => $a->user_id,
+            'lesson_id'         => $a->lesson_id,
+            'type'              => $a->type,
+            'note'              => $a->note,
+            'attended_at'       => $a->attended_at?->toISOString(),
+            'recorded_by_name'  => $a->recorded_by ? ($recorderNames[$a->recorded_by] ?? null) : null,
+        ])->all();
     }
 
     /**

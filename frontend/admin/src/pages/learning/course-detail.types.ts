@@ -51,6 +51,9 @@ export interface AttendanceCell {
 	lesson_id: number;
 	/** Cách điểm danh: qr (học viên tự quét) hoặc manual (admin điểm danh tay) */
 	type: "qr" | "manual";
+	note: string | null;
+	attended_at: string | null;
+	recorded_by_name: string | null;
 }
 
 /** Một đăng ký "sẽ tham gia" (vé QR) của học viên cho một buổi offline */
