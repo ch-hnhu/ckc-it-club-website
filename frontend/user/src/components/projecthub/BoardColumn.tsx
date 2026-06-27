@@ -72,7 +72,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 			onDragOver={(e) => onColumnDragOver(index, e)}
 			onDrop={(e) => onColumnDrop(index, e)}
 			className={cn(
-				"flex w-72 shrink-0 flex-col rounded-2xl border-2 border-black bg-gray-50 shadow-[4px_4px_0_#111]",
+				"flex w-72 max-h-full shrink-0 flex-col rounded-2xl border-2 border-black bg-gray-50 shadow-[4px_4px_0_#111]",
 				isColumnDragging && "opacity-40",
 			)}>
 			{/* Header */}
@@ -168,7 +168,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 			</div>
 
 			{/* Tasks */}
-			<div className='flex max-h-[calc(100vh-19rem)] flex-1 flex-col gap-2 overflow-y-auto p-2.5'>
+			<div className='flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2.5'>
 				{tasks.map((task, index) => (
 					<TaskCard
 						key={task.id}

@@ -25,7 +25,7 @@ type DragInfo = { taskId: number; fromColumnId: number; index: number };
 
 const ProjectBoardPage: React.FC = () => {
 	const { slug = "" } = useParams();
-	const { user } = useOutletContext<OutletCtx>();
+	const { user, loadingUser } = useOutletContext<OutletCtx>();
 	const navigate = useNavigate();
 
 	const [board, setBoard] = useState<ProjectDetail | null>(null);
@@ -49,6 +49,13 @@ const ProjectBoardPage: React.FC = () => {
 	const isOwner = !!board && currentUserId != null && board.created_by === currentUserId;
 	const myRole = board?.members?.find((m) => m.id === currentUserId)?.pivot?.role;
 	const canEdit = isOwner || (!!myRole && myRole !== "viewer");
+
+	// Redirect khi đăng xuất
+	useEffect(() => {
+		if (!loadingUser && !user) {
+			navigate(`/login?returnTo=${encodeURIComponent(`/du-an/${slug}`)}`, { replace: true });
+		}
+	}, [loadingUser, user, navigate, slug]);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -357,9 +364,9 @@ const ProjectBoardPage: React.FC = () => {
 	const members = board.members ?? [];
 
 	return (
-		<div className='flex flex-1 flex-col px-4 py-5 md:px-6'>
+		<div className='flex flex-1 flex-col px-4 pt-[68px] md:px-6'>
 			{/* Header */}
-			<div className='mb-5 flex flex-wrap items-center gap-3'>
+			<div className='sticky top-[68px] z-10 -mx-4 flex flex-wrap items-center gap-3 border-b-2 border-black/10 bg-white px-4 py-3 md:-mx-6 md:px-6'>
 				<Link
 					to='/du-an'
 					className='rounded-lg border-2 border-black bg-white p-2 shadow-[2px_2px_0_#111] hover:translate-y-0.5'
@@ -445,7 +452,7 @@ const ProjectBoardPage: React.FC = () => {
 			</div>
 
 			{/* Board */}
-			<div className='flex flex-1 gap-4 overflow-x-auto pb-4'>
+			<div className='flex items-start gap-4 overflow-x-auto pb-6 pt-4'>
 				{board.columns.map((column, index) => (
 					<React.Fragment key={column.id}>
 						{columnDropTarget === index && (
