@@ -1,0 +1,89 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\ProjectVisibility;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Project extends Model
+{
+    use SoftDeletes;
+
+    protected $fillable = [
+        'name',
+        'slug',
+        'description',
+        'color',
+        'department_id',
+        'visibility',
+        'is_archived',
+        'archived_at',
+        'created_by',
+        'updated_by',
+        'deleted_by',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'visibility' => ProjectVisibility::class,
+            'is_archived' => 'boolean',
+            'archived_at' => 'datetime',
+        ];
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function columns(): HasMany
+    {
+        return $this->hasMany(ProjectColumn::class)->orderBy('position');
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(ProjectTask::class);
+    }
+
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(ProjectMember::class);
+    }
+
+    public function members(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'project_members')
+            ->using(ProjectMember::class)
+            ->withPivot('role', 'joined_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * User có quyền truy cập board hay không (là người tạo hoặc thành viên).
+     */
+    public function hasMember(?int $userId): bool
+    {
+        if (! $userId) {
+            return false;
+        }
+
+        return $this->created_by === $userId
+            || $this->members()->where('users.id', $userId)->exists();
+    }
+}

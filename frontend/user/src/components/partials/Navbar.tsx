@@ -51,6 +51,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
 	{ label: "Sự kiện", href: "/su-kien" },
 	{ label: "Blog", href: "/blog" },
 	{ label: "Khóa học", href: "/khoa-hoc" },
+	{ label: "Dự án", href: "/du-an" },
 	{ label: "Liên hệ", href: "/lien-he" },
 ];
 
