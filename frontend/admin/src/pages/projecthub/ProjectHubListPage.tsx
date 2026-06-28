@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutGrid, Plus } from "lucide-react";
+import { CalendarDays, GraduationCap, LayoutGrid, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -102,9 +103,25 @@ const ProjectHubListPage: React.FC = () => {
 							<div className='h-2' style={{ backgroundColor: p.color || "var(--primary)" }} />
 							<div className='flex flex-1 flex-col p-4'>
 								<h3 className='mb-1 line-clamp-1 font-semibold'>{p.name}</h3>
-								<p className='mb-4 line-clamp-2 flex-1 text-sm text-muted-foreground'>
+								<p className='mb-3 line-clamp-2 flex-1 text-sm text-muted-foreground'>
 									{p.description || "Không có mô tả"}
 								</p>
+								{(p.course || p.event) && (
+									<div className='mb-3 flex flex-wrap gap-1'>
+										{p.course && (
+											<Badge variant='secondary' className='gap-1 font-normal'>
+												<GraduationCap className='h-3 w-3' />
+												<span className='max-w-[9rem] truncate'>{p.course.title}</span>
+											</Badge>
+										)}
+										{p.event && (
+											<Badge variant='secondary' className='gap-1 font-normal'>
+												<CalendarDays className='h-3 w-3' />
+												<span className='max-w-[9rem] truncate'>{p.event.title}</span>
+											</Badge>
+										)}
+									</div>
+								)}
 								<div className='flex items-center gap-3 border-t pt-3 text-xs font-medium text-muted-foreground'>
 									<span>{p.columns_count ?? 0} cột</span>
 									<span>·</span>

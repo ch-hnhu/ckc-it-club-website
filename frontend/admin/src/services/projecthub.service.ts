@@ -2,6 +2,8 @@ import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type {
 	AssignableUser,
+	BoardLinkOptions,
+	ChecklistItem,
 	CreateProjectInput,
 	CreateTaskInput,
 	Project,
@@ -18,8 +20,16 @@ const BASE = "/projecthub/boards";
 // ProjectHub API — yêu cầu đăng nhập (auth:sanctum), chỉ thành viên của board.
 export const projectHubService = {
 	// ── Boards ──────────────────────────────────────────────────────────────
-	listProjects: (params?: { archived?: 0 | 1; page?: number; per_page?: number }) =>
-		api.get<PaginatedResponse<Project>>(BASE, params as Record<string, unknown>),
+	listProjects: (params?: {
+		archived?: 0 | 1;
+		page?: number;
+		per_page?: number;
+		course_id?: number;
+		event_id?: number;
+	}) => api.get<PaginatedResponse<Project>>(BASE, params as Record<string, unknown>),
+
+	// Danh sách course/event để chọn liên kết cho board.
+	getLinkOptions: () => api.get<ApiResponse<BoardLinkOptions>>("/projecthub/link-options"),
 
 	getProject: (slug: string) => api.get<ApiResponse<ProjectDetail>>(`${BASE}/${slug}`),
 
@@ -64,6 +74,24 @@ export const projectHubService = {
 			`${BASE}/${slug}/tasks/${taskId}/move`,
 			body,
 		),
+
+	// ── Checklist (việc con của task) ────────────────────────────────────────
+	addChecklistItem: (slug: string, taskId: number, content: string) =>
+		api.post<ApiResponse<ChecklistItem>>(`${BASE}/${slug}/tasks/${taskId}/checklist`, { content }),
+
+	updateChecklistItem: (
+		slug: string,
+		taskId: number,
+		itemId: number,
+		body: { content?: string; is_done?: boolean },
+	) =>
+		api.patch<ApiResponse<ChecklistItem>>(
+			`${BASE}/${slug}/tasks/${taskId}/checklist/${itemId}`,
+			body,
+		),
+
+	deleteChecklistItem: (slug: string, taskId: number, itemId: number) =>
+		api.delete<ApiResponse<null>>(`${BASE}/${slug}/tasks/${taskId}/checklist/${itemId}`),
 
 	// ── Members ─────────────────────────────────────────────────────────────
 	getMembers: (slug: string) => api.get<ApiResponse<ProjectMember[]>>(`${BASE}/${slug}/members`),

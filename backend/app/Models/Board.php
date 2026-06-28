@@ -21,6 +21,8 @@ class Board extends Model
         'description',
         'color',
         'department_id',
+        'course_id',
+        'event_id',
         'visibility',
         'is_archived',
         'archived_at',
@@ -46,6 +48,16 @@ class Board extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(Course::class);
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(Event::class);
     }
 
     public function creator(): BelongsTo

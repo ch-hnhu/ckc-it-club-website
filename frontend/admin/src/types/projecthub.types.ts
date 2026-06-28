@@ -24,6 +24,19 @@ export interface ProjectDepartment {
 	slug: string;
 }
 
+// Tham chiếu gọn tới course/event mà board liên kết.
+export interface ProjectLinkRef {
+	id: number;
+	title: string;
+	slug: string;
+}
+
+// Tùy chọn cho picker liên kết (GET /projecthub/link-options).
+export interface BoardLinkOptions {
+	courses: ProjectLinkRef[];
+	events: ProjectLinkRef[];
+}
+
 // Kết quả tìm user để thêm vào board.
 export interface AssignableUser {
 	id: number;
@@ -32,6 +45,15 @@ export interface AssignableUser {
 	email: string;
 	student_code: string | null;
 	avatar: string | null;
+}
+
+// Việc con (checklist) của một task.
+export interface ChecklistItem {
+	id: number;
+	board_task_id: number;
+	content: string;
+	is_done: boolean;
+	position: number;
 }
 
 export interface ProjectTask {
@@ -47,6 +69,7 @@ export interface ProjectTask {
 	completed_at: string | null;
 	created_by: number;
 	assignees?: ProjectUser[];
+	checklist_items?: ChecklistItem[];
 	created_at?: string;
 	updated_at?: string;
 }
@@ -69,11 +92,15 @@ export interface Project {
 	description: string | null;
 	color: string | null;
 	department_id: number | null;
+	course_id: number | null;
+	event_id: number | null;
 	visibility: ProjectVisibility;
 	is_archived: boolean;
 	archived_at: string | null;
 	created_by: number;
 	department?: ProjectDepartment | null;
+	course?: ProjectLinkRef | null;
+	event?: ProjectLinkRef | null;
 	columns_count?: number;
 	tasks_count?: number;
 	created_at?: string;
@@ -92,6 +119,8 @@ export interface CreateProjectInput {
 	color?: string | null;
 	visibility?: ProjectVisibility;
 	department_id?: number | null;
+	course_id?: number | null;
+	event_id?: number | null;
 }
 
 export interface CreateTaskInput {

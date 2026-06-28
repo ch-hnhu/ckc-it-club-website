@@ -1,9 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Archive, ArrowLeft, Check, Loader2, MoreVertical, Plus, Trash2, Users, X } from "lucide-react";
+import {
+	Archive,
+	ArrowLeft,
+	CalendarDays,
+	Check,
+	GraduationCap,
+	Link2,
+	Loader2,
+	MoreVertical,
+	Plus,
+	Trash2,
+	Users,
+	X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,10 +30,17 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { projectHubService } from "@/services/projecthub.service";
-import type { ProjectDetail, ProjectMember, ProjectTask, UpdateTaskInput } from "@/types/projecthub.types";
+import type {
+	ChecklistItem,
+	ProjectDetail,
+	ProjectMember,
+	ProjectTask,
+	UpdateTaskInput,
+} from "@/types/projecthub.types";
 import BoardColumn from "@/components/projecthub/BoardColumn";
 import TaskDialog from "@/components/projecthub/TaskDialog";
 import ManageMembersDialog from "@/components/projecthub/ManageMembersDialog";
+import LinkBoardDialog from "@/components/projecthub/LinkBoardDialog";
 import { initials } from "@/components/projecthub/constants";
 
 type DragInfo = { taskId: number; fromColumnId: number; index: number };
@@ -35,6 +56,7 @@ const ProjectBoardPage: React.FC = () => {
 
 	const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
 	const [showMembers, setShowMembers] = useState(false);
+	const [showLink, setShowLink] = useState(false);
 	const [addingColumn, setAddingColumn] = useState(false);
 	const [columnName, setColumnName] = useState("");
 
@@ -113,6 +135,25 @@ const ProjectBoardPage: React.FC = () => {
 		} catch {
 			toast.error("Lưu công việc thất bại");
 		}
+	};
+
+	const handleChecklistChange = (taskId: number, checklistItems: ChecklistItem[]) => {
+		setBoard((prev) =>
+			prev
+				? {
+						...prev,
+						columns: prev.columns.map((c) => ({
+							...c,
+							tasks: (c.tasks ?? []).map((t) =>
+								t.id === taskId ? { ...t, checklist_items: checklistItems } : t,
+							),
+						})),
+				  }
+				: prev,
+		);
+		setSelectedTask((st) =>
+			st && st.id === taskId ? { ...st, checklist_items: checklistItems } : st,
+		);
 	};
 
 	const handleDeleteTask = async (taskId: number) => {
@@ -306,6 +347,17 @@ const ProjectBoardPage: React.FC = () => {
 		}
 	};
 
+	const handleUpdateLink = async (payload: { course_id: number | null; event_id: number | null }) => {
+		try {
+			const res = await projectHubService.updateProject(slug, payload);
+			setBoard((b) => (b ? { ...b, ...res.data } : b));
+			toast.success("Đã cập nhật liên kết");
+		} catch {
+			toast.error("Cập nhật liên kết thất bại");
+			throw new Error("update-link-failed");
+		}
+	};
+
 	const handleDeleteBoard = async () => {
 		if (!window.confirm("Xóa toàn bộ dự án này? Hành động không thể hoàn tác.")) return;
 		try {
@@ -365,6 +417,26 @@ const ProjectBoardPage: React.FC = () => {
 					{board.description && (
 						<p className='truncate text-sm text-muted-foreground'>{board.description}</p>
 					)}
+					{(board.course || board.event) && (
+						<div className='mt-1 flex flex-wrap items-center gap-1.5'>
+							{board.course && (
+								<Link to={`/courses/${board.course.slug}`}>
+									<Badge variant='secondary' className='gap-1 hover:bg-secondary/80'>
+										<GraduationCap className='h-3 w-3' />
+										<span className='max-w-[12rem] truncate'>{board.course.title}</span>
+									</Badge>
+								</Link>
+							)}
+							{board.event && (
+								<Link to={`/events/${board.event.id}`}>
+									<Badge variant='secondary' className='gap-1 hover:bg-secondary/80'>
+										<CalendarDays className='h-3 w-3' />
+										<span className='max-w-[12rem] truncate'>{board.event.title}</span>
+									</Badge>
+								</Link>
+							)}
+						</div>
+					)}
 				</div>
 
 				<Button
@@ -391,6 +463,9 @@ const ProjectBoardPage: React.FC = () => {
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align='end'>
+							<DropdownMenuItem onClick={() => setShowLink(true)}>
+								<Link2 className='mr-2 h-4 w-4' /> Liên kết course/event
+							</DropdownMenuItem>
 							<DropdownMenuItem onClick={handleArchive}>
 								<Archive className='mr-2 h-4 w-4' />
 								{board.is_archived ? "Bỏ lưu trữ" : "Lưu trữ"}
@@ -496,9 +571,11 @@ const ProjectBoardPage: React.FC = () => {
 					task={selectedTask}
 					members={members}
 					canEdit={canEdit}
+					slug={slug}
 					onClose={() => setSelectedTask(null)}
 					onSave={handleSaveTask}
 					onDelete={handleDeleteTask}
+					onChecklistChange={handleChecklistChange}
 				/>
 			)}
 
@@ -511,6 +588,15 @@ const ProjectBoardPage: React.FC = () => {
 					onClose={() => setShowMembers(false)}
 					onMembersChange={handleMembersChange}
 					onMemberRemoved={handleMemberRemoved}
+				/>
+			)}
+
+			{showLink && (
+				<LinkBoardDialog
+					courseId={board.course_id}
+					eventId={board.event_id}
+					onClose={() => setShowLink(false)}
+					onSave={handleUpdateLink}
 				/>
 			)}
 		</div>

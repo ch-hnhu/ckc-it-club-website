@@ -16,6 +16,8 @@ use App\Http\Requests\Api\V1\ProjectHub\UpdateBoardTaskRequest;
 use App\Models\Board;
 use App\Models\BoardColumn;
 use App\Models\BoardTask;
+use App\Models\Course;
+use App\Models\Event;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,7 +49,9 @@ class BoardController extends BaseApiController
                 ->where('created_by', $userId)
                 ->orWhereHas('members', fn ($m) => $m->where('users.id', $userId)))
             ->where('is_archived', $archived)
-            ->with('department:id,name,slug')
+            ->when($request->query('course_id'), fn ($q, $id) => $q->where('course_id', $id))
+            ->when($request->query('event_id'), fn ($q, $id) => $q->where('event_id', $id))
+            ->with(['department:id,name,slug', 'course:id,title,slug', 'event:id,title,slug'])
             ->withCount(['columns', 'tasks'])
             ->orderByDesc('updated_at')
             ->paginate($perPage);
@@ -70,6 +74,8 @@ class BoardController extends BaseApiController
                 'description'   => $validated['description'] ?? null,
                 'color'         => $validated['color'] ?? null,
                 'department_id' => $validated['department_id'] ?? null,
+                'course_id'     => $validated['course_id'] ?? null,
+                'event_id'      => $validated['event_id'] ?? null,
                 'visibility'    => $validated['visibility'] ?? 'members',
                 'created_by'    => $user->id,
             ]);
@@ -108,8 +114,11 @@ class BoardController extends BaseApiController
 
         $board->load([
             'department:id,name,slug',
+            'course:id,title,slug',
+            'event:id,title,slug',
             'members:' . self::ASSIGNEE_FIELDS,
             'columns.tasks.assignees:' . self::ASSIGNEE_FIELDS,
+            'columns.tasks.checklistItems',
         ]);
 
         return $this->successResponse(true, $board, ApiMessage::RETRIEVED);
@@ -123,13 +132,17 @@ class BoardController extends BaseApiController
         }
 
         $data = collect($request->validated())
-            ->only(['name', 'description', 'color', 'department_id', 'visibility'])
+            ->only(['name', 'description', 'color', 'department_id', 'course_id', 'event_id', 'visibility'])
             ->toArray();
         $data['updated_by'] = $user->id;
 
         $board->update($data);
 
-        return $this->successResponse(true, $board->fresh(), ApiMessage::UPDATED);
+        return $this->successResponse(
+            true,
+            $board->fresh()->load(['course:id,title,slug', 'event:id,title,slug']),
+            ApiMessage::UPDATED
+        );
     }
 
     /**
@@ -166,6 +179,22 @@ class BoardController extends BaseApiController
         $board->delete();
 
         return $this->successResponse(true, null, ApiMessage::DELETED);
+    }
+
+    /**
+     * Danh sách course + event để chọn liên kết khi tạo/sửa board.
+     */
+    public function linkOptions(): JsonResponse
+    {
+        $courses = Course::query()
+            ->orderByDesc('created_at')
+            ->get(['id', 'title', 'slug']);
+
+        $events = Event::query()
+            ->orderByDesc('start_at')
+            ->get(['id', 'title', 'slug']);
+
+        return $this->successResponse(true, compact('courses', 'events'), ApiMessage::RETRIEVED);
     }
 
     // ---------------------------------------------------------------------
@@ -294,7 +323,7 @@ class BoardController extends BaseApiController
         });
 
         return $this->createdResponse(
-            $task->load('assignees:' . self::ASSIGNEE_FIELDS),
+            $task->load(['assignees:' . self::ASSIGNEE_FIELDS, 'checklistItems']),
             ApiMessage::CREATED
         );
     }
@@ -328,7 +357,7 @@ class BoardController extends BaseApiController
 
         return $this->successResponse(
             true,
-            $taskModel->fresh()->load('assignees:' . self::ASSIGNEE_FIELDS),
+            $taskModel->fresh()->load(['assignees:' . self::ASSIGNEE_FIELDS, 'checklistItems']),
             ApiMessage::UPDATED
         );
     }
@@ -401,6 +430,69 @@ class BoardController extends BaseApiController
             'id'        => $taskModel->id,
             'column_id' => $targetColumn->id,
         ], ApiMessage::UPDATED);
+    }
+
+    // ---------------------------------------------------------------------
+    // Checklist (việc con của task)
+    // ---------------------------------------------------------------------
+
+    public function storeChecklistItem(Request $request, Board $board, int $task): JsonResponse
+    {
+        if ($resp = $this->editorGuard($board, $request->user())) {
+            return $resp;
+        }
+
+        $taskModel = $board->tasks()->findOrFail($task);
+        $validated = $request->validate(
+            ['content' => ['required', 'string', 'max:500']],
+            ['content.required' => 'Vui lòng nhập nội dung mục.', 'content.max' => 'Nội dung không được vượt quá 500 ký tự.']
+        );
+
+        $position = $taskModel->checklistItems()->exists()
+            ? (int) $taskModel->checklistItems()->max('position') + 1
+            : 0;
+
+        $item = $taskModel->checklistItems()->create([
+            'content'  => trim($validated['content']),
+            'position' => $position,
+        ]);
+
+        return $this->createdResponse($item, ApiMessage::CREATED);
+    }
+
+    public function updateChecklistItem(Request $request, Board $board, int $task, int $item): JsonResponse
+    {
+        if ($resp = $this->editorGuard($board, $request->user())) {
+            return $resp;
+        }
+
+        $taskModel = $board->tasks()->findOrFail($task);
+        $itemModel = $taskModel->checklistItems()->findOrFail($item);
+
+        $validated = $request->validate([
+            'content' => ['sometimes', 'required', 'string', 'max:500'],
+            'is_done' => ['sometimes', 'boolean'],
+        ]);
+
+        if (isset($validated['content'])) {
+            $validated['content'] = trim($validated['content']);
+        }
+
+        $itemModel->update($validated);
+
+        return $this->successResponse(true, $itemModel->fresh(), ApiMessage::UPDATED);
+    }
+
+    public function destroyChecklistItem(Request $request, Board $board, int $task, int $item): JsonResponse
+    {
+        if ($resp = $this->editorGuard($board, $request->user())) {
+            return $resp;
+        }
+
+        $taskModel = $board->tasks()->findOrFail($task);
+        $taskModel->checklistItems()->whereKey($item)->delete();
+
+        return $this->successResponse(true, null, ApiMessage::DELETED);
     }
 
     // ---------------------------------------------------------------------

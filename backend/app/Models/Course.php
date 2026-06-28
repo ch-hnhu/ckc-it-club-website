@@ -91,6 +91,14 @@ class Course extends Model
     }
 
     /**
+     * Các board ProjectHub liên kết với khoá học này.
+     */
+    public function boards(): HasMany
+    {
+        return $this->hasMany(Board::class);
+    }
+
+    /**
      * User hiện tại có đang "quan tâm" khoá học không.
      */
     public function isFollowedBy(?int $userId): bool

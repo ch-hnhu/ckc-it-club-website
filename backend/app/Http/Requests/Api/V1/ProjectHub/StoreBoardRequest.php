@@ -22,6 +22,8 @@ class StoreBoardRequest extends FormRequest
             'description'   => ['nullable', 'string', 'max:5000'],
             'color'         => ['nullable', 'string', 'max:20'],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'course_id'     => ['nullable', 'integer', 'exists:courses,id'],
+            'event_id'      => ['nullable', 'integer', 'exists:events,id'],
             'visibility'    => ['nullable', Rule::in(BoardVisibility::values())],
         ];
     }
@@ -33,6 +35,8 @@ class StoreBoardRequest extends FormRequest
             'name.max'            => 'Tên dự án không được vượt quá 255 ký tự.',
             'description.max'     => 'Mô tả không được vượt quá 5000 ký tự.',
             'department_id.exists' => 'Ban được chọn không tồn tại.',
+            'course_id.exists'    => 'Khoá học được chọn không tồn tại.',
+            'event_id.exists'     => 'Sự kiện được chọn không tồn tại.',
             'visibility.in'       => 'Phạm vi hiển thị không hợp lệ.',
         ];
     }

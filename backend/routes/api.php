@@ -251,6 +251,9 @@ Route::prefix('v1')->group(function () {
 
         // ProjectHub — bảng Kanban quản lý tiến độ (chỉ thành viên của board)
         Route::prefix('projecthub')->group(function () {
+            // Tùy chọn liên kết (course/event) cho board
+            Route::get('link-options', [ProjectHubController::class, 'linkOptions']);
+
             // Boards
             Route::get('boards', [ProjectHubController::class, 'index']);
             Route::post('boards', [ProjectHubController::class, 'store']);
@@ -280,6 +283,11 @@ Route::prefix('v1')->group(function () {
             Route::put('boards/{board}/tasks/{task}', [ProjectHubController::class, 'updateTask']);
             Route::patch('boards/{board}/tasks/{task}', [ProjectHubController::class, 'updateTask']);
             Route::delete('boards/{board}/tasks/{task}', [ProjectHubController::class, 'destroyTask']);
+
+            // Checklist (việc con của task)
+            Route::post('boards/{board}/tasks/{task}/checklist', [ProjectHubController::class, 'storeChecklistItem']);
+            Route::patch('boards/{board}/tasks/{task}/checklist/{item}', [ProjectHubController::class, 'updateChecklistItem']);
+            Route::delete('boards/{board}/tasks/{task}/checklist/{item}', [ProjectHubController::class, 'destroyChecklistItem']);
         });
     });
 

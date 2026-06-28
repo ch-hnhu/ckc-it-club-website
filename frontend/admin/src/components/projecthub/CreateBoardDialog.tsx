@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { CreateProjectInput, ProjectVisibility } from "@/types/projecthub.types";
 import { BOARD_COLORS, VISIBILITY_META } from "./constants";
+import BoardLinkFields, { useBoardLinkOptions } from "./BoardLinkFields";
 
 interface CreateBoardDialogProps {
 	onClose: () => void;
@@ -26,7 +27,10 @@ const CreateBoardDialog: React.FC<CreateBoardDialogProps> = ({ onClose, onCreate
 	const [description, setDescription] = useState("");
 	const [color, setColor] = useState<string>(BOARD_COLORS[0]);
 	const [visibility, setVisibility] = useState<ProjectVisibility>("members");
+	const [courseId, setCourseId] = useState<number | null>(null);
+	const [eventId, setEventId] = useState<number | null>(null);
 	const [saving, setSaving] = useState(false);
+	const { options, loading: loadingOptions } = useBoardLinkOptions();
 
 	const handleCreate = async () => {
 		if (!name.trim()) return;
@@ -37,6 +41,8 @@ const CreateBoardDialog: React.FC<CreateBoardDialogProps> = ({ onClose, onCreate
 				description: description.trim() || null,
 				color,
 				visibility,
+				course_id: courseId,
+				event_id: eventId,
 			});
 		} finally {
 			setSaving(false);
@@ -109,6 +115,17 @@ const CreateBoardDialog: React.FC<CreateBoardDialogProps> = ({ onClose, onCreate
 							))}
 						</div>
 					</div>
+
+					<BoardLinkFields
+						options={options}
+						loading={loadingOptions}
+						courseId={courseId}
+						eventId={eventId}
+						onChange={({ course_id, event_id }) => {
+							setCourseId(course_id);
+							setEventId(event_id);
+						}}
+					/>
 				</div>
 
 				<DialogFooter>

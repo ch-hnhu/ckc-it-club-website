@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar, CheckCircle2, MessageSquareText } from "lucide-react";
+import { Calendar, CheckCircle2, CheckSquare, MessageSquareText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { ProjectTask } from "@/types/projecthub.types";
@@ -32,6 +32,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
 	const completed = Boolean(task.completed_at);
 	const overdue = isOverdue(task.due_date, task.completed_at);
 	const assignees = task.assignees ?? [];
+	const checklist = task.checklist_items ?? [];
+	const checklistTotal = checklist.length;
+	const checklistDone = checklist.filter((i) => i.is_done).length;
+	const checklistComplete = checklistTotal > 0 && checklistDone === checklistTotal;
 
 	return (
 		<div onDragOver={(e) => onDragOver(columnId, index, e)} onDrop={(e) => onDrop(columnId, index, e)}>
@@ -65,7 +69,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 					{task.title}
 				</p>
 
-				{(task.due_date || task.description || assignees.length > 0) && (
+				{(task.due_date || task.description || assignees.length > 0 || checklistTotal > 0) && (
 					<div className='mt-2.5 flex items-center justify-between gap-2'>
 						<div className='flex items-center gap-2 text-[11px] font-medium'>
 							{completed ? (
@@ -84,6 +88,18 @@ const TaskCard: React.FC<TaskCardProps> = ({
 									{formatShortDate(task.due_date)}
 								</span>
 							) : null}
+							{checklistTotal > 0 && (
+								<span
+									className={cn(
+										"inline-flex items-center gap-1 rounded px-1.5 py-0.5",
+										checklistComplete
+											? "bg-emerald-100 text-emerald-700"
+											: "bg-muted text-muted-foreground",
+									)}>
+									<CheckSquare className='h-3.5 w-3.5' />
+									{checklistDone}/{checklistTotal}
+								</span>
+							)}
 							{task.description && (
 								<MessageSquareText className='h-3.5 w-3.5 text-muted-foreground' />
 							)}

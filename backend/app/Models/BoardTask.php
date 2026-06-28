@@ -6,6 +6,7 @@ use App\Enums\TaskPriority;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BoardTask extends Model
@@ -59,5 +60,10 @@ class BoardTask extends Model
             ->using(BoardTaskAssignee::class)
             ->withPivot('assigned_at')
             ->withTimestamps();
+    }
+
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(BoardChecklistItem::class)->orderBy('position');
     }
 }
