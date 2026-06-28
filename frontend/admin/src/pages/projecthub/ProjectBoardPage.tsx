@@ -1,31 +1,32 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Archive, ArrowLeft, Check, Loader2, MoreVertical, Plus, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
-import type { AuthUser } from "@/services/auth.service";
-import { buildAvatar } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import { projectHubService } from "@/services/projecthub.service";
-import type {
-	ProjectDetail,
-	ProjectMember,
-	ProjectTask,
-	UpdateTaskInput,
-} from "@/types/projecthub.types";
+import type { ProjectDetail, ProjectMember, ProjectTask, UpdateTaskInput } from "@/types/projecthub.types";
 import BoardColumn from "@/components/projecthub/BoardColumn";
 import TaskDialog from "@/components/projecthub/TaskDialog";
 import ManageMembersDialog from "@/components/projecthub/ManageMembersDialog";
-
-interface OutletCtx {
-	user: AuthUser | null;
-	loadingUser: boolean;
-}
+import { initials } from "@/components/projecthub/constants";
 
 type DragInfo = { taskId: number; fromColumnId: number; index: number };
 
 const ProjectBoardPage: React.FC = () => {
 	const { slug = "" } = useParams();
-	const { user, loadingUser } = useOutletContext<OutletCtx>();
+	const { user } = useAuth();
 	const navigate = useNavigate();
 
 	const [board, setBoard] = useState<ProjectDetail | null>(null);
@@ -36,26 +37,23 @@ const ProjectBoardPage: React.FC = () => {
 	const [showMembers, setShowMembers] = useState(false);
 	const [addingColumn, setAddingColumn] = useState(false);
 	const [columnName, setColumnName] = useState("");
-	const [menuOpen, setMenuOpen] = useState(false);
 
 	const draggingRef = useRef<DragInfo | null>(null);
 	const [dropTarget, setDropTarget] = useState<{ columnId: number; index: number } | null>(null);
-
 	const columnDraggingRef = useRef<number | null>(null);
 	const [columnDragId, setColumnDragId] = useState<number | null>(null);
 	const [columnDropTarget, setColumnDropTarget] = useState<number | null>(null);
 
-	const currentUserId = user?.id ? Number(user.id) : null;
+	useBreadcrumb([
+		{ title: "Dashboard", link: "/" },
+		{ title: "ProjectHub", link: "/du-an" },
+		{ title: board?.name ?? "Đang tải..." },
+	]);
+
+	const currentUserId = user?.id ?? null;
 	const isOwner = !!board && currentUserId != null && board.created_by === currentUserId;
 	const myRole = board?.members?.find((m) => m.id === currentUserId)?.pivot?.role;
 	const canEdit = isOwner || (!!myRole && myRole !== "viewer");
-
-	// Redirect khi đăng xuất
-	useEffect(() => {
-		if (!loadingUser && !user) {
-			navigate(`/login?returnTo=${encodeURIComponent(`/du-an/${slug}`)}`, { replace: true });
-		}
-	}, [loadingUser, user, navigate, slug]);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -72,14 +70,10 @@ const ProjectBoardPage: React.FC = () => {
 	}, [slug]);
 
 	useEffect(() => {
-		if (user) load();
-	}, [user, load]);
+		load();
+	}, [load]);
 
-	// ── Cập nhật state cục bộ ──────────────────────────────────────────────────
-	const patchColumnTasks = (
-		columnId: number,
-		fn: (tasks: ProjectTask[]) => ProjectTask[],
-	) =>
+	const patchColumnTasks = (columnId: number, fn: (tasks: ProjectTask[]) => ProjectTask[]) =>
 		setBoard((prev) =>
 			prev
 				? {
@@ -91,7 +85,7 @@ const ProjectBoardPage: React.FC = () => {
 				: prev,
 		);
 
-	// ── Tasks ──────────────────────────────────────────────────────────────────
+	// ── Tasks ────────────────────────────────────────────────────────────────
 	const handleAddTask = async (columnId: number, title: string) => {
 		try {
 			const res = await projectHubService.createTask(slug, { column_id: columnId, title });
@@ -187,16 +181,14 @@ const ProjectBoardPage: React.FC = () => {
 		}
 	};
 
-	// ── Drag & drop ────────────────────────────────────────────────────────────
+	// ── Drag & drop task ───────────────────────────────────────────────────────
 	const onTaskDragStart = (task: ProjectTask, columnId: number, index: number) => {
 		draggingRef.current = { taskId: task.id, fromColumnId: columnId, index };
 	};
-
 	const onTaskDragEnd = () => {
 		draggingRef.current = null;
 		setDropTarget(null);
 	};
-
 	const onTaskDragOver = (columnId: number, index: number, e: React.DragEvent) => {
 		if (!draggingRef.current) return;
 		e.preventDefault();
@@ -204,11 +196,9 @@ const ProjectBoardPage: React.FC = () => {
 			cur && cur.columnId === columnId && cur.index === index ? cur : { columnId, index },
 		);
 	};
-
 	const onTaskDrop = async (columnId: number, index: number, e: React.DragEvent) => {
 		const drag = draggingRef.current;
-		// Không phải kéo task (vd: đang kéo cột) → để sự kiện nổi bọt lên handler của cột
-		if (!drag) return;
+		if (!drag) return; // đang kéo cột → để nổi bọt lên handler cột
 		e.preventDefault();
 		e.stopPropagation();
 		setDropTarget(null);
@@ -216,7 +206,6 @@ const ProjectBoardPage: React.FC = () => {
 
 		let insertIndex = index;
 		if (drag.fromColumnId === columnId && drag.index < index) insertIndex = index - 1;
-		// Bỏ qua nếu thả đúng vị trí cũ
 		if (drag.fromColumnId === columnId && insertIndex === drag.index) return;
 
 		const prev = board;
@@ -235,34 +224,28 @@ const ProjectBoardPage: React.FC = () => {
 		});
 
 		try {
-			await projectHubService.moveTask(slug, drag.taskId, {
-				column_id: columnId,
-				position: insertIndex,
-			});
+			await projectHubService.moveTask(slug, drag.taskId, { column_id: columnId, position: insertIndex });
 		} catch {
 			toast.error("Di chuyển thất bại");
 			setBoard(prev);
 		}
 	};
 
-	// ── Drag & drop cột ──────────────────────────────────────────────────────
+	// ── Drag & drop cột ────────────────────────────────────────────────────────
 	const onColumnDragStart = (columnId: number) => {
 		columnDraggingRef.current = columnId;
 		setColumnDragId(columnId);
 	};
-
 	const onColumnDragEnd = () => {
 		columnDraggingRef.current = null;
 		setColumnDragId(null);
 		setColumnDropTarget(null);
 	};
-
 	const onColumnDragOver = (index: number, e: React.DragEvent) => {
 		if (columnDraggingRef.current == null) return;
 		e.preventDefault();
 		setColumnDropTarget((cur) => (cur === index ? cur : index));
 	};
-
 	const onColumnDrop = async (index: number, e: React.DragEvent) => {
 		if (columnDraggingRef.current == null) return;
 		e.preventDefault();
@@ -296,7 +279,6 @@ const ProjectBoardPage: React.FC = () => {
 	const handleMembersChange = (newMembers: ProjectMember[]) =>
 		setBoard((b) => (b ? { ...b, members: newMembers } : b));
 
-	// Khi xóa thành viên: gỡ họ khỏi danh sách người phụ trách của mọi task (đã gỡ ở backend)
 	const handleMemberRemoved = (userId: number) =>
 		setBoard((b) =>
 			b
@@ -313,7 +295,7 @@ const ProjectBoardPage: React.FC = () => {
 				: b,
 		);
 
-	// ── Board actions ──────────────────────────────────────────────────────────
+	// ── Board actions ────────────────────────────────────────────────────────
 	const handleArchive = async () => {
 		try {
 			await projectHubService.archiveProject(slug);
@@ -339,7 +321,7 @@ const ProjectBoardPage: React.FC = () => {
 	if (loading) {
 		return (
 			<div className='flex flex-1 items-center justify-center py-32'>
-				<Loader2 className='h-8 w-8 animate-spin' />
+				<Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
 			</div>
 		);
 	}
@@ -352,11 +334,13 @@ const ProjectBoardPage: React.FC = () => {
 				? "Không tìm thấy dự án."
 				: "Đã có lỗi xảy ra.";
 		return (
-			<div className='neo-container neo-section flex flex-col items-center py-24 text-center'>
-				<h1 className='mb-2 text-2xl font-bold'>{msg}</h1>
-				<Link to='/du-an' className='neo-btn neo-btn-primary mt-4'>
-					<ArrowLeft className='h-5 w-5' /> Về danh sách dự án
-				</Link>
+			<div className='flex flex-col items-center py-24 text-center'>
+				<h1 className='mb-4 text-xl font-semibold'>{msg}</h1>
+				<Button asChild>
+					<Link to='/du-an'>
+						<ArrowLeft className='mr-1.5 h-4 w-4' /> Về danh sách dự án
+					</Link>
+				</Button>
 			</div>
 		);
 	}
@@ -364,99 +348,72 @@ const ProjectBoardPage: React.FC = () => {
 	const members = board.members ?? [];
 
 	return (
-		<div className='flex flex-1 flex-col px-4 pt-[68px] md:px-6'>
+		<div className='flex h-full flex-col p-4 md:p-6'>
 			{/* Header */}
-			<div className='sticky top-[68px] z-10 -mx-4 flex flex-wrap items-center gap-3 border-b-2 border-black/10 bg-white px-4 py-3 md:-mx-6 md:px-6'>
-				<Link
-					to='/du-an'
-					className='rounded-lg border-2 border-black bg-white p-2 shadow-[2px_2px_0_#111] hover:translate-y-0.5'
-					aria-label='Quay lại'>
-					<ArrowLeft className='h-5 w-5' />
-				</Link>
+			<div className='mb-5 flex flex-wrap items-center gap-3'>
+				<Button variant='outline' size='icon' asChild>
+					<Link to='/du-an' aria-label='Quay lại'>
+						<ArrowLeft className='h-4 w-4' />
+					</Link>
+				</Button>
 				<span
-					className='h-7 w-7 shrink-0 rounded-lg border-2 border-black'
-					style={{ backgroundColor: board.color || "#a3e635" }}
+					className='h-7 w-7 shrink-0 rounded-md'
+					style={{ backgroundColor: board.color || "var(--primary)" }}
 				/>
 				<div className='min-w-0'>
-					<h1 className='truncate text-2xl font-extrabold'>{board.name}</h1>
+					<h1 className='truncate text-xl font-semibold tracking-tight'>{board.name}</h1>
 					{board.description && (
-						<p className='truncate text-sm text-gray-600'>{board.description}</p>
+						<p className='truncate text-sm text-muted-foreground'>{board.description}</p>
 					)}
 				</div>
 
-				{/* Members */}
-				<button
-					onClick={() => setShowMembers(true)}
-					title='Quản lý thành viên'
-					className='ml-auto flex items-center gap-2 rounded-lg border-2 border-black bg-white px-2 py-1 shadow-[2px_2px_0_#111] hover:translate-y-0.5'>
-					{members.length > 0 && (
-						<div className='flex -space-x-2'>
-							{members.slice(0, 5).map((m) => (
-								<img
-									key={m.id}
-									src={buildAvatar(m.full_name, m.avatar)}
-									alt={m.full_name}
-									title={m.full_name}
-									className='h-7 w-7 rounded-full border-2 border-black object-cover'
-								/>
-							))}
-						</div>
-					)}
-					{members.length > 5 && (
-						<span className='text-xs font-bold'>+{members.length - 5}</span>
-					)}
-					<Users className='h-4 w-4' />
-				</button>
-
-				{/* Menu */}
-				{canEdit && (
-					<div className='relative'>
-						<button
-							onClick={() => setMenuOpen((o) => !o)}
-							className='rounded-lg border-2 border-black bg-white p-2 shadow-[2px_2px_0_#111] hover:translate-y-0.5'
-							aria-label='Tùy chọn dự án'>
-							<MoreVertical className='h-5 w-5' />
-						</button>
-						{menuOpen && (
-							<>
-								<button
-									className='fixed inset-0 z-10 cursor-default'
-									onClick={() => setMenuOpen(false)}
-									aria-label='Đóng menu'
-								/>
-								<div className='absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-xl border-2 border-black bg-white shadow-[3px_3px_0_#111]'>
-									<button
-										onClick={() => {
-											setMenuOpen(false);
-											handleArchive();
-										}}
-										className='flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold hover:bg-gray-100'>
-										<Archive className='h-4 w-4' />
-										{board.is_archived ? "Bỏ lưu trữ" : "Lưu trữ"}
-									</button>
-									{isOwner && (
-										<button
-											onClick={() => {
-												setMenuOpen(false);
-												handleDeleteBoard();
-											}}
-											className='flex w-full items-center gap-2 border-t-2 border-black px-3 py-2 text-left text-sm font-semibold text-red-600 hover:bg-red-50'>
-											<Trash2 className='h-4 w-4' /> Xóa dự án
-										</button>
-									)}
-								</div>
-							</>
-						)}
+				<Button
+					variant='outline'
+					className='ml-auto h-9 gap-2'
+					onClick={() => setShowMembers(true)}>
+					<div className='flex -space-x-2'>
+						{members.slice(0, 5).map((m) => (
+							<Avatar key={m.id} className='h-6 w-6 border-2 border-background'>
+								<AvatarImage src={m.avatar ?? undefined} alt={m.full_name} />
+								<AvatarFallback className='text-[9px]'>{initials(m.full_name)}</AvatarFallback>
+							</Avatar>
+						))}
 					</div>
+					{members.length > 5 && <span className='text-xs font-medium'>+{members.length - 5}</span>}
+					<Users className='h-4 w-4' />
+				</Button>
+
+				{canEdit && (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant='outline' size='icon'>
+								<MoreVertical className='h-4 w-4' />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align='end'>
+							<DropdownMenuItem onClick={handleArchive}>
+								<Archive className='mr-2 h-4 w-4' />
+								{board.is_archived ? "Bỏ lưu trữ" : "Lưu trữ"}
+							</DropdownMenuItem>
+							{isOwner && (
+								<>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem variant='destructive' onClick={handleDeleteBoard}>
+										<Trash2 className='mr-2 h-4 w-4' /> Xóa dự án
+									</DropdownMenuItem>
+								</>
+							)}
+						</DropdownMenuContent>
+					</DropdownMenu>
 				)}
 			</div>
 
 			{/* Board */}
-			<div className='flex items-start gap-4 overflow-x-auto pb-6 pt-4'>
+			<div className='flex flex-1 items-start gap-4 overflow-x-auto pb-4'>
 				{board.columns.map((column, index) => (
 					<React.Fragment key={column.id}>
 						{columnDropTarget === index && (
-							<div className='w-1.5 shrink-0 self-stretch rounded-full bg-[var(--color-primary)]' />
+							<div className='w-1 shrink-0 self-stretch rounded-full bg-primary' />
 						)}
 						<BoardColumn
 							column={column}
@@ -481,7 +438,7 @@ const ProjectBoardPage: React.FC = () => {
 				))}
 
 				{columnDropTarget === board.columns.length && (
-					<div className='w-1.5 shrink-0 self-stretch rounded-full bg-[var(--color-primary)]' />
+					<div className='w-1 shrink-0 self-stretch rounded-full bg-primary' />
 				)}
 
 				{/* Add column */}
@@ -491,8 +448,8 @@ const ProjectBoardPage: React.FC = () => {
 						onDragOver={(e) => onColumnDragOver(board.columns.length, e)}
 						onDrop={(e) => onColumnDrop(board.columns.length, e)}>
 						{addingColumn ? (
-							<div className='rounded-2xl border-2 border-black bg-gray-50 p-3 shadow-[4px_4px_0_#111]'>
-								<input
+							<div className='rounded-lg border bg-muted/40 p-2'>
+								<Input
 									autoFocus
 									value={columnName}
 									onChange={(e) => setColumnName(e.target.value)}
@@ -504,31 +461,31 @@ const ProjectBoardPage: React.FC = () => {
 										}
 									}}
 									placeholder='Tên cột...'
-									className='mb-2 w-full rounded-lg border-2 border-black px-2.5 py-2 text-sm font-bold outline-none'
+									className='mb-2 h-8 text-sm font-medium'
 								/>
 								<div className='flex items-center gap-2'>
-									<button
-										onClick={handleAddColumn}
-										className='flex items-center gap-1 rounded-lg border-2 border-black bg-[var(--color-primary)] px-3 py-1.5 text-sm font-bold shadow-[2px_2px_0_#111] hover:translate-y-0.5'>
-										<Check className='h-4 w-4' /> Thêm
-									</button>
-									<button
+									<Button size='sm' onClick={handleAddColumn}>
+										<Check className='mr-1 h-4 w-4' /> Thêm
+									</Button>
+									<Button
+										size='icon'
+										variant='ghost'
+										className='h-8 w-8'
 										onClick={() => {
 											setAddingColumn(false);
 											setColumnName("");
-										}}
-										className='rounded-lg p-1.5 text-gray-500 hover:bg-gray-200'
-										aria-label='Hủy'>
+										}}>
 										<X className='h-4 w-4' />
-									</button>
+									</Button>
 								</div>
 							</div>
 						) : (
-							<button
-								onClick={() => setAddingColumn(true)}
-								className='flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-400 py-4 text-sm font-bold text-gray-600 hover:border-black hover:bg-gray-50'>
-								<Plus className='h-5 w-5' /> Thêm cột
-							</button>
+							<Button
+								variant='outline'
+								className='w-full justify-center border-dashed text-muted-foreground'
+								onClick={() => setAddingColumn(true)}>
+								<Plus className='mr-1.5 h-4 w-4' /> Thêm cột
+							</Button>
 						)}
 					</div>
 				)}

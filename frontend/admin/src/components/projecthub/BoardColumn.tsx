@@ -1,6 +1,17 @@
 import React, { useState } from "react";
-import { Check, GripVertical, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
+import { Check, GripVertical, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { ProjectColumn, ProjectTask } from "@/types/projecthub.types";
 import TaskCard from "./TaskCard";
 
@@ -44,7 +55,6 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 	onColumnDrop,
 }) => {
 	const tasks = column.tasks ?? [];
-	const [menuOpen, setMenuOpen] = useState(false);
 	const [renaming, setRenaming] = useState(false);
 	const [nameValue, setNameValue] = useState(column.name);
 	const [adding, setAdding] = useState(false);
@@ -72,14 +82,14 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 			onDragOver={(e) => onColumnDragOver(index, e)}
 			onDrop={(e) => onColumnDrop(index, e)}
 			className={cn(
-				"flex w-72 max-h-full shrink-0 flex-col rounded-2xl border-2 border-black bg-gray-50 shadow-[4px_4px_0_#111]",
+				"flex w-72 shrink-0 flex-col rounded-lg border bg-muted/40",
 				isColumnDragging && "opacity-40",
 			)}>
 			{/* Header */}
-			<div className='flex items-center justify-between gap-2 border-b-2 border-black px-3 py-2.5'>
+			<div className='flex items-center justify-between gap-2 border-b px-2.5 py-2'>
 				{renaming ? (
 					<div className='flex flex-1 items-center gap-1'>
-						<input
+						<Input
 							autoFocus
 							value={nameValue}
 							onChange={(e) => setNameValue(e.target.value)}
@@ -87,11 +97,11 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 								if (e.key === "Enter") submitRename();
 								if (e.key === "Escape") setRenaming(false);
 							}}
-							className='w-full rounded-md border-2 border-black px-2 py-1 text-sm font-bold outline-none'
+							className='h-8 text-sm font-semibold'
 						/>
-						<button onClick={submitRename} className='rounded-md p-1 hover:bg-gray-200' aria-label='Lưu'>
+						<Button size='icon' variant='ghost' className='h-8 w-8' onClick={submitRename}>
 							<Check className='h-4 w-4' />
-						</button>
+						</Button>
 					</div>
 				) : (
 					<div className='flex min-w-0 items-center gap-2'>
@@ -105,77 +115,57 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 								}}
 								onDragEnd={onColumnDragEnd}
 								title='Kéo để sắp xếp cột'
-								className='shrink-0 cursor-grab text-gray-400 hover:text-gray-700 active:cursor-grabbing'>
+								className='shrink-0 cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing'>
 								<GripVertical className='h-4 w-4' />
 							</span>
 						)}
 						{column.color && (
 							<span
-								className='h-3 w-3 shrink-0 rounded-full border border-black'
+								className='h-3 w-3 shrink-0 rounded-full'
 								style={{ backgroundColor: column.color }}
 							/>
 						)}
-						<h3 className='truncate text-sm font-bold text-black'>{column.name}</h3>
-						<span
-							className={cn(
-								"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold",
-								overLimit ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-700",
-							)}>
+						<h3 className='truncate text-sm font-semibold'>{column.name}</h3>
+						<Badge variant={overLimit ? "destructive" : "secondary"} className='shrink-0'>
 							{tasks.length}
 							{column.wip_limit != null && `/${column.wip_limit}`}
-						</span>
+						</Badge>
 					</div>
 				)}
 
 				{canEdit && !renaming && (
-					<div className='relative'>
-						<button
-							onClick={() => setMenuOpen((o) => !o)}
-							className='rounded-md p-1 text-gray-500 hover:bg-gray-200'
-							aria-label='Tùy chọn cột'>
-							<MoreHorizontal className='h-4 w-4' />
-						</button>
-						{menuOpen && (
-							<>
-								<button
-									className='fixed inset-0 z-10 cursor-default'
-									onClick={() => setMenuOpen(false)}
-									aria-label='Đóng menu'
-								/>
-								<div className='absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-xl border-2 border-black bg-white shadow-[3px_3px_0_#111]'>
-									<button
-										onClick={() => {
-											setNameValue(column.name);
-											setRenaming(true);
-											setMenuOpen(false);
-										}}
-										className='block w-full px-3 py-2 text-left text-sm font-semibold hover:bg-gray-100'>
-										Đổi tên cột
-									</button>
-									<button
-										onClick={() => {
-											setMenuOpen(false);
-											onDeleteColumn(column.id);
-										}}
-										className='flex w-full items-center gap-2 border-t-2 border-black px-3 py-2 text-left text-sm font-semibold text-red-600 hover:bg-red-50'>
-										<Trash2 className='h-4 w-4' /> Xóa cột
-									</button>
-								</div>
-							</>
-						)}
-					</div>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button size='icon' variant='ghost' className='h-7 w-7 text-muted-foreground'>
+								<MoreHorizontal className='h-4 w-4' />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align='end'>
+							<DropdownMenuItem
+								onClick={() => {
+									setNameValue(column.name);
+									setRenaming(true);
+								}}>
+								<Pencil className='mr-2 h-4 w-4' /> Đổi tên cột
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem variant='destructive' onClick={() => onDeleteColumn(column.id)}>
+								<Trash2 className='mr-2 h-4 w-4' /> Xóa cột
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				)}
 			</div>
 
 			{/* Tasks */}
-			<div className='flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2.5'>
-				{tasks.map((task, index) => (
+			<div className='flex max-h-[calc(100vh-18rem)] flex-1 flex-col gap-2 overflow-y-auto p-2'>
+				{tasks.map((task, idx) => (
 					<TaskCard
 						key={task.id}
 						task={task}
 						columnId={column.id}
-						index={index}
-						dropBefore={dropTarget?.columnId === column.id && dropTarget.index === index}
+						index={idx}
+						dropBefore={dropTarget?.columnId === column.id && dropTarget.index === idx}
 						onDragStart={onTaskDragStart}
 						onDragEnd={onTaskDragEnd}
 						onDragOver={onTaskDragOver}
@@ -189,19 +179,19 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 					onDragOver={(e) => onTaskDragOver(column.id, tasks.length, e)}
 					onDrop={(e) => onTaskDrop(column.id, tasks.length, e)}
 					className='min-h-[12px]'>
-					{isEndDrop && <div className='h-1.5 rounded-full bg-[var(--color-primary)]' />}
+					{isEndDrop && <div className='h-1 rounded-full bg-primary' />}
 					{tasks.length === 0 && !isEndDrop && (
-						<p className='py-6 text-center text-xs font-medium text-gray-400'>Chưa có công việc</p>
+						<p className='py-6 text-center text-xs text-muted-foreground'>Chưa có công việc</p>
 					)}
 				</div>
 			</div>
 
 			{/* Add task */}
 			{canEdit && (
-				<div className='border-t-2 border-black p-2'>
+				<div className='border-t p-2'>
 					{adding ? (
 						<div className='space-y-2'>
-							<textarea
+							<Textarea
 								autoFocus
 								value={title}
 								onChange={(e) => setTitle(e.target.value)}
@@ -217,31 +207,32 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 								}}
 								placeholder='Tiêu đề công việc...'
 								rows={2}
-								className='w-full resize-none rounded-lg border-2 border-black px-2.5 py-2 text-sm outline-none'
+								className='resize-none text-sm'
 							/>
 							<div className='flex items-center gap-2'>
-								<button
-									onClick={submitAdd}
-									className='rounded-lg border-2 border-black bg-[var(--color-primary)] px-3 py-1.5 text-sm font-bold shadow-[2px_2px_0_#111] hover:translate-y-0.5'>
+								<Button size='sm' onClick={submitAdd}>
 									Thêm
-								</button>
-								<button
+								</Button>
+								<Button
+									size='icon'
+									variant='ghost'
+									className='h-8 w-8'
 									onClick={() => {
 										setAdding(false);
 										setTitle("");
-									}}
-									className='rounded-lg p-1.5 text-gray-500 hover:bg-gray-200'
-									aria-label='Hủy'>
+									}}>
 									<X className='h-4 w-4' />
-								</button>
+								</Button>
 							</div>
 						</div>
 					) : (
-						<button
-							onClick={() => setAdding(true)}
-							className='flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-200'>
-							<Plus className='h-4 w-4' /> Thêm công việc
-						</button>
+						<Button
+							variant='ghost'
+							size='sm'
+							className='w-full justify-start text-muted-foreground'
+							onClick={() => setAdding(true)}>
+							<Plus className='mr-1.5 h-4 w-4' /> Thêm công việc
+						</Button>
 					)}
 				</div>
 			)}

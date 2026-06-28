@@ -18,8 +18,6 @@ import VideoDetailPage from "@/pages/learning/VideoDetailPage";
 import QuizPlayPage from "@/pages/learning/QuizPlayPage";
 import EventsFeedPage from "@/pages/event/EventsFeedPage";
 import EventDetailPage from "@/pages/event/EventDetailPage";
-import ProjectHubListPage from "@/pages/projecthub/ProjectHubListPage";
-import ProjectBoardPage from "@/pages/projecthub/ProjectBoardPage";
 import LandingPage from "@/pages/LandingPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
 import ApplicationPage from "@/pages/ApplicationPage";
@@ -108,14 +106,6 @@ const router = createBrowserRouter([
 			{
 				path: "diem-cua-toi",
 				element: <MyPointsPage />,
-			},
-			{
-				path: "du-an",
-				element: <ProjectHubListPage />,
-			},
-			{
-				path: "du-an/:slug",
-				element: <ProjectBoardPage />,
 			},
 			{
 				// Dynamic catch-all for /@username profile pages — must be last

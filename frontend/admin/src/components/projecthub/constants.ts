@@ -13,7 +13,7 @@ export const PRIORITY_META: Record<
 export const PRIORITY_ORDER: TaskPriority[] = ["low", "medium", "high", "urgent"];
 
 export const MEMBER_ROLE_META: Record<ProjectMemberRole, { label: string; className: string }> = {
-	owner: { label: "Chủ sở hữu", className: "bg-[var(--color-primary)] text-black" },
+	owner: { label: "Chủ sở hữu", className: "bg-primary/15 text-primary" },
 	editor: { label: "Biên tập", className: "bg-sky-100 text-sky-800" },
 	viewer: { label: "Người xem", className: "bg-gray-100 text-gray-700" },
 };
@@ -28,7 +28,7 @@ export const VISIBILITY_META: Record<ProjectVisibility, { label: string }> = {
 
 // Bảng màu gợi ý cho board.
 export const BOARD_COLORS = [
-	"#a3e635",
+	"#6366f1",
 	"#38bdf8",
 	"#f472b6",
 	"#fbbf24",
@@ -37,6 +37,13 @@ export const BOARD_COLORS = [
 	"#34d399",
 	"#94a3b8",
 ];
+
+/** Viết tắt tên cho avatar fallback. */
+export function initials(name: string | null | undefined): string {
+	const n = (name || "?").trim().split(/\s+/);
+	if (n.length === 1) return n[0].slice(0, 2).toUpperCase();
+	return (n[0][0] + n[n.length - 1][0]).toUpperCase();
+}
 
 /** ISO date -> "YYYY-MM-DD" cho input[type=date]. */
 export function toDateInput(iso: string | null | undefined): string {
