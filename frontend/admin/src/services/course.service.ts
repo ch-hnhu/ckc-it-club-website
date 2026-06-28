@@ -100,11 +100,13 @@ export interface QuizQuestionDTO {
 export interface QuizDTO {
 	id: number;
 	lesson_id: number;
+	is_published: boolean;
 	questions: QuizQuestionDTO[];
 }
 
-/** Payload gửi lên khi lưu quiz: chỉ cần danh sách câu hỏi. */
+/** Payload gửi lên khi lưu quiz. */
 export interface QuizPayload {
+	is_published: boolean;
 	questions: QuizQuestionDTO[];
 }
 
@@ -218,6 +220,11 @@ const courseService = {
 		payload: QuizPayload,
 	): Promise<ApiResponse<QuizDTO>> {
 		return api.put(`/courses/${courseSlug}/lessons/${lessonId}/quiz`, payload);
+	},
+
+	/** Xoá toàn bộ quiz của buổi học. */
+	async deleteQuiz(courseSlug: string, lessonId: number): Promise<ApiResponse<null>> {
+		return api.delete(`/courses/${courseSlug}/lessons/${lessonId}/quiz`);
 	},
 
 	/** Điểm danh buổi học bằng mã QR (token trên vé học viên). */

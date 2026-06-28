@@ -538,6 +538,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:quizzes.manage')->group(function () {
             Route::get('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'show']);
             Route::put('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert']);
+            Route::delete('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'destroy']);
         });
 
         // events (admin)

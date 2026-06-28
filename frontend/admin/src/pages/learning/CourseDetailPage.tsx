@@ -58,6 +58,13 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { TablePaginationFooter } from "@/components/TablePaginationFooter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
@@ -1185,32 +1192,41 @@ function CourseDetailPage() {
 				</AlertDialogContent>
 			</AlertDialog>
 
-			<AlertDialog
+			<Dialog
 				open={deletingLesson !== null}
 				onOpenChange={(o) => !o && setDeletingLesson(null)}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Xóa buổi học?</AlertDialogTitle>
-						<AlertDialogDescription>
-							{deletingLesson
-								? `Bạn có chắc muốn xóa "Buổi ${deletingLesson.order}: ${deletingLesson.title}"? Tiến độ và điểm danh liên quan sẽ không còn truy cập được.`
-								: ""}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isDeletingLesson}>Hủy</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={(e) => {
-								e.preventDefault();
-								void handleDeleteLesson();
-							}}
-							disabled={isDeletingLesson}
-							className='bg-destructive text-white hover:bg-destructive/90'>
+				<DialogContent className='sm:max-w-[440px]'>
+					<DialogHeader>
+						<DialogTitle>Xác nhận xóa buổi học</DialogTitle>
+					</DialogHeader>
+					{deletingLesson && (
+						<div className='space-y-2 text-sm text-muted-foreground'>
+							<p>
+								Bạn sắp xóa buổi học{" "}
+								<span className='font-semibold text-foreground'>
+									"{deletingLesson.title}"
+								</span>
+								.
+							</p>
+							<p>Tiến độ và điểm danh liên quan sẽ không còn truy cập được.</p>
+						</div>
+					)}
+					<DialogFooter>
+						<Button
+							variant='outline'
+							onClick={() => setDeletingLesson(null)}
+							disabled={isDeletingLesson}>
+							Hủy
+						</Button>
+						<Button
+							variant='destructive'
+							onClick={() => void handleDeleteLesson()}
+							disabled={isDeletingLesson}>
 							{isDeletingLesson ? "Đang xóa..." : "Xóa buổi học"}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
