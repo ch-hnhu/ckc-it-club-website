@@ -6,7 +6,7 @@ import {
 	ArrowLeftRight,
 	Award,
 	Ban,
-	BookOpen,
+	Eye,
 	CalendarCheck,
 	CalendarClock,
 	CheckCircle2,
@@ -23,6 +23,7 @@ import {
 	Trash2,
 	Users,
 	UserPlus,
+	BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -702,17 +703,17 @@ function CourseDetailPage() {
 															<DropdownMenuContent
 																align='end'
 																className='w-[160px]'>
-																	{hasOffline && (
-																		<DropdownMenuItem
-																			onClick={() =>
-																				openLessonDetail(
-																					lesson.id,
-																				)
-																			}>
-																			<BookOpen className='h-4 w-4' />
-																			Xem chi tiết
-																		</DropdownMenuItem>
-																	)}
+																{hasOffline && (
+																	<DropdownMenuItem
+																		onClick={() =>
+																			openLessonDetail(
+																				lesson.id,
+																			)
+																		}>
+																		<Eye className='h-4 w-4' />
+																		Xem chi tiết
+																	</DropdownMenuItem>
+																)}
 																<DropdownMenuItem
 																	onClick={() =>
 																		openEditLesson(lesson.id)
@@ -835,7 +836,7 @@ function CourseDetailPage() {
 									<TableRow>
 										<TableHead className='w-[70px]'>STT</TableHead>
 										<TableHead className='min-w-[240px]'>Học viên</TableHead>
-										<TableHead className='w-[110px]'>Track</TableHead>
+										<TableHead className='w-[110px]'>Hình thức</TableHead>
 										<TableHead className='min-w-[180px]'>Tiến độ</TableHead>
 										<TableHead className='w-[150px]'>Hoàn thành</TableHead>
 										<TableHead className='w-[52px]' />
@@ -972,7 +973,7 @@ function CourseDetailPage() {
 											Mã chứng chỉ
 										</TableHead>
 										<TableHead className='min-w-[240px]'>Học viên</TableHead>
-										<TableHead className='w-[110px]'>Track</TableHead>
+										<TableHead className='w-[110px]'>Hình thức</TableHead>
 										<TableHead className='w-[150px]'>Ngày cấp</TableHead>
 										<TableHead className='w-[130px]'>Trạng thái</TableHead>
 										<TableHead className='w-[52px]' />
