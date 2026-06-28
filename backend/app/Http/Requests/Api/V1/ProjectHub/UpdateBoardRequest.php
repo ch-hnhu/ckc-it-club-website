@@ -2,13 +2,13 @@
 
 namespace App\Http\Requests\Api\V1\ProjectHub;
 
-use App\Enums\ProjectVisibility;
+use App\Enums\BoardVisibility;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
-class UpdateProjectRequest extends FormRequest
+class UpdateBoardRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -22,7 +22,7 @@ class UpdateProjectRequest extends FormRequest
             'description'   => ['nullable', 'string', 'max:5000'],
             'color'         => ['nullable', 'string', 'max:20'],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
-            'visibility'    => ['sometimes', Rule::in(ProjectVisibility::values())],
+            'visibility'    => ['sometimes', Rule::in(BoardVisibility::values())],
         ];
     }
 

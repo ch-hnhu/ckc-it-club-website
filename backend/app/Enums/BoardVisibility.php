@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum ProjectVisibility: string
+enum BoardVisibility: string
 {
     case PRIVATE = 'private';
     case MEMBERS = 'members';

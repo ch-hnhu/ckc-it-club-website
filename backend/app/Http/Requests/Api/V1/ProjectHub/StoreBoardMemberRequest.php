@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests\Api\V1\ProjectHub;
 
+use App\Enums\BoardMemberRole;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
-class UpdateProjectColumnRequest extends FormRequest
+class StoreBoardMemberRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,18 +18,17 @@ class UpdateProjectColumnRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'      => ['sometimes', 'required', 'string', 'max:255'],
-            'color'     => ['nullable', 'string', 'max:20'],
-            'wip_limit' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'role'    => ['nullable', Rule::in(BoardMemberRole::values())],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'name.required' => 'Vui lòng nhập tên cột.',
-            'name.max'      => 'Tên cột không được vượt quá 255 ký tự.',
-            'wip_limit.min' => 'Giới hạn công việc phải lớn hơn 0.',
+            'user_id.required' => 'Vui lòng chọn người dùng.',
+            'user_id.exists'   => 'Người dùng không tồn tại.',
+            'role.in'          => 'Vai trò không hợp lệ.',
         ];
     }
 

@@ -13,7 +13,7 @@ import type {
 	UpdateTaskInput,
 } from "@/types/projecthub.types";
 
-const BASE = "/projecthub/projects";
+const BASE = "/projecthub/boards";
 
 // ProjectHub API — yêu cầu đăng nhập (auth:sanctum), chỉ thành viên của board.
 export const projectHubService = {

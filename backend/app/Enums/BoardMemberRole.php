@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum ProjectMemberRole: string
+enum BoardMemberRole: string
 {
     case OWNER = 'owner';
     case EDITOR = 'editor';

@@ -8,19 +8,20 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('project_task_assignees', function (Blueprint $table) {
+        Schema::create('board_members', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('task_id')->constrained('project_tasks')->cascadeOnDelete();
+            $table->foreignId('board_id')->constrained('kanban_boards')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->timestamp('assigned_at')->nullable();
+            $table->enum('role', ['owner', 'editor', 'viewer'])->default('editor');
+            $table->timestamp('joined_at')->nullable();
             $table->timestamps();
 
-            $table->unique(['task_id', 'user_id']);
+            $table->unique(['board_id', 'user_id']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('project_task_assignees');
+        Schema::dropIfExists('board_members');
     }
 };

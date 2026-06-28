@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ProjectColumn extends Model
+class BoardColumn extends Model
 {
     protected $fillable = [
-        'project_id',
+        'board_id',
         'name',
         'position',
         'color',
@@ -26,13 +26,13 @@ class ProjectColumn extends Model
         ];
     }
 
-    public function project(): BelongsTo
+    public function board(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Board::class);
     }
 
     public function tasks(): HasMany
     {
-        return $this->hasMany(ProjectTask::class, 'column_id')->orderBy('position');
+        return $this->hasMany(BoardTask::class, 'column_id')->orderBy('position');
     }
 }

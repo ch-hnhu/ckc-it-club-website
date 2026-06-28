@@ -8,10 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('project_tasks', function (Blueprint $table) {
+        Schema::create('board_tasks', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->foreignId('column_id')->constrained('project_columns')->cascadeOnDelete();
+            $table->foreignId('board_id')->constrained('kanban_boards')->cascadeOnDelete();
+            $table->foreignId('column_id')->constrained('board_columns')->cascadeOnDelete();
             $table->string('title');
             $table->longText('description')->nullable();
             $table->unsignedInteger('position')->default(0);
@@ -26,12 +26,12 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['column_id', 'position']);
-            $table->index(['project_id', 'due_date']);
+            $table->index(['board_id', 'due_date']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('project_tasks');
+        Schema::dropIfExists('board_tasks');
     }
 };

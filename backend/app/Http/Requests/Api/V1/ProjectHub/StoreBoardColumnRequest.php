@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class MoveProjectTaskRequest extends FormRequest
+class StoreBoardColumnRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,17 +16,18 @@ class MoveProjectTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'column_id' => ['required', 'integer'],
-            'position'  => ['required', 'integer', 'min:0'],
+            'name'      => ['required', 'string', 'max:255'],
+            'color'     => ['nullable', 'string', 'max:20'],
+            'wip_limit' => ['nullable', 'integer', 'min:1', 'max:999'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'column_id.required' => 'Thiếu cột đích.',
-            'position.required'  => 'Thiếu vị trí mới.',
-            'position.min'       => 'Vị trí không hợp lệ.',
+            'name.required'   => 'Vui lòng nhập tên cột.',
+            'name.max'        => 'Tên cột không được vượt quá 255 ký tự.',
+            'wip_limit.min'   => 'Giới hạn công việc phải lớn hơn 0.',
         ];
     }
 

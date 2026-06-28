@@ -8,12 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class ProjectTask extends Model
+class BoardTask extends Model
 {
     use SoftDeletes;
 
     protected $fillable = [
-        'project_id',
+        'board_id',
         'column_id',
         'title',
         'description',
@@ -38,14 +38,14 @@ class ProjectTask extends Model
         ];
     }
 
-    public function project(): BelongsTo
+    public function board(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Board::class);
     }
 
     public function column(): BelongsTo
     {
-        return $this->belongsTo(ProjectColumn::class, 'column_id');
+        return $this->belongsTo(BoardColumn::class, 'column_id');
     }
 
     public function creator(): BelongsTo
@@ -55,8 +55,8 @@ class ProjectTask extends Model
 
     public function assignees(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'project_task_assignees', 'task_id', 'user_id')
-            ->using(ProjectTaskAssignee::class)
+        return $this->belongsToMany(User::class, 'board_task_assignees', 'task_id', 'user_id')
+            ->using(BoardTaskAssignee::class)
             ->withPivot('assigned_at')
             ->withTimestamps();
     }

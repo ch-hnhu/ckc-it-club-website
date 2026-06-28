@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
-class StoreProjectTaskRequest extends FormRequest
+class StoreBoardTaskRequest extends FormRequest
 {
     public function authorize(): bool
     {

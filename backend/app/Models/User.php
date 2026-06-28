@@ -129,18 +129,18 @@ class User extends Authenticatable
     /**
      * Các board (ProjectHub) do user này tạo.
      */
-    public function ownedProjects(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function ownedBoards(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(Project::class, 'created_by');
+        return $this->hasMany(Board::class, 'created_by');
     }
 
     /**
      * Các board mà user là thành viên.
      */
-    public function projects(): BelongsToMany
+    public function boards(): BelongsToMany
     {
-        return $this->belongsToMany(Project::class, 'project_members')
-            ->using(ProjectMember::class)
+        return $this->belongsToMany(Board::class, 'board_members')
+            ->using(BoardMember::class)
             ->withPivot('role', 'joined_at')
             ->withTimestamps();
     }
@@ -150,8 +150,8 @@ class User extends Authenticatable
      */
     public function assignedTasks(): BelongsToMany
     {
-        return $this->belongsToMany(ProjectTask::class, 'project_task_assignees', 'user_id', 'task_id')
-            ->using(ProjectTaskAssignee::class)
+        return $this->belongsToMany(BoardTask::class, 'board_task_assignees', 'user_id', 'task_id')
+            ->using(BoardTaskAssignee::class)
             ->withPivot('assigned_at')
             ->withTimestamps();
     }

@@ -5,9 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class ProjectTaskAssignee extends Pivot
+class BoardTaskAssignee extends Pivot
 {
-    protected $table = 'project_task_assignees';
+    protected $table = 'board_task_assignees';
 
     public $incrementing = true;
 
@@ -26,7 +26,7 @@ class ProjectTaskAssignee extends Pivot
 
     public function task(): BelongsTo
     {
-        return $this->belongsTo(ProjectTask::class, 'task_id');
+        return $this->belongsTo(BoardTask::class, 'task_id');
     }
 
     public function user(): BelongsTo

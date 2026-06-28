@@ -36,7 +36,7 @@ export interface AssignableUser {
 
 export interface ProjectTask {
 	id: number;
-	project_id: number;
+	board_id: number;
 	column_id: number;
 	title: string;
 	description: string | null;
@@ -53,7 +53,7 @@ export interface ProjectTask {
 
 export interface ProjectColumn {
 	id: number;
-	project_id: number;
+	board_id: number;
 	name: string;
 	position: number;
 	color: string | null;

@@ -4,25 +4,25 @@ namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
-use App\Http\Requests\Api\V1\ProjectHub\MoveProjectTaskRequest;
-use App\Http\Requests\Api\V1\ProjectHub\StoreProjectColumnRequest;
-use App\Http\Requests\Api\V1\ProjectHub\StoreProjectMemberRequest;
-use App\Http\Requests\Api\V1\ProjectHub\StoreProjectRequest;
-use App\Http\Requests\Api\V1\ProjectHub\StoreProjectTaskRequest;
-use App\Http\Requests\Api\V1\ProjectHub\UpdateProjectColumnRequest;
-use App\Http\Requests\Api\V1\ProjectHub\UpdateProjectMemberRoleRequest;
-use App\Http\Requests\Api\V1\ProjectHub\UpdateProjectRequest;
-use App\Http\Requests\Api\V1\ProjectHub\UpdateProjectTaskRequest;
-use App\Models\Project;
-use App\Models\ProjectColumn;
-use App\Models\ProjectTask;
+use App\Http\Requests\Api\V1\ProjectHub\MoveBoardTaskRequest;
+use App\Http\Requests\Api\V1\ProjectHub\StoreBoardColumnRequest;
+use App\Http\Requests\Api\V1\ProjectHub\StoreBoardMemberRequest;
+use App\Http\Requests\Api\V1\ProjectHub\StoreBoardRequest;
+use App\Http\Requests\Api\V1\ProjectHub\StoreBoardTaskRequest;
+use App\Http\Requests\Api\V1\ProjectHub\UpdateBoardColumnRequest;
+use App\Http\Requests\Api\V1\ProjectHub\UpdateBoardMemberRoleRequest;
+use App\Http\Requests\Api\V1\ProjectHub\UpdateBoardRequest;
+use App\Http\Requests\Api\V1\ProjectHub\UpdateBoardTaskRequest;
+use App\Models\Board;
+use App\Models\BoardColumn;
+use App\Models\BoardTask;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-class ProjectController extends BaseApiController
+class BoardController extends BaseApiController
 {
     /** Các cột mặc định khi tạo board mới. */
     private const DEFAULT_COLUMNS = ['Cần làm', 'Đang làm', 'Hoàn thành'];
@@ -30,7 +30,7 @@ class ProjectController extends BaseApiController
     private const ASSIGNEE_FIELDS = 'id,full_name,username,avatar';
 
     // ---------------------------------------------------------------------
-    // Boards (projects)
+    // Boards
     // ---------------------------------------------------------------------
 
     /**
@@ -42,7 +42,7 @@ class ProjectController extends BaseApiController
         $perPage = min((int) $request->query('per_page', 15), 50);
         $archived = $request->query('archived') === '1';
 
-        $projects = Project::query()
+        $boards = Board::query()
             ->where(fn ($q) => $q
                 ->where('created_by', $userId)
                 ->orWhereHas('members', fn ($m) => $m->where('users.id', $userId)))
@@ -52,19 +52,19 @@ class ProjectController extends BaseApiController
             ->orderByDesc('updated_at')
             ->paginate($perPage);
 
-        return $this->paginatedResponse($projects, ApiMessage::RETRIEVED);
+        return $this->paginatedResponse($boards, ApiMessage::RETRIEVED);
     }
 
     /**
      * Tạo board mới (kèm các cột mặc định + gán người tạo làm chủ sở hữu).
      */
-    public function store(StoreProjectRequest $request): JsonResponse
+    public function store(StoreBoardRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $user = $request->user();
 
-        $project = DB::transaction(function () use ($validated, $user) {
-            $project = Project::create([
+        $board = DB::transaction(function () use ($validated, $user) {
+            $board = Board::create([
                 'name'          => trim($validated['name']),
                 'slug'          => $this->uniqueSlug($validated['name']),
                 'description'   => $validated['description'] ?? null,
@@ -74,25 +74,25 @@ class ProjectController extends BaseApiController
                 'created_by'    => $user->id,
             ]);
 
-            $project->memberships()->create([
+            $board->memberships()->create([
                 'user_id'   => $user->id,
                 'role'      => 'owner',
                 'joined_at' => now(),
             ]);
 
             foreach (self::DEFAULT_COLUMNS as $index => $name) {
-                $project->columns()->create([
+                $board->columns()->create([
                     'name'       => $name,
                     'position'   => $index,
                     'created_by' => $user->id,
                 ]);
             }
 
-            return $project;
+            return $board;
         });
 
         return $this->createdResponse(
-            $project->load('columns'),
+            $board->load('columns'),
             ApiMessage::CREATED
         );
     }
@@ -100,25 +100,25 @@ class ProjectController extends BaseApiController
     /**
      * Chi tiết board: cột + task + người được giao (giao diện Kanban).
      */
-    public function show(Request $request, Project $project): JsonResponse
+    public function show(Request $request, Board $board): JsonResponse
     {
-        if ($resp = $this->memberGuard($project, $request->user())) {
+        if ($resp = $this->memberGuard($board, $request->user())) {
             return $resp;
         }
 
-        $project->load([
+        $board->load([
             'department:id,name,slug',
             'members:' . self::ASSIGNEE_FIELDS,
             'columns.tasks.assignees:' . self::ASSIGNEE_FIELDS,
         ]);
 
-        return $this->successResponse(true, $project, ApiMessage::RETRIEVED);
+        return $this->successResponse(true, $board, ApiMessage::RETRIEVED);
     }
 
-    public function update(UpdateProjectRequest $request, Project $project): JsonResponse
+    public function update(UpdateBoardRequest $request, Board $board): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
@@ -127,23 +127,23 @@ class ProjectController extends BaseApiController
             ->toArray();
         $data['updated_by'] = $user->id;
 
-        $project->update($data);
+        $board->update($data);
 
-        return $this->successResponse(true, $project->fresh(), ApiMessage::UPDATED);
+        return $this->successResponse(true, $board->fresh(), ApiMessage::UPDATED);
     }
 
     /**
      * Lưu trữ / bỏ lưu trữ board (toggle).
      */
-    public function archive(Request $request, Project $project): JsonResponse
+    public function archive(Request $request, Board $board): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
-        $archived = ! $project->is_archived;
-        $project->update([
+        $archived = ! $board->is_archived;
+        $board->update([
             'is_archived' => $archived,
             'archived_at' => $archived ? now() : null,
             'updated_by'  => $user->id,
@@ -155,15 +155,15 @@ class ProjectController extends BaseApiController
     /**
      * Xóa board — chỉ chủ sở hữu (người tạo).
      */
-    public function destroy(Request $request, Project $project): JsonResponse
+    public function destroy(Request $request, Board $board): JsonResponse
     {
         $user = $request->user();
-        if ($project->created_by !== $user->id) {
+        if ($board->created_by !== $user->id) {
             return $this->forbiddenResponse();
         }
 
-        $project->update(['deleted_by' => $user->id]);
-        $project->delete();
+        $board->update(['deleted_by' => $user->id]);
+        $board->delete();
 
         return $this->successResponse(true, null, ApiMessage::DELETED);
     }
@@ -172,18 +172,18 @@ class ProjectController extends BaseApiController
     // Columns
     // ---------------------------------------------------------------------
 
-    public function storeColumn(StoreProjectColumnRequest $request, Project $project): JsonResponse
+    public function storeColumn(StoreBoardColumnRequest $request, Board $board): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
         $validated = $request->validated();
-        $position = (int) $project->columns()->max('position');
-        $position = $project->columns()->exists() ? $position + 1 : 0;
+        $position = (int) $board->columns()->max('position');
+        $position = $board->columns()->exists() ? $position + 1 : 0;
 
-        $column = $project->columns()->create([
+        $column = $board->columns()->create([
             'name'       => trim($validated['name']),
             'color'      => $validated['color'] ?? null,
             'wip_limit'  => $validated['wip_limit'] ?? null,
@@ -194,14 +194,14 @@ class ProjectController extends BaseApiController
         return $this->createdResponse($column, ApiMessage::CREATED);
     }
 
-    public function updateColumn(UpdateProjectColumnRequest $request, Project $project, int $column): JsonResponse
+    public function updateColumn(UpdateBoardColumnRequest $request, Board $board, int $column): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
-        $columnModel = $project->columns()->findOrFail($column);
+        $columnModel = $board->columns()->findOrFail($column);
 
         $data = collect($request->validated())
             ->only(['name', 'color', 'wip_limit'])
@@ -213,14 +213,14 @@ class ProjectController extends BaseApiController
         return $this->successResponse(true, $columnModel->fresh(), ApiMessage::UPDATED);
     }
 
-    public function destroyColumn(Request $request, Project $project, int $column): JsonResponse
+    public function destroyColumn(Request $request, Board $board, int $column): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
-        $columnModel = $project->columns()->findOrFail($column);
+        $columnModel = $board->columns()->findOrFail($column);
         $columnModel->delete(); // cascade xóa task thuộc cột (FK cascadeOnDelete)
 
         return $this->successResponse(true, null, ApiMessage::DELETED);
@@ -229,10 +229,10 @@ class ProjectController extends BaseApiController
     /**
      * Sắp xếp lại thứ tự các cột theo mảng id truyền lên.
      */
-    public function reorderColumns(Request $request, Project $project): JsonResponse
+    public function reorderColumns(Request $request, Board $board): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
@@ -241,7 +241,7 @@ class ProjectController extends BaseApiController
             'column_ids.*' => ['integer'],
         ]);
 
-        $ownedIds = $project->columns()->pluck('id')->all();
+        $ownedIds = $board->columns()->pluck('id')->all();
         if (array_diff($validated['column_ids'], $ownedIds)) {
             return $this->validationErrorResponse([
                 'column_ids' => ['Danh sách cột không hợp lệ.'],
@@ -250,7 +250,7 @@ class ProjectController extends BaseApiController
 
         DB::transaction(function () use ($validated) {
             foreach ($validated['column_ids'] as $index => $id) {
-                ProjectColumn::whereKey($id)->update(['position' => $index]);
+                BoardColumn::whereKey($id)->update(['position' => $index]);
             }
         });
 
@@ -261,21 +261,21 @@ class ProjectController extends BaseApiController
     // Tasks
     // ---------------------------------------------------------------------
 
-    public function storeTask(StoreProjectTaskRequest $request, Project $project): JsonResponse
+    public function storeTask(StoreBoardTaskRequest $request, Board $board): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
         $validated = $request->validated();
-        $column = $project->columns()->findOrFail($validated['column_id']);
+        $column = $board->columns()->findOrFail($validated['column_id']);
 
-        $task = DB::transaction(function () use ($project, $column, $validated, $user) {
-            $max = $project->tasks()->where('column_id', $column->id)->max('position');
+        $task = DB::transaction(function () use ($board, $column, $validated, $user) {
+            $max = $board->tasks()->where('column_id', $column->id)->max('position');
             $position = is_null($max) ? 0 : $max + 1;
 
-            $task = $project->tasks()->create([
+            $task = $board->tasks()->create([
                 'column_id'   => $column->id,
                 'title'       => trim($validated['title']),
                 'description' => $validated['description'] ?? null,
@@ -299,14 +299,14 @@ class ProjectController extends BaseApiController
         );
     }
 
-    public function updateTask(UpdateProjectTaskRequest $request, Project $project, int $task): JsonResponse
+    public function updateTask(UpdateBoardTaskRequest $request, Board $board, int $task): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
-        $taskModel = $project->tasks()->findOrFail($task);
+        $taskModel = $board->tasks()->findOrFail($task);
         $validated = $request->validated();
 
         $data = collect($validated)
@@ -333,14 +333,14 @@ class ProjectController extends BaseApiController
         );
     }
 
-    public function destroyTask(Request $request, Project $project, int $task): JsonResponse
+    public function destroyTask(Request $request, Board $board, int $task): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
-        $taskModel = $project->tasks()->findOrFail($task);
+        $taskModel = $board->tasks()->findOrFail($task);
         $taskModel->update(['deleted_by' => $user->id]);
         $taskModel->delete();
 
@@ -350,21 +350,21 @@ class ProjectController extends BaseApiController
     /**
      * Kéo-thả: chuyển task sang cột + vị trí mới, đánh lại số thứ tự 2 cột liên quan.
      */
-    public function moveTask(MoveProjectTaskRequest $request, Project $project, int $task): JsonResponse
+    public function moveTask(MoveBoardTaskRequest $request, Board $board, int $task): JsonResponse
     {
         $user = $request->user();
-        if ($resp = $this->editorGuard($project, $user)) {
+        if ($resp = $this->editorGuard($board, $user)) {
             return $resp;
         }
 
-        $taskModel = $project->tasks()->findOrFail($task);
+        $taskModel = $board->tasks()->findOrFail($task);
         $validated = $request->validated();
-        $targetColumn = $project->columns()->findOrFail($validated['column_id']);
+        $targetColumn = $board->columns()->findOrFail($validated['column_id']);
         $sourceColumnId = $taskModel->column_id;
         $targetPosition = (int) $validated['position'];
 
-        DB::transaction(function () use ($project, $taskModel, $targetColumn, $sourceColumnId, $targetPosition, $user) {
-            $siblings = $project->tasks()
+        DB::transaction(function () use ($board, $taskModel, $targetColumn, $sourceColumnId, $targetPosition, $user) {
+            $siblings = $board->tasks()
                 ->where('column_id', $targetColumn->id)
                 ->where('id', '!=', $taskModel->id)
                 ->orderBy('position')
@@ -380,19 +380,19 @@ class ProjectController extends BaseApiController
             ]);
 
             foreach ($siblings as $index => $id) {
-                ProjectTask::whereKey($id)->update(['position' => $index]);
+                BoardTask::whereKey($id)->update(['position' => $index]);
             }
 
             // Đánh lại thứ tự cột nguồn để không bị "lỗ hổng" vị trí
             if ($sourceColumnId !== $targetColumn->id) {
-                $sourceIds = $project->tasks()
+                $sourceIds = $board->tasks()
                     ->where('column_id', $sourceColumnId)
                     ->orderBy('position')
                     ->pluck('id')
                     ->all();
 
                 foreach ($sourceIds as $index => $id) {
-                    ProjectTask::whereKey($id)->update(['position' => $index]);
+                    BoardTask::whereKey($id)->update(['position' => $index]);
                 }
             }
         });
@@ -410,23 +410,23 @@ class ProjectController extends BaseApiController
     /**
      * Danh sách thành viên của board.
      */
-    public function members(Request $request, Project $project): JsonResponse
+    public function members(Request $request, Board $board): JsonResponse
     {
-        if ($resp = $this->memberGuard($project, $request->user())) {
+        if ($resp = $this->memberGuard($board, $request->user())) {
             return $resp;
         }
 
-        $project->load('members:id,full_name,username,avatar');
+        $board->load('members:id,full_name,username,avatar');
 
-        return $this->successResponse(true, $project->members, ApiMessage::RETRIEVED);
+        return $this->successResponse(true, $board->members, ApiMessage::RETRIEVED);
     }
 
     /**
      * Tìm user để thêm vào board (loại trừ thành viên hiện có). Chỉ chủ board.
      */
-    public function assignableUsers(Request $request, Project $project): JsonResponse
+    public function assignableUsers(Request $request, Board $board): JsonResponse
     {
-        if ($resp = $this->ownerGuard($project, $request->user())) {
+        if ($resp = $this->ownerGuard($board, $request->user())) {
             return $resp;
         }
 
@@ -437,7 +437,7 @@ class ProjectController extends BaseApiController
             ]);
         }
 
-        $memberIds = $project->members()->pluck('users.id');
+        $memberIds = $board->members()->pluck('users.id');
 
         $users = User::query()
             ->whereNotIn('id', $memberIds)
@@ -454,21 +454,21 @@ class ProjectController extends BaseApiController
     /**
      * Thêm thành viên vào board. Chỉ chủ board.
      */
-    public function storeMember(StoreProjectMemberRequest $request, Project $project): JsonResponse
+    public function storeMember(StoreBoardMemberRequest $request, Board $board): JsonResponse
     {
-        if ($resp = $this->ownerGuard($project, $request->user())) {
+        if ($resp = $this->ownerGuard($board, $request->user())) {
             return $resp;
         }
 
         $validated = $request->validated();
         $userId = (int) $validated['user_id'];
 
-        if ($project->memberships()->where('user_id', $userId)->exists()) {
+        if ($board->memberships()->where('user_id', $userId)->exists()) {
             return $this->errorResponse(false, 'Người dùng đã là thành viên của board.', 422);
         }
 
         $role = $validated['role'] ?? 'editor';
-        $project->memberships()->create([
+        $board->memberships()->create([
             'user_id'   => $userId,
             'role'      => $role,
             'joined_at' => now(),
@@ -488,17 +488,17 @@ class ProjectController extends BaseApiController
     /**
      * Đổi vai trò thành viên. Chỉ chủ board; không đổi vai trò người tạo board.
      */
-    public function updateMemberRole(UpdateProjectMemberRoleRequest $request, Project $project, int $user): JsonResponse
+    public function updateMemberRole(UpdateBoardMemberRoleRequest $request, Board $board, int $user): JsonResponse
     {
-        if ($resp = $this->ownerGuard($project, $request->user())) {
+        if ($resp = $this->ownerGuard($board, $request->user())) {
             return $resp;
         }
 
-        if ($user === $project->created_by) {
+        if ($user === $board->created_by) {
             return $this->errorResponse(false, 'Không thể đổi vai trò của người tạo board.', 422);
         }
 
-        $membership = $project->memberships()->where('user_id', $user)->first();
+        $membership = $board->memberships()->where('user_id', $user)->first();
         if (! $membership) {
             return $this->notFoundResponse();
         }
@@ -514,24 +514,24 @@ class ProjectController extends BaseApiController
     /**
      * Xóa thành viên khỏi board (kèm gỡ khỏi mọi task). Chỉ chủ board; không xóa người tạo.
      */
-    public function destroyMember(Request $request, Project $project, int $user): JsonResponse
+    public function destroyMember(Request $request, Board $board, int $user): JsonResponse
     {
-        if ($resp = $this->ownerGuard($project, $request->user())) {
+        if ($resp = $this->ownerGuard($board, $request->user())) {
             return $resp;
         }
 
-        if ($user === $project->created_by) {
+        if ($user === $board->created_by) {
             return $this->errorResponse(false, 'Không thể xóa người tạo board.', 422);
         }
 
-        $membership = $project->memberships()->where('user_id', $user)->first();
+        $membership = $board->memberships()->where('user_id', $user)->first();
         if (! $membership) {
             return $this->notFoundResponse();
         }
 
-        DB::transaction(function () use ($project, $user, $membership) {
-            DB::table('project_task_assignees')
-                ->whereIn('task_id', $project->tasks()->pluck('id'))
+        DB::transaction(function () use ($board, $user, $membership) {
+            DB::table('board_task_assignees')
+                ->whereIn('task_id', $board->tasks()->pluck('id'))
                 ->where('user_id', $user)
                 ->delete();
 
@@ -548,25 +548,25 @@ class ProjectController extends BaseApiController
     /**
      * Chặn nếu user không thuộc board (không xem được).
      */
-    private function memberGuard(Project $project, $user): ?JsonResponse
+    private function memberGuard(Board $board, $user): ?JsonResponse
     {
-        return $project->hasMember($user->id) ? null : $this->forbiddenResponse();
+        return $board->hasMember($user->id) ? null : $this->forbiddenResponse();
     }
 
     /**
      * Chặn nếu user không có quyền chỉnh sửa (không thuộc board hoặc chỉ là "viewer").
      */
-    private function editorGuard(Project $project, $user): ?JsonResponse
+    private function editorGuard(Board $board, $user): ?JsonResponse
     {
-        if (! $project->hasMember($user->id)) {
+        if (! $board->hasMember($user->id)) {
             return $this->forbiddenResponse();
         }
 
-        if ($project->created_by === $user->id) {
+        if ($board->created_by === $user->id) {
             return null;
         }
 
-        $role = $project->memberships()->where('user_id', $user->id)->value('role');
+        $role = $board->memberships()->where('user_id', $user->id)->value('role');
 
         return $role === 'viewer' ? $this->forbiddenResponse() : null;
     }
@@ -574,13 +574,13 @@ class ProjectController extends BaseApiController
     /**
      * Chặn nếu user không phải chủ board (người tạo hoặc thành viên vai trò "owner").
      */
-    private function ownerGuard(Project $project, $user): ?JsonResponse
+    private function ownerGuard(Board $board, $user): ?JsonResponse
     {
-        if ($project->created_by === $user->id) {
+        if ($board->created_by === $user->id) {
             return null;
         }
 
-        $role = $project->memberships()->where('user_id', $user->id)->value('role');
+        $role = $board->memberships()->where('user_id', $user->id)->value('role');
 
         return $role === 'owner' ? null : $this->forbiddenResponse();
     }
@@ -594,7 +594,7 @@ class ProjectController extends BaseApiController
         $slug = $base;
         $i = 1;
 
-        while (Project::withTrashed()->where('slug', $slug)->exists()) {
+        while (Board::withTrashed()->where('slug', $slug)->exists()) {
             $slug = $base . '-' . $i++;
         }
 

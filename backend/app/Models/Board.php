@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
-use App\Enums\ProjectVisibility;
+use App\Enums\BoardVisibility;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Project extends Model
+class Board extends Model
 {
     use SoftDeletes;
+
+    protected $table = 'kanban_boards';
 
     protected $fillable = [
         'name',
@@ -30,7 +32,7 @@ class Project extends Model
     protected function casts(): array
     {
         return [
-            'visibility' => ProjectVisibility::class,
+            'visibility' => BoardVisibility::class,
             'is_archived' => 'boolean',
             'archived_at' => 'datetime',
         ];
@@ -53,23 +55,23 @@ class Project extends Model
 
     public function columns(): HasMany
     {
-        return $this->hasMany(ProjectColumn::class)->orderBy('position');
+        return $this->hasMany(BoardColumn::class)->orderBy('position');
     }
 
     public function tasks(): HasMany
     {
-        return $this->hasMany(ProjectTask::class);
+        return $this->hasMany(BoardTask::class);
     }
 
     public function memberships(): HasMany
     {
-        return $this->hasMany(ProjectMember::class);
+        return $this->hasMany(BoardMember::class);
     }
 
     public function members(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'project_members')
-            ->using(ProjectMember::class)
+        return $this->belongsToMany(User::class, 'board_members')
+            ->using(BoardMember::class)
             ->withPivot('role', 'joined_at')
             ->withTimestamps();
     }
