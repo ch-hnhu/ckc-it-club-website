@@ -1,4 +1,4 @@
-import type { ProjectMemberRole, ProjectVisibility, TaskPriority } from "@/types/projecthub.types";
+import type { ProjectMemberRole, TaskPriority } from "@/types/projecthub.types";
 
 export const PRIORITY_META: Record<
 	TaskPriority,
@@ -19,12 +19,6 @@ export const MEMBER_ROLE_META: Record<ProjectMemberRole, { label: string; classN
 };
 
 export const MEMBER_ROLE_ORDER: ProjectMemberRole[] = ["owner", "editor", "viewer"];
-
-export const VISIBILITY_META: Record<ProjectVisibility, { label: string }> = {
-	private: { label: "Riêng tư" },
-	members: { label: "Thành viên" },
-	public: { label: "Công khai" },
-};
 
 // Bảng màu gợi ý cho board.
 export const BOARD_COLORS = [

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,8 +12,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { CreateProjectInput, ProjectVisibility } from "@/types/projecthub.types";
-import { BOARD_COLORS, VISIBILITY_META } from "./constants";
+import type { CreateProjectInput } from "@/types/projecthub.types";
+import { BOARD_COLORS } from "./constants";
 import BoardLinkFields, { useBoardLinkOptions } from "./BoardLinkFields";
 
 interface CreateBoardDialogProps {
@@ -20,17 +21,16 @@ interface CreateBoardDialogProps {
 	onCreate: (body: CreateProjectInput) => Promise<void>;
 }
 
-const VISIBILITIES: ProjectVisibility[] = ["private", "members", "public"];
-
 const CreateBoardDialog: React.FC<CreateBoardDialogProps> = ({ onClose, onCreate }) => {
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [color, setColor] = useState<string>(BOARD_COLORS[0]);
-	const [visibility, setVisibility] = useState<ProjectVisibility>("members");
 	const [courseId, setCourseId] = useState<number | null>(null);
 	const [eventId, setEventId] = useState<number | null>(null);
 	const [saving, setSaving] = useState(false);
 	const { options, loading: loadingOptions } = useBoardLinkOptions();
+	const customColorInputRef = useRef<HTMLInputElement>(null);
+	const isCustomColor = !BOARD_COLORS.includes(color);
 
 	const handleCreate = async () => {
 		if (!name.trim()) return;
@@ -40,7 +40,6 @@ const CreateBoardDialog: React.FC<CreateBoardDialogProps> = ({ onClose, onCreate
 				name: name.trim(),
 				description: description.trim() || null,
 				color,
-				visibility,
 				course_id: courseId,
 				event_id: eventId,
 			});
@@ -66,7 +65,7 @@ const CreateBoardDialog: React.FC<CreateBoardDialogProps> = ({ onClose, onCreate
 							onKeyDown={(e) => {
 								if (e.key === "Enter") handleCreate();
 							}}
-							placeholder='VD: Website CLB 2026'
+							placeholder='VD: Sự kiện Hành trang tân sinh viên 2026'
 						/>
 					</div>
 
@@ -97,22 +96,29 @@ const CreateBoardDialog: React.FC<CreateBoardDialogProps> = ({ onClose, onCreate
 									style={{ backgroundColor: c }}
 								/>
 							))}
-						</div>
-					</div>
-
-					<div className='space-y-1.5'>
-						<Label>Phạm vi</Label>
-						<div className='flex gap-2'>
-							{VISIBILITIES.map((v) => (
-								<Button
-									key={v}
-									type='button'
-									variant={visibility === v ? "default" : "outline"}
-									className='flex-1'
-									onClick={() => setVisibility(v)}>
-									{VISIBILITY_META[v].label}
-								</Button>
-							))}
+							<button
+								type='button'
+								onClick={() => customColorInputRef.current?.click()}
+								aria-label='Chọn màu tự do'
+								title='Chọn màu tự do'
+								className={cn(
+									"flex h-8 w-8 items-center justify-center rounded-full border transition",
+									isCustomColor
+										? "ring-2 ring-ring ring-offset-2"
+										: "border-dashed",
+								)}
+								style={isCustomColor ? { backgroundColor: color } : undefined}>
+								{!isCustomColor && (
+									<Plus className='h-4 w-4 text-muted-foreground' />
+								)}
+							</button>
+							<input
+								ref={customColorInputRef}
+								type='color'
+								value={isCustomColor ? color : BOARD_COLORS[0]}
+								onChange={(e) => setColor(e.target.value)}
+								className='sr-only'
+							/>
 						</div>
 					</div>
 
@@ -133,7 +139,7 @@ const CreateBoardDialog: React.FC<CreateBoardDialogProps> = ({ onClose, onCreate
 						Hủy
 					</Button>
 					<Button onClick={handleCreate} disabled={saving || !name.trim()}>
-						{saving ? "Đang tạo..." : "Tạo dự án"}
+						{saving ? "Đang tạo..." : "Tạo"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

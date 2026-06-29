@@ -2,10 +2,10 @@ import {
 	Award,
 	Building,
 	CalendarDays,
+	CircleCheckBig,
 	Globe,
 	GraduationCap,
 	House,
-	LayoutGrid,
 	MailOpen,
 	Trophy,
 	UserRoundPlus,
@@ -271,9 +271,9 @@ export const adminNavMain: AdminNavItem[] = [
 	},
 	{
 		// Không gắn permission: ProjectHub mở cho mọi tài khoản đăng nhập (API chỉ yêu cầu auth)
-		title: "ProjectHub",
-		url: "/du-an",
-		icon: LayoutGrid,
+		title: "Việc cần làm",
+		url: "/to-do-list",
+		icon: CircleCheckBig,
 	},
 ];
 

@@ -99,7 +99,11 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 							}}
 							className='h-8 text-sm font-semibold'
 						/>
-						<Button size='icon' variant='ghost' className='h-8 w-8' onClick={submitRename}>
+						<Button
+							size='icon'
+							variant='ghost'
+							className='h-8 w-8'
+							onClick={submitRename}>
 							<Check className='h-4 w-4' />
 						</Button>
 					</div>
@@ -126,7 +130,9 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 							/>
 						)}
 						<h3 className='truncate text-sm font-semibold'>{column.name}</h3>
-						<Badge variant={overLimit ? "destructive" : "secondary"} className='shrink-0'>
+						<Badge
+							variant={overLimit ? "destructive" : "secondary"}
+							className='shrink-0'>
 							{tasks.length}
 							{column.wip_limit != null && `/${column.wip_limit}`}
 						</Badge>
@@ -136,7 +142,10 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 				{canEdit && !renaming && (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button size='icon' variant='ghost' className='h-7 w-7 text-muted-foreground'>
+							<Button
+								size='icon'
+								variant='ghost'
+								className='h-7 w-7 text-muted-foreground'>
 								<MoreHorizontal className='h-4 w-4' />
 							</Button>
 						</DropdownMenuTrigger>
@@ -146,11 +155,13 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 									setNameValue(column.name);
 									setRenaming(true);
 								}}>
-								<Pencil className='mr-2 h-4 w-4' /> Đổi tên cột
+								<Pencil className='h-4 w-4' /> Đổi tên cột
 							</DropdownMenuItem>
 							<DropdownMenuSeparator />
-							<DropdownMenuItem variant='destructive' onClick={() => onDeleteColumn(column.id)}>
-								<Trash2 className='mr-2 h-4 w-4' /> Xóa cột
+							<DropdownMenuItem
+								variant='destructive'
+								onClick={() => onDeleteColumn(column.id)}>
+								<Trash2 className='h-4 w-4' /> Xóa cột
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
@@ -181,7 +192,9 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 					className='min-h-[12px]'>
 					{isEndDrop && <div className='h-1 rounded-full bg-primary' />}
 					{tasks.length === 0 && !isEndDrop && (
-						<p className='py-6 text-center text-xs text-muted-foreground'>Chưa có công việc</p>
+						<p className='py-6 text-center text-xs text-muted-foreground'>
+							Chưa có công việc
+						</p>
 					)}
 				</div>
 			</div>

@@ -60,7 +60,7 @@ const LinkedBoardsCard: React.FC<LinkedBoardsCardProps> = ({ courseId, eventId }
 						{boards.map((b) => (
 							<li key={b.id}>
 								<Link
-									to={`/du-an/${b.slug}`}
+									to={`/to-do-list/${b.slug}`}
 									className='flex items-center gap-3 rounded-lg border p-3 transition hover:bg-muted/50'>
 									<span
 										className='h-8 w-1.5 shrink-0 rounded-full'
@@ -69,7 +69,8 @@ const LinkedBoardsCard: React.FC<LinkedBoardsCardProps> = ({ courseId, eventId }
 									<div className='min-w-0 flex-1'>
 										<p className='truncate font-medium'>{b.name}</p>
 										<p className='text-xs text-muted-foreground'>
-											{b.columns_count ?? 0} cột · {b.tasks_count ?? 0} công việc
+											{b.columns_count ?? 0} cột · {b.tasks_count ?? 0} công
+											việc
 										</p>
 									</div>
 								</Link>

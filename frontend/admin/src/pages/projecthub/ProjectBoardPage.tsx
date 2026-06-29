@@ -68,7 +68,7 @@ const ProjectBoardPage: React.FC = () => {
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
-		{ title: "ProjectHub", link: "/du-an" },
+		{ title: "Việc cần làm", link: "/to-do-list" },
 		{ title: board?.name ?? "Đang tải..." },
 	]);
 
@@ -103,7 +103,7 @@ const ProjectBoardPage: React.FC = () => {
 						columns: prev.columns.map((c) =>
 							c.id === columnId ? { ...c, tasks: fn(c.tasks ?? []) } : c,
 						),
-				  }
+					}
 				: prev,
 		);
 
@@ -128,7 +128,7 @@ const ProjectBoardPage: React.FC = () => {
 								...c,
 								tasks: (c.tasks ?? []).map((t) => (t.id === taskId ? res.data : t)),
 							})),
-					  }
+						}
 					: prev,
 			);
 			toast.success("Đã lưu công việc");
@@ -148,7 +148,7 @@ const ProjectBoardPage: React.FC = () => {
 								t.id === taskId ? { ...t, checklist_items: checklistItems } : t,
 							),
 						})),
-				  }
+					}
 				: prev,
 		);
 		setSelectedTask((st) =>
@@ -167,7 +167,7 @@ const ProjectBoardPage: React.FC = () => {
 							...c,
 							tasks: (c.tasks ?? []).filter((t) => t.id !== taskId),
 						})),
-				  }
+					}
 				: b,
 		);
 		setSelectedTask(null);
@@ -199,7 +199,9 @@ const ProjectBoardPage: React.FC = () => {
 	const handleRenameColumn = async (columnId: number, name: string) => {
 		const prev = board;
 		setBoard((b) =>
-			b ? { ...b, columns: b.columns.map((c) => (c.id === columnId ? { ...c, name } : c)) } : b,
+			b
+				? { ...b, columns: b.columns.map((c) => (c.id === columnId ? { ...c, name } : c)) }
+				: b,
 		);
 		try {
 			await projectHubService.updateColumn(slug, columnId, { name });
@@ -265,7 +267,10 @@ const ProjectBoardPage: React.FC = () => {
 		});
 
 		try {
-			await projectHubService.moveTask(slug, drag.taskId, { column_id: columnId, position: insertIndex });
+			await projectHubService.moveTask(slug, drag.taskId, {
+				column_id: columnId,
+				position: insertIndex,
+			});
 		} catch {
 			toast.error("Di chuyển thất bại");
 			setBoard(prev);
@@ -309,7 +314,10 @@ const ProjectBoardPage: React.FC = () => {
 		setBoard({ ...board, columns: newCols });
 
 		try {
-			await projectHubService.reorderColumns(slug, newCols.map((c) => c.id));
+			await projectHubService.reorderColumns(
+				slug,
+				newCols.map((c) => c.id),
+			);
 		} catch {
 			toast.error("Sắp xếp cột thất bại");
 			setBoard(prev);
@@ -332,7 +340,7 @@ const ProjectBoardPage: React.FC = () => {
 								assignees: (t.assignees ?? []).filter((a) => a.id !== userId),
 							})),
 						})),
-				  }
+					}
 				: b,
 		);
 
@@ -341,13 +349,16 @@ const ProjectBoardPage: React.FC = () => {
 		try {
 			await projectHubService.archiveProject(slug);
 			toast.success("Đã cập nhật trạng thái lưu trữ");
-			navigate("/du-an");
+			navigate("/to-do-list");
 		} catch {
 			toast.error("Thao tác thất bại");
 		}
 	};
 
-	const handleUpdateLink = async (payload: { course_id: number | null; event_id: number | null }) => {
+	const handleUpdateLink = async (payload: {
+		course_id: number | null;
+		event_id: number | null;
+	}) => {
 		try {
 			const res = await projectHubService.updateProject(slug, payload);
 			setBoard((b) => (b ? { ...b, ...res.data } : b));
@@ -363,7 +374,7 @@ const ProjectBoardPage: React.FC = () => {
 		try {
 			await projectHubService.deleteProject(slug);
 			toast.success("Đã xóa dự án");
-			navigate("/du-an");
+			navigate("/to-do-list");
 		} catch {
 			toast.error("Xóa dự án thất bại");
 		}
@@ -383,13 +394,13 @@ const ProjectBoardPage: React.FC = () => {
 			error === "forbidden"
 				? "Bạn không có quyền truy cập dự án này."
 				: error === "notfound"
-				? "Không tìm thấy dự án."
-				: "Đã có lỗi xảy ra.";
+					? "Không tìm thấy dự án."
+					: "Đã có lỗi xảy ra.";
 		return (
 			<div className='flex flex-col items-center py-24 text-center'>
 				<h1 className='mb-4 text-xl font-semibold'>{msg}</h1>
 				<Button asChild>
-					<Link to='/du-an'>
+					<Link to='/to-do-list'>
 						<ArrowLeft className='mr-1.5 h-4 w-4' /> Về danh sách dự án
 					</Link>
 				</Button>
@@ -404,38 +415,44 @@ const ProjectBoardPage: React.FC = () => {
 			{/* Header */}
 			<div className='mb-5 flex flex-wrap items-center gap-3'>
 				<Button variant='outline' size='icon' asChild>
-					<Link to='/du-an' aria-label='Quay lại'>
+					<Link to='/to-do-list' aria-label='Quay lại'>
 						<ArrowLeft className='h-4 w-4' />
 					</Link>
 				</Button>
-				<span
-					className='h-7 w-7 shrink-0 rounded-md'
-					style={{ backgroundColor: board.color || "var(--primary)" }}
-				/>
 				<div className='min-w-0'>
-					<h1 className='truncate text-xl font-semibold tracking-tight'>{board.name}</h1>
-					{board.description && (
-						<p className='truncate text-sm text-muted-foreground'>{board.description}</p>
-					)}
 					{(board.course || board.event) && (
 						<div className='mt-1 flex flex-wrap items-center gap-1.5'>
 							{board.course && (
 								<Link to={`/courses/${board.course.slug}`}>
-									<Badge variant='secondary' className='gap-1 hover:bg-secondary/80'>
+									<Badge
+										variant='secondary'
+										className='gap-1 hover:bg-secondary/80'>
 										<GraduationCap className='h-3 w-3' />
-										<span className='max-w-[12rem] truncate'>{board.course.title}</span>
+										<span className='max-w-[12rem] truncate'>
+											{board.course.title}
+										</span>
 									</Badge>
 								</Link>
 							)}
 							{board.event && (
 								<Link to={`/events/${board.event.id}`}>
-									<Badge variant='secondary' className='gap-1 hover:bg-secondary/80'>
+									<Badge
+										variant='secondary'
+										className='gap-1 hover:bg-secondary/80'>
 										<CalendarDays className='h-3 w-3' />
-										<span className='max-w-[12rem] truncate'>{board.event.title}</span>
+										<span className='max-w-[12rem] truncate'>
+											{board.event.title}
+										</span>
 									</Badge>
 								</Link>
 							)}
 						</div>
+					)}
+					<h1 className='truncate text-xl font-semibold tracking-tight'>{board.name}</h1>
+					{board.description && (
+						<p className='truncate text-sm text-muted-foreground'>
+							{board.description}
+						</p>
 					)}
 				</div>
 
@@ -447,11 +464,15 @@ const ProjectBoardPage: React.FC = () => {
 						{members.slice(0, 5).map((m) => (
 							<Avatar key={m.id} className='h-6 w-6 border-2 border-background'>
 								<AvatarImage src={m.avatar ?? undefined} alt={m.full_name} />
-								<AvatarFallback className='text-[9px]'>{initials(m.full_name)}</AvatarFallback>
+								<AvatarFallback className='text-[9px]'>
+									{initials(m.full_name)}
+								</AvatarFallback>
 							</Avatar>
 						))}
 					</div>
-					{members.length > 5 && <span className='text-xs font-medium'>+{members.length - 5}</span>}
+					{members.length > 5 && (
+						<span className='text-xs font-medium'>+{members.length - 5}</span>
+					)}
 					<Users className='h-4 w-4' />
 				</Button>
 
@@ -464,7 +485,7 @@ const ProjectBoardPage: React.FC = () => {
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align='end'>
 							<DropdownMenuItem onClick={() => setShowLink(true)}>
-								<Link2 className='mr-2 h-4 w-4' /> Liên kết course/event
+								<Link2 className='mr-2 h-4 w-4' /> Liên kết dự án
 							</DropdownMenuItem>
 							<DropdownMenuItem onClick={handleArchive}>
 								<Archive className='mr-2 h-4 w-4' />
@@ -473,7 +494,9 @@ const ProjectBoardPage: React.FC = () => {
 							{isOwner && (
 								<>
 									<DropdownMenuSeparator />
-									<DropdownMenuItem variant='destructive' onClick={handleDeleteBoard}>
+									<DropdownMenuItem
+										variant='destructive'
+										onClick={handleDeleteBoard}>
 										<Trash2 className='mr-2 h-4 w-4' /> Xóa dự án
 									</DropdownMenuItem>
 								</>

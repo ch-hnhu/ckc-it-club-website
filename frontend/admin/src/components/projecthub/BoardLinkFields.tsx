@@ -12,6 +12,8 @@ import type { BoardLinkOptions } from "@/types/projecthub.types";
 
 const NONE = "none";
 
+type LinkType = "none" | "course" | "event";
+
 /** Tải danh sách course/event để chọn liên kết (dùng chung cho dialog tạo & liên kết board). */
 export function useBoardLinkOptions() {
 	const [options, setOptions] = React.useState<BoardLinkOptions | null>(null);
@@ -40,7 +42,7 @@ interface BoardLinkFieldsProps {
 	onChange: (next: { course_id: number | null; event_id: number | null }) => void;
 }
 
-/** Hai select tuỳ chọn: liên kết board với 1 khoá học và/hoặc 1 sự kiện. */
+/** Liên kết dự án với 1 khoá học hoặc 1 sự kiện: chọn loại rồi chọn mục theo loại đó. */
 const BoardLinkFields: React.FC<BoardLinkFieldsProps> = ({
 	options,
 	loading,
@@ -48,46 +50,55 @@ const BoardLinkFields: React.FC<BoardLinkFieldsProps> = ({
 	eventId,
 	onChange,
 }) => {
+	const [type, setType] = React.useState<LinkType>(() =>
+		courseId != null ? "course" : eventId != null ? "event" : "none",
+	);
+
+	const itemId = type === "course" ? courseId : type === "event" ? eventId : null;
+	const items = type === "course" ? options?.courses : type === "event" ? options?.events : [];
+
+	const handleTypeChange = (value: string) => {
+		setType(value as LinkType);
+		onChange({ course_id: null, event_id: null });
+	};
+
+	const handleItemChange = (value: string) => {
+		const id = value === NONE ? null : Number(value);
+		onChange({
+			course_id: type === "course" ? id : null,
+			event_id: type === "event" ? id : null,
+		});
+	};
+
 	return (
-		<div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-			<div className='space-y-1.5'>
-				<Label>Khoá học liên kết</Label>
-				<Select
-					disabled={loading}
-					value={courseId != null ? String(courseId) : NONE}
-					onValueChange={(v) =>
-						onChange({ course_id: v === NONE ? null : Number(v), event_id: eventId })
-					}>
+		<div className='space-y-1.5'>
+			<Label>Liên kết</Label>
+			<div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+				<Select disabled={loading} value={type} onValueChange={handleTypeChange}>
 					<SelectTrigger className='w-full'>
-						<SelectValue placeholder='Không liên kết' />
+						<SelectValue placeholder='Loại dự án' />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value={NONE}>Không liên kết</SelectItem>
-						{options?.courses.map((c) => (
-							<SelectItem key={c.id} value={String(c.id)}>
-								{c.title}
-							</SelectItem>
-						))}
+						<SelectItem value='none'>Không liên kết</SelectItem>
+						<SelectItem value='course'>Khoá học</SelectItem>
+						<SelectItem value='event'>Sự kiện</SelectItem>
 					</SelectContent>
 				</Select>
-			</div>
 
-			<div className='space-y-1.5'>
-				<Label>Sự kiện liên kết</Label>
 				<Select
-					disabled={loading}
-					value={eventId != null ? String(eventId) : NONE}
-					onValueChange={(v) =>
-						onChange({ course_id: courseId, event_id: v === NONE ? null : Number(v) })
-					}>
+					disabled={loading || type === "none"}
+					value={itemId != null ? String(itemId) : NONE}
+					onValueChange={handleItemChange}>
 					<SelectTrigger className='w-full'>
-						<SelectValue placeholder='Không liên kết' />
+						<SelectValue
+							placeholder={type === "none" ? "Chọn loại trước" : "Chọn dự án"}
+						/>
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value={NONE}>Không liên kết</SelectItem>
-						{options?.events.map((e) => (
-							<SelectItem key={e.id} value={String(e.id)}>
-								{e.title}
+						<SelectItem value={NONE}>Không chọn</SelectItem>
+						{items?.map((item) => (
+							<SelectItem key={item.id} value={String(item.id)}>
+								{item.title}
 							</SelectItem>
 						))}
 					</SelectContent>

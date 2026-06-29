@@ -17,7 +17,12 @@ interface LinkBoardDialogProps {
 }
 
 /** Hộp thoại đổi liên kết course/event của một board đã tồn tại. */
-const LinkBoardDialog: React.FC<LinkBoardDialogProps> = ({ courseId, eventId, onClose, onSave }) => {
+const LinkBoardDialog: React.FC<LinkBoardDialogProps> = ({
+	courseId,
+	eventId,
+	onClose,
+	onSave,
+}) => {
 	const { options, loading } = useBoardLinkOptions();
 	const [course, setCourse] = useState<number | null>(courseId);
 	const [event, setEvent] = useState<number | null>(eventId);
@@ -58,7 +63,7 @@ const LinkBoardDialog: React.FC<LinkBoardDialogProps> = ({ courseId, eventId, on
 						Hủy
 					</Button>
 					<Button onClick={handleSave} disabled={saving}>
-						{saving ? "Đang lưu..." : "Lưu liên kết"}
+						{saving ? "Đang lưu..." : "Lưu"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

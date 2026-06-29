@@ -341,7 +341,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/channels",
 				element: (
-					<PermissionRoute permission="community.channels.manage">
+					<PermissionRoute permission='community.channels.manage'>
 						<ChannelListPage />
 					</PermissionRoute>
 				),
@@ -349,7 +349,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/posts",
 				element: (
-					<PermissionRoute permission="community.posts.view">
+					<PermissionRoute permission='community.posts.view'>
 						<PostListPage />
 					</PermissionRoute>
 				),
@@ -357,7 +357,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/blogs",
 				element: (
-					<PermissionRoute permission="community.blogs.view">
+					<PermissionRoute permission='community.blogs.view'>
 						<BlogListPage />
 					</PermissionRoute>
 				),
@@ -365,7 +365,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/blogs/create",
 				element: (
-					<PermissionRoute permission="community.blogs.manage">
+					<PermissionRoute permission='community.blogs.manage'>
 						<BlogCreatePage />
 					</PermissionRoute>
 				),
@@ -373,7 +373,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/blogs/:id",
 				element: (
-					<PermissionRoute permission="community.blogs.view">
+					<PermissionRoute permission='community.blogs.view'>
 						<BlogDetailPage />
 					</PermissionRoute>
 				),
@@ -381,7 +381,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/comments",
 				element: (
-					<PermissionRoute permission="community.comments.view">
+					<PermissionRoute permission='community.comments.view'>
 						<CommentListPage />
 					</PermissionRoute>
 				),
@@ -389,7 +389,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/tags",
 				element: (
-					<PermissionRoute permission="community.tags.manage">
+					<PermissionRoute permission='community.tags.manage'>
 						<TagListPage />
 					</PermissionRoute>
 				),
@@ -397,7 +397,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/chat",
 				element: (
-					<PermissionRoute permission="community.chat.view">
+					<PermissionRoute permission='community.chat.view'>
 						<ChatRoomListPage />
 					</PermissionRoute>
 				),
@@ -405,12 +405,12 @@ const router = createBrowserRouter([
 			{
 				// Redirect alias — xử lý link cũ trong thông báo
 				path: "community/chat-rooms",
-				element: <Navigate to="/community/chat" replace />,
+				element: <Navigate to='/community/chat' replace />,
 			},
 			{
 				path: "community/media",
 				element: (
-					<PermissionRoute permission="community.media.view">
+					<PermissionRoute permission='community.media.view'>
 						<MediaListPage />
 					</PermissionRoute>
 				),
@@ -418,7 +418,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/skills",
 				element: (
-					<PermissionRoute permission="community.skills.manage">
+					<PermissionRoute permission='community.skills.manage'>
 						<SkillListPage />
 					</PermissionRoute>
 				),
@@ -426,7 +426,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/reports",
 				element: (
-					<PermissionRoute permission="community.reports.view">
+					<PermissionRoute permission='community.reports.view'>
 						<ReportListPage />
 					</PermissionRoute>
 				),
@@ -434,7 +434,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/blog-reports",
 				element: (
-					<PermissionRoute permission="community.reports.view">
+					<PermissionRoute permission='community.reports.view'>
 						<BlogReportListPage />
 					</PermissionRoute>
 				),
@@ -538,7 +538,7 @@ const router = createBrowserRouter([
 			{
 				path: "gamification/point-rules",
 				element: (
-					<PermissionRoute permission="gamification.manage">
+					<PermissionRoute permission='gamification.manage'>
 						<PointRulesPage />
 					</PermissionRoute>
 				),
@@ -546,7 +546,7 @@ const router = createBrowserRouter([
 			{
 				path: "gamification/ranks",
 				element: (
-					<PermissionRoute permission="gamification.manage">
+					<PermissionRoute permission='gamification.manage'>
 						<RanksPage />
 					</PermissionRoute>
 				),
@@ -554,17 +554,17 @@ const router = createBrowserRouter([
 			{
 				path: "gamification/leaderboard",
 				element: (
-					<PermissionRoute permission="gamification.view">
+					<PermissionRoute permission='gamification.view'>
 						<LeaderboardPage />
 					</PermissionRoute>
 				),
 			},
 			{
-				path: "du-an",
+				path: "to-do-list",
 				element: <ProjectHubListPage />,
 			},
 			{
-				path: "du-an/:slug",
+				path: "to-do-list/:slug",
 				element: <ProjectBoardPage />,
 			},
 		],

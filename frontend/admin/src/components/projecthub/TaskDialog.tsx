@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CheckSquare, Plus, Trash2, X } from "lucide-react";
+import { CircleCheckBig, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,7 +52,9 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 	const [startDate, setStartDate] = useState(toDateInput(task.start_date));
 	const [dueDate, setDueDate] = useState(toDateInput(task.due_date));
 	const [completed, setCompleted] = useState(Boolean(task.completed_at));
-	const [assigneeIds, setAssigneeIds] = useState<number[]>((task.assignees ?? []).map((u) => u.id));
+	const [assigneeIds, setAssigneeIds] = useState<number[]>(
+		(task.assignees ?? []).map((u) => u.id),
+	);
 	const [saving, setSaving] = useState(false);
 
 	const [items, setItems] = useState<ChecklistItem[]>(task.checklist_items ?? []);
@@ -92,7 +94,9 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 		setBusyItem(item.id);
 		syncItems(items.map((i) => (i.id === item.id ? { ...i, is_done: isDone } : i)));
 		try {
-			await projectHubService.updateChecklistItem(slug, task.id, item.id, { is_done: isDone });
+			await projectHubService.updateChecklistItem(slug, task.id, item.id, {
+				is_done: isDone,
+			});
 		} catch {
 			toast.error("Cập nhật mục thất bại");
 			syncItems(prev);
@@ -141,7 +145,11 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 				<div className='space-y-4'>
 					<div className='space-y-1.5'>
 						<Label>Tiêu đề</Label>
-						<Input value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)} />
+						<Input
+							value={title}
+							disabled={!canEdit}
+							onChange={(e) => setTitle(e.target.value)}
+						/>
 					</div>
 
 					<div className='space-y-1.5'>
@@ -216,11 +224,18 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 											onClick={() => toggleAssignee(m.id)}
 											className={cn(
 												"flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2.5 text-xs font-medium transition",
-												active ? "border-primary bg-primary/10" : "bg-background hover:bg-accent",
+												active
+													? "border-primary bg-primary/10"
+													: "bg-background hover:bg-accent",
 											)}>
 											<Avatar className='h-5 w-5'>
-												<AvatarImage src={m.avatar ?? undefined} alt={m.full_name} />
-												<AvatarFallback className='text-[9px]'>{initials(m.full_name)}</AvatarFallback>
+												<AvatarImage
+													src={m.avatar ?? undefined}
+													alt={m.full_name}
+												/>
+												<AvatarFallback className='text-[9px]'>
+													{initials(m.full_name)}
+												</AvatarFallback>
 											</Avatar>
 											{m.full_name}
 										</button>
@@ -233,7 +248,7 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 					<div className='space-y-2'>
 						<div className='flex items-center justify-between'>
 							<Label className='flex items-center gap-1.5'>
-								<CheckSquare className='h-4 w-4' /> Việc cần làm
+								<CircleCheckBig className='h-4 w-4' /> Việc cần làm
 							</Label>
 							{checklistTotal > 0 && (
 								<span className='text-xs font-medium text-muted-foreground'>
@@ -260,7 +275,9 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 										<Checkbox
 											checked={it.is_done}
 											disabled={!canEdit || busyItem === it.id}
-											onCheckedChange={(v) => handleToggleItem(it, v === true)}
+											onCheckedChange={(v) =>
+												handleToggleItem(it, v === true)
+											}
 										/>
 										<span
 											className={cn(
@@ -321,7 +338,10 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 
 				{canEdit && (
 					<DialogFooter className='sm:justify-between'>
-						<Button variant='outline' className='text-destructive' onClick={() => onDelete(task.id)}>
+						<Button
+							variant='outline'
+							className='text-destructive'
+							onClick={() => onDelete(task.id)}>
 							<Trash2 className='mr-1.5 h-4 w-4' /> Xóa
 						</Button>
 						<Button onClick={handleSave} disabled={saving || !title.trim()}>

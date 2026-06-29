@@ -53,7 +53,11 @@ class BoardController extends BaseApiController
             ->when($request->query('course_id'), fn ($q, $id) => $q->where('course_id', $id))
             ->when($request->query('event_id'), fn ($q, $id) => $q->where('event_id', $id))
             ->with(['department:id,name,slug', 'course:id,title,slug', 'event:id,title,slug'])
-            ->withCount(['columns', 'tasks'])
+            ->withCount([
+                'columns',
+                'tasks',
+                'tasks as completed_tasks_count' => fn ($q) => $q->whereNotNull('completed_at'),
+            ])
             ->orderByDesc('updated_at')
             ->paginate($perPage);
 
@@ -77,7 +81,6 @@ class BoardController extends BaseApiController
                 'department_id' => $validated['department_id'] ?? null,
                 'course_id'     => $validated['course_id'] ?? null,
                 'event_id'      => $validated['event_id'] ?? null,
-                'visibility'    => $validated['visibility'] ?? 'members',
                 'created_by'    => $user->id,
             ]);
 
@@ -133,7 +136,7 @@ class BoardController extends BaseApiController
         }
 
         $data = collect($request->validated())
-            ->only(['name', 'description', 'color', 'department_id', 'course_id', 'event_id', 'visibility'])
+            ->only(['name', 'description', 'color', 'department_id', 'course_id', 'event_id'])
             ->toArray();
         $data['updated_by'] = $user->id;
 
