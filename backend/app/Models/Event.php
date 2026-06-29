@@ -81,6 +81,14 @@ class Event extends Model
     }
 
     /**
+     * Các board ProjectHub liên kết với sự kiện này.
+     */
+    public function boards(): HasMany
+    {
+        return $this->hasMany(Board::class);
+    }
+
+    /**
      * Tự động chuyển trạng thái theo thời gian thực tế (chỉ tiến, không lùi):
      * published → ongoing khi đã đến giờ bắt đầu, published/ongoing → ended khi đã qua giờ kết thúc.
      * Không đụng đến draft, cancelled hay sự kiện đã được kết thúc thủ công.

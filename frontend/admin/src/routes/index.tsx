@@ -19,6 +19,8 @@ import { LoginForm } from "@/pages/auth/LoginForm";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { PermissionRoute } from "@/components/auth/PermissionRoute";
 import NotFound from "@/pages/NotFound";
+import ProjectHubListPage from "@/pages/projecthub/ProjectHubListPage";
+import ProjectBoardPage from "@/pages/projecthub/ProjectBoardPage";
 import RoleList from "@/pages/role/RoleList";
 import RoleDetailPage from "@/pages/role/RoleDetailPage";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
@@ -556,6 +558,14 @@ const router = createBrowserRouter([
 						<LeaderboardPage />
 					</PermissionRoute>
 				),
+			},
+			{
+				path: "du-an",
+				element: <ProjectHubListPage />,
+			},
+			{
+				path: "du-an/:slug",
+				element: <ProjectBoardPage />,
 			},
 		],
 	},

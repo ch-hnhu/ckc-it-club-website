@@ -357,7 +357,7 @@ function QuizCreatePage() {
 		},
 		{
 			title: lessonTitle || (lessonId ? `Buổi #${lessonId}` : "Buổi học chưa xác định"),
-			link: lessonId ? `/courses/${courseId}/${lessonId}` : undefined,
+			link: lessonId ? `/courses/${courseId}/lessons/${lessonId}` : undefined,
 		},
 		{ title: "Tạo quiz" },
 	]);
@@ -1105,7 +1105,7 @@ function QuizCreatePage() {
 
 				<div className='space-y-6'>
 					<div className='grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]'>
-						<aside className='relative'>
+						<aside className='relative h-[280px] xl:h-auto'>
 							<Card className='absolute inset-0 flex flex-col'>
 								<CardHeader className='shrink-0 gap-3'>
 									<div className='flex items-center justify-between gap-3'>

@@ -72,7 +72,7 @@ const getInitialForm = (): FormState => ({
 	enrollment_deadline: "",
 	course_end: "",
 	max_offline_slots: "30",
-	max_absent_allowed: "1",
+	max_absent_allowed: "3",
 	quiz_pass_threshold: "80",
 	certificate_template_id: "",
 });
@@ -209,12 +209,15 @@ function CourseFormPage() {
 					course_end: toLocalInput(c.course_end),
 					max_offline_slots:
 						c.max_offline_slots != null ? String(c.max_offline_slots) : "30",
-					max_absent_allowed: String(c.max_absent_allowed),
+					max_absent_allowed:
+						c.max_absent_allowed != null ? String(c.max_absent_allowed) : "2",
 					quiz_pass_threshold: String(c.quiz_pass_threshold),
 					certificate_template_id: (() => {
 						if (c.certificate_template) return String(c.certificate_template.id);
 						// Khóa không có cert → thử auto-chọn mặc định nếu templates đã load
-						const defaultTpl = certificateTemplatesRef.current.find((t) => t.is_default);
+						const defaultTpl = certificateTemplatesRef.current.find(
+							(t) => t.is_default,
+						);
 						return defaultTpl ? String(defaultTpl.id) : "";
 					})(),
 				});
@@ -387,9 +390,7 @@ function CourseFormPage() {
 						<Card className='shadow-sm'>
 							<CardHeader>
 								<CardTitle>Thông tin khóa học</CardTitle>
-								<CardDescription>
-									Tên và mô tả của khóa học.
-								</CardDescription>
+								<CardDescription>Tên và mô tả của khóa học.</CardDescription>
 							</CardHeader>
 							<CardContent className='flex flex-col gap-5'>
 								<div className='flex flex-col gap-2'>
@@ -454,7 +455,7 @@ function CourseFormPage() {
 												setForm((prev) => ({
 													...prev,
 													max_offline_slots: "30",
-													max_absent_allowed: "1",
+													max_absent_allowed: "3",
 													enrollment_start: "",
 													enrollment_deadline: "",
 													course_end: "",
@@ -747,7 +748,13 @@ function CourseFormPage() {
 										<SelectTrigger
 											id='course-certificate-template'
 											className='w-full'>
-											<SelectValue placeholder={templatesLoading ? "Đang tải..." : "Chọn mẫu chứng chỉ"} />
+											<SelectValue
+												placeholder={
+													templatesLoading
+														? "Đang tải..."
+														: "Chọn mẫu chứng chỉ"
+												}
+											/>
 										</SelectTrigger>
 										<SelectContent>
 											{certificateTemplates.map((t) => (

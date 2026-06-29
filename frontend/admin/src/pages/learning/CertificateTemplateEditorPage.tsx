@@ -958,9 +958,9 @@ function CertificateTemplateEditorPage() {
 							<Transformer
 								ref={trRef}
 								rotateEnabled
-								anchorSize={9 / zoom}
-								anchorStrokeWidth={1 / zoom}
-								borderStrokeWidth={1 / zoom}
+								anchorSize={9}
+								anchorStrokeWidth={1}
+								borderStrokeWidth={1}
 								ignoreStroke
 								// Ảnh: giữ tỉ lệ, chỉ cho kéo 4 góc để không bị méo.
 								keepRatio={selected?.type === "image"}

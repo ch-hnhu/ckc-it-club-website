@@ -214,8 +214,8 @@ function LessonFormPage() {
 			live_url: form.live_url,
 			live_duration: form.live_duration,
 			resource_url: form.resource_url,
-			assignment_url: form.assignment_url,
-			assignment_deadline: toUtcIso(form.assignment_deadline),
+			assignment_url: hasOffline ? form.assignment_url : "",
+			assignment_deadline: hasOffline ? toUtcIso(form.assignment_deadline) : "",
 			document: editorRef.current?.getContent() ?? "",
 		};
 
@@ -457,35 +457,39 @@ function LessonFormPage() {
 								</p>
 							)}
 						</div>
-						<div className='grid gap-4 sm:grid-cols-2'>
-							<div className='flex flex-col gap-2'>
-								<Label htmlFor='lesson-assign-url'>Bài tập (URL)</Label>
-								<Input
-									id='lesson-assign-url'
-									placeholder='Google Forms...'
-									value={form.assignment_url}
-									onChange={(e) => setField("assignment_url", e.target.value)}
-									disabled={submitting}
-								/>
-								{fieldErrors.assignment_url && (
-									<p className='text-sm text-destructive'>
-										{fieldErrors.assignment_url}
-									</p>
-								)}
+						{hasOffline && (
+							<div className='grid gap-4 sm:grid-cols-2'>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='lesson-assign-url'>Bài tập (URL)</Label>
+									<Input
+										id='lesson-assign-url'
+										placeholder='Google Forms...'
+										value={form.assignment_url}
+										onChange={(e) =>
+											setField("assignment_url", e.target.value)
+										}
+										disabled={submitting}
+									/>
+									{fieldErrors.assignment_url && (
+										<p className='text-sm text-destructive'>
+											{fieldErrors.assignment_url}
+										</p>
+									)}
+								</div>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='lesson-assign-deadline'>Hạn nộp bài</Label>
+									<Input
+										id='lesson-assign-deadline'
+										type='datetime-local'
+										value={form.assignment_deadline}
+										onChange={(e) =>
+											setField("assignment_deadline", e.target.value)
+										}
+										disabled={submitting}
+									/>
+								</div>
 							</div>
-							<div className='flex flex-col gap-2'>
-								<Label htmlFor='lesson-assign-deadline'>Hạn nộp bài</Label>
-								<Input
-									id='lesson-assign-deadline'
-									type='datetime-local'
-									value={form.assignment_deadline}
-									onChange={(e) =>
-										setField("assignment_deadline", e.target.value)
-									}
-									disabled={submitting}
-								/>
-							</div>
-						</div>
+						)}
 					</CardContent>
 				</Card>
 

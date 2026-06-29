@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -86,6 +86,7 @@ function SchoolClassList() {
 	const normalizedSearch = search.trim();
 
 	useEffect(() => {
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 		setMeta((prev) => ({ ...prev, current_page: 1 }));
 	}, [normalizedSearch, majorFilter, sortConfig]);
 
@@ -120,6 +121,7 @@ function SchoolClassList() {
 	};
 
 	useEffect(() => {
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 		void fetchClasses();
 	}, [meta.current_page, meta.per_page, normalizedSearch, majorFilter, sortConfig]);
 

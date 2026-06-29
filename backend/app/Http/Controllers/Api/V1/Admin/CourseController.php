@@ -107,6 +107,11 @@ class CourseController extends BaseApiController
             $data['enrollment_start']     = null;
             $data['enrollment_deadline']  = null;
             $data['course_end']           = null;
+        } elseif ($data['max_offline_slots'] !== null) {
+            // Offline course bắt buộc phải có max_absent_allowed
+            if (! isset($data['max_absent_allowed']) || $data['max_absent_allowed'] === null) {
+                $data['max_absent_allowed'] = 3;
+            }
         }
 
         $thumbnailPath = null;
@@ -199,6 +204,14 @@ class CourseController extends BaseApiController
             $data['enrollment_start']     = null;
             $data['enrollment_deadline']  = null;
             $data['course_end']           = null;
+        } else {
+            // Nếu set max_offline_slots, bắt buộc phải có max_absent_allowed
+            $maxOfflineSlots = $data['max_offline_slots'] ?? $course->max_offline_slots;
+            if ($maxOfflineSlots !== null) {
+                if (! isset($data['max_absent_allowed']) || $data['max_absent_allowed'] === null) {
+                    $data['max_absent_allowed'] = $course->max_absent_allowed ?? 3;
+                }
+            }
         }
 
         $tagIds = $data['tag_ids'] ?? null;
@@ -518,15 +531,25 @@ class CourseController extends BaseApiController
             return [];
         }
 
-        return LessonAttendance::query()
+        $recorderNames = collect();
+        $attendances = LessonAttendance::query()
             ->whereIn('lesson_id', $offlineLessonIds)
-            ->get(['user_id', 'lesson_id', 'type'])
-            ->map(fn (LessonAttendance $a) => [
-                'user_id' => $a->user_id,
-                'lesson_id' => $a->lesson_id,
-                'type' => $a->type,
-            ])
-            ->all();
+            ->get(['user_id', 'lesson_id', 'type', 'note', 'attended_at', 'recorded_by']);
+
+        $recorderIds = $attendances->pluck('recorded_by')->filter()->unique()->values();
+        if ($recorderIds->isNotEmpty()) {
+            $recorderNames = \App\Models\User::whereIn('id', $recorderIds)
+                ->pluck('full_name', 'id');
+        }
+
+        return $attendances->map(fn (LessonAttendance $a) => [
+            'user_id'           => $a->user_id,
+            'lesson_id'         => $a->lesson_id,
+            'type'              => $a->type,
+            'note'              => $a->note,
+            'attended_at'       => $a->attended_at?->toISOString(),
+            'recorded_by_name'  => $a->recorded_by ? ($recorderNames[$a->recorded_by] ?? null) : null,
+        ])->all();
     }
 
     /**
