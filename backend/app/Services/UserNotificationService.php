@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\NotificationSent;
 use App\Models\Blog;
+use App\Models\Board;
 use App\Models\Post;
 use App\Models\User;
 use App\Notifications\UserCommunityNotification;
@@ -325,6 +326,29 @@ class UserNotificationService
             'target_type' => "{$contentType}_report",
             'target_id' => 0,
             'link' => $contentLink,
+        ]);
+    }
+
+    /**
+     * Notify a user when another user adds them as a member of a ProjectHub board.
+     * Does nothing if the actor adds themselves.
+     */
+    public static function dispatchBoardMemberAdded(
+        User $recipient,
+        User $actor,
+        Board $board,
+    ): void {
+        if ($recipient->id === $actor->id) {
+            return;
+        }
+
+        self::send($recipient, $actor, [
+            'title' => "{$actor->full_name} đã thêm bạn vào một bảng công việc",
+            'message' => "Bạn vừa được thêm vào bảng \"{$board->name}\" trên ProjectHub.",
+            'type' => 'board_member_added',
+            'target_type' => 'board',
+            'target_id' => $board->id,
+            'link' => '',
         ]);
     }
 

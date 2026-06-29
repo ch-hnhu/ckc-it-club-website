@@ -19,6 +19,7 @@ use App\Models\BoardTask;
 use App\Models\Course;
 use App\Models\Event;
 use App\Models\User;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -567,6 +568,9 @@ class BoardController extends BaseApiController
         ]);
 
         $user = User::find($userId);
+
+        // Thông báo cho người vừa được thêm vào board.
+        UserNotificationService::dispatchBoardMemberAdded($user, $request->user(), $board);
 
         return $this->createdResponse([
             'id'        => $user->id,
