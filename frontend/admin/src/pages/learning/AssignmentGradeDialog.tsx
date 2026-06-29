@@ -64,14 +64,7 @@ function AssignmentGradeDialog({
 			.then((res) => {
 				if (cancelled) return;
 				setStudents(res.data);
-				setPassed(
-					Object.fromEntries(
-						res.data.map((s) => [
-							s.user_id,
-							s.score === null ? null : s.score >= 1 ? true : false,
-						]),
-					),
-				);
+				setPassed(Object.fromEntries(res.data.map((s) => [s.user_id, s.passed])));
 			})
 			.catch(() => {
 				if (cancelled) return;
@@ -107,7 +100,7 @@ function AssignmentGradeDialog({
 		try {
 			const grades = students.map((s) => ({
 				user_id: s.user_id,
-				score: passed[s.user_id] === true ? 1 : null,
+				passed: passed[s.user_id] ?? null,
 			}));
 
 			const res = await courseService.saveGrades(courseSlug, lesson.id, grades);

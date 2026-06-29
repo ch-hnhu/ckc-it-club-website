@@ -162,6 +162,8 @@ export interface VideoDetail {
 	duration: string;
 	xp: number;
 	completed: boolean;
+	/** Track học của user hiện tại trong khóa này (null nếu chưa ghi danh) */
+	enrollment_track: CourseTrack | null;
 	course: { slug: string; title: string };
 	lesson: { slug: string; title: string; order: number };
 	/** Buổi trước (điều hướng) */
@@ -257,6 +259,7 @@ export interface CourseListParams {
 	per_page?: number;
 	search?: string;
 	category?: string;
+	audience?: CourseAudience;
 	level?: CourseLevel;
 	sort?: "created_at" | "enrolled_count";
 	order?: "asc" | "desc";

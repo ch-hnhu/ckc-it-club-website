@@ -222,6 +222,7 @@ function CreateClubInformationPage() {
 								<p className='text-xs text-muted-foreground'>
 									{form.type === "text" && "Văn bản ngắn."}
 									{form.type === "html" && "Nội dung HTML có định dạng."}
+									{form.type === "markdown" && "Nội dung Markdown dài."}
 									{form.type === "url" && "Đường dẫn URL."}
 									{form.type === "image" && "URL ảnh, hỗ trợ nhập alt text."}
 									{form.type === "banner" &&

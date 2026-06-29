@@ -203,12 +203,7 @@ function LessonDetailPage() {
 					try {
 						const gradesRes = await courseService.getGrades(slug, lessonIdNum);
 						setPassed(
-							Object.fromEntries(
-								gradesRes.data.map((s) => [
-									s.user_id,
-									s.score === null ? null : s.score >= 1 ? true : false,
-								]),
-							),
+							Object.fromEntries(gradesRes.data.map((s) => [s.user_id, s.passed])),
 						);
 					} catch {
 						/* bỏ qua — phần điểm không chặn cả trang */
@@ -339,6 +334,8 @@ function LessonDetailPage() {
 		});
 		try {
 			await courseService.toggleAttendance(slug, lesson.id, userId, next, note);
+			// Tải lại để đồng bộ chi tiết điểm danh (ghi chú, kiểu, người ghi nhận) từ server.
+			await loadAll({ silent: true });
 		} catch (err) {
 			setPresent((prev) => {
 				const s = new Set(prev);

@@ -297,10 +297,22 @@ const StacksEditorWrapper = forwardRef<StacksEditorHandle, StacksEditorWrapperPr
 
 			const scheduleEditorMenuSync = () => {
 				cancelAnimationFrame(frameId);
-				frameId = requestAnimationFrame(syncEditorMenuState);
+				frameId = requestAnimationFrame(() => {
+					syncEditorMenuState();
+				});
 			};
 
-			const syncEvents = ["click", "focusin", "focusout", "input", "keyup", "mouseup", "pointerup"];
+			const syncEvents = [
+				"click",
+				"focusin",
+				"focusout",
+				"input",
+				"keyup",
+				"mouseover",
+				"mouseup",
+				"pointerover",
+				"pointerup",
+			];
 			const toolbarObserver = new MutationObserver(scheduleEditorMenuSync);
 
 			const handleTableDropdownToggle = (event: MouseEvent | PointerEvent) => {

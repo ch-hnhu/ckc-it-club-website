@@ -226,6 +226,7 @@ class CertificateTemplateController extends BaseApiController
             'course' => 'Khoá học mẫu',
             'cert_code' => $code,
             'issued_at' => now()->format('d/m/Y'),
+            'track' => 'Offline',
             'verify_url' => rtrim((string) config('app.url'), '/').'/verify/'.$code,
         ];
     }

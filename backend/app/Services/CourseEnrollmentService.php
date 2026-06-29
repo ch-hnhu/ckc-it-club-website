@@ -15,10 +15,16 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Nghiệp vụ ghi danh khoá học — dùng chung cho học viên tự đăng ký
- * (User\CourseController::enroll) và admin ghi danh/đổi track/xoá ghi danh
- * thay học viên (Admin\CourseController). Cùng một bộ điều kiện cho cả hai
- * luồng: đối tượng của khoá học, cửa sổ thời gian
- * ghi danh, giới hạn `max_offline_slots` (chống race bằng lockForUpdate).
+ * (User\CourseController::enroll) và admin ghi danh/xoá ghi danh thay học viên
+ * (Admin\CourseController). Cùng một bộ điều kiện cho cả hai luồng: đối tượng
+ * của khoá học, cửa sổ thời gian ghi danh, giới hạn `max_offline_slots`
+ * (chống race bằng lockForUpdate).
+ *
+ * Track của một ghi danh là cố định — chọn lúc ghi danh, không có cơ chế đổi
+ * track sau đó. Lý do: course_certificates unique theo (user_id, course_id, track),
+ * nên nếu track có thể đổi, một học viên có thể lần lượt hoàn thành cả 2 track
+ * và nhận 2 chứng chỉ cho cùng 1 khoá — không đúng với nghiệp vụ mong muốn
+ * (1 khoá chỉ 1 track, 1 loại chứng chỉ cho mỗi học viên).
  */
 class CourseEnrollmentService
 {
@@ -85,32 +91,6 @@ class CourseEnrollmentService
             ['user_id' => $user->id, 'course_id' => $course->id],
             ['track' => 'online', 'progress' => 0],
         );
-    }
-
-    /**
-     * Đổi track của một ghi danh đã có. Áp cùng điều kiện cửa sổ thời gian/slot
-     * như ghi danh mới cho track đích.
-     */
-    public function changeTrack(CourseEnrollment $enrollment, string $newTrack): CourseEnrollment
-    {
-        abort_if($enrollment->track === $newTrack, 422, 'Học viên đã ở track này.');
-
-        $course = $enrollment->course;
-        $now = now();
-
-        if ($newTrack === 'offline') {
-            $this->assertOfflineWindowOpen($course, $now);
-
-            DB::transaction(function () use ($course, $enrollment) {
-                $this->assertOfflineSlotAvailable($course);
-                $enrollment->update(['track' => 'offline']);
-            });
-        } else {
-            $this->assertOnlineWindowOpen($course, $now);
-            $enrollment->update(['track' => 'online']);
-        }
-
-        return app(CourseCompletionService::class)->recalc($enrollment->refresh());
     }
 
     /**

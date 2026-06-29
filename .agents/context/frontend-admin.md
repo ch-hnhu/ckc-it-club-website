@@ -88,6 +88,8 @@
 - academic structure import history and upload flow for faculty, major, and class files
 - `/club-informations`
 - club information list backed by `GET /club-informations` with search, sort, and pagination
+- `/club-informations/create`
+- create club information config form backed by `POST /club-informations`, gated by `club_info.manage`
 - `/requests`
 - recruitment application list
 - `/requests/:applicationId`
@@ -280,8 +282,11 @@
 - role detail can add one or more existing permissions from a modal multi-select combobox and remove assigned permissions directly from permission badges after confirmation. Permission removal is disabled for the `admin` role. The add option list is loaded from `GET /permissions` and filters out permissions already assigned to the role; add/remove both persist via `POST /roles/{role}/permissions` with the full permission name list. Permission detail also confirms before removing a role from a permission.
 - Club information management:
 - route `/club-informations`
+- route `/club-informations/create`
 - route `/club-informations/:id`
 - list uses server-driven pagination, search, and sorting through `clubInformationService.getClubInformations`; parent `club_informations.is_active` has been removed from the database/API because parent configs are stable code-facing contracts.
+- list exposes the "Thêm cấu hình" action only to admins with `club_info.manage`, linking to the create form.
+- create/detail value forms support the `markdown` club information type; Markdown values use the admin Stacks markdown editor when adding/editing, keep the original single-row scrolling toolbar style, and portal editor popovers/tooltips out of the modal scroll area so dropdowns are not clipped. Markdown values use the same long-text backend limit behavior as HTML.
 - detail uses `clubInformationService.getClubInformation(id, params)`; the nested value table supports API-driven search/sort and local pagination.
 - image and banner rows render the thumbnail preview and URL in the same value cell, matching the user list pattern; there is no separate image column.
 - the nested value table supports sorting by `alt` for image rows and `link`/`position` for banner rows in addition to the existing value/date/status keys.

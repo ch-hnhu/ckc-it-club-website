@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
 	ArrowDown,
@@ -28,6 +28,10 @@ import { toast } from "sonner";
 import clubInformationService from "@/services/club-information.service";
 import type { ApiErrorResponse } from "@/types/api.types";
 import { type ClubInformation, type ClubInformationValue } from "@/types/club-information";
+import { renderMarkdownContent } from "@/lib/markdown";
+import StacksEditorWrapper, {
+	type StacksEditorHandle,
+} from "@/components/ui/StacksEditorWrapper";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -112,6 +116,15 @@ const getInitialValueForm = (): ValueFormState => ({
 
 const HTML_VALUE_TEXTAREA_CLASS =
 	"min-h-32 max-h-64 resize-y overflow-y-auto [field-sizing:fixed] whitespace-pre-wrap break-words";
+
+const isLongTextType = (type?: string | null) => type === "html" || type === "markdown";
+
+const isMarkdownType = (type?: string | null) => type === "markdown";
+
+const getLongTextTypeLabel = (type?: string | null) => (type === "markdown" ? "Markdown" : "HTML");
+
+const getLongTextPlaceholder = (type?: string | null) =>
+	type === "markdown" ? "Nhập nội dung Markdown..." : "Nhập nội dung HTML...";
 
 const getValueFormFromRecord = (record: ClubInformationValue): ValueFormState => ({
 	value: record.value ?? "",
@@ -208,6 +221,8 @@ function ClubInformationDetailPage() {
 	const [detailValueForm, setDetailValueForm] = useState<ValueFormState>(getInitialValueForm);
 	const [detailValueFieldErrors, setDetailValueFieldErrors] = useState<ValueFieldErrors>({});
 	const [detailValueSubmitting, setDetailValueSubmitting] = useState(false);
+	const addValueMarkdownEditorRef = useRef<StacksEditorHandle>(null);
+	const detailValueMarkdownEditorRef = useRef<StacksEditorHandle>(null);
 	const [isEditingInfo, setIsEditingInfo] = useState(false);
 	const [infoForm, setInfoForm] = useState<InfoFormState | null>(null);
 	const [infoFieldErrors, setInfoFieldErrors] = useState<InfoFieldErrors>({});
@@ -371,7 +386,11 @@ function ClubInformationDetailPage() {
 			return;
 		}
 
-		if (!detailValueForm.value.trim()) {
+		const nextValue = isMarkdownType(info?.type)
+			? (detailValueMarkdownEditorRef.current?.getContent() ?? detailValueForm.value)
+			: detailValueForm.value;
+
+		if (!nextValue.trim()) {
 			setDetailValueFieldErrors({ value: "Vui lòng nhập giá trị." });
 			return;
 		}
@@ -386,7 +405,7 @@ function ClubInformationDetailPage() {
 				clubInformationId,
 				selectedValue.id,
 				{
-					value: detailValueForm.value.trim(),
+					value: nextValue.trim(),
 					link: detailValueForm.link.trim() || undefined,
 					alt: detailValueForm.alt.trim() || undefined,
 					position:
@@ -681,7 +700,11 @@ function ClubInformationDetailPage() {
 
 		const clubInformationId = Number(id);
 
-		if (!valueForm.value.trim()) {
+		const nextValue = isMarkdownType(info?.type)
+			? (addValueMarkdownEditorRef.current?.getContent() ?? valueForm.value)
+			: valueForm.value;
+
+		if (!nextValue.trim()) {
 			setValueFieldErrors({ value: "Vui lòng nhập giá trị." });
 			return;
 		}
@@ -698,7 +721,7 @@ function ClubInformationDetailPage() {
 			const response = await clubInformationService.createClubInformationValue(
 				clubInformationId,
 				{
-					value: valueForm.value.trim(),
+					value: nextValue.trim(),
 					link: valueForm.link.trim() || undefined,
 					alt: valueForm.alt.trim() || undefined,
 					position:
@@ -1136,12 +1159,12 @@ function ClubInformationDetailPage() {
 																</span>
 																<ExternalLink className='h-3 w-3 shrink-0' />
 															</a>
-														) : info.type === "html" ? (
+														) : isLongTextType(info.type) ? (
 															<div className='flex min-w-0 items-center gap-2'>
 																<Badge
 																	variant='secondary'
 																	className='shrink-0 text-xs'>
-																	HTML
+																	{getLongTextTypeLabel(info.type)}
 																</Badge>
 																<span
 																	className='truncate text-xs text-muted-foreground'
@@ -1472,7 +1495,12 @@ function ClubInformationDetailPage() {
 			</AlertDialog>
 
 			<Dialog open={isAddValueDialogOpen} onOpenChange={handleAddValueDialogOpenChange}>
-				<DialogContent className='max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[540px]'>
+				<DialogContent
+					className={
+						isMarkdownType(info.type)
+							? "max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto sm:max-w-[960px]"
+							: "max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[540px]"
+					}>
 					<DialogHeader>
 						<DialogTitle>
 							Thêm giá trị —{" "}
@@ -1482,9 +1510,9 @@ function ClubInformationDetailPage() {
 
 					<form
 						onSubmit={(e) => void handleAddValueSubmit(e)}
-						className='flex flex-col gap-4'>
-						{/* value — boolean: select; html: textarea; others: input */}
-						<div className='space-y-2'>
+						className='flex min-w-0 flex-col gap-4'>
+						{/* value — boolean: select; long text: textarea; others: input */}
+						<div className='min-w-0 space-y-2'>
 							<Label htmlFor='val_value'>
 								{info.type === "image" || info.type === "banner"
 									? "URL ảnh"
@@ -1508,11 +1536,22 @@ function ClubInformationDetailPage() {
 										<SelectItem value='false'>False (Tắt)</SelectItem>
 									</SelectContent>
 								</Select>
+							) : isMarkdownType(info.type) ? (
+								<div
+									className='min-w-0 overflow-hidden rounded-md border bg-background'>
+									<StacksEditorWrapper
+										key={`add-markdown-${info.id}-${isAddValueDialogOpen ? "open" : "closed"}`}
+										ref={addValueMarkdownEditorRef}
+										initialContent={valueForm.value}
+										placeholder={getLongTextPlaceholder(info.type)}
+										className='club-info-markdown-editor'
+									/>
+								</div>
 							) : info.type === "html" ? (
 								<Textarea
 									id='val_value'
 									className={HTML_VALUE_TEXTAREA_CLASS}
-									placeholder='Nhập nội dung HTML...'
+									placeholder={getLongTextPlaceholder(info.type)}
 									value={valueForm.value}
 									onChange={(e) => {
 										setValueForm((p) => ({ ...p, value: e.target.value }));
@@ -1635,7 +1674,8 @@ function ClubInformationDetailPage() {
 							/>
 						</div>
 
-						<DialogFooter>
+						<DialogFooter
+							className={isMarkdownType(info.type) ? "flex-row justify-end" : undefined}>
 							<Button
 								type='button'
 								variant='outline'
@@ -1657,7 +1697,12 @@ function ClubInformationDetailPage() {
 				onOpenChange={(open) => {
 					if (!open) closeValueDetail();
 				}}>
-				<DialogContent className='max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[540px] overflow-y-auto'>
+				<DialogContent
+					className={
+						isMarkdownType(info.type)
+							? "max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto sm:max-w-[960px]"
+							: "max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[540px] overflow-y-auto"
+					}>
 					{selectedValue ? (
 						<>
 							<DialogHeader>
@@ -1696,6 +1741,29 @@ function ClubInformationDetailPage() {
 												<SelectItem value='false'>False (Tắt)</SelectItem>
 											</SelectContent>
 										</Select>
+									) : isMarkdownType(info.type) ? (
+										isEditingValue ? (
+											<div
+												className='overflow-hidden rounded-md border bg-background'>
+												<StacksEditorWrapper
+													key={`detail-markdown-${selectedValue.id}-${isEditingValue ? "edit" : "view"}`}
+													ref={detailValueMarkdownEditorRef}
+													initialContent={detailValueForm.value}
+													placeholder={getLongTextPlaceholder(info.type)}
+													className='club-info-markdown-editor'
+												/>
+											</div>
+										) : (
+											<div
+												id='detail_val_value'
+												className='blog-content-viewer max-h-64 overflow-y-auto rounded-md border bg-muted/30 p-4'
+												dangerouslySetInnerHTML={{
+													__html: renderMarkdownContent(
+														selectedValue.value || "_Không có nội dung._",
+													),
+												}}
+											/>
+										)
 									) : info.type === "html" ? (
 										<Textarea
 											id='detail_val_value'
@@ -1910,7 +1978,10 @@ function ClubInformationDetailPage() {
 								</div>
 							</div>
 
-							<DialogFooter>
+							<DialogFooter
+								className={
+									isMarkdownType(info.type) ? "flex-row justify-end" : undefined
+								}>
 								<Button
 									type='button'
 									variant='outline'

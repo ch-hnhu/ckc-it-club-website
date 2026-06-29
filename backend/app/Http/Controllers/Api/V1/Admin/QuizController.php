@@ -49,6 +49,7 @@ class QuizController extends BaseApiController
 
         $quiz = DB::transaction(function () use ($lesson, $data, $typeMap) {
             $quiz = Quiz::firstOrCreate(['lesson_id' => $lesson->id]);
+            $quiz->update(['is_published' => (bool) ($data['is_published'] ?? false)]);
             $quiz->questions()->delete(); // cascade xoá options
 
             foreach ($data['questions'] as $qIndex => $q) {
@@ -85,6 +86,21 @@ class QuizController extends BaseApiController
         return $this->successResponse(true, $this->transform($quiz), 'Đã lưu quiz cho buổi học.');
     }
 
+    /**
+     * Xoá toàn bộ quiz của buổi học (câu hỏi và options tự cascade).
+     */
+    public function destroy(Course $course, Lesson $lesson): JsonResponse
+    {
+        $this->assertBelongsTo($course, $lesson);
+
+        $quiz = $lesson->quiz()->first();
+        abort_if(! $quiz, 404, 'Buổi học chưa có quiz.');
+
+        $quiz->delete();
+
+        return $this->successResponse(true, null, 'Đã xoá quiz của buổi học.');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private function assertBelongsTo(Course $course, Lesson $lesson): void
@@ -99,6 +115,7 @@ class QuizController extends BaseApiController
     private function validateData(Request $request, array $allowedTypes): array
     {
         return $request->validate([
+            'is_published' => 'boolean',
             'questions' => 'required|array|min:1',
             'questions.*.type' => ['required', 'string', Rule::in($allowedTypes)],
             'questions.*.ui_type' => 'nullable|string|max:50',
@@ -136,6 +153,7 @@ class QuizController extends BaseApiController
         return [
             'id' => $quiz->id,
             'lesson_id' => $quiz->lesson_id,
+            'is_published' => (bool) $quiz->is_published,
             'questions' => $quiz->questions->map(function (QuizQuestion $question) {
                 $metadata = $question->metadata ?? [];
                 $uiType = $metadata['ui_type'] ?? ($question->type?->key);

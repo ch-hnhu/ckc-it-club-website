@@ -169,17 +169,17 @@ class LessonController extends BaseApiController
     }
 
     /**
-     * Danh sách học viên track offline đã ghi danh + điểm bài tập hiện tại (nếu có) của buổi học.
+     * Danh sách học viên track offline đã ghi danh + trạng thái chấm bài tập (đạt/chưa chấm).
      * Chấm bài chỉ áp dụng cho track offline (online tính tiến độ theo % xem video).
      */
     public function grades(Course $course, Lesson $lesson): JsonResponse
     {
         $this->assertBelongsTo($course, $lesson);
 
-        $scores = LessonProgress::query()
+        $passedMap = LessonProgress::query()
             ->where('lesson_id', $lesson->id)
             ->where('section_type', LessonSectionType::ASSIGNMENT)
-            ->pluck('score', 'user_id');
+            ->pluck('is_completed', 'user_id');
 
         $students = $course->enrollments()
             ->where('track', 'offline')
@@ -192,7 +192,10 @@ class LessonController extends BaseApiController
                 'email' => $e->user?->email,
                 'avatar' => $this->resolveAvatar($e->user?->avatar),
                 'track' => $e->track,
-                'score' => isset($scores[$e->user_id]) ? (float) $scores[$e->user_id] : null,
+                // null = chưa chấm, true = đạt, false = không đạt
+                'passed' => array_key_exists($e->user_id, $passedMap->all())
+                    ? (bool) $passedMap[$e->user_id]
+                    : null,
             ])
             ->all();
 
@@ -200,8 +203,8 @@ class LessonController extends BaseApiController
     }
 
     /**
-     * Lưu điểm bài tập cho nhiều học viên track offline cùng lúc. score = null → bỏ điểm (chưa chấm).
-     * is_completed tính theo ngưỡng của LessonSectionType::ASSIGNMENT (80đ).
+     * Lưu kết quả chấm bài tập (đạt/không đạt) cho nhiều học viên track offline.
+     * passed = null → xoá bản ghi (chưa chấm); passed = true/false → ghi is_completed trực tiếp.
      */
     public function saveGrades(Request $request, Course $course, Lesson $lesson): JsonResponse
     {
@@ -210,14 +213,13 @@ class LessonController extends BaseApiController
         $data = $request->validate([
             'grades' => 'required|array',
             'grades.*.user_id' => 'required|integer',
-            'grades.*.score' => 'nullable|numeric|min:0|max:100',
+            'grades.*.passed' => 'nullable|boolean',
         ]);
 
         $offlineUserIds = $course->enrollments()->where('track', 'offline')->pluck('user_id')->all();
-        $threshold = LessonSectionType::ASSIGNMENT->completionThreshold();
         $newlyCompleted = [];
 
-        DB::transaction(function () use ($data, $lesson, $offlineUserIds, $threshold, &$newlyCompleted) {
+        DB::transaction(function () use ($data, $lesson, $offlineUserIds, &$newlyCompleted) {
             foreach ($data['grades'] as $grade) {
                 abort_if(
                     ! in_array($grade['user_id'], $offlineUserIds, true),
@@ -225,7 +227,7 @@ class LessonController extends BaseApiController
                     'Chỉ chấm bài tập cho học viên track offline.'
                 );
 
-                if ($grade['score'] === null) {
+                if ($grade['passed'] === null) {
                     LessonProgress::where([
                         'user_id' => $grade['user_id'],
                         'lesson_id' => $lesson->id,
@@ -241,7 +243,7 @@ class LessonController extends BaseApiController
                     'section_type' => LessonSectionType::ASSIGNMENT,
                 ])->first();
 
-                $isCompleted = $grade['score'] >= $threshold;
+                $isPassed = (bool) $grade['passed'];
 
                 $progress = LessonProgress::updateOrCreate(
                     [
@@ -250,13 +252,13 @@ class LessonController extends BaseApiController
                         'section_type' => LessonSectionType::ASSIGNMENT,
                     ],
                     [
-                        'score' => $grade['score'],
-                        'is_completed' => $isCompleted,
-                        'completed_at' => $isCompleted ? now() : null,
+                        'score' => null,
+                        'is_completed' => $isPassed,
+                        'completed_at' => $isPassed ? now() : null,
                     ],
                 );
 
-                if (! ((bool) $existing?->is_completed) && $isCompleted) {
+                if (! ((bool) $existing?->is_completed) && $isPassed) {
                     $newlyCompleted[] = $progress;
                 }
             }

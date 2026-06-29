@@ -9,6 +9,7 @@ import {
 	ChevronsRight,
 	Eye,
 	MoreHorizontal,
+	Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SortKey = "id" | "label" | "type" | "description" | "created_at";
 
@@ -57,6 +59,8 @@ function toBadgeItems(value?: string | null) {
 
 function ClubInformationList() {
 	const navigate = useNavigate();
+	const { hasPermission } = useAuth();
+	const canManageClubInformation = hasPermission("club_info.manage");
 	const breadcrumb = useMemo(
 		() => [{ title: "Dashboard", link: "/" }, { title: "Quản lý thông tin CLB" }],
 		[],
@@ -182,8 +186,17 @@ function ClubInformationList() {
 							placeholder='Tìm kiếm theo tên, kiểu dữ liệu hoặc mô tả...'
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
-							className='h-8 w-full sm:max-w-sm'
+							className='h-8 w-full min-w-0 flex-1 sm:max-w-sm'
 						/>
+						{canManageClubInformation ? (
+							<Button
+								size='sm'
+								onClick={() => navigate("/club-informations/create")}
+								className='h-8 bg-foreground text-background hover:bg-foreground/90'>
+								<Plus className='h-4 w-4' />
+								Thêm
+							</Button>
+						) : null}
 					</div>
 				</div>
 

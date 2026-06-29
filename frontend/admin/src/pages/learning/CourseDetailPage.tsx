@@ -3,10 +3,9 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
 import {
 	ArrowLeft,
-	ArrowLeftRight,
 	Award,
 	Ban,
-	BookOpen,
+	Eye,
 	CalendarCheck,
 	CalendarClock,
 	CheckCircle2,
@@ -23,6 +22,7 @@ import {
 	Trash2,
 	Users,
 	UserPlus,
+	BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -57,6 +57,13 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { TablePaginationFooter } from "@/components/TablePaginationFooter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
@@ -72,7 +79,11 @@ import {
 } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import type { AdminCourseDetail, EnrollmentTrack } from "@/pages/learning/course-detail.types";
+import type {
+	AdminCourseDetail,
+	CourseLessonRow,
+	EnrollmentTrack,
+} from "@/pages/learning/course-detail.types";
 import AssignmentGradeDialog from "@/pages/learning/AssignmentGradeDialog";
 import EnrollStudentDialog from "@/pages/learning/EnrollStudentDialog";
 import LessonAttendanceDialog from "@/pages/learning/LessonAttendanceDialog";
@@ -99,6 +110,63 @@ function formatDateTime(value: string | null) {
 
 function statusBadge(status: CourseStatus) {
 	const { label, className } = COURSE_STATUS_MAP[status];
+	return (
+		<Badge variant='outline' className={cn("rounded-full px-3 py-1", className)}>
+			{label}
+		</Badge>
+	);
+}
+
+type SessionStatus = "upcoming" | "ongoing" | "ended";
+
+/**
+ * Trạng thái một buổi học offline theo thời gian diễn ra của chính buổi đó.
+ * Trả về null nếu buổi chưa xếp lịch (không có session_start).
+ */
+function getSessionStatus(lesson: CourseLessonRow, now = new Date()): SessionStatus | null {
+	if (!lesson.session_start) return null;
+	const start = new Date(lesson.session_start);
+	if (now < start) return "upcoming";
+	if (!lesson.session_end || now <= new Date(lesson.session_end)) return "ongoing";
+	return "ended";
+}
+
+const SESSION_STATUS_MAP: Record<
+	SessionStatus | "scheduled",
+	{ label: string; className: string }
+> = {
+	upcoming: {
+		label: "Sắp diễn ra",
+		className: "border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
+	},
+	scheduled: {
+		label: "Chưa diễn ra",
+		className: "border-slate-400/20 bg-slate-400/10 text-slate-600 hover:bg-slate-400/10",
+	},
+	ongoing: {
+		label: "Đang diễn ra",
+		className:
+			"border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
+	},
+	ended: {
+		label: "Đã kết thúc",
+		className: "border-red-500/20 bg-red-500/10 text-red-700 hover:bg-red-500/10",
+	},
+};
+
+/**
+ * Badge trạng thái cho ô "Trạng thái" của buổi học:
+ * - Buổi nháp → luôn hiện "Bản nháp".
+ * - Buổi đã xuất bản có lịch offline → trạng thái theo thời gian diễn ra; trong các buổi
+ *   sắp tới chỉ buổi gần nhất (`isNearestUpcoming`) hiện "Sắp diễn ra", còn lại "Chưa diễn ra".
+ * - Buổi đã xuất bản không có lịch (online) → giữ "Đã xuất bản".
+ */
+function lessonStatusBadge(lesson: CourseLessonRow, isNearestUpcoming: boolean) {
+	if (lesson.status === "draft") return statusBadge("draft");
+	const sessionStatus = getSessionStatus(lesson);
+	if (!sessionStatus) return statusBadge(lesson.status);
+	const key = sessionStatus === "upcoming" && !isNearestUpcoming ? "scheduled" : sessionStatus;
+	const { label, className } = SESSION_STATUS_MAP[key];
 	return (
 		<Badge variant='outline' className={cn("rounded-full px-3 py-1", className)}>
 			{label}
@@ -191,7 +259,6 @@ function CourseDetailPage() {
 	>(null);
 	const [isDeletingLesson, setIsDeletingLesson] = useState(false);
 	const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
-	const [changingTrackId, setChangingTrackId] = useState<number | null>(null);
 	const [removingEnrollment, setRemovingEnrollment] = useState<
 		AdminCourseDetail["enrollments"][number] | null
 	>(null);
@@ -260,6 +327,22 @@ function CourseDetailPage() {
 		);
 	}, [offlineLessons]);
 
+	/**
+	 * Buổi sắp diễn ra gần nhất — buổi đã xuất bản, chưa tới giờ, có session_start
+	 * sớm nhất. Chỉ buổi này hiện "Sắp diễn ra"; các buổi tương lai sau đó "Chưa diễn ra".
+	 */
+	const nearestUpcomingLessonId = useMemo(() => {
+		const now = new Date();
+		return (
+			offlineLessons
+				.filter((l) => l.status !== "draft" && new Date(l.session_start!) > now)
+				.sort(
+					(a, b) =>
+						new Date(a.session_start!).getTime() - new Date(b.session_start!).getTime(),
+				)[0]?.id ?? null
+		);
+	}, [offlineLessons]);
+
 	/** Các buổi offline đã kết thúc — chỉ những buổi này mới cho "Sửa điểm danh". */
 	const pastOfflineLessonIds = useMemo(() => {
 		const now = new Date();
@@ -320,26 +403,6 @@ function CourseDetailPage() {
 			toast.error("Không thể xóa buổi học.", { position: "top-right" });
 		} finally {
 			setIsDeletingLesson(false);
-		}
-	};
-
-	const handleChangeTrack = async (
-		enrollment: AdminCourseDetail["enrollments"][number],
-		track: EnrollmentTrack,
-	) => {
-		setChangingTrackId(enrollment.id);
-		try {
-			await courseService.updateEnrollmentTrack(slug, enrollment.id, track);
-			toast.success("Đã đổi hình thức học.", { position: "top-right" });
-			await loadCourse({ silent: true });
-		} catch (err) {
-			const message =
-				isAxiosError(err) && (err.response?.data as ApiErrorResponse | undefined)?.message
-					? String((err.response?.data as ApiErrorResponse).message)
-					: "Không thể đổi hình thức học.";
-			toast.error(message, { position: "top-right" });
-		} finally {
-			setChangingTrackId(null);
 		}
 	};
 
@@ -595,7 +658,7 @@ function CourseDetailPage() {
 						<div className='mb-3 flex items-center justify-end'>
 							<Button size='sm' className='h-8' onClick={openCreateLesson}>
 								<Plus className='h-4 w-4' />
-								Thêm buổi học
+								Thêm
 							</Button>
 						</div>
 						<div className='overflow-hidden rounded-md border'>
@@ -691,7 +754,10 @@ function CourseDetailPage() {
 														</TableCell>
 													)}
 													<TableCell>
-														{statusBadge(lesson.status)}
+														{lessonStatusBadge(
+															lesson,
+															lesson.id === nearestUpcomingLessonId,
+														)}
 													</TableCell>
 													<TableCell>
 														<DropdownMenu>
@@ -705,17 +771,17 @@ function CourseDetailPage() {
 															<DropdownMenuContent
 																align='end'
 																className='w-[160px]'>
-																	{hasOffline && (
-																		<DropdownMenuItem
-																			onClick={() =>
-																				openLessonDetail(
-																					lesson.id,
-																				)
-																			}>
-																			<BookOpen className='h-4 w-4' />
-																			Xem chi tiết
-																		</DropdownMenuItem>
-																	)}
+																{hasOffline && (
+																	<DropdownMenuItem
+																		onClick={() =>
+																			openLessonDetail(
+																				lesson.id,
+																			)
+																		}>
+																		<Eye className='h-4 w-4' />
+																		Xem chi tiết
+																	</DropdownMenuItem>
+																)}
 																<DropdownMenuItem
 																	onClick={() =>
 																		openEditLesson(lesson.id)
@@ -838,7 +904,7 @@ function CourseDetailPage() {
 									<TableRow>
 										<TableHead className='w-[70px]'>STT</TableHead>
 										<TableHead className='min-w-[240px]'>Học viên</TableHead>
-										<TableHead className='w-[110px]'>Track</TableHead>
+										<TableHead className='w-[110px]'>Hình thức</TableHead>
 										<TableHead className='min-w-[180px]'>Tiến độ</TableHead>
 										<TableHead className='w-[150px]'>Hoàn thành</TableHead>
 										<TableHead className='w-[52px]' />
@@ -902,29 +968,13 @@ function CourseDetailPage() {
 														<DropdownMenuTrigger asChild>
 															<Button
 																variant='ghost'
-																className='h-8 w-8 p-0 data-[state=open]:bg-muted'
-																disabled={changingTrackId === e.id}>
+																className='h-8 w-8 p-0 data-[state=open]:bg-muted'>
 																<MoreHorizontal className='h-4 w-4' />
 															</Button>
 														</DropdownMenuTrigger>
 														<DropdownMenuContent
 															align='end'
 															className='w-[180px]'>
-															<DropdownMenuItem
-																onClick={() =>
-																	handleChangeTrack(
-																		e,
-																		e.track === "offline"
-																			? "online"
-																			: "offline",
-																	)
-																}>
-																<ArrowLeftRight className='h-4 w-4' />
-																Chuyển sang{" "}
-																{e.track === "offline"
-																	? "Online"
-																	: "Offline"}
-															</DropdownMenuItem>
 															<DropdownMenuItem
 																className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 																onClick={() =>
@@ -975,7 +1025,7 @@ function CourseDetailPage() {
 											Mã chứng chỉ
 										</TableHead>
 										<TableHead className='min-w-[240px]'>Học viên</TableHead>
-										<TableHead className='w-[110px]'>Track</TableHead>
+										<TableHead className='w-[110px]'>Hình thức</TableHead>
 										<TableHead className='w-[150px]'>Ngày cấp</TableHead>
 										<TableHead className='w-[130px]'>Trạng thái</TableHead>
 										<TableHead className='w-[52px]' />
@@ -1187,32 +1237,41 @@ function CourseDetailPage() {
 				</AlertDialogContent>
 			</AlertDialog>
 
-			<AlertDialog
+			<Dialog
 				open={deletingLesson !== null}
 				onOpenChange={(o) => !o && setDeletingLesson(null)}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Xóa buổi học?</AlertDialogTitle>
-						<AlertDialogDescription>
-							{deletingLesson
-								? `Bạn có chắc muốn xóa "Buổi ${deletingLesson.order}: ${deletingLesson.title}"? Tiến độ và điểm danh liên quan sẽ không còn truy cập được.`
-								: ""}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isDeletingLesson}>Hủy</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={(e) => {
-								e.preventDefault();
-								void handleDeleteLesson();
-							}}
-							disabled={isDeletingLesson}
-							className='bg-destructive text-white hover:bg-destructive/90'>
+				<DialogContent className='sm:max-w-[440px]'>
+					<DialogHeader>
+						<DialogTitle>Xác nhận xóa buổi học</DialogTitle>
+					</DialogHeader>
+					{deletingLesson && (
+						<div className='space-y-2 text-sm text-muted-foreground'>
+							<p>
+								Bạn sắp xóa buổi học{" "}
+								<span className='font-semibold text-foreground'>
+									"{deletingLesson.title}"
+								</span>
+								.
+							</p>
+							<p>Tiến độ và điểm danh liên quan sẽ không còn truy cập được.</p>
+						</div>
+					)}
+					<DialogFooter>
+						<Button
+							variant='outline'
+							onClick={() => setDeletingLesson(null)}
+							disabled={isDeletingLesson}>
+							Hủy
+						</Button>
+						<Button
+							variant='destructive'
+							onClick={() => void handleDeleteLesson()}
+							disabled={isDeletingLesson}>
 							{isDeletingLesson ? "Đang xóa..." : "Xóa buổi học"}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

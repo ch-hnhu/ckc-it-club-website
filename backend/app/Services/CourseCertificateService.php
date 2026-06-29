@@ -79,6 +79,7 @@ class CourseCertificateService
             'course' => $enrollment->course->title,
             'cert_code' => $certCode,
             'issued_at' => now()->format('d/m/Y'),
+            'track' => $enrollment->track === 'offline' ? 'Offline' : 'Online',
             'verify_url' => rtrim((string) config('app.url'), '/').'/verify/'.$certCode,
         ];
 

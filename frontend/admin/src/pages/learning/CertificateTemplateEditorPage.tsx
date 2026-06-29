@@ -74,6 +74,7 @@ const PLACEHOLDERS: Array<{ token: string; label: string }> = [
 	{ token: "{{course}}", label: "Tên khóa học" },
 	{ token: "{{issued_at}}", label: "Ngày cấp" },
 	{ token: "{{cert_code}}", label: "Mã chứng chỉ" },
+	{ token: "{{track}}", label: "Hình thức học" },
 ];
 
 const emptyDesign = (): CertificateDesign => ({
