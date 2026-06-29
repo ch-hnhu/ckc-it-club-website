@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\V1\User\QuizController as UserQuizController;
 use App\Http\Controllers\Api\V1\User\EventController as UserEventController;
 use App\Http\Controllers\Api\V1\User\GamificationController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
+use App\Http\Controllers\Api\V1\User\BoardController as ProjectHubController;
 use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
 use App\Http\Controllers\Api\V1\User\UserNotificationController;
@@ -246,6 +247,47 @@ Route::prefix('v1')->group(function () {
         Route::prefix('gamification')->group(function () {
             Route::get('/me', [GamificationController::class, 'me']);
             Route::get('/me/history', [GamificationController::class, 'history']);
+        });
+
+        // ProjectHub — bảng Kanban quản lý tiến độ (chỉ thành viên của board)
+        Route::prefix('projecthub')->group(function () {
+            // Tùy chọn liên kết (course/event) cho board
+            Route::get('link-options', [ProjectHubController::class, 'linkOptions']);
+
+            // Boards
+            Route::get('boards', [ProjectHubController::class, 'index']);
+            Route::post('boards', [ProjectHubController::class, 'store']);
+            Route::get('boards/{board}', [ProjectHubController::class, 'show']);
+            Route::put('boards/{board}', [ProjectHubController::class, 'update']);
+            Route::patch('boards/{board}', [ProjectHubController::class, 'update']);
+            Route::patch('boards/{board}/archive', [ProjectHubController::class, 'archive']);
+            Route::delete('boards/{board}', [ProjectHubController::class, 'destroy']);
+
+            // Columns (đăng ký 'reorder' trước '{column}' để không bị che route)
+            Route::post('boards/{board}/columns', [ProjectHubController::class, 'storeColumn']);
+            Route::patch('boards/{board}/columns/reorder', [ProjectHubController::class, 'reorderColumns']);
+            Route::put('boards/{board}/columns/{column}', [ProjectHubController::class, 'updateColumn']);
+            Route::patch('boards/{board}/columns/{column}', [ProjectHubController::class, 'updateColumn']);
+            Route::delete('boards/{board}/columns/{column}', [ProjectHubController::class, 'destroyColumn']);
+
+            // Members
+            Route::get('boards/{board}/members', [ProjectHubController::class, 'members']);
+            Route::get('boards/{board}/assignable-users', [ProjectHubController::class, 'assignableUsers']);
+            Route::post('boards/{board}/members', [ProjectHubController::class, 'storeMember']);
+            Route::patch('boards/{board}/members/{user}', [ProjectHubController::class, 'updateMemberRole']);
+            Route::delete('boards/{board}/members/{user}', [ProjectHubController::class, 'destroyMember']);
+
+            // Tasks (đăng ký '{task}/move' trước '{task}' chung)
+            Route::post('boards/{board}/tasks', [ProjectHubController::class, 'storeTask']);
+            Route::patch('boards/{board}/tasks/{task}/move', [ProjectHubController::class, 'moveTask']);
+            Route::put('boards/{board}/tasks/{task}', [ProjectHubController::class, 'updateTask']);
+            Route::patch('boards/{board}/tasks/{task}', [ProjectHubController::class, 'updateTask']);
+            Route::delete('boards/{board}/tasks/{task}', [ProjectHubController::class, 'destroyTask']);
+
+            // Checklist (việc con của task)
+            Route::post('boards/{board}/tasks/{task}/checklist', [ProjectHubController::class, 'storeChecklistItem']);
+            Route::patch('boards/{board}/tasks/{task}/checklist/{item}', [ProjectHubController::class, 'updateChecklistItem']);
+            Route::delete('boards/{board}/tasks/{task}/checklist/{item}', [ProjectHubController::class, 'destroyChecklistItem']);
         });
     });
 

@@ -88,6 +88,7 @@ import AssignmentGradeDialog from "@/pages/learning/AssignmentGradeDialog";
 import EnrollStudentDialog from "@/pages/learning/EnrollStudentDialog";
 import LessonAttendanceDialog from "@/pages/learning/LessonAttendanceDialog";
 import LessonCheckInDialog from "@/pages/learning/LessonCheckInDialog";
+import LinkedBoardsCard from "@/components/projecthub/LinkedBoardsCard";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -570,7 +571,9 @@ function CourseDetailPage() {
 					/>
 				</div>
 
-				{/* Tabs */}
+				<LinkedBoardsCard courseId={course.id} />
+
+					{/* Tabs */}
 				<Tabs
 					defaultValue={
 						["overview", "lessons", "students", "certificates"].includes(

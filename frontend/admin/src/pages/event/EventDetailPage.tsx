@@ -32,6 +32,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import EventCheckInDialog from "@/pages/event/EventCheckInDialog";
+import LinkedBoardsCard from "@/components/projecthub/LinkedBoardsCard";
 import { STATUS_MAP } from "@/pages/event/event-status";
 import type { EventRecord, EventStatus } from "@/pages/event/EventListPage";
 import eventService from "@/services/event.service";
@@ -891,7 +892,9 @@ function EventDetailPage() {
 					</CardContent>
 				</Card>
 
-				{/* Tabs: participants / feedback / gallery */}
+				<LinkedBoardsCard eventId={event.id} />
+
+					{/* Tabs: participants / feedback / gallery */}
 				<Tabs defaultValue='registrations' className='gap-4'>
 					<TabsList>
 						<TabsTrigger value='registrations'>

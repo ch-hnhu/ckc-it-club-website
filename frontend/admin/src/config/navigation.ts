@@ -5,6 +5,7 @@ import {
 	Globe,
 	GraduationCap,
 	House,
+	LayoutGrid,
 	MailOpen,
 	Trophy,
 	UserRoundPlus,
@@ -267,6 +268,12 @@ export const adminNavMain: AdminNavItem[] = [
 		url: "/contacts",
 		icon: MailOpen,
 		permission: "contacts.view",
+	},
+	{
+		// Không gắn permission: ProjectHub mở cho mọi tài khoản đăng nhập (API chỉ yêu cầu auth)
+		title: "ProjectHub",
+		url: "/du-an",
+		icon: LayoutGrid,
 	},
 ];
 

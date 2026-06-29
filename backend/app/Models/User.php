@@ -127,6 +127,36 @@ class User extends Authenticatable
     }
 
     /**
+     * Các board (ProjectHub) do user này tạo.
+     */
+    public function ownedBoards(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Board::class, 'created_by');
+    }
+
+    /**
+     * Các board mà user là thành viên.
+     */
+    public function boards(): BelongsToMany
+    {
+        return $this->belongsToMany(Board::class, 'board_members')
+            ->using(BoardMember::class)
+            ->withPivot('role', 'joined_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * Các task được giao cho user.
+     */
+    public function assignedTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(BoardTask::class, 'board_task_assignees', 'user_id', 'task_id')
+            ->using(BoardTaskAssignee::class)
+            ->withPivot('assigned_at')
+            ->withTimestamps();
+    }
+
+    /**
      * Kiểm tra user có phải trưởng ban của một department hay không.
      *
      * Điều kiện: user thuộc department VÀ có role trùng với department.head_role_id.
