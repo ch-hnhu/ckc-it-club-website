@@ -203,12 +203,7 @@ function LessonDetailPage() {
 					try {
 						const gradesRes = await courseService.getGrades(slug, lessonIdNum);
 						setPassed(
-							Object.fromEntries(
-								gradesRes.data.map((s) => [
-									s.user_id,
-									s.score === null ? null : s.score >= 1 ? true : false,
-								]),
-							),
+							Object.fromEntries(gradesRes.data.map((s) => [s.user_id, s.passed])),
 						);
 					} catch {
 						/* bỏ qua — phần điểm không chặn cả trang */

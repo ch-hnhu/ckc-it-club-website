@@ -18,7 +18,7 @@ class StoreClubInformationValueRequest extends FormRequest
         $clubInformation = $this->route('clubInformation');
         $valueRules = ['required', 'string'];
 
-        if ($clubInformation?->type !== 'html') {
+        if (! in_array($clubInformation?->type, ['html', 'markdown'], true)) {
             $valueRules[] = 'max:1000';
         }
 
@@ -35,7 +35,7 @@ class StoreClubInformationValueRequest extends FormRequest
     {
         return [
             'value.required'    => 'Vui lòng nhập giá trị.',
-            'value.max'         => 'Giá trị không được vượt quá 1000 ký tự. Cấu hình HTML không áp dụng giới hạn này.',
+            'value.max'         => 'Giá trị không được vượt quá 1000 ký tự. Cấu hình HTML/Markdown không áp dụng giới hạn này.',
             'link.max'          => 'Link không được vượt quá 1000 ký tự.',
             'alt.max'           => 'Alt text không được vượt quá 255 ký tự.',
             'position.integer'  => 'Vị trí phải là số nguyên.',
