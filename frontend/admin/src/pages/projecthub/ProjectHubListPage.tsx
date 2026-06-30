@@ -64,7 +64,7 @@ const ProjectHubListPage: React.FC = () => {
 					</p>
 				</div>
 				<Button onClick={() => setShowCreate(true)}>
-					<Plus className='mr-1.5 h-4 w-4' /> Tạo dự án
+					<Plus className='h-4 w-4' /> Tạo dự án
 				</Button>
 			</div>
 
@@ -90,7 +90,7 @@ const ProjectHubListPage: React.FC = () => {
 					</p>
 					{tab === "active" && (
 						<Button className='mt-4' onClick={() => setShowCreate(true)}>
-							<Plus className='mr-1.5 h-4 w-4' /> Tạo dự án đầu tiên
+							<Plus className='h-4 w-4' /> Tạo dự án đầu tiên
 						</Button>
 					)}
 				</div>

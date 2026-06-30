@@ -248,7 +248,7 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 					<div className='space-y-2'>
 						<div className='flex items-center justify-between'>
 							<Label className='flex items-center gap-1.5'>
-								<CircleCheckBig className='h-4 w-4' /> Việc cần làm
+								<CircleCheckBig className='h-4 w-4' /> Checklist
 							</Label>
 							{checklistTotal > 0 && (
 								<span className='text-xs font-medium text-muted-foreground'>
@@ -339,13 +339,12 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 				{canEdit && (
 					<DialogFooter className='sm:justify-between'>
 						<Button
-							variant='outline'
-							className='text-destructive'
+							className='text-destructive border-0 bg-transparent hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/20'
 							onClick={() => onDelete(task.id)}>
-							<Trash2 className='mr-1.5 h-4 w-4' /> Xóa
+							<Trash2 className='h-4 w-4' /> Xoá
 						</Button>
 						<Button onClick={handleSave} disabled={saving || !title.trim()}>
-							{saving ? "Đang lưu..." : "Lưu thay đổi"}
+							{saving ? "Đang lưu..." : "Lưu"}
 						</Button>
 					</DialogFooter>
 				)}

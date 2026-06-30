@@ -1,6 +1,26 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+	DndContext,
+	DragOverlay,
+	KeyboardSensor,
+	PointerSensor,
+	pointerWithin,
+	rectIntersection,
+	useSensor,
+	useSensors,
+	type CollisionDetection,
+	type DragEndEvent,
+	type DragOverEvent,
+	type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+	SortableContext,
+	arrayMove,
+	horizontalListSortingStrategy,
+	sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import {
 	Archive,
 	ArrowLeft,
 	CalendarDays,
@@ -38,12 +58,64 @@ import type {
 	UpdateTaskInput,
 } from "@/types/projecthub.types";
 import BoardColumn from "@/components/projecthub/BoardColumn";
+import { TaskCardPreview } from "@/components/projecthub/TaskCard";
+import { columnDndId, taskDndId } from "@/components/projecthub/dnd";
 import TaskDialog from "@/components/projecthub/TaskDialog";
 import ManageMembersDialog from "@/components/projecthub/ManageMembersDialog";
 import LinkBoardDialog from "@/components/projecthub/LinkBoardDialog";
 import { initials } from "@/components/projecthub/constants";
 
-type DragInfo = { taskId: number; fromColumnId: number; index: number };
+type TaskDragOrigin = { taskId: number; columnId: number; index: number };
+type ColumnDragOrigin = { columnId: number; index: number };
+type ActiveDrag =
+	| { type: "task"; task: ProjectTask; origin: TaskDragOrigin }
+	| { type: "column"; column: ProjectDetail["columns"][number]; origin: ColumnDragOrigin };
+
+const getTaskIdFromDndId = (id: string) =>
+	id.startsWith("task-") ? Number(id.replace("task-", "")) : null;
+
+const getColumnIdFromDndId = (id: string) =>
+	/^column-\d+$/.test(id) ? Number(id.replace("column-", "")) : null;
+
+const getColumnDropIdFromDndId = (id: string) =>
+	id.startsWith("column-drop-") ? Number(id.replace("column-drop-", "")) : null;
+
+const findTaskLocation = (columns: ProjectDetail["columns"], taskId: number) => {
+	for (const column of columns) {
+		const index = (column.tasks ?? []).findIndex((task) => task.id === taskId);
+		if (index !== -1) {
+			return { columnId: column.id, index, task: (column.tasks ?? [])[index] };
+		}
+	}
+	return null;
+};
+
+const moveTaskInColumns = (
+	columns: ProjectDetail["columns"],
+	taskId: number,
+	toColumnId: number,
+	toIndex: number,
+) => {
+	const source = findTaskLocation(columns, taskId);
+	if (!source) return { columns, moved: false };
+
+	const nextColumns = columns.map((column) => ({
+		...column,
+		tasks: [...(column.tasks ?? [])],
+	}));
+	const fromColumn = nextColumns.find((column) => column.id === source.columnId);
+	const toColumn = nextColumns.find((column) => column.id === toColumnId);
+	if (!fromColumn || !toColumn) return { columns, moved: false };
+
+	const [movedTask] = fromColumn.tasks.splice(source.index, 1);
+	const boundedIndex = Math.max(0, Math.min(toIndex, toColumn.tasks.length));
+	if (source.columnId === toColumnId && source.index === boundedIndex) {
+		return { columns, moved: false };
+	}
+
+	toColumn.tasks.splice(boundedIndex, 0, { ...movedTask, column_id: toColumnId });
+	return { columns: nextColumns, moved: true };
+};
 
 const ProjectBoardPage: React.FC = () => {
 	const { slug = "" } = useParams();
@@ -60,11 +132,30 @@ const ProjectBoardPage: React.FC = () => {
 	const [addingColumn, setAddingColumn] = useState(false);
 	const [columnName, setColumnName] = useState("");
 
-	const draggingRef = useRef<DragInfo | null>(null);
-	const [dropTarget, setDropTarget] = useState<{ columnId: number; index: number } | null>(null);
-	const columnDraggingRef = useRef<number | null>(null);
-	const [columnDragId, setColumnDragId] = useState<number | null>(null);
-	const [columnDropTarget, setColumnDropTarget] = useState<number | null>(null);
+	const boardRef = useRef<ProjectDetail | null>(null);
+	const boardBeforeDragRef = useRef<ProjectDetail | null>(null);
+	const activeDragRef = useRef<ActiveDrag | null>(null);
+	const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+
+	const sensors = useSensors(
+		useSensor(PointerSensor, {
+			activationConstraint: {
+				distance: 6,
+			},
+		}),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates,
+		}),
+	);
+
+	const collisionDetection: CollisionDetection = useCallback((args) => {
+		const pointerIntersections = pointerWithin(args);
+		return pointerIntersections.length > 0 ? pointerIntersections : rectIntersection(args);
+	}, []);
+
+	useEffect(() => {
+		boardRef.current = board;
+	}, [board]);
 
 	useBreadcrumb([
 		{ title: "Dashboard", link: "/" },
@@ -224,104 +315,203 @@ const ProjectBoardPage: React.FC = () => {
 		}
 	};
 
-	// ── Drag & drop task ───────────────────────────────────────────────────────
-	const onTaskDragStart = (task: ProjectTask, columnId: number, index: number) => {
-		draggingRef.current = { taskId: task.id, fromColumnId: columnId, index };
-	};
-	const onTaskDragEnd = () => {
-		draggingRef.current = null;
-		setDropTarget(null);
-	};
-	const onTaskDragOver = (columnId: number, index: number, e: React.DragEvent) => {
-		if (!draggingRef.current) return;
-		e.preventDefault();
-		setDropTarget((cur) =>
-			cur && cur.columnId === columnId && cur.index === index ? cur : { columnId, index },
+	// ── Drag & drop board ─────────────────────────────────────────────────────
+	const resolveTaskTarget = useCallback(
+		(overId: string, event?: DragOverEvent | DragEndEvent) => {
+			const currentBoard = boardRef.current;
+			if (!currentBoard) return null;
+
+			const overTaskId = getTaskIdFromDndId(overId);
+			if (overTaskId != null) {
+				const location = findTaskLocation(currentBoard.columns, overTaskId);
+				if (!location) return null;
+				const isBelow =
+					event?.active.rect.current.translated &&
+					event.active.rect.current.translated.top >
+						event.over!.rect.top + event.over!.rect.height / 2;
+				return {
+					columnId: location.columnId,
+					index: location.index + (isBelow ? 1 : 0),
+				};
+			}
+
+			const dropColumnId = getColumnDropIdFromDndId(overId);
+			if (dropColumnId != null) {
+				const column = currentBoard.columns.find((item) => item.id === dropColumnId);
+				return column ? { columnId: dropColumnId, index: column.tasks?.length ?? 0 } : null;
+			}
+
+			const overColumnId = getColumnIdFromDndId(overId);
+			if (overColumnId != null && Number.isFinite(overColumnId)) {
+				const column = currentBoard.columns.find((item) => item.id === overColumnId);
+				return column ? { columnId: overColumnId, index: column.tasks?.length ?? 0 } : null;
+			}
+
+			return null;
+		},
+		[],
+	);
+
+	const resolveColumnTargetIndex = useCallback((overId: string) => {
+		const currentBoard = boardRef.current;
+		if (!currentBoard) return null;
+
+		const overColumnId = getColumnIdFromDndId(overId);
+		const dropColumnId = getColumnDropIdFromDndId(overId);
+		const overTaskId = getTaskIdFromDndId(overId);
+		let targetColumnId = Number.isFinite(overColumnId) ? overColumnId : dropColumnId;
+
+		if (targetColumnId == null && overTaskId != null) {
+			targetColumnId = findTaskLocation(currentBoard.columns, overTaskId)?.columnId ?? null;
+		}
+
+		if (targetColumnId == null) return null;
+		const targetIndex = currentBoard.columns.findIndex(
+			(column) => column.id === targetColumnId,
 		);
-	};
-	const onTaskDrop = async (columnId: number, index: number, e: React.DragEvent) => {
-		const drag = draggingRef.current;
-		if (!drag) return; // đang kéo cột → để nổi bọt lên handler cột
-		e.preventDefault();
-		e.stopPropagation();
-		setDropTarget(null);
-		draggingRef.current = null;
+		return targetIndex === -1 ? null : targetIndex;
+	}, []);
 
-		let insertIndex = index;
-		if (drag.fromColumnId === columnId && drag.index < index) insertIndex = index - 1;
-		if (drag.fromColumnId === columnId && insertIndex === drag.index) return;
+	const handleDragStart = (event: DragStartEvent) => {
+		if (!canEdit || !boardRef.current) return;
 
-		const prev = board;
-		setBoard((b) => {
-			if (!b) return b;
-			const cols = b.columns.map((c) => ({ ...c, tasks: [...(c.tasks ?? [])] }));
-			const from = cols.find((c) => c.id === drag.fromColumnId);
-			const to = cols.find((c) => c.id === columnId);
-			if (!from || !to) return b;
-			const ti = from.tasks.findIndex((t) => t.id === drag.taskId);
-			if (ti === -1) return b;
-			const [moved] = from.tasks.splice(ti, 1);
-			moved.column_id = columnId;
-			to.tasks.splice(insertIndex, 0, moved);
-			return { ...b, columns: cols };
-		});
+		const data = event.active.data.current;
+		boardBeforeDragRef.current = boardRef.current;
 
-		try {
-			await projectHubService.moveTask(slug, drag.taskId, {
-				column_id: columnId,
-				position: insertIndex,
-			});
-		} catch {
-			toast.error("Di chuyển thất bại");
-			setBoard(prev);
+		if (data?.type === "task") {
+			const task = data.task as ProjectTask;
+			const location = findTaskLocation(boardRef.current.columns, task.id);
+			if (!location) return;
+			const nextDrag: ActiveDrag = {
+				type: "task",
+				task,
+				origin: { taskId: task.id, columnId: location.columnId, index: location.index },
+			};
+			activeDragRef.current = nextDrag;
+			setActiveDrag(nextDrag);
+			return;
+		}
+
+		if (data?.type === "column") {
+			const column = data.column as ProjectDetail["columns"][number];
+			const index = boardRef.current.columns.findIndex((item) => item.id === column.id);
+			if (index === -1) return;
+			const nextDrag: ActiveDrag = {
+				type: "column",
+				column,
+				origin: { columnId: column.id, index },
+			};
+			activeDragRef.current = nextDrag;
+			setActiveDrag(nextDrag);
 		}
 	};
 
-	// ── Drag & drop cột ────────────────────────────────────────────────────────
-	const onColumnDragStart = (columnId: number) => {
-		columnDraggingRef.current = columnId;
-		setColumnDragId(columnId);
-	};
-	const onColumnDragEnd = () => {
-		columnDraggingRef.current = null;
-		setColumnDragId(null);
-		setColumnDropTarget(null);
-	};
-	const onColumnDragOver = (index: number, e: React.DragEvent) => {
-		if (columnDraggingRef.current == null) return;
-		e.preventDefault();
-		setColumnDropTarget((cur) => (cur === index ? cur : index));
-	};
-	const onColumnDrop = async (index: number, e: React.DragEvent) => {
-		if (columnDraggingRef.current == null) return;
-		e.preventDefault();
-		const dragId = columnDraggingRef.current;
-		setColumnDropTarget(null);
-		columnDraggingRef.current = null;
-		setColumnDragId(null);
-		if (!board) return;
+	const handleDragOver = (event: DragOverEvent) => {
+		const drag = activeDragRef.current;
+		if (!drag || !event.over) return;
 
-		const fromIndex = board.columns.findIndex((c) => c.id === dragId);
-		if (fromIndex === -1) return;
-		let insertIndex = index;
-		if (fromIndex < index) insertIndex = index - 1;
-		if (insertIndex === fromIndex) return;
+		if (drag.type === "task") {
+			if (String(event.over.id) === taskDndId(drag.task.id)) return;
+			const target = resolveTaskTarget(String(event.over.id), event);
+			if (!target) return;
 
-		const prev = board;
-		const newCols = [...board.columns];
-		const [moved] = newCols.splice(fromIndex, 1);
-		newCols.splice(insertIndex, 0, moved);
-		setBoard({ ...board, columns: newCols });
+			setBoard((currentBoard) => {
+				if (!currentBoard) return currentBoard;
+				const result = moveTaskInColumns(
+					currentBoard.columns,
+					drag.task.id,
+					target.columnId,
+					target.index,
+				);
+				if (!result.moved) return currentBoard;
+				const nextBoard = { ...currentBoard, columns: result.columns };
+				boardRef.current = nextBoard;
+				return nextBoard;
+			});
+			return;
+		}
+
+		const targetIndex = resolveColumnTargetIndex(String(event.over.id));
+		if (targetIndex == null) return;
+
+		setBoard((currentBoard) => {
+			if (!currentBoard) return currentBoard;
+			const fromIndex = currentBoard.columns.findIndex(
+				(column) => column.id === drag.column.id,
+			);
+			if (fromIndex === -1 || fromIndex === targetIndex) return currentBoard;
+			const nextBoard = {
+				...currentBoard,
+				columns: arrayMove(currentBoard.columns, fromIndex, targetIndex),
+			};
+			boardRef.current = nextBoard;
+			return nextBoard;
+		});
+	};
+
+	const resetDragState = () => {
+		activeDragRef.current = null;
+		setActiveDrag(null);
+		boardBeforeDragRef.current = null;
+	};
+
+	const handleDragEnd = async (event: DragEndEvent) => {
+		const drag = activeDragRef.current;
+		const previousBoard = boardBeforeDragRef.current;
+		const currentBoard = boardRef.current;
+
+		if (!drag || !previousBoard || !currentBoard || !event.over) {
+			if (previousBoard) setBoard(previousBoard);
+			resetDragState();
+			return;
+		}
+
+		if (drag.type === "task") {
+			const finalLocation = findTaskLocation(currentBoard.columns, drag.task.id);
+			resetDragState();
+			if (
+				!finalLocation ||
+				(finalLocation.columnId === drag.origin.columnId &&
+					finalLocation.index === drag.origin.index)
+			) {
+				return;
+			}
+
+			try {
+				await projectHubService.moveTask(slug, drag.task.id, {
+					column_id: finalLocation.columnId,
+					position: finalLocation.index,
+				});
+			} catch {
+				toast.error("Di chuyển thất bại");
+				setBoard(previousBoard);
+				boardRef.current = previousBoard;
+			}
+			return;
+		}
+
+		const finalIndex = currentBoard.columns.findIndex((column) => column.id === drag.column.id);
+		resetDragState();
+		if (finalIndex === -1 || finalIndex === drag.origin.index) return;
 
 		try {
 			await projectHubService.reorderColumns(
 				slug,
-				newCols.map((c) => c.id),
+				currentBoard.columns.map((column) => column.id),
 			);
 		} catch {
 			toast.error("Sắp xếp cột thất bại");
-			setBoard(prev);
+			setBoard(previousBoard);
+			boardRef.current = previousBoard;
 		}
+	};
+
+	const handleDragCancel = () => {
+		if (boardBeforeDragRef.current) {
+			setBoard(boardBeforeDragRef.current);
+			boardRef.current = boardBeforeDragRef.current;
+		}
+		resetDragState();
 	};
 
 	// ── Members ────────────────────────────────────────────────────────────────
@@ -485,10 +675,10 @@ const ProjectBoardPage: React.FC = () => {
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align='end'>
 							<DropdownMenuItem onClick={() => setShowLink(true)}>
-								<Link2 className='mr-2 h-4 w-4' /> Liên kết dự án
+								<Link2 className='h-4 w-4' /> Liên kết dự án
 							</DropdownMenuItem>
 							<DropdownMenuItem onClick={handleArchive}>
-								<Archive className='mr-2 h-4 w-4' />
+								<Archive className='h-4 w-4' />
 								{board.is_archived ? "Bỏ lưu trữ" : "Lưu trữ"}
 							</DropdownMenuItem>
 							{isOwner && (
@@ -497,7 +687,7 @@ const ProjectBoardPage: React.FC = () => {
 									<DropdownMenuItem
 										variant='destructive'
 										onClick={handleDeleteBoard}>
-										<Trash2 className='mr-2 h-4 w-4' /> Xóa dự án
+										<Trash2 className='h-4 w-4' /> Xóa dự án
 									</DropdownMenuItem>
 								</>
 							)}
@@ -507,87 +697,108 @@ const ProjectBoardPage: React.FC = () => {
 			</div>
 
 			{/* Board */}
-			<div className='flex flex-1 items-start gap-4 overflow-x-auto pb-4'>
-				{board.columns.map((column, index) => (
-					<React.Fragment key={column.id}>
-						{columnDropTarget === index && (
-							<div className='w-1 shrink-0 self-stretch rounded-full bg-primary' />
-						)}
-						<BoardColumn
-							column={column}
-							index={index}
-							canEdit={canEdit}
-							dropTarget={dropTarget}
-							isColumnDragging={columnDragId === column.id}
-							onTaskDragStart={onTaskDragStart}
-							onTaskDragEnd={onTaskDragEnd}
-							onTaskDragOver={onTaskDragOver}
-							onTaskDrop={onTaskDrop}
-							onTaskClick={setSelectedTask}
-							onAddTask={handleAddTask}
-							onRenameColumn={handleRenameColumn}
-							onDeleteColumn={handleDeleteColumn}
-							onColumnDragStart={onColumnDragStart}
-							onColumnDragEnd={onColumnDragEnd}
-							onColumnDragOver={onColumnDragOver}
-							onColumnDrop={onColumnDrop}
-						/>
-					</React.Fragment>
-				))}
+			<DndContext
+				sensors={sensors}
+				collisionDetection={collisionDetection}
+				onDragStart={handleDragStart}
+				onDragOver={handleDragOver}
+				onDragEnd={handleDragEnd}
+				onDragCancel={handleDragCancel}>
+				<div className='flex min-w-0 flex-1 items-start gap-4 overflow-x-auto overflow-y-hidden pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+					<SortableContext
+						items={board.columns.map((column) => columnDndId(column.id))}
+						strategy={horizontalListSortingStrategy}>
+						{board.columns.map((column, index) => (
+							<BoardColumn
+								key={column.id}
+								column={column}
+								index={index}
+								canEdit={canEdit}
+								isColumnDragging={
+									activeDrag?.type === "column" &&
+									activeDrag.column.id === column.id
+								}
+								onTaskClick={setSelectedTask}
+								onAddTask={handleAddTask}
+								onRenameColumn={handleRenameColumn}
+								onDeleteColumn={handleDeleteColumn}
+							/>
+						))}
+					</SortableContext>
 
-				{columnDropTarget === board.columns.length && (
-					<div className='w-1 shrink-0 self-stretch rounded-full bg-primary' />
-				)}
-
-				{/* Add column */}
-				{canEdit && (
-					<div
-						className='w-72 shrink-0'
-						onDragOver={(e) => onColumnDragOver(board.columns.length, e)}
-						onDrop={(e) => onColumnDrop(board.columns.length, e)}>
-						{addingColumn ? (
-							<div className='rounded-lg border bg-muted/40 p-2'>
-								<Input
-									autoFocus
-									value={columnName}
-									onChange={(e) => setColumnName(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") handleAddColumn();
-										if (e.key === "Escape") {
-											setAddingColumn(false);
-											setColumnName("");
-										}
-									}}
-									placeholder='Tên cột...'
-									className='mb-2 h-8 text-sm font-medium'
-								/>
-								<div className='flex items-center gap-2'>
-									<Button size='sm' onClick={handleAddColumn}>
-										<Check className='mr-1 h-4 w-4' /> Thêm
-									</Button>
-									<Button
-										size='icon'
-										variant='ghost'
-										className='h-8 w-8'
-										onClick={() => {
-											setAddingColumn(false);
-											setColumnName("");
-										}}>
-										<X className='h-4 w-4' />
-									</Button>
+					{/* Add column */}
+					{canEdit && (
+						<div className='w-72 shrink-0'>
+							{addingColumn ? (
+								<div className='rounded-lg border bg-muted/40 p-2'>
+									<Input
+										autoFocus
+										value={columnName}
+										onChange={(e) => setColumnName(e.target.value)}
+										onKeyDown={(e) => {
+											if (e.key === "Enter") handleAddColumn();
+											if (e.key === "Escape") {
+												setAddingColumn(false);
+												setColumnName("");
+											}
+										}}
+										placeholder='Tên cột...'
+										className='mb-2 h-8 text-sm font-medium'
+									/>
+									<div className='flex items-center gap-2'>
+										<Button size='sm' onClick={handleAddColumn}>
+											<Check className='mr-1 h-4 w-4' /> Thêm
+										</Button>
+										<Button
+											size='icon'
+											variant='ghost'
+											className='h-8 w-8'
+											onClick={() => {
+												setAddingColumn(false);
+												setColumnName("");
+											}}>
+											<X className='h-4 w-4' />
+										</Button>
+									</div>
 								</div>
+							) : (
+								<Button
+									variant='outline'
+									className='w-full justify-center border-dashed text-muted-foreground'
+									onClick={() => setAddingColumn(true)}>
+									<Plus className='mr-1.5 h-4 w-4' /> Thêm cột
+								</Button>
+							)}
+						</div>
+					)}
+				</div>
+
+				<DragOverlay
+					dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
+					{activeDrag?.type === "task" ? (
+						<div className='w-72'>
+							<TaskCardPreview task={activeDrag.task} isOverlay />
+						</div>
+					) : activeDrag?.type === "column" ? (
+						<div className='w-72 rounded-lg border bg-muted/80 shadow-xl ring-1 ring-primary/20'>
+							<div className='flex items-center gap-2 border-b px-2.5 py-2'>
+								<MoreVertical className='h-4 w-4 text-muted-foreground' />
+								<h3 className='truncate text-sm font-semibold'>
+									{activeDrag.column.name}
+								</h3>
+								<Badge variant='secondary' className='shrink-0'>
+									{activeDrag.column.tasks?.length ?? 0}
+								</Badge>
 							</div>
-						) : (
-							<Button
-								variant='outline'
-								className='w-full justify-center border-dashed text-muted-foreground'
-								onClick={() => setAddingColumn(true)}>
-								<Plus className='mr-1.5 h-4 w-4' /> Thêm cột
-							</Button>
-						)}
-					</div>
-				)}
-			</div>
+							<div className='space-y-2 p-2'>
+								{(activeDrag.column.tasks ?? []).slice(0, 3).map((task) => (
+									<TaskCardPreview key={task.id} task={task} />
+								))}
+							</div>
+						</div>
+					) : null}
+				</DragOverlay>
+			</DndContext>
 
 			{selectedTask && (
 				<TaskDialog
