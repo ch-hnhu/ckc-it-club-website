@@ -542,7 +542,9 @@ function CourseListPage() {
 												</div>
 											</TableCell>
 											<TableCell>{getLevelBadge(course.level)}</TableCell>
-											<TableCell>{getAudienceBadge(course.audience)}</TableCell>
+											<TableCell>
+												{getAudienceBadge(course.audience)}
+											</TableCell>
 											<TableCell>
 												{course.max_offline_slots !== null ? (
 													<div className='space-y-0.5 text-sm'>
@@ -632,7 +634,7 @@ function CourseListPage() {
 													</DropdownMenuTrigger>
 													<DropdownMenuContent
 														align='end'
-														className='w-[200px]'>
+														className='w-[160px]'>
 														<DropdownMenuItem
 															onClick={() =>
 																navigate(`/courses/${course.slug}`)

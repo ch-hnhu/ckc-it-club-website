@@ -100,6 +100,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 							value={nameValue}
 							onChange={(e) => setNameValue(e.target.value)}
 							onKeyDown={(e) => {
+								if (e.nativeEvent.isComposing) return;
 								if (e.key === "Enter") submitRename();
 								if (e.key === "Escape") setRenaming(false);
 							}}
@@ -208,6 +209,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 								value={title}
 								onChange={(e) => setTitle(e.target.value)}
 								onKeyDown={(e) => {
+									if (e.nativeEvent.isComposing) return;
 									if (e.key === "Enter" && !e.shiftKey) {
 										e.preventDefault();
 										submitAdd();

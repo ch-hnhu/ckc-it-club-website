@@ -41,7 +41,7 @@ const LinkedBoardsCard: React.FC<LinkedBoardsCardProps> = ({ courseId, eventId }
 		<Card>
 			<CardHeader>
 				<CardTitle className='flex items-center gap-2 text-base'>
-					<LayoutGrid className='h-4 w-4' /> Bảng ProjectHub liên kết
+					<LayoutGrid className='h-4 w-4' /> Bảng quản lý dự án đã liên kết
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
@@ -69,8 +69,9 @@ const LinkedBoardsCard: React.FC<LinkedBoardsCardProps> = ({ courseId, eventId }
 									<div className='min-w-0 flex-1'>
 										<p className='truncate font-medium'>{b.name}</p>
 										<p className='text-xs text-muted-foreground'>
-											{b.columns_count ?? 0} cột · {b.tasks_count ?? 0} công
-											việc
+											{(b.tasks_count ?? 0) - (b.completed_tasks_count ?? 0)}{" "}
+											chưa hoàn thành · {b.completed_tasks_count ?? 0} đã hoàn
+											thành
 										</p>
 									</div>
 								</Link>

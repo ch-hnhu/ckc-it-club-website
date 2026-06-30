@@ -228,19 +228,6 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
-		title: "Quản lý sự kiện",
-		url: "/events",
-		icon: CalendarDays,
-		permission: "events.view",
-		items: [
-			{
-				title: "Sự kiện",
-				url: "/events",
-				permission: "events.view",
-			},
-		],
-	},
-	{
 		title: "Điểm & Bảng xếp hạng",
 		url: "/gamification/leaderboard",
 		icon: Award,
@@ -264,16 +251,22 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
+		title: "Quản lý sự kiện",
+		url: "/events",
+		icon: CalendarDays,
+		permission: "events.view",
+	},
+	{
 		title: "Quản lý liên hệ",
 		url: "/contacts",
 		icon: MailOpen,
 		permission: "contacts.view",
 	},
 	{
-		// Không gắn permission: ProjectHub mở cho mọi tài khoản đăng nhập (API chỉ yêu cầu auth)
 		title: "Việc cần làm",
 		url: "/to-do-list",
 		icon: CircleCheckBig,
+		permission: "admin_panel.access",
 	},
 ];
 

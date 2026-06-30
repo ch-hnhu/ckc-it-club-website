@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { CircleCheckBig, Plus, Trash2, X } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { CircleCheckBig, Plus, Search, Trash2, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { projectHubService } from "@/services/projecthub.service";
 import type {
 	ChecklistItem,
 	ProjectMember,
+	ProjectUser,
 	ProjectTask,
 	TaskPriority,
 	UpdateTaskInput,
@@ -55,6 +57,11 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 	const [assigneeIds, setAssigneeIds] = useState<number[]>(
 		(task.assignees ?? []).map((u) => u.id),
 	);
+	const [selectedAssignees, setSelectedAssignees] = useState<ProjectUser[]>(
+		task.assignees ?? [],
+	);
+	const [assigneePickerOpen, setAssigneePickerOpen] = useState(false);
+	const [assigneeQuery, setAssigneeQuery] = useState("");
 	const [saving, setSaving] = useState(false);
 
 	const [items, setItems] = useState<ChecklistItem[]>(task.checklist_items ?? []);
@@ -65,9 +72,36 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 	const checklistTotal = items.length;
 	const checklistDone = items.filter((i) => i.is_done).length;
 	const checklistPct = checklistTotal ? Math.round((checklistDone / checklistTotal) * 100) : 0;
+	const assigneeOptions = useMemo(() => {
+		const query = assigneeQuery.trim().toLowerCase();
+		return members.filter((member) => {
+			if (assigneeIds.includes(member.id)) return false;
+			if (!query) return true;
+			return [member.full_name, member.username].some((value) =>
+				(value ?? "").toLowerCase().includes(query),
+			);
+		});
+	}, [assigneeIds, assigneeQuery, members]);
 
-	const toggleAssignee = (id: number) =>
-		setAssigneeIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+	const addAssignee = (user: ProjectMember) => {
+		if (assigneeIds.includes(user.id)) return;
+		setAssigneeIds((ids) => [...ids, user.id]);
+		setSelectedAssignees((users) => [
+			...users,
+			{
+				id: user.id,
+				full_name: user.full_name,
+				username: user.username,
+				avatar: user.avatar,
+			},
+		]);
+		setAssigneeQuery("");
+	};
+
+	const removeAssignee = (id: number) => {
+		setAssigneeIds((ids) => ids.filter((item) => item !== id));
+		setSelectedAssignees((users) => users.filter((user) => user.id !== id));
+	};
 
 	const syncItems = (next: ChecklistItem[]) => {
 		setItems(next);
@@ -210,40 +244,104 @@ const TaskDialog: React.FC<TaskDialogProps> = ({
 						</div>
 					</div>
 
-					{members.length > 0 && (
-						<div className='space-y-1.5'>
-							<Label>Người phụ trách</Label>
-							<div className='flex flex-wrap gap-2'>
-								{members.map((m) => {
-									const active = assigneeIds.includes(m.id);
-									return (
+					<div className='space-y-1.5'>
+						<Label>Người phụ trách</Label>
+						<div className='flex flex-wrap gap-2'>
+							{selectedAssignees.map((user) => (
+								<span
+									key={user.id}
+									className='inline-flex items-center gap-1.5 rounded-full border bg-background py-1 pl-1 pr-2 text-xs font-medium'>
+									<Avatar className='h-5 w-5'>
+										<AvatarImage
+											src={user.avatar ?? undefined}
+											alt={user.full_name}
+										/>
+										<AvatarFallback className='text-[9px]'>
+											{initials(user.full_name)}
+										</AvatarFallback>
+									</Avatar>
+									{user.full_name}
+									{canEdit && (
 										<button
-											key={m.id}
 											type='button'
-											disabled={!canEdit}
-											onClick={() => toggleAssignee(m.id)}
-											className={cn(
-												"flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2.5 text-xs font-medium transition",
-												active
-													? "border-primary bg-primary/10"
-													: "bg-background hover:bg-accent",
-											)}>
-											<Avatar className='h-5 w-5'>
-												<AvatarImage
-													src={m.avatar ?? undefined}
-													alt={m.full_name}
-												/>
-												<AvatarFallback className='text-[9px]'>
-													{initials(m.full_name)}
-												</AvatarFallback>
-											</Avatar>
-											{m.full_name}
+											onClick={() => removeAssignee(user.id)}
+											aria-label={`Bỏ ${user.full_name}`}
+											className='rounded-full text-muted-foreground hover:text-foreground'>
+											<X className='h-3.5 w-3.5' />
 										</button>
-									);
-								})}
-							</div>
+									)}
+								</span>
+							))}
+							{canEdit && (
+								<Popover
+									open={assigneePickerOpen}
+									onOpenChange={(open) => {
+										setAssigneePickerOpen(open);
+										if (!open) setAssigneeQuery("");
+									}}>
+									<PopoverTrigger asChild>
+										<button
+											type='button'
+											className='inline-flex items-center gap-1.5 rounded-full border border-dashed bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:border-primary/60 hover:text-foreground'>
+											<Plus className='h-3.5 w-3.5' />
+											Thêm
+										</button>
+									</PopoverTrigger>
+									<PopoverContent align='start' className='w-80 p-0'>
+										<div className='border-b p-2'>
+											<div className='relative'>
+												<Search className='pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+												<Input
+													value={assigneeQuery}
+													onChange={(e) => setAssigneeQuery(e.target.value)}
+													placeholder='Tìm thành viên board...'
+													className='h-9 pl-8'
+												/>
+											</div>
+										</div>
+										<div className='max-h-64 overflow-y-auto p-1'>
+											{assigneeOptions.map((user) => (
+													<button
+														key={user.id}
+														type='button'
+														onClick={() => {
+															addAssignee(user);
+															setAssigneePickerOpen(false);
+														}}
+														className='flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-accent'>
+														<Avatar className='h-8 w-8'>
+															<AvatarImage
+																src={user.avatar ?? undefined}
+																alt={user.full_name}
+															/>
+															<AvatarFallback className='text-xs'>
+																{initials(user.full_name)}
+															</AvatarFallback>
+														</Avatar>
+														<div className='min-w-0 flex-1'>
+															<p className='truncate text-sm font-medium'>
+																{user.full_name}
+															</p>
+															{user.username && (
+																<p className='truncate text-xs text-muted-foreground'>
+																	@{user.username}
+																</p>
+															)}
+														</div>
+														<UserPlus className='h-4 w-4 shrink-0 text-muted-foreground' />
+													</button>
+												))}
+											{assigneeOptions.length === 0 && (
+												<p className='px-3 py-6 text-center text-sm text-muted-foreground'>
+													Không tìm thấy thành viên phù hợp.
+												</p>
+											)}
+										</div>
+									</PopoverContent>
+								</Popover>
+							)}
 						</div>
-					)}
+					</div>
 
 					<div className='space-y-2'>
 						<div className='flex items-center justify-between'>

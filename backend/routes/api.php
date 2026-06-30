@@ -249,8 +249,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/me/history', [GamificationController::class, 'history']);
         });
 
-        // ProjectHub — bảng Kanban quản lý tiến độ (chỉ thành viên của board)
-        Route::prefix('projecthub')->group(function () {
+        // ProjectHub — bảng Kanban quản lý tiến độ (yêu cầu quyền vào trang quản trị; dữ liệu vẫn lọc theo thành viên board)
+        Route::middleware('permission:admin_panel.access')->prefix('projecthub')->group(function () {
             // Tùy chọn liên kết (course/event) cho board
             Route::get('link-options', [ProjectHubController::class, 'linkOptions']);
 

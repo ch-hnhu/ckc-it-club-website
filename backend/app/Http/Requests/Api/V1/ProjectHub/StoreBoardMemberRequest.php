@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Api\V1\ProjectHub;
 
-use App\Enums\BoardMemberRole;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -19,7 +18,7 @@ class StoreBoardMemberRequest extends FormRequest
     {
         return [
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            'role'    => ['nullable', Rule::in(BoardMemberRole::values())],
+            'role'    => ['nullable', Rule::in(['editor', 'viewer'])],
         ];
     }
 

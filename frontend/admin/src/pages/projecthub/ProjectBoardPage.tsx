@@ -736,6 +736,7 @@ const ProjectBoardPage: React.FC = () => {
 										value={columnName}
 										onChange={(e) => setColumnName(e.target.value)}
 										onKeyDown={(e) => {
+											if (e.nativeEvent.isComposing) return;
 											if (e.key === "Enter") handleAddColumn();
 											if (e.key === "Escape") {
 												setAddingColumn(false);

@@ -105,9 +105,9 @@
 - `/community/notifications`
 - system notification log/admin stats page gated by `community.notifications.send`
 - `/to-do-list`
-- ProjectHub board list for admin-side to-do boards.
+- ProjectHub board list for admin-side to-do boards. Gated by `PermissionRoute` with `admin_panel.access`.
 - `/to-do-list/:slug`
-- ProjectHub Kanban board detail. Column and task drag/drop uses `@dnd-kit` with sortable columns, sortable task cards, drag overlays, and optimistic UI updates; persistence still goes through `projecthub.service.ts` (`moveTask` and `reorderColumns`) only after drop.
+- ProjectHub Kanban board detail. Gated by `PermissionRoute` with `admin_panel.access`. Column and task drag/drop uses `@dnd-kit` with sortable columns, sortable task cards, drag overlays, and optimistic UI updates; persistence still goes through `projecthub.service.ts` (`moveTask` and `reorderColumns`) only after drop. Task assignees are chosen from the board's current members in the task dialog. Adding board members uses `/projecthub/boards/{slug}/assignable-users`, which preloads active users with `admin_panel.access` and supports search. Board member role controls expose only `editor` and `viewer`; `owner` is reserved for the board creator and is not assignable from the UI.
 - `/learning/courses/:courseId/lessons/:lessonId/quiz/create`
 - UI-only quiz composer for a lesson. It is authenticated through the main admin shell but deliberately has no `PermissionRoute`, sidebar entry, service, or persistence yet because Learning Center admin permissions and API contracts have not been implemented. It follows the fixed Duolingo-like flow: one question at a time and immediate answer/explanation feedback; the course owns the pass threshold.
 
@@ -375,6 +375,10 @@ npm run dev
 ## Change Log
 
 - `2026-06-30`: ProjectHub board detail (`/to-do-list/:slug`) replaced native HTML5 drag handlers with `@dnd-kit` sortable interactions for smoother Trello-like task and column dragging. Tasks and columns now animate/reorder optimistically while dragging, render drag overlays, support empty-column drops via column body droppable zones, and persist through the existing `moveTask` / `reorderColumns` service calls on drop.
+- `2026-06-30`: ProjectHub task assignee selection no longer renders all board members as preselectable chips. The task dialog now shows selected assignees plus an inline `+ Thêm` chip at the end of the list; its picker searches the current board members only. The board member management dialog now preloads assignable active users with `admin_panel.access` instead of requiring a 2-character search first.
+- `2026-06-30`: ProjectHub member role dropdown now only offers `Biên tập` and `Người xem`; owner remains a fixed board-creator badge and is not assignable/editable.
+- `2026-06-30`: ProjectHub admin pages (`/to-do-list`, `/to-do-list/:slug`) and sidebar entry now require `admin_panel.access` via `PermissionRoute`; board membership still controls which boards/details/actions the permitted user can access.
+- `2026-06-30`: ProjectHub member management dialog is wider on desktop and hides horizontal overflow; member rows keep avatar/actions fixed, wrap long names/usernames on mobile, and truncate them on desktop to avoid the modal scrolling sideways.
 - `2026-06-27`: Course lesson detail and assignment grading are offline-only in admin UI. `CourseDetailPage` only links lesson titles and shows lesson-row "Xem chi tiết" / "Chấm bài" actions when the course opens an offline class (`max_offline_slots != null`), `LessonFormPage` only shows/submits assignment URL/deadline for offline courses, and `LessonDetailPage` only loads/renders assignment grading controls for offline courses with an assignment.
 - `2026-06-26`: Course create/edit audience helper text is now dynamic and changes with the selected audience option (`club_member`, `cao_thang_student`, `public`).
 - `2026-06-26`: Course detail "Cấu hình khóa" only shows offline-specific rows ("Sức chứa lớp offline", "Số buổi vắng tối đa") when the course actually opens an offline class (`max_offline_slots != null`).

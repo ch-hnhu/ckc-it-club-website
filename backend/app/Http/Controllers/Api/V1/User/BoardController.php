@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\ApiMessage;
+use App\Enums\PermissionsEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\ProjectHub\MoveBoardTaskRequest;
 use App\Http\Requests\Api\V1\ProjectHub\StoreBoardColumnRequest;
@@ -303,6 +304,9 @@ class BoardController extends BaseApiController
 
         $validated = $request->validated();
         $column = $board->columns()->findOrFail($validated['column_id']);
+        if ($resp = $this->boardAssigneeGuard($board, $validated['assignee_ids'] ?? [])) {
+            return $resp;
+        }
 
         $task = DB::transaction(function () use ($board, $column, $validated, $user) {
             $max = $board->tasks()->where('column_id', $column->id)->max('position');
@@ -341,6 +345,9 @@ class BoardController extends BaseApiController
 
         $taskModel = $board->tasks()->findOrFail($task);
         $validated = $request->validated();
+        if ($resp = $this->boardAssigneeGuard($board, $validated['assignee_ids'] ?? [])) {
+            return $resp;
+        }
 
         $data = collect($validated)
             ->only(['title', 'description', 'priority', 'start_date', 'due_date'])
@@ -526,22 +533,20 @@ class BoardController extends BaseApiController
             return $resp;
         }
 
-        $search = trim((string) $request->query('search'));
-        if (mb_strlen($search) < 2) {
-            return $this->validationErrorResponse([
-                'search' => ['Nhập tối thiểu 2 ký tự để tìm kiếm.'],
-            ]);
-        }
-
         $memberIds = $board->members()->pluck('users.id');
+        $search = trim((string) $request->query('search'));
 
         $users = User::query()
+            ->permission(PermissionsEnum::ADMIN_PANEL_ACCESS->value)
+            ->where('is_active', true)
             ->whereNotIn('id', $memberIds)
-            ->where(fn ($q) => $q->where('full_name', 'like', "%{$search}%")
+            ->when($search !== '', fn ($q) => $q->where(fn ($sub) => $sub
+                ->where('full_name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")
                 ->orWhere('username', 'like', "%{$search}%")
-                ->orWhere('student_code', 'like', "%{$search}%"))
-            ->limit(10)
+                ->orWhere('student_code', 'like', "%{$search}%")))
+            ->orderBy('full_name')
+            ->limit(30)
             ->get(['id', 'full_name', 'username', 'email', 'student_code', 'avatar']);
 
         return $this->successResponse(true, $users, ApiMessage::RETRIEVED);
@@ -561,6 +566,18 @@ class BoardController extends BaseApiController
 
         if ($board->memberships()->where('user_id', $userId)->exists()) {
             return $this->errorResponse(false, 'Người dùng đã là thành viên của board.', 422);
+        }
+
+        $canAccessAdmin = User::query()
+            ->permission(PermissionsEnum::ADMIN_PANEL_ACCESS->value)
+            ->where('is_active', true)
+            ->whereKey($userId)
+            ->exists();
+
+        if (! $canAccessAdmin) {
+            return $this->validationErrorResponse([
+                'user_id' => ['Thành viên board phải có quyền truy cập trang quản trị.'],
+            ]);
         }
 
         $role = $validated['role'] ?? 'editor';
@@ -709,5 +726,28 @@ class BoardController extends BaseApiController
             ->unique()
             ->mapWithKeys(fn ($id) => [$id => ['assigned_at' => now()]])
             ->all();
+    }
+
+    /**
+     * Chỉ cho phép giao task cho thành viên của board.
+     */
+    private function boardAssigneeGuard(Board $board, array $ids): ?JsonResponse
+    {
+        $ids = collect($ids)->filter()->unique()->values();
+        if ($ids->isEmpty()) {
+            return null;
+        }
+
+        $validCount = $board->members()
+            ->whereIn('users.id', $ids)
+            ->count();
+
+        if ($validCount !== $ids->count()) {
+            return $this->validationErrorResponse([
+                'assignee_ids' => ['Người phụ trách phải là thành viên của board.'],
+            ]);
+        }
+
+        return null;
     }
 }

@@ -12,7 +12,7 @@ enum BoardMemberRole: string
     {
         return match ($this) {
             self::OWNER => 'Chủ sở hữu',
-            self::EDITOR => 'Biên tập',
+            self::EDITOR => 'Người chỉnh sửa',
             self::VIEWER => 'Người xem',
         };
     }

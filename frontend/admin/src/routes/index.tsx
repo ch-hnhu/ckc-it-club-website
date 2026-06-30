@@ -561,11 +561,19 @@ const router = createBrowserRouter([
 			},
 			{
 				path: "to-do-list",
-				element: <ProjectHubListPage />,
+				element: (
+					<PermissionRoute permission='admin_panel.access'>
+						<ProjectHubListPage />
+					</PermissionRoute>
+				),
 			},
 			{
 				path: "to-do-list/:slug",
-				element: <ProjectBoardPage />,
+				element: (
+					<PermissionRoute permission='admin_panel.access'>
+						<ProjectBoardPage />
+					</PermissionRoute>
+				),
 			},
 		],
 	},
