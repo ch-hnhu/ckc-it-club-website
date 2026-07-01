@@ -16,7 +16,6 @@ return new class extends Migration
             $table->string('color', 20)->nullable();
             $table->foreignId('department_id')->nullable()
                 ->constrained('departments')->nullOnDelete();
-            $table->enum('visibility', ['private', 'members', 'public'])->default('members');
             $table->boolean('is_archived')->default(false);
             $table->timestamp('archived_at')->nullable();
             $table->foreignId('created_by')->constrained('users');

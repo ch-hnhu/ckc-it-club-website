@@ -26,6 +26,8 @@ use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PointRuleController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\BlogReportController;
+use App\Http\Controllers\Api\V1\Admin\ResourceController;
+use App\Http\Controllers\Api\V1\Admin\ResourceReportController;
 use App\Http\Controllers\Api\V1\Admin\MailTemplateController;
 use App\Http\Controllers\Api\V1\Admin\ReportController;
 use App\Http\Controllers\Api\V1\Admin\UnifiedReportController;
@@ -36,6 +38,7 @@ use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\User\AcademicController;
 use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
+use App\Http\Controllers\Api\V1\User\ResourceController as UserResourceController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
@@ -113,6 +116,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
         Route::get('/blogs/{id}/reactions/users', [UserBlogController::class, 'reactors']);
 
+        // Public resource routes
+        Route::get('/resources', [UserResourceController::class, 'index']);
+
         // Public event routes (avoid collision with admin /v1/events resource routes)
         Route::get('/events', [UserEventController::class, 'index']);
         Route::get('/events/{event:slug}', [UserEventController::class, 'show']);
@@ -160,12 +166,17 @@ Route::prefix('v1')->group(function () {
             Route::post('/blogs/{id}/visibility', [UserBlogController::class, 'updateVisibility']);
             Route::post('/blogs/{id}/report', [UserBlogController::class, 'report']);
             Route::delete('/blogs/{id}', [UserBlogController::class, 'destroy']);
+            Route::post('/resources', [UserResourceController::class, 'store']);
+            Route::get('/resources/my-resources', [UserResourceController::class, 'myResources']);
+            Route::post('/resources/{resource}/click', [UserResourceController::class, 'recordClick']);
+            Route::post('/resources/{id}/report', [UserResourceController::class, 'report']);
         });
 
         // Wildcard routes registered last to avoid masking specific paths above
         Route::get('/posts/{id}', [UserPostController::class, 'show']);
         Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
         Route::post('/blogs/{slug}/view', [UserBlogController::class, 'recordView']);
+        Route::get('/resources/{resource}', [UserResourceController::class, 'show']);
     });
 
     // Learning center (public read; auth optional để trả tiến độ/ghi danh của user hiện tại)
@@ -249,8 +260,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/me/history', [GamificationController::class, 'history']);
         });
 
-        // ProjectHub — bảng Kanban quản lý tiến độ (chỉ thành viên của board)
-        Route::prefix('projecthub')->group(function () {
+        // ProjectHub — bảng Kanban quản lý tiến độ (yêu cầu quyền vào trang quản trị; dữ liệu vẫn lọc theo thành viên board)
+        Route::middleware('permission:admin_panel.access')->prefix('projecthub')->group(function () {
             // Tùy chọn liên kết (course/event) cho board
             Route::get('link-options', [ProjectHubController::class, 'linkOptions']);
 
@@ -477,6 +488,17 @@ Route::prefix('v1')->group(function () {
             Route::delete('blogs/{blog}', [BlogController::class, 'destroy']);
         });
 
+        // resources
+        Route::middleware('permission:community.resources.view')->group(function () {
+            Route::get('resources/stats', [ResourceController::class, 'stats']);
+            Route::get('resources', [ResourceController::class, 'index']);
+            Route::get('resources/{resource}', [ResourceController::class, 'show']);
+        });
+        Route::middleware('permission:community.resources.manage')->group(function () {
+            Route::patch('resources/{resource}/status', [ResourceController::class, 'updateStatus']);
+            Route::delete('resources/{resource}', [ResourceController::class, 'destroy']);
+        });
+
         // comments
         Route::middleware('permission:community.comments.view')->group(function () {
             Route::get('comments/stats', [CommentController::class, 'stats']);
@@ -634,6 +656,14 @@ Route::prefix('v1')->group(function () {
             Route::get('blog-reports', [BlogReportController::class, 'index']);
             Route::patch('blog-reports/{report}/status', [BlogReportController::class, 'updateStatus']);
             Route::post('blog-reports/{report}/hide-blog', [BlogReportController::class, 'hideBlog']);
+        });
+
+        // resource reports
+        Route::middleware('permission:community.reports.view')->group(function () {
+            Route::get('resource-reports/stats', [ResourceReportController::class, 'stats']);
+            Route::get('resource-reports', [ResourceReportController::class, 'index']);
+            Route::post('resource-reports/{report}/dismiss', [ResourceReportController::class, 'dismiss']);
+            Route::post('resource-reports/{report}/hide', [ResourceReportController::class, 'hide']);
         });
 
         // unified reports (post + blog)

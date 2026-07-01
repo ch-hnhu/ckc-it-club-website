@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\BoardVisibility;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -23,7 +22,6 @@ class Board extends Model
         'department_id',
         'course_id',
         'event_id',
-        'visibility',
         'is_archived',
         'archived_at',
         'created_by',
@@ -34,7 +32,6 @@ class Board extends Model
     protected function casts(): array
     {
         return [
-            'visibility' => BoardVisibility::class,
             'is_archived' => 'boolean',
             'archived_at' => 'datetime',
         ];

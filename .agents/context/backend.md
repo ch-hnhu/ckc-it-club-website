@@ -76,6 +76,7 @@
 - `POST /api/v1/community/blogs/{id}/comments`
 - `GET /api/v1/gamification/me`
 - `GET /api/v1/gamification/me/history`
+- ProjectHub admin routes under `/api/v1/projecthub` require both Sanctum auth and `admin_panel.access`, including board CRUD, columns, members, tasks, and task checklist items. Board ownership/membership guards still determine which boards/details/actions the permitted user can access. `GET /projecthub/boards/{board}/assignable-users` returns active users with `admin_panel.access` who are not already board members. Board member create/update accepts only `editor` or `viewer`; `owner` is reserved for the creator membership.
 - `GET /api/v1/`
 - `GET /api/v1/users`
 - `GET /api/v1/faculties`
@@ -463,6 +464,8 @@ curl http://localhost:8000/api/v1/health
 
 ## Change Log
 
+- `2026-06-30`: ProjectHub board member search now preloads active users with `admin_panel.access` through `GET /api/v1/projecthub/boards/{board}/assignable-users` without requiring a minimum search length, and adding a board member rejects users without that permission. Board member create/update accepts only `editor`/`viewer`; `owner` remains fixed to the board creator. Task assignees are constrained to existing board members; `storeTask`/`updateTask` reject `assignee_ids` outside the board membership.
+- `2026-06-30`: ProjectHub API routes under `/api/v1/projecthub` now require `admin_panel.access` in addition to Sanctum auth; existing board owner/member/editor guards still handle per-board visibility and write permissions.
 - `2026-06-26`: Removed the course-level `total_lessons`/maximum expected lesson count from the Learning Center contract. The original `courses` migration no longer creates the column, admin course create/update no longer accepts or returns it, and lesson creation no longer blocks when a course reaches a configured lesson cap.
 - `2026-06-26`: Learning audience enforcement now checks the course's current `audience` on every learning access/action; an existing `course_enrollments` row no longer bypasses a later audience change. Fixed online lessons with nullable `session_start` returning `Call to a member function format() on null` when opening video/quiz by avoiding eager `abort_if()` message evaluation.
 - `2026-06-25`: Learning courses now have an `audience` field (`club_member`, `cao_thang_student`, `public`) returned in admin/user course payloads and accepted by admin create/update. Course content endpoints (`lesson`, `video`, quiz show/submit through enrollment) enforce the audience rule server-side; `public` means any authenticated user, not anonymous access.

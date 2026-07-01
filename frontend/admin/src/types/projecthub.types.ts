@@ -1,6 +1,5 @@
 // Types cho module ProjectHub — backend: routes/api.php nhóm `/projecthub`.
 
-export type ProjectVisibility = "private" | "members" | "public";
 export type ProjectMemberRole = "owner" | "editor" | "viewer";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 
@@ -94,7 +93,6 @@ export interface Project {
 	department_id: number | null;
 	course_id: number | null;
 	event_id: number | null;
-	visibility: ProjectVisibility;
 	is_archived: boolean;
 	archived_at: string | null;
 	created_by: number;
@@ -103,6 +101,7 @@ export interface Project {
 	event?: ProjectLinkRef | null;
 	columns_count?: number;
 	tasks_count?: number;
+	completed_tasks_count?: number;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -117,7 +116,6 @@ export interface CreateProjectInput {
 	name: string;
 	description?: string | null;
 	color?: string | null;
-	visibility?: ProjectVisibility;
 	department_id?: number | null;
 	course_id?: number | null;
 	event_id?: number | null;

@@ -12,7 +12,7 @@ import type { CreateProjectInput, Project } from "@/types/projecthub.types";
 import CreateBoardDialog from "@/components/projecthub/CreateBoardDialog";
 
 const ProjectHubListPage: React.FC = () => {
-	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "ProjectHub" }]);
+	useBreadcrumb([{ title: "Dashboard", link: "/" }, { title: "Việc cần làm" }]);
 	const navigate = useNavigate();
 
 	const [projects, setProjects] = useState<Project[]>([]);
@@ -44,7 +44,7 @@ const ProjectHubListPage: React.FC = () => {
 			const res = await projectHubService.createProject(body);
 			toast.success("Đã tạo dự án");
 			setShowCreate(false);
-			navigate(`/du-an/${res.data.slug}`);
+			navigate(`/to-do-list/${res.data.slug}`);
 		} catch {
 			toast.error("Tạo dự án thất bại");
 		}
@@ -56,14 +56,15 @@ const ProjectHubListPage: React.FC = () => {
 			<div className='flex flex-wrap items-center justify-between gap-4'>
 				<div>
 					<h1 className='flex items-center gap-2 text-2xl font-semibold tracking-tight'>
-						<LayoutGrid className='h-6 w-6' /> ProjectHub
+						<LayoutGrid className='h-6 w-6' /> Việc cần làm
 					</h1>
 					<p className='mt-1 text-sm text-muted-foreground'>
-						Bảng Kanban quản lý tiến độ công việc.
+						Bảng Kanban quản lý tiến độ công việc cho các dự án hoạt động của câu lạc
+						bộ.
 					</p>
 				</div>
 				<Button onClick={() => setShowCreate(true)}>
-					<Plus className='mr-1.5 h-4 w-4' /> Tạo dự án
+					<Plus className='h-4 w-4' /> Tạo dự án
 				</Button>
 			</div>
 
@@ -89,7 +90,7 @@ const ProjectHubListPage: React.FC = () => {
 					</p>
 					{tab === "active" && (
 						<Button className='mt-4' onClick={() => setShowCreate(true)}>
-							<Plus className='mr-1.5 h-4 w-4' /> Tạo dự án đầu tiên
+							<Plus className='h-4 w-4' /> Tạo dự án đầu tiên
 						</Button>
 					)}
 				</div>
@@ -98,9 +99,12 @@ const ProjectHubListPage: React.FC = () => {
 					{projects.map((p) => (
 						<Link
 							key={p.id}
-							to={`/du-an/${p.slug}`}
+							to={`/to-do-list/${p.slug}`}
 							className='group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md'>
-							<div className='h-2' style={{ backgroundColor: p.color || "var(--primary)" }} />
+							<div
+								className='h-2'
+								style={{ backgroundColor: p.color || "var(--primary)" }}
+							/>
 							<div className='flex flex-1 flex-col p-4'>
 								<h3 className='mb-1 line-clamp-1 font-semibold'>{p.name}</h3>
 								<p className='mb-3 line-clamp-2 flex-1 text-sm text-muted-foreground'>
@@ -109,28 +113,39 @@ const ProjectHubListPage: React.FC = () => {
 								{(p.course || p.event) && (
 									<div className='mb-3 flex flex-wrap gap-1'>
 										{p.course && (
-											<Badge variant='secondary' className='gap-1 font-normal'>
+											<Badge
+												variant='secondary'
+												className='gap-1 font-normal'>
 												<GraduationCap className='h-3 w-3' />
-												<span className='max-w-[9rem] truncate'>{p.course.title}</span>
+												<span className='max-w-[9rem] truncate'>
+													{p.course.title}
+												</span>
 											</Badge>
 										)}
 										{p.event && (
-											<Badge variant='secondary' className='gap-1 font-normal'>
+											<Badge
+												variant='secondary'
+												className='gap-1 font-normal'>
 												<CalendarDays className='h-3 w-3' />
-												<span className='max-w-[9rem] truncate'>{p.event.title}</span>
+												<span className='max-w-[9rem] truncate'>
+													{p.event.title}
+												</span>
 											</Badge>
 										)}
 									</div>
 								)}
 								<div className='flex items-center gap-3 border-t pt-3 text-xs font-medium text-muted-foreground'>
-									<span>{p.columns_count ?? 0} cột</span>
-									<span>·</span>
-									<span>{p.tasks_count ?? 0} công việc</span>
+									<span>
+										{(p.tasks_count ?? 0) - (p.completed_tasks_count ?? 0)} chưa
+										hoàn thành
+									</span>
 									{p.department && (
 										<span className='ml-auto rounded-full bg-muted px-2 py-0.5'>
 											{p.department.name}
 										</span>
 									)}
+									<span>·</span>
+									<span>{p.completed_tasks_count ?? 0} đã hoàn thành</span>
 								</div>
 							</div>
 						</Link>

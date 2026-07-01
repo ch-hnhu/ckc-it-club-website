@@ -20,12 +20,14 @@ use App\Models\CourseCertificate;
 use App\Services\CourseCompletionService;
 use App\Services\CourseEnrollmentService;
 use App\Services\PointService;
+use App\Traits\HasSequentialLessonLock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CourseController extends BaseApiController
 {
+    use HasSequentialLessonLock;
     /**
      * Danh sách khoá học đã xuất bản (catalog). Trả về shape `Course[]`.
      */
@@ -124,6 +126,8 @@ class CourseController extends BaseApiController
 
         $card = $this->transformCourseCard($course, $userId, $lessons->count());
 
+        $lockedIds = $this->lockedLessonIds($course, $lessons, $userId, $enrollment?->track);
+
         $data = array_merge($card, [
             'description' => $course->description ?? '',
             'enrollment_track' => $enrollment?->track,
@@ -131,7 +135,7 @@ class CourseController extends BaseApiController
             'enrollment_deadline' => $course->enrollment_deadline?->toIso8601String(),
             'course_end' => $course->course_end?->toIso8601String(),
             'max_offline_slots' => $course->max_offline_slots,
-            'lessons' => $lessons->map(fn (Lesson $l) => $this->transformLessonRow($l, $userId, $enrollment?->track))->all(),
+            'lessons' => $lessons->map(fn (Lesson $l) => $this->transformLessonRow($l, $userId, $enrollment?->track, $lockedIds))->all(),
             'stats' => $this->buildStats($course, $lessons, $userId, $enrollment),
         ]);
 
@@ -526,8 +530,10 @@ class CourseController extends BaseApiController
 
     /**
      * Map Lesson → shape `CourseLesson` (dòng trong danh sách buổi học).
+     *
+     * @param array<int,int> $lockedIds  lesson IDs blocked by sequential lock
      */
-    private function transformLessonRow(Lesson $lesson, ?int $userId, ?string $track): array
+    private function transformLessonRow(Lesson $lesson, ?int $userId, ?string $track, array $lockedIds = []): array
     {
         $sections = $this->sectionCompletionMap($lesson, $userId);
         $isCompleted = $this->lessonProgressPercent($lesson, $userId, $track) === 100;
@@ -542,6 +548,9 @@ class CourseController extends BaseApiController
             $isAttended = $lesson->attendances()->where('user_id', $userId)->exists();
         }
 
+        // session_start > now → content (video/quiz) blocked by assertLessonContentOpen().
+        $isContentAvailable = ! ($lesson->session_start && now()->lt($lesson->session_start));
+
         return [
             'id' => $lesson->id,
             'slug' => $lesson->slug,
@@ -549,7 +558,8 @@ class CourseController extends BaseApiController
             'title' => $lesson->title,
             'summary' => $lesson->description,
             'club_only' => false,
-            'is_locked' => false,
+            'is_locked' => in_array($lesson->id, $lockedIds, true),
+            'is_content_available' => $isContentAvailable,
             'completed' => $isCompleted,
             'items_count' => $lesson->itemsCount(),
             'session_start' => $lesson->session_start?->toIso8601String(),
@@ -559,114 +569,11 @@ class CourseController extends BaseApiController
         ];
     }
 
-    /**
-     * Trạng thái hoàn thành từng section (video/assignment/quiz) của user trong buổi học.
-     *
-     * @return array<string,bool>
-     */
-    private function sectionCompletionMap(Lesson $lesson, ?int $userId): array
-    {
-        if (! $userId) {
-            return [];
-        }
-
-        return $lesson->progress()
-            ->where('user_id', $userId)
-            ->where('is_completed', true)
-            ->pluck('section_type')
-            ->mapWithKeys(fn ($type) => [
-                $type instanceof LessonSectionType ? $type->value : $type => true,
-            ])
-            ->all();
-    }
-
-    /**
-     * Tập id các buổi học đang bị khoá với user hiện tại — phản chiếu logic khoá ở
-     * frontend (CourseDetailPage::frontendLockedIds). Dùng để chặn điều hướng
-     * "Buổi tiếp theo" vượt khoá, cả ở UI lẫn ở API.
-     *
-     * - Khoá 100% online (max_offline_slots === null): mở tuần tự, chỉ buổi chưa
-     *   hoàn thành đầu tiên được mở; các buổi chưa hoàn thành phía sau bị khoá.
-     * - Khoá có lớp offline: mở buổi đã hoàn thành, buổi đã tới giờ, và buổi sắp
-     *   diễn ra gần nhất; các buổi tương lai còn lại bị khoá.
-     *
-     * @param  \Illuminate\Support\Collection<int,Lesson>  $lessons  đã sắp theo thứ tự
-     * @return array<int,int>  danh sách lesson id bị khoá
-     */
-    private function lockedLessonIds(Course $course, $lessons, ?int $userId, ?string $track): array
-    {
-        $isCompleted = fn (Lesson $l) => $this->lessonProgressPercent($l, $userId, $track) === 100;
-
-        if ($course->max_offline_slots === null) {
-            $nextOpenId = $lessons->first(fn (Lesson $l) => ! $isCompleted($l))?->id;
-
-            return $lessons
-                ->filter(fn (Lesson $l) => ! $isCompleted($l) && $l->id !== $nextOpenId)
-                ->pluck('id')
-                ->all();
-        }
-
-        $now = now();
-        $nearestUpcomingId = $lessons
-            ->filter(fn (Lesson $l) => $l->session_start && $l->session_start->gt($now))
-            ->sortBy('session_start')
-            ->first()?->id;
-
-        return $lessons
-            ->filter(function (Lesson $l) use ($isCompleted, $now, $nearestUpcomingId) {
-                if ($isCompleted($l)) {
-                    return false;
-                }
-                if ($l->session_start && $l->session_start->lte($now)) {
-                    return false;
-                }
-
-                return $l->id !== $nearestUpcomingId;
-            })
-            ->pluck('id')
-            ->all();
-    }
-
     private function assertLessonContentOpen(Lesson $lesson): void
     {
         if ($lesson->session_start && now()->lt($lesson->session_start)) {
             abort(403, 'Buổi học chưa bắt đầu. Vui lòng quay lại vào ngày ' . $lesson->session_start->format('d/m/Y') . '.');
         }
-    }
-
-    /**
-     * % tiến độ buổi học = số section đã hoàn thành / số section có mặt.
-     * Online track: chỉ tính video (50%) + quiz (50%), bỏ assignment.
-     * Offline track: chỉ tính assignment (chấm tay) + quiz, bỏ video — offline điểm danh
-     * bằng QR/admin, xem video không thay thế điểm danh nên không tính vào tiến độ.
-     * Chưa ghi danh: tính video + assignment + quiz.
-     * null nếu buổi học chưa có section nào để tính tiến độ.
-     */
-    private function lessonProgressPercent(Lesson $lesson, ?int $userId, ?string $track = null): ?int
-    {
-        $present = [];
-        if ($track !== 'offline' && $lesson->playableVideoUrl()) {
-            $present[] = 'video';
-        }
-        // Assignment chỉ tính cho offline (online không cần nộp bài tập)
-        if ($track !== 'online' && $lesson->assignment_url) {
-            $present[] = 'assignment';
-        }
-        $hasQuiz = $lesson->relationLoaded('quiz')
-            ? (bool) $lesson->quiz
-            : $lesson->quiz()->where('is_published', true)->exists();
-        if ($hasQuiz) {
-            $present[] = 'quiz';
-        }
-
-        if (empty($present)) {
-            return null;
-        }
-
-        $done = $this->sectionCompletionMap($lesson, $userId);
-        $completed = count(array_intersect($present, array_keys($done)));
-
-        return (int) round($completed / count($present) * 100);
     }
 
     /**

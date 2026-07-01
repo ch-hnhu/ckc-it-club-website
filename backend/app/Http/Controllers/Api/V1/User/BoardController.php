@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Enums\ApiMessage;
+use App\Enums\PermissionsEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\ProjectHub\MoveBoardTaskRequest;
 use App\Http\Requests\Api\V1\ProjectHub\StoreBoardColumnRequest;
@@ -19,7 +20,6 @@ use App\Models\BoardTask;
 use App\Models\Course;
 use App\Models\Event;
 use App\Models\User;
-use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,7 +53,11 @@ class BoardController extends BaseApiController
             ->when($request->query('course_id'), fn ($q, $id) => $q->where('course_id', $id))
             ->when($request->query('event_id'), fn ($q, $id) => $q->where('event_id', $id))
             ->with(['department:id,name,slug', 'course:id,title,slug', 'event:id,title,slug'])
-            ->withCount(['columns', 'tasks'])
+            ->withCount([
+                'columns',
+                'tasks',
+                'tasks as completed_tasks_count' => fn ($q) => $q->whereNotNull('completed_at'),
+            ])
             ->orderByDesc('updated_at')
             ->paginate($perPage);
 
@@ -77,7 +81,6 @@ class BoardController extends BaseApiController
                 'department_id' => $validated['department_id'] ?? null,
                 'course_id'     => $validated['course_id'] ?? null,
                 'event_id'      => $validated['event_id'] ?? null,
-                'visibility'    => $validated['visibility'] ?? 'members',
                 'created_by'    => $user->id,
             ]);
 
@@ -133,7 +136,7 @@ class BoardController extends BaseApiController
         }
 
         $data = collect($request->validated())
-            ->only(['name', 'description', 'color', 'department_id', 'course_id', 'event_id', 'visibility'])
+            ->only(['name', 'description', 'color', 'department_id', 'course_id', 'event_id'])
             ->toArray();
         $data['updated_by'] = $user->id;
 
@@ -300,6 +303,9 @@ class BoardController extends BaseApiController
 
         $validated = $request->validated();
         $column = $board->columns()->findOrFail($validated['column_id']);
+        if ($resp = $this->boardAssigneeGuard($board, $validated['assignee_ids'] ?? [])) {
+            return $resp;
+        }
 
         $task = DB::transaction(function () use ($board, $column, $validated, $user) {
             $max = $board->tasks()->where('column_id', $column->id)->max('position');
@@ -318,6 +324,21 @@ class BoardController extends BaseApiController
 
             if (! empty($validated['assignee_ids'])) {
                 $task->assignees()->attach($this->assigneePayload($validated['assignee_ids']));
+                
+                $assignees = \App\Models\User::whereIn('id', $validated['assignee_ids'])->get();
+                foreach ($assignees as $assignee) {
+                    if ($assignee->id !== $user->id) {
+                        $assignee->notify(new \App\Notifications\AdminActionNotification(
+                            'Được giao công việc mới',
+                            "Bạn đã được giao công việc \"{$task->title}\" trong bảng \"{$board->name}\".",
+                            'task_assigned',
+                            'task',
+                            $task->id,
+                            $user->full_name,
+                            "/to-do-list/{$board->slug}"
+                        ));
+                    }
+                }
             }
 
             return $task;
@@ -338,6 +359,9 @@ class BoardController extends BaseApiController
 
         $taskModel = $board->tasks()->findOrFail($task);
         $validated = $request->validated();
+        if ($resp = $this->boardAssigneeGuard($board, $validated['assignee_ids'] ?? [])) {
+            return $resp;
+        }
 
         $data = collect($validated)
             ->only(['title', 'description', 'priority', 'start_date', 'due_date'])
@@ -348,11 +372,32 @@ class BoardController extends BaseApiController
         }
         $data['updated_by'] = $user->id;
 
-        DB::transaction(function () use ($taskModel, $data, $validated) {
+        DB::transaction(function () use ($taskModel, $data, $validated, $user, $board) {
             $taskModel->update($data);
 
             if (array_key_exists('assignee_ids', $validated)) {
-                $taskModel->assignees()->sync($this->assigneePayload($validated['assignee_ids'] ?? []));
+                $oldAssigneeIds = $taskModel->assignees()->pluck('users.id')->toArray();
+                $newAssigneeIds = $validated['assignee_ids'] ?? [];
+
+                $taskModel->assignees()->sync($this->assigneePayload($newAssigneeIds));
+
+                $addedAssigneeIds = array_diff($newAssigneeIds, $oldAssigneeIds);
+                if (!empty($addedAssigneeIds)) {
+                    $addedAssignees = \App\Models\User::whereIn('id', $addedAssigneeIds)->get();
+                    foreach ($addedAssignees as $assignee) {
+                        if ($assignee->id !== $user->id) {
+                            $assignee->notify(new \App\Notifications\AdminActionNotification(
+                                'Được giao công việc mới',
+                                "Bạn đã được giao công việc \"{$taskModel->title}\" trong bảng \"{$board->name}\".",
+                                'task_assigned',
+                                'task',
+                                $taskModel->id,
+                                $user->full_name,
+                                "/to-do-list/{$board->slug}"
+                            ));
+                        }
+                    }
+                }
             }
         });
 
@@ -523,22 +568,20 @@ class BoardController extends BaseApiController
             return $resp;
         }
 
-        $search = trim((string) $request->query('search'));
-        if (mb_strlen($search) < 2) {
-            return $this->validationErrorResponse([
-                'search' => ['Nhập tối thiểu 2 ký tự để tìm kiếm.'],
-            ]);
-        }
-
         $memberIds = $board->members()->pluck('users.id');
+        $search = trim((string) $request->query('search'));
 
         $users = User::query()
+            ->permission(PermissionsEnum::ADMIN_PANEL_ACCESS->value)
+            ->where('is_active', true)
             ->whereNotIn('id', $memberIds)
-            ->where(fn ($q) => $q->where('full_name', 'like', "%{$search}%")
+            ->when($search !== '', fn ($q) => $q->where(fn ($sub) => $sub
+                ->where('full_name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")
                 ->orWhere('username', 'like', "%{$search}%")
-                ->orWhere('student_code', 'like', "%{$search}%"))
-            ->limit(10)
+                ->orWhere('student_code', 'like', "%{$search}%")))
+            ->orderBy('full_name')
+            ->limit(30)
             ->get(['id', 'full_name', 'username', 'email', 'student_code', 'avatar']);
 
         return $this->successResponse(true, $users, ApiMessage::RETRIEVED);
@@ -560,6 +603,18 @@ class BoardController extends BaseApiController
             return $this->errorResponse(false, 'Người dùng đã là thành viên của board.', 422);
         }
 
+        $canAccessAdmin = User::query()
+            ->permission(PermissionsEnum::ADMIN_PANEL_ACCESS->value)
+            ->where('is_active', true)
+            ->whereKey($userId)
+            ->exists();
+
+        if (! $canAccessAdmin) {
+            return $this->validationErrorResponse([
+                'user_id' => ['Thành viên board phải có quyền truy cập trang quản trị.'],
+            ]);
+        }
+
         $role = $validated['role'] ?? 'editor';
         $board->memberships()->create([
             'user_id'   => $userId,
@@ -570,7 +625,17 @@ class BoardController extends BaseApiController
         $user = User::find($userId);
 
         // Thông báo cho người vừa được thêm vào board.
-        UserNotificationService::dispatchBoardMemberAdded($user, $request->user(), $board);
+        if ($user->id !== $request->user()->id) {
+            $user->notify(new \App\Notifications\AdminActionNotification(
+                'Được thêm vào bảng công việc',
+                "Bạn đã được thêm vào bảng \"{$board->name}\".",
+                'board_member_added',
+                'board',
+                $board->id,
+                $request->user()->full_name,
+                "/to-do-list/{$board->slug}"
+            ));
+        }
 
         return $this->createdResponse([
             'id'        => $user->id,
@@ -706,5 +771,28 @@ class BoardController extends BaseApiController
             ->unique()
             ->mapWithKeys(fn ($id) => [$id => ['assigned_at' => now()]])
             ->all();
+    }
+
+    /**
+     * Chỉ cho phép giao task cho thành viên của board.
+     */
+    private function boardAssigneeGuard(Board $board, array $ids): ?JsonResponse
+    {
+        $ids = collect($ids)->filter()->unique()->values();
+        if ($ids->isEmpty()) {
+            return null;
+        }
+
+        $validCount = $board->members()
+            ->whereIn('users.id', $ids)
+            ->count();
+
+        if ($validCount !== $ids->count()) {
+            return $this->validationErrorResponse([
+                'assignee_ids' => ['Người phụ trách phải là thành viên của board.'],
+            ]);
+        }
+
+        return null;
     }
 }

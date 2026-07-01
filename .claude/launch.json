@@ -28,6 +28,13 @@
       "runtimeArgs": ["run", "dev", "--prefix", "frontend/user", "--", "--port", "5181", "--strictPort"],
       "port": 5181,
       "autoPort": false
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["backend/artisan", "serve", "--host", "127.0.0.1", "--port", "8000"],
+      "port": 8000,
+      "autoPort": false
     }
   ]
 }

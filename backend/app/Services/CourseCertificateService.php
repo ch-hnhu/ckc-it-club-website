@@ -102,6 +102,7 @@ class CourseCertificateService
             'issued_at' => now(),
             'revoked_at' => null,
             'revoked_by' => null,
+            'has_physical' => $enrollment->track === 'offline',
         ];
 
         if ($existing) {

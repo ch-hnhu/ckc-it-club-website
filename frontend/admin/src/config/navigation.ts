@@ -2,10 +2,10 @@ import {
 	Award,
 	Building,
 	CalendarDays,
+	CircleCheckBig,
 	Globe,
 	GraduationCap,
 	House,
-	LayoutGrid,
 	MailOpen,
 	Trophy,
 	UserRoundPlus,
@@ -198,8 +198,18 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "community.skills.manage",
 			},
 			{
+				title: "Kho tài nguyên",
+				url: "/community/resources",
+				permission: "community.resources.view",
+			},
+			{
 				title: "Báo cáo vi phạm",
 				url: "/community/reports",
+				permission: "community.reports.view",
+			},
+			{
+				title: "Báo cáo vi phạm tài nguyên",
+				url: "/community/resource-reports",
 				permission: "community.reports.view",
 			},
 		],
@@ -228,19 +238,6 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
-		title: "Quản lý sự kiện",
-		url: "/events",
-		icon: CalendarDays,
-		permission: "events.view",
-		items: [
-			{
-				title: "Sự kiện",
-				url: "/events",
-				permission: "events.view",
-			},
-		],
-	},
-	{
 		title: "Điểm & Bảng xếp hạng",
 		url: "/gamification/leaderboard",
 		icon: Award,
@@ -264,16 +261,22 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
+		title: "Quản lý sự kiện",
+		url: "/events",
+		icon: CalendarDays,
+		permission: "events.view",
+	},
+	{
 		title: "Quản lý liên hệ",
 		url: "/contacts",
 		icon: MailOpen,
 		permission: "contacts.view",
 	},
 	{
-		// Không gắn permission: ProjectHub mở cho mọi tài khoản đăng nhập (API chỉ yêu cầu auth)
-		title: "ProjectHub",
-		url: "/du-an",
-		icon: LayoutGrid,
+		title: "Việc cần làm",
+		url: "/to-do-list",
+		icon: CircleCheckBig,
+		permission: "admin_panel.access",
 	},
 ];
 
@@ -328,6 +331,8 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/community\/skills$/, permission: "community.skills.manage" },
 	{ pattern: /^\/community\/reports$/, permission: "community.reports.view" },
 	{ pattern: /^\/community\/blog-reports$/, permission: "community.reports.view" },
+	{ pattern: /^\/community\/resources$/, permission: "community.resources.view" },
+	{ pattern: /^\/community\/resource-reports$/, permission: "community.reports.view" },
 	{ pattern: /^\/courses$/, permission: "courses.view" },
 	{ pattern: /^\/courses\/trash$/, permission: "courses.view" },
 	{ pattern: /^\/course-categories$/, permission: "courses.view" },

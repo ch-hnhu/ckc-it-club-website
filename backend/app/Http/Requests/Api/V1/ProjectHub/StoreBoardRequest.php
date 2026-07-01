@@ -2,11 +2,9 @@
 
 namespace App\Http\Requests\Api\V1\ProjectHub;
 
-use App\Enums\BoardVisibility;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Validation\Rule;
 
 class StoreBoardRequest extends FormRequest
 {
@@ -24,7 +22,6 @@ class StoreBoardRequest extends FormRequest
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
             'course_id'     => ['nullable', 'integer', 'exists:courses,id'],
             'event_id'      => ['nullable', 'integer', 'exists:events,id'],
-            'visibility'    => ['nullable', Rule::in(BoardVisibility::values())],
         ];
     }
 
@@ -37,7 +34,6 @@ class StoreBoardRequest extends FormRequest
             'department_id.exists' => 'Ban được chọn không tồn tại.',
             'course_id.exists'    => 'Khoá học được chọn không tồn tại.',
             'event_id.exists'     => 'Sự kiện được chọn không tồn tại.',
-            'visibility.in'       => 'Phạm vi hiển thị không hợp lệ.',
         ];
     }
 

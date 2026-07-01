@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Api\V1\ProjectHub;
 
-use App\Enums\BoardMemberRole;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -18,7 +17,7 @@ class UpdateBoardMemberRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'role' => ['required', Rule::in(BoardMemberRole::values())],
+            'role' => ['required', Rule::in(['editor', 'viewer'])],
         ];
     }
 
