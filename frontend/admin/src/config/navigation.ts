@@ -3,6 +3,7 @@ import {
 	Building,
 	CalendarDays,
 	CircleCheckBig,
+	FolderOpen,
 	Globe,
 	GraduationCap,
 	House,
@@ -198,17 +199,25 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "community.skills.manage",
 			},
 			{
-				title: "Kho tài nguyên",
+				title: "Báo cáo vi phạm",
+				url: "/community/reports",
+				permission: "community.reports.view",
+			},
+		],
+	},
+	{
+		title: "Quản lý tài nguyên",
+		url: "/community/resources",
+		icon: FolderOpen,
+		permission: "community.resources.view",
+		items: [
+			{
+				title: "Danh sách tài nguyên",
 				url: "/community/resources",
 				permission: "community.resources.view",
 			},
 			{
 				title: "Báo cáo vi phạm",
-				url: "/community/reports",
-				permission: "community.reports.view",
-			},
-			{
-				title: "Báo cáo vi phạm tài nguyên",
 				url: "/community/resource-reports",
 				permission: "community.reports.view",
 			},
