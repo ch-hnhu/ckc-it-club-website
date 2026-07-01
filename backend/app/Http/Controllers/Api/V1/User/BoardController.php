@@ -20,7 +20,6 @@ use App\Models\BoardTask;
 use App\Models\Course;
 use App\Models\Event;
 use App\Models\User;
-use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -325,6 +324,21 @@ class BoardController extends BaseApiController
 
             if (! empty($validated['assignee_ids'])) {
                 $task->assignees()->attach($this->assigneePayload($validated['assignee_ids']));
+                
+                $assignees = \App\Models\User::whereIn('id', $validated['assignee_ids'])->get();
+                foreach ($assignees as $assignee) {
+                    if ($assignee->id !== $user->id) {
+                        $assignee->notify(new \App\Notifications\AdminActionNotification(
+                            'Được giao công việc mới',
+                            "Bạn đã được giao công việc \"{$task->title}\" trong bảng \"{$board->name}\".",
+                            'task_assigned',
+                            'task',
+                            $task->id,
+                            $user->full_name,
+                            "/to-do-list/{$board->slug}"
+                        ));
+                    }
+                }
             }
 
             return $task;
@@ -358,11 +372,32 @@ class BoardController extends BaseApiController
         }
         $data['updated_by'] = $user->id;
 
-        DB::transaction(function () use ($taskModel, $data, $validated) {
+        DB::transaction(function () use ($taskModel, $data, $validated, $user, $board) {
             $taskModel->update($data);
 
             if (array_key_exists('assignee_ids', $validated)) {
-                $taskModel->assignees()->sync($this->assigneePayload($validated['assignee_ids'] ?? []));
+                $oldAssigneeIds = $taskModel->assignees()->pluck('users.id')->toArray();
+                $newAssigneeIds = $validated['assignee_ids'] ?? [];
+
+                $taskModel->assignees()->sync($this->assigneePayload($newAssigneeIds));
+
+                $addedAssigneeIds = array_diff($newAssigneeIds, $oldAssigneeIds);
+                if (!empty($addedAssigneeIds)) {
+                    $addedAssignees = \App\Models\User::whereIn('id', $addedAssigneeIds)->get();
+                    foreach ($addedAssignees as $assignee) {
+                        if ($assignee->id !== $user->id) {
+                            $assignee->notify(new \App\Notifications\AdminActionNotification(
+                                'Được giao công việc mới',
+                                "Bạn đã được giao công việc \"{$taskModel->title}\" trong bảng \"{$board->name}\".",
+                                'task_assigned',
+                                'task',
+                                $taskModel->id,
+                                $user->full_name,
+                                "/to-do-list/{$board->slug}"
+                            ));
+                        }
+                    }
+                }
             }
         });
 
@@ -590,7 +625,17 @@ class BoardController extends BaseApiController
         $user = User::find($userId);
 
         // Thông báo cho người vừa được thêm vào board.
-        UserNotificationService::dispatchBoardMemberAdded($user, $request->user(), $board);
+        if ($user->id !== $request->user()->id) {
+            $user->notify(new \App\Notifications\AdminActionNotification(
+                'Được thêm vào bảng công việc',
+                "Bạn đã được thêm vào bảng \"{$board->name}\".",
+                'board_member_added',
+                'board',
+                $board->id,
+                $request->user()->full_name,
+                "/to-do-list/{$board->slug}"
+            ));
+        }
 
         return $this->createdResponse([
             'id'        => $user->id,
