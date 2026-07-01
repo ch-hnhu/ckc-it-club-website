@@ -188,11 +188,11 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/community/chat",
 				permission: "community.chat.view",
 			},
-			{
-				title: "Tài nguyên",
-				url: "/community/media",
-				permission: "community.media.view",
-			},
+			// {
+			// 	title: "Tài nguyên",
+			// 	url: "/community/media",
+			// 	permission: "community.media.view",
+			// },
 			{
 				title: "Skills",
 				url: "/community/skills",
