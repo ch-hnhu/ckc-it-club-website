@@ -44,6 +44,8 @@ import MediaListPage from "@/pages/community/MediaListPage";
 import SkillListPage from "@/pages/community/SkillListPage";
 import ReportListPage from "@/pages/community/ReportListPage";
 import BlogReportListPage from "@/pages/community/BlogReportListPage";
+import ResourceListPage from "@/pages/community/ResourceListPage";
+import ResourceReportListPage from "@/pages/community/ResourceReportListPage";
 import MailTemplateListPage from "@/pages/mail-template/MailTemplateListPage";
 import MailTemplateDetailPage from "@/pages/mail-template/MailTemplateDetailPage";
 import EventListPage from "@/pages/event/EventListPage";
@@ -436,6 +438,22 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='community.reports.view'>
 						<BlogReportListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/resources",
+				element: (
+					<PermissionRoute permission='community.resources.view'>
+						<ResourceListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/resource-reports",
+				element: (
+					<PermissionRoute permission='community.reports.view'>
+						<ResourceReportListPage />
 					</PermissionRoute>
 				),
 			},

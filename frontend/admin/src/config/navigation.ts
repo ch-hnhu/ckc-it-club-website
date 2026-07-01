@@ -198,8 +198,18 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "community.skills.manage",
 			},
 			{
+				title: "Kho tài nguyên",
+				url: "/community/resources",
+				permission: "community.resources.view",
+			},
+			{
 				title: "Báo cáo vi phạm",
 				url: "/community/reports",
+				permission: "community.reports.view",
+			},
+			{
+				title: "Báo cáo vi phạm tài nguyên",
+				url: "/community/resource-reports",
 				permission: "community.reports.view",
 			},
 		],
@@ -321,6 +331,8 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/community\/skills$/, permission: "community.skills.manage" },
 	{ pattern: /^\/community\/reports$/, permission: "community.reports.view" },
 	{ pattern: /^\/community\/blog-reports$/, permission: "community.reports.view" },
+	{ pattern: /^\/community\/resources$/, permission: "community.resources.view" },
+	{ pattern: /^\/community\/resource-reports$/, permission: "community.reports.view" },
 	{ pattern: /^\/courses$/, permission: "courses.view" },
 	{ pattern: /^\/courses\/trash$/, permission: "courses.view" },
 	{ pattern: /^\/course-categories$/, permission: "courses.view" },
