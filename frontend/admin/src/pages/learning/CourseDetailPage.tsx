@@ -573,7 +573,7 @@ function CourseDetailPage() {
 
 				<LinkedBoardsCard courseId={course.id} />
 
-					{/* Tabs */}
+				{/* Tabs */}
 				<Tabs
 					defaultValue={
 						["overview", "lessons", "students", "certificates"].includes(
@@ -906,7 +906,7 @@ function CourseDetailPage() {
 										<TableHead className='min-w-[240px]'>Học viên</TableHead>
 										<TableHead className='w-[110px]'>Hình thức</TableHead>
 										<TableHead className='min-w-[180px]'>Tiến độ</TableHead>
-										<TableHead className='w-[150px]'>Hoàn thành</TableHead>
+										<TableHead className='w-[150px]'>Trạng thái</TableHead>
 										<TableHead className='w-[52px]' />
 									</TableRow>
 								</TableHeader>

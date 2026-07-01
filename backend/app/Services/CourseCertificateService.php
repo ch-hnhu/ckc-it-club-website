@@ -6,7 +6,6 @@ use App\Models\CertificateTemplate;
 use App\Models\CourseCertificate;
 use App\Models\CourseEnrollment;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -85,13 +84,13 @@ class CourseCertificateService
 
         $path = "certificates/{$certCode}.pdf";
 
-        if (is_array($template->design) && ! empty($template->design['canvas'])) {
-            // Mẫu thiết kế canvas (editor kéo-thả) → render WYSIWYG bằng Browsershot.
-            $pdfBytes = app(CertificateRenderer::class)->renderPdf($template, $renderData);
-        } else {
-            // Mẫu cũ chỉ có html_content → fallback dompdf.
-            $pdfBytes = Pdf::loadHTML($template->render($renderData))->setPaper('a4', 'landscape')->output();
-        }
+        abort_if(
+            ! is_array($template->design) || empty($template->design['canvas']),
+            422,
+            'Mẫu chứng chỉ chưa có thiết kế.',
+        );
+
+        $pdfBytes = app(CertificateRenderer::class)->renderPdf($template, $renderData);
 
         Storage::disk('public')->put($path, $pdfBytes);
 
