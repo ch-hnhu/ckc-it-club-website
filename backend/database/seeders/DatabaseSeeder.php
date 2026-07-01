@@ -41,6 +41,7 @@ class DatabaseSeeder extends Seeder
             QuestionTypeSeeder::class,
             LearningCenterSeeder::class,
             CertificateTemplateSeeder::class,
+            CourseCertificateTestSeeder::class,
         ]);
     }
 }

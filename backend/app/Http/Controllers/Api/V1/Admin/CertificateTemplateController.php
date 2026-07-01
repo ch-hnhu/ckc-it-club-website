@@ -66,7 +66,7 @@ class CertificateTemplateController extends BaseApiController
         $template = CertificateTemplate::create([
             'name' => $data['name'],
             // Dùng input() (không phải mảng validated đã bị lược các key không có rule như canvas.background)
-            'design' => $request->input('design'),
+            'design' => $this->normalizeDesignForStorage($request->input('design')),
             'is_default' => false,
             'created_by' => $request->user()->id,
         ]);
@@ -85,7 +85,7 @@ class CertificateTemplateController extends BaseApiController
 
         $certificateTemplate->update([
             'name' => $data['name'],
-            'design' => $request->input('design'),
+            'design' => $this->normalizeDesignForStorage($request->input('design')),
         ]);
 
         // Render lại thumbnail theo thiết kế mới.
@@ -130,7 +130,6 @@ class CertificateTemplateController extends BaseApiController
         $clone = CertificateTemplate::create([
             'name' => $certificateTemplate->name.' (sao chép)',
             'design' => $certificateTemplate->design,
-            'html_content' => $certificateTemplate->html_content,
             'thumbnail' => $this->copyFile($certificateTemplate->thumbnail),
             'is_default' => false,
             'created_by' => $request->user()->id,
@@ -277,7 +276,7 @@ class CertificateTemplateController extends BaseApiController
     {
         return [
             ...$this->transformTemplate($template),
-            'design' => $template->design,
+            'design' => $this->resolveDesignForClient($template->design),
         ];
     }
 
@@ -290,10 +289,80 @@ class CertificateTemplateController extends BaseApiController
             return null;
         }
 
+        if (str_starts_with($path, '/storage/')) {
+            return rtrim((string) config('app.url'), '/').$path;
+        }
+
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
             return $path;
         }
 
         return Storage::disk('public')->url($path);
+    }
+
+    /**
+     * Editor chạy ở port frontend nên asset /storage phải được trả về URL backend tuyệt đối.
+     *
+     * @param  array<string,mixed>|null  $design
+     * @return array<string,mixed>|null
+     */
+    private function resolveDesignForClient(?array $design): ?array
+    {
+        if (! $design) {
+            return $design;
+        }
+
+        if (! empty($design['canvas']['background']['image']) && is_string($design['canvas']['background']['image'])) {
+            $design['canvas']['background']['image'] = $this->resolveUrl($design['canvas']['background']['image']);
+        }
+
+        foreach (($design['elements'] ?? []) as $idx => $element) {
+            if (
+                is_array($element)
+                && ($element['type'] ?? null) === 'image'
+                && ! empty($element['src'])
+                && is_string($element['src'])
+            ) {
+                $design['elements'][$idx]['src'] = $this->resolveUrl($element['src']);
+            }
+        }
+
+        return $design;
+    }
+
+    /**
+     * DB chỉ lưu path ổn định để seed/export không bị dính host local.
+     *
+     * @param  array<string,mixed>  $design
+     * @return array<string,mixed>
+     */
+    private function normalizeDesignForStorage(array $design): array
+    {
+        if (! empty($design['canvas']['background']['image']) && is_string($design['canvas']['background']['image'])) {
+            $design['canvas']['background']['image'] = $this->normalizePublicStorageUrl($design['canvas']['background']['image']);
+        }
+
+        foreach (($design['elements'] ?? []) as $idx => $element) {
+            if (
+                is_array($element)
+                && ($element['type'] ?? null) === 'image'
+                && ! empty($element['src'])
+                && is_string($element['src'])
+            ) {
+                $design['elements'][$idx]['src'] = $this->normalizePublicStorageUrl($element['src']);
+            }
+        }
+
+        return $design;
+    }
+
+    private function normalizePublicStorageUrl(string $url): string
+    {
+        $appUrl = rtrim((string) config('app.url'), '/');
+        if ($appUrl !== '' && str_starts_with($url, $appUrl.'/storage/')) {
+            return substr($url, strlen($appUrl));
+        }
+
+        return $url;
     }
 }
