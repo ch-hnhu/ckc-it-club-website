@@ -6,6 +6,7 @@ use App\Events\NotificationSent;
 use App\Models\Blog;
 use App\Models\Board;
 use App\Models\Post;
+use App\Models\Resource;
 use App\Models\User;
 use App\Notifications\UserCommunityNotification;
 use Illuminate\Support\Facades\Log;
@@ -329,6 +330,66 @@ class UserNotificationService
         ]);
     }
 
+
+    /**
+     * Notify the uploader when an admin approves or rejects their submitted resource.
+     */
+    public static function dispatchResourceReviewed(
+        User $recipient,
+        User $actor,
+        Resource $resource,
+        string $status, // 'published' | 'rejected'
+    ): void {
+        $approved = $status === 'published';
+
+        self::send($recipient, $actor, [
+            'title' => $approved ? 'Tài nguyên được duyệt' : 'Tài nguyên bị từ chối',
+            'message' => $approved
+                ? "Tài nguyên \"{$resource->title}\" của bạn đã được duyệt và xuất bản."
+                : "Tài nguyên \"{$resource->title}\" của bạn đã bị từ chối.",
+            'type' => 'resource_reviewed',
+            'target_type' => 'resource',
+            'target_id' => $resource->id,
+            'link' => '/tai-nguyen',
+        ]);
+    }
+
+    /**
+     * Notify the resource owner when an admin hides their resource due to a report.
+     */
+    public static function dispatchResourceHidden(
+        User $recipient,
+        User $actor,
+        Resource $resource,
+        string $reason,
+    ): void {
+        self::send($recipient, $actor, [
+            'title' => 'Tài nguyên đã bị ẩn',
+            'message' => "Tài nguyên \"{$resource->title}\" của bạn đã bị ẩn. Lý do: {$reason}",
+            'type' => 'resource_hidden',
+            'target_type' => 'resource',
+            'target_id' => $resource->id,
+            'link' => '/tai-nguyen',
+        ]);
+    }
+
+    /**
+     * Notify the reporter when an admin dismisses their resource report (no violation found).
+     */
+    public static function dispatchResourceReportDismissed(
+        User $reporter,
+        User $admin,
+        string $resourceTitle,
+    ): void {
+        self::send($reporter, $admin, [
+            'title' => 'Báo cáo vi phạm đã được xem xét',
+            'message' => "Báo cáo của bạn về tài nguyên \"{$resourceTitle}\" đã được xem xét. Chúng tôi không tìm thấy vi phạm trong nội dung này.",
+            'type' => 'resource_report_dismissed',
+            'target_type' => 'resource_report',
+            'target_id' => 0,
+            'link' => '/tai-nguyen',
+        ]);
+    }
 
     // ─── Internal ────────────────────────────────────────────────────────────
 

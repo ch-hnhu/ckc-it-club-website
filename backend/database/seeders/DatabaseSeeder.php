@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             TagSeeder::class,
             PostSeeder::class,
             BlogSeeder::class,
+            ResourceSeeder::class,
             CommentSeeder::class,
             ReactionSeeder::class,
             MediaFileSeeder::class,
