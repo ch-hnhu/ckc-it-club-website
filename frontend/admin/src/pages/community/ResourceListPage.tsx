@@ -61,7 +61,7 @@ const LINK_TYPE_LABELS: Record<string, string> = {
 	google_drive: "Google Drive",
 	youtube: "YouTube",
 	github: "GitHub",
-	document: "Tài liệu",
+	document: "Website",
 	other: "Khác",
 };
 

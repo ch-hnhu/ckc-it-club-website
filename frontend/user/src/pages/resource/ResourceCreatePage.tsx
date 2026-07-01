@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { toast } from "sonner";
 import { ChevronLeft, Send } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import NeoSelect from "@/components/ui/NeoSelect";
 import { resourceService } from "@/services/resource.service";
 import type { ApiErrorResponse } from "@/types/api.types";
 import type { ResourceLinkType } from "@/types/resource.types";
@@ -10,7 +11,7 @@ const LINK_TYPE_OPTIONS: { value: ResourceLinkType; label: string }[] = [
 	{ value: "google_drive", label: "Google Drive" },
 	{ value: "youtube", label: "YouTube" },
 	{ value: "github", label: "GitHub" },
-	{ value: "document", label: "Tài liệu" },
+	{ value: "document", label: "Website" },
 	{ value: "other", label: "Khác" },
 ];
 
@@ -72,7 +73,7 @@ const ResourceCreatePage: React.FC = () => {
 					Quay lại kho tài nguyên
 				</Link>
 
-				<h1 className='font-heading text-2xl font-extrabold text-black'>Gửi tài nguyên mới</h1>
+				<h1 className='font-heading text-3xl font-extrabold leading-tight text-black md:text-4xl'>Đóng góp tài nguyên</h1>
 				<p className='mt-2 text-sm text-gray-600'>
 					Tài nguyên của bạn sẽ ở trạng thái chờ duyệt cho đến khi quản trị viên xem xét.
 				</p>
@@ -102,17 +103,15 @@ const ResourceCreatePage: React.FC = () => {
 						/>
 					</div>
 
-					<div className='grid grid-cols-1 gap-4 sm:grid-cols-[160px_1fr]'>
+					<div className='grid grid-cols-1 gap-4 sm:grid-cols-[220px_1fr]'>
 						<div>
-							<label className='mb-1.5 block text-sm font-bold text-black'>Loại link</label>
-							<select
+							<label htmlFor='resource-link-type' className='mb-1.5 block text-sm font-bold text-black'>Loại link</label>
+							<NeoSelect
+								id='resource-link-type'
+								options={LINK_TYPE_OPTIONS}
 								value={linkType}
-								onChange={(e) => setLinkType(e.target.value as ResourceLinkType)}
-								className='w-full rounded-lg border-2 border-black bg-white p-3 text-sm font-medium text-black outline-none focus:shadow-[0_0_0_3px_#A3E635]'>
-								{LINK_TYPE_OPTIONS.map((opt) => (
-									<option key={opt.value} value={opt.value}>{opt.label}</option>
-								))}
-							</select>
+								onChange={(value) => setLinkType(value as ResourceLinkType)}
+							/>
 						</div>
 						<div>
 							<label className='mb-1.5 block text-sm font-bold text-black'>Link</label>
@@ -137,7 +136,7 @@ const ResourceCreatePage: React.FC = () => {
 							type='submit'
 							disabled={isSubmitting}
 							className='inline-flex items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'>
-							{isSubmitting ? "Đang gửi..." : "Gửi tài nguyên"}
+							{isSubmitting ? "Đang gửi..." : "Đóng góp tài nguyên"}
 							<Send className='h-4 w-4' />
 						</button>
 					</div>

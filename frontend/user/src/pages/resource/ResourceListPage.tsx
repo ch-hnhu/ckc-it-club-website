@@ -19,7 +19,7 @@ const LINK_TYPE_LABELS: Record<ResourceLinkType, string> = {
 	google_drive: "Google Drive",
 	youtube: "YouTube",
 	github: "GitHub",
-	document: "Tài liệu",
+	document: "Website",
 	other: "Khác",
 };
 
