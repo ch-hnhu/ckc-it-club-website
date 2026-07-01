@@ -206,7 +206,7 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
-		title: "Quản lý tài nguyên",
+		title: "Kho tài nguyên",
 		url: "/community/resources",
 		icon: FolderOpen,
 		permission: "community.resources.view",
@@ -217,7 +217,7 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "community.resources.view",
 			},
 			{
-				title: "Báo cáo vi phạm",
+				title: "Báo cáo",
 				url: "/community/resource-reports",
 				permission: "community.reports.view",
 			},
