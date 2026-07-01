@@ -137,7 +137,7 @@ const SESSION_STATUS_MAP: Record<
 > = {
 	upcoming: {
 		label: "Sắp diễn ra",
-		className: "border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
+		className: "border-yellow-500/20 bg-yellow-500/10 text-yellow-700 hover:bg-yellow-500/10",
 	},
 	scheduled: {
 		label: "Chưa diễn ra",
@@ -145,12 +145,12 @@ const SESSION_STATUS_MAP: Record<
 	},
 	ongoing: {
 		label: "Đang diễn ra",
-		className:
-			"border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
+		className: "border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
 	},
 	ended: {
 		label: "Đã kết thúc",
-		className: "border-red-500/20 bg-red-500/10 text-red-700 hover:bg-red-500/10",
+		className:
+			"border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
 	},
 };
 
@@ -1054,12 +1054,16 @@ function CourseDetailPage() {
 												</TableCell>
 												<TableCell>
 													{cert.revoked_at ? (
-														<Badge variant='destructive'>
+														<Badge
+															variant='outline'
+															className='rounded-full border-red-500/20 bg-red-500/10 px-3 py-1 text-red-700'>
 															Đã thu hồi
 														</Badge>
 													) : (
-														<Badge className='bg-emerald-100 text-emerald-700 hover:bg-emerald-100'>
-															Còn hiệu lực
+														<Badge
+															variant='outline'
+															className='rounded-full border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-700'>
+															Có hiệu lực
 														</Badge>
 													)}
 												</TableCell>

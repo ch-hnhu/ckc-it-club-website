@@ -52,6 +52,11 @@ class CourseCertificateTestSeeder extends Seeder
             ]);
         }
 
+        // Publish tất cả quiz của khoá — quiz chưa published không được tính vào điều kiện hoàn thành
+        DB::table('quizzes')
+            ->whereIn('lesson_id', $lessonIds)
+            ->update(['is_published' => true]);
+
         // Đọc session_start của từng buổi (đã được backdate ở trên)
         $lessons = DB::table('lessons')
             ->where('course_id', $courseId)
@@ -63,10 +68,30 @@ class CourseCertificateTestSeeder extends Seeder
         $completedAt = $courseEnd->copy()->addDay();
         $issuedAt    = $completedAt->copy()->addDay();
 
+        // Dùng sinh viên Cao Thắng thực sự (có student_code) để khớp audience='cao_thang_student'
         $candidates = [
-            ['user_id' => 4, 'track' => 'offline'],
-            ['user_id' => 5, 'track' => 'online'],
+            ['user_id' => 15, 'track' => 'offline'],
+            ['user_id' => 16, 'track' => 'online'],
         ];
+
+        // Đọc point_rule ids một lần
+        $pointRules = DB::table('point_rules')
+            ->whereIn('key', [
+                'learning_center.video_completed',
+                'learning_center.quiz_passed',
+                'learning_center.assignment_completed',
+                'learning_center.course_completed',
+            ])
+            ->pluck('points', 'id')       // [id => points]
+            ->all();
+
+        $ruleIdByKey = DB::table('point_rules')
+            ->whereIn('key', array_keys(
+                array_flip(['learning_center.video_completed', 'learning_center.quiz_passed',
+                    'learning_center.assignment_completed', 'learning_center.course_completed'])
+            ))
+            ->pluck('id', 'key')          // [key => id]
+            ->all();
 
         foreach ($candidates as ['user_id' => $userId, 'track' => $track]) {
             if (! DB::table('users')->where('id', $userId)->exists()) {
@@ -135,21 +160,93 @@ class CourseCertificateTestSeeder extends Seeder
                 }
             }
 
-            // Course certificate
-            DB::table('course_certificates')->updateOrInsert(
-                ['user_id' => $userId, 'course_id' => $courseId, 'track' => $track],
-                [
-                    'template_id'  => $templateId,
-                    'cert_code'    => strtoupper(Str::random(4).'-'.Str::random(4).'-'.Str::random(4)),
-                    'cert_url'     => null,
-                    'has_physical' => $track === 'offline',
-                    'issued_at'    => $issuedAt,
-                    'revoked_at'   => null,
-                    'revoked_by'   => null,
-                    'created_at'   => $issuedAt,
-                    'updated_at'   => $issuedAt,
-                ]
-            );
+            // Point transactions — chỉ insert nếu chưa có (tránh trùng khi chạy lại)
+            $totalAwarded = 0;
+            $sectionRuleMap = [
+                'video'      => 'learning_center.video_completed',
+                'quiz'       => 'learning_center.quiz_passed',
+                'assignment' => 'learning_center.assignment_completed',
+            ];
+
+            foreach ($lessonIds as $lessonId) {
+                foreach ($sectionRuleMap as $sectionType => $ruleKey) {
+                    $ruleId = $ruleIdByKey[$ruleKey] ?? null;
+                    if (! $ruleId) continue;
+
+                    $progressId = DB::table('lesson_progress')
+                        ->where('user_id', $userId)
+                        ->where('lesson_id', $lessonId)
+                        ->where('section_type', $sectionType)
+                        ->value('id');
+                    if (! $progressId) continue;
+
+                    $alreadyExists = DB::table('point_transactions')
+                        ->where('point_rule_id', $ruleId)
+                        ->where('source_type', 'lesson_progress')
+                        ->where('source_id', $progressId)
+                        ->exists();
+                    if ($alreadyExists) continue;
+
+                    $pts = $pointRules[$ruleId] ?? 0;
+                    DB::table('point_transactions')->insert([
+                        'user_id'       => $userId,
+                        'point_rule_id' => $ruleId,
+                        'points'        => $pts,
+                        'source_type'   => 'lesson_progress',
+                        'source_id'     => $progressId,
+                        'metadata'      => null,
+                        'created_at'    => $completedAt,
+                        'updated_at'    => $completedAt,
+                    ]);
+                    $totalAwarded += $pts;
+                }
+            }
+
+            // Điểm thưởng hoàn thành khoá
+            $courseRuleId = $ruleIdByKey['learning_center.course_completed'] ?? null;
+            if ($courseRuleId) {
+                $enrollmentId = DB::table('course_enrollments')
+                    ->where('user_id', $userId)->where('course_id', $courseId)->value('id');
+
+                $alreadyExists = DB::table('point_transactions')
+                    ->where('point_rule_id', $courseRuleId)
+                    ->where('source_type', 'course_enrollment')
+                    ->where('source_id', $enrollmentId)
+                    ->exists();
+
+                if (! $alreadyExists && $enrollmentId) {
+                    $pts = $pointRules[$courseRuleId] ?? 0;
+                    DB::table('point_transactions')->insert([
+                        'user_id'       => $userId,
+                        'point_rule_id' => $courseRuleId,
+                        'points'        => $pts,
+                        'source_type'   => 'course_enrollment',
+                        'source_id'     => $enrollmentId,
+                        'metadata'      => null,
+                        'created_at'    => $completedAt,
+                        'updated_at'    => $completedAt,
+                    ]);
+                    $totalAwarded += $pts;
+                }
+            }
+
+            if ($totalAwarded > 0) {
+                DB::table('users')->where('id', $userId)->increment('total_points', $totalAwarded);
+            }
+
+            // Course certificate — xoá cert cũ (nếu có) rồi gọi service để generate PDF thật sự
+            DB::table('course_certificates')
+                ->where(['user_id' => $userId, 'course_id' => $courseId, 'track' => $track])
+                ->delete();
+
+            $enrollment = \App\Models\CourseEnrollment::with(['user', 'course.certificateTemplate'])
+                ->where('user_id', $userId)
+                ->where('course_id', $courseId)
+                ->first();
+
+            if ($enrollment) {
+                app(\App\Services\CourseCertificateService::class)->issue($enrollment);
+            }
 
             $this->command->info("✓ User {$userId} ({$track}) — enrollment + attendance + lesson_progress + certificate đã được seed.");
         }

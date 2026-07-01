@@ -220,7 +220,8 @@ class CertificateRenderer
         $fontCss = File::exists(public_path('vendor/fonts/cert-fonts.css'))
             ? File::get(public_path('vendor/fonts/cert-fonts.css'))
             : '';
-        $sceneJson = json_encode($scene, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        // JSON_UNESCAPED_SLASHES bị bỏ: giữ `\/` để tránh `</script>` phá vỡ HTML.
+        $sceneJson = json_encode($scene, JSON_UNESCAPED_UNICODE);
         $w = (int) $scene['canvas']['width'];
         $h = (int) $scene['canvas']['height'];
 
@@ -237,12 +238,18 @@ class CertificateRenderer
 <div id="stage"></div>
 <script>
 const scene = {$sceneJson};
+// Font được nhúng base64 trong cert-fonts.css → chỉ có Be Vietnam Pro và Roboto hỗ trợ đầy đủ
+// tiếng Việt. Các font khác (Arial, Times New Roman...) dùng fallback về Be Vietnam Pro.
+const EMBEDDED_FONTS = ['Be Vietnam Pro', 'Roboto'];
+function safeFontFamily(f) {
+  return EMBEDDED_FONTS.includes(f) ? '"'+f+'"' : '"'+f+'", "Be Vietnam Pro", sans-serif';
+}
 function buildNode(el){
   const t = el.type;
   const common = { x: el.x, y: el.y, rotation: el.rotation || 0 };
   if (t === 'text') {
     return new Konva.Text({ ...common, text: el.text || ' ', width: el.width,
-      fontSize: el.fontSize || 28, fontFamily: el.fontFamily || 'Be Vietnam Pro',
+      fontSize: el.fontSize || 28, fontFamily: safeFontFamily(el.fontFamily || 'Be Vietnam Pro'),
       fontStyle: el.fontStyle || 'normal', fill: el.fill || '#111111', align: el.align || 'center' });
   }
   if (t === 'rect') {
@@ -272,16 +279,18 @@ function loadImage(src){
   });
 }
 (async () => {
-  // Nạp font (Google Fonts) trước khi Konva vẽ — nếu không Konva dùng font fallback (serif).
-  // Có timeout cứng 4s: nếu mạng treo/không có internet thì vẫn vẽ (fallback) chứ KHÔNG treo.
+  // Nạp tất cả variant cần thiết của font nhúng (base64 trong cert-fonts.css) trước khi Konva vẽ.
+  // Timeout 8s: base64 decode có thể chậm trên server yếu nhưng không để treo vô hạn.
   const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
   try {
-    const families = [...new Set((scene.elements||[]).filter(e=>e.type==='text').map(e=>e.fontFamily||'Be Vietnam Pro'))];
+    const families = [...new Set((scene.elements||[]).filter(e=>e.type==='text').map(e=>e.fontFamily||'Be Vietnam Pro'))]
+      .filter(f => EMBEDDED_FONTS.includes(f)); // chỉ load font có trong cert-fonts.css
     await withTimeout(Promise.all(families.flatMap(f => [
       document.fonts.load('400 40px "'+f+'"'),
       document.fonts.load('700 40px "'+f+'"'),
       document.fonts.load('italic 400 40px "'+f+'"'),
-    ])), 4000);
+      document.fonts.load('italic 700 40px "'+f+'"'),  // cần cho fontStyle: 'italic bold'
+    ])), 8000);
     await withTimeout(document.fonts.ready, 1000);
   } catch(e) {}
   try {
