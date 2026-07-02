@@ -12,7 +12,11 @@ RUN apk add --no-cache \
     oniguruma-dev \
     icu-dev \
     mysql-client \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring bcmath intl zip pcntl \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring bcmath intl zip pcntl gd \
     && rm -rf /var/cache/apk/*
 
 # ── Render chứng chỉ (Browsershot/Chrome headless) ───────────────────────────
