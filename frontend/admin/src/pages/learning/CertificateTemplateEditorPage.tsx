@@ -69,6 +69,10 @@ const SCALE = DISPLAY_W / CANVAS_W;
 
 // Chỉ liệt kê font đã nhúng base64 trong cert-fonts.css — đảm bảo tiếng Việt đúng trong PDF.
 const FONTS = ["Be Vietnam Pro", "Roboto"];
+const FONT_LOAD_TEXT =
+	"ÀÁÂĂÈÉÊÌÍÒÓÔƠÙÚƯỲÝĐàáâăèéêìíòóôơùúưỳýđ " +
+	"ạảãấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏõốồổỗộớờởỡợụủũứừửữựỳỵỷỹ " +
+	"Trưởng ban Học thuật Truyền thông Nguyễn Minh Anh Python Nhập Môn";
 
 type FontStyleValue = "normal" | "bold" | "italic" | "italic bold";
 
@@ -297,10 +301,14 @@ function CertificateTemplateEditorPage() {
 			document.head.appendChild(link);
 		}
 		Promise.all([
-			document.fonts.load('400 40px "Be Vietnam Pro"'),
-			document.fonts.load('700 40px "Be Vietnam Pro"'),
-			document.fonts.load('400 40px "Roboto"'),
-			document.fonts.load('700 40px "Roboto"'),
+			document.fonts.load('400 40px "Be Vietnam Pro"', FONT_LOAD_TEXT),
+			document.fonts.load('700 40px "Be Vietnam Pro"', FONT_LOAD_TEXT),
+			document.fonts.load('italic 400 40px "Be Vietnam Pro"', FONT_LOAD_TEXT),
+			document.fonts.load('italic 700 40px "Be Vietnam Pro"', FONT_LOAD_TEXT),
+			document.fonts.load('400 40px "Roboto"', FONT_LOAD_TEXT),
+			document.fonts.load('700 40px "Roboto"', FONT_LOAD_TEXT),
+			document.fonts.load('italic 400 40px "Roboto"', FONT_LOAD_TEXT),
+			document.fonts.load('italic 700 40px "Roboto"', FONT_LOAD_TEXT),
 		])
 			.then(() => setFontsReady(true))
 			.catch(() => undefined);
