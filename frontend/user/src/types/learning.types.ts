@@ -1,5 +1,6 @@
 export type CourseLevel = "beginner" | "intermediate" | "advanced";
 export type CourseTrack = "offline" | "online";
+export type CourseAudience = "club_member" | "cao_thang_student" | "public";
 
 export interface CourseInstructor {
 	id: number;
@@ -21,6 +22,8 @@ export interface Course {
 	excerpt: string | null;
 	thumbnail: string | null;
 	level: CourseLevel;
+	/** Đối tượng được học khóa này; public = tài khoản đã đăng nhập bất kỳ */
+	audience: CourseAudience;
 	instructor: CourseInstructor | null;
 	lessons_count: number;
 	/** Tổng thời lượng (phút) */
@@ -107,6 +110,8 @@ export interface CourseDetail extends Course {
 	enrollment_deadline: string | null;
 	/** Khoá học kết thúc hoàn toàn — sau mốc này content thành kho tự học */
 	course_end: string | null;
+	/** Số slot lớp offline; null nghĩa là khóa 100% online */
+	max_offline_slots: number | null;
 	/** User đang quan tâm khoá học này (chưa đăng ký, chưa có lesson) */
 	is_interested: boolean;
 	lessons: CourseLesson[];
@@ -131,8 +136,8 @@ export interface LessonDetail {
 		title: string;
 		level: CourseLevel;
 	};
-	prev: { slug: string; title: string } | null;
-	next: { slug: string; title: string } | null;
+	prev: { slug: string; title: string; locked?: boolean } | null;
+	next: { slug: string; title: string; locked?: boolean } | null;
 	/** 1 video bài giảng */
 	video: CourseContentItem | null;
 	/** 1 link tài nguyên (Google Drive) */
@@ -157,12 +162,24 @@ export interface VideoDetail {
 	duration: string;
 	xp: number;
 	completed: boolean;
+	/** Track học của user hiện tại trong khóa này (null nếu chưa ghi danh) */
+	enrollment_track: CourseTrack | null;
 	course: { slug: string; title: string };
 	lesson: { slug: string; title: string; order: number };
 	/** Buổi trước (điều hướng) */
-	prev_lesson: { slug: string; title: string } | null;
+	prev_lesson: {
+		slug: string;
+		title: string;
+		session_start?: string | null;
+		locked?: boolean;
+	} | null;
 	/** Buổi kế tiếp (điều hướng) */
-	next_lesson: { slug: string; title: string } | null;
+	next_lesson: {
+		slug: string;
+		title: string;
+		session_start?: string | null;
+		locked?: boolean;
+	} | null;
 }
 
 // ─── Quiz (làm bài kiểu Duolingo) ────────────────────────────────────────────
@@ -230,11 +247,19 @@ export interface QuizSubmitResult {
 	results: Array<{ question_id: number; is_correct: boolean }>;
 }
 
+/** Chứng chỉ khoá học của user hiện tại */
+export interface CourseCertificateInfo {
+	cert_code: string;
+	cert_url: string;
+	issued_at: string | null;
+}
+
 export interface CourseListParams {
 	page?: number;
 	per_page?: number;
 	search?: string;
 	category?: string;
+	audience?: CourseAudience;
 	level?: CourseLevel;
 	sort?: "created_at" | "enrolled_count";
 	order?: "asc" | "desc";

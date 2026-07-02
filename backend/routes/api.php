@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\CommentController;
 use App\Http\Controllers\Api\V1\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
+use App\Http\Controllers\Api\V1\Admin\CourseCategoryController as AdminCourseCategoryController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Api\V1\Admin\CertificateTemplateController as AdminCertificateTemplateController;
 use App\Http\Controllers\Api\V1\Admin\LessonController as AdminLessonController;
@@ -25,6 +26,8 @@ use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\PointRuleController;
 use App\Http\Controllers\Api\V1\Admin\PostController;
 use App\Http\Controllers\Api\V1\Admin\BlogReportController;
+use App\Http\Controllers\Api\V1\Admin\ResourceController;
+use App\Http\Controllers\Api\V1\Admin\ResourceReportController;
 use App\Http\Controllers\Api\V1\Admin\MailTemplateController;
 use App\Http\Controllers\Api\V1\Admin\ReportController;
 use App\Http\Controllers\Api\V1\Admin\UnifiedReportController;
@@ -35,6 +38,7 @@ use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\User\AcademicController;
 use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
+use App\Http\Controllers\Api\V1\User\ResourceController as UserResourceController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
@@ -44,6 +48,7 @@ use App\Http\Controllers\Api\V1\User\QuizController as UserQuizController;
 use App\Http\Controllers\Api\V1\User\EventController as UserEventController;
 use App\Http\Controllers\Api\V1\User\GamificationController;
 use App\Http\Controllers\Api\V1\User\PostController as UserPostController;
+use App\Http\Controllers\Api\V1\User\BoardController as ProjectHubController;
 use App\Http\Controllers\Api\V1\User\FollowController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
 use App\Http\Controllers\Api\V1\User\UserNotificationController;
@@ -111,6 +116,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
         Route::get('/blogs/{id}/reactions/users', [UserBlogController::class, 'reactors']);
 
+        // Public resource routes
+        Route::get('/resources', [UserResourceController::class, 'index']);
+
         // Public event routes (avoid collision with admin /v1/events resource routes)
         Route::get('/events', [UserEventController::class, 'index']);
         Route::get('/events/{event:slug}', [UserEventController::class, 'show']);
@@ -158,12 +166,17 @@ Route::prefix('v1')->group(function () {
             Route::post('/blogs/{id}/visibility', [UserBlogController::class, 'updateVisibility']);
             Route::post('/blogs/{id}/report', [UserBlogController::class, 'report']);
             Route::delete('/blogs/{id}', [UserBlogController::class, 'destroy']);
+            Route::post('/resources', [UserResourceController::class, 'store']);
+            Route::get('/resources/my-resources', [UserResourceController::class, 'myResources']);
+            Route::post('/resources/{resource}/click', [UserResourceController::class, 'recordClick']);
+            Route::post('/resources/{id}/report', [UserResourceController::class, 'report']);
         });
 
         // Wildcard routes registered last to avoid masking specific paths above
         Route::get('/posts/{id}', [UserPostController::class, 'show']);
         Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
         Route::post('/blogs/{slug}/view', [UserBlogController::class, 'recordView']);
+        Route::get('/resources/{resource}', [UserResourceController::class, 'show']);
     });
 
     // Learning center (public read; auth optional để trả tiến độ/ghi danh của user hiện tại)
@@ -181,6 +194,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/courses/{course:slug}/follow', [UserCourseController::class, 'toggleFollow']);
             Route::post('/courses/{course:slug}/lessons/{lessonSlug}/qr-ticket', [UserCourseController::class, 'createQrTicket']);
             Route::post('/courses/{course:slug}/lessons/{lessonSlug}/progress', [UserCourseController::class, 'markVideoProgress']);
+            Route::get('/courses/{course:slug}/certificate', [UserCourseController::class, 'certificate']);
         });
     });
 
@@ -244,6 +258,47 @@ Route::prefix('v1')->group(function () {
         Route::prefix('gamification')->group(function () {
             Route::get('/me', [GamificationController::class, 'me']);
             Route::get('/me/history', [GamificationController::class, 'history']);
+        });
+
+        // ProjectHub — bảng Kanban quản lý tiến độ (yêu cầu quyền vào trang quản trị; dữ liệu vẫn lọc theo thành viên board)
+        Route::middleware('permission:admin_panel.access')->prefix('projecthub')->group(function () {
+            // Tùy chọn liên kết (course/event) cho board
+            Route::get('link-options', [ProjectHubController::class, 'linkOptions']);
+
+            // Boards
+            Route::get('boards', [ProjectHubController::class, 'index']);
+            Route::post('boards', [ProjectHubController::class, 'store']);
+            Route::get('boards/{board}', [ProjectHubController::class, 'show']);
+            Route::put('boards/{board}', [ProjectHubController::class, 'update']);
+            Route::patch('boards/{board}', [ProjectHubController::class, 'update']);
+            Route::patch('boards/{board}/archive', [ProjectHubController::class, 'archive']);
+            Route::delete('boards/{board}', [ProjectHubController::class, 'destroy']);
+
+            // Columns (đăng ký 'reorder' trước '{column}' để không bị che route)
+            Route::post('boards/{board}/columns', [ProjectHubController::class, 'storeColumn']);
+            Route::patch('boards/{board}/columns/reorder', [ProjectHubController::class, 'reorderColumns']);
+            Route::put('boards/{board}/columns/{column}', [ProjectHubController::class, 'updateColumn']);
+            Route::patch('boards/{board}/columns/{column}', [ProjectHubController::class, 'updateColumn']);
+            Route::delete('boards/{board}/columns/{column}', [ProjectHubController::class, 'destroyColumn']);
+
+            // Members
+            Route::get('boards/{board}/members', [ProjectHubController::class, 'members']);
+            Route::get('boards/{board}/assignable-users', [ProjectHubController::class, 'assignableUsers']);
+            Route::post('boards/{board}/members', [ProjectHubController::class, 'storeMember']);
+            Route::patch('boards/{board}/members/{user}', [ProjectHubController::class, 'updateMemberRole']);
+            Route::delete('boards/{board}/members/{user}', [ProjectHubController::class, 'destroyMember']);
+
+            // Tasks (đăng ký '{task}/move' trước '{task}' chung)
+            Route::post('boards/{board}/tasks', [ProjectHubController::class, 'storeTask']);
+            Route::patch('boards/{board}/tasks/{task}/move', [ProjectHubController::class, 'moveTask']);
+            Route::put('boards/{board}/tasks/{task}', [ProjectHubController::class, 'updateTask']);
+            Route::patch('boards/{board}/tasks/{task}', [ProjectHubController::class, 'updateTask']);
+            Route::delete('boards/{board}/tasks/{task}', [ProjectHubController::class, 'destroyTask']);
+
+            // Checklist (việc con của task)
+            Route::post('boards/{board}/tasks/{task}/checklist', [ProjectHubController::class, 'storeChecklistItem']);
+            Route::patch('boards/{board}/tasks/{task}/checklist/{item}', [ProjectHubController::class, 'updateChecklistItem']);
+            Route::delete('boards/{board}/tasks/{task}/checklist/{item}', [ProjectHubController::class, 'destroyChecklistItem']);
         });
     });
 
@@ -433,6 +488,17 @@ Route::prefix('v1')->group(function () {
             Route::delete('blogs/{blog}', [BlogController::class, 'destroy']);
         });
 
+        // resources
+        Route::middleware('permission:community.resources.view')->group(function () {
+            Route::get('resources/stats', [ResourceController::class, 'stats']);
+            Route::get('resources', [ResourceController::class, 'index']);
+            Route::get('resources/{resource}', [ResourceController::class, 'show']);
+        });
+        Route::middleware('permission:community.resources.manage')->group(function () {
+            Route::patch('resources/{resource}/status', [ResourceController::class, 'updateStatus']);
+            Route::delete('resources/{resource}', [ResourceController::class, 'destroy']);
+        });
+
         // comments
         Route::middleware('permission:community.comments.view')->group(function () {
             Route::get('comments/stats', [CommentController::class, 'stats']);
@@ -492,34 +558,50 @@ Route::prefix('v1')->group(function () {
             Route::get('courses', [AdminCourseController::class, 'index']);
             Route::get('courses/trash', [AdminCourseController::class, 'trash']);
             Route::get('certificate-templates', [AdminCertificateTemplateController::class, 'index']);
+            Route::get('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'show']);
+            Route::get('course-categories', [AdminCourseCategoryController::class, 'index']);
             Route::get('courses/{course}', [AdminCourseController::class, 'show']);
             Route::get('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'show']);
         });
         Route::middleware('permission:courses.manage')->group(function () {
             Route::post('courses', [AdminCourseController::class, 'store']);
+            Route::post('course-categories', [AdminCourseCategoryController::class, 'store']);
+            Route::put('course-categories/{tag}', [AdminCourseCategoryController::class, 'update']);
+            Route::patch('course-categories/{tag}', [AdminCourseCategoryController::class, 'update']);
+            Route::delete('course-categories/{tag}', [AdminCourseCategoryController::class, 'destroy']);
             Route::patch('courses/trash/{id}/restore', [AdminCourseController::class, 'restore']);
             Route::delete('courses/trash/{id}/force', [AdminCourseController::class, 'forceDelete']);
             Route::put('courses/{course}', [AdminCourseController::class, 'update']);
             Route::patch('courses/{course}', [AdminCourseController::class, 'update']);
             Route::delete('courses/{course}', [AdminCourseController::class, 'destroy']);
+            Route::get('lessons/youtube-duration', [AdminLessonController::class, 'youtubeDuration']);
             Route::post('courses/{course}/lessons', [AdminLessonController::class, 'store']);
             Route::put('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::patch('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'update']);
             Route::delete('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'destroy']);
             Route::post('courses/{course}/lessons/{lesson}/check-in', [AdminLessonController::class, 'checkIn']);
+            Route::post('courses/{course}/lessons/{lesson}/attendance', [AdminLessonController::class, 'toggleAttendance']);
             Route::get('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'grades']);
             Route::put('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'saveGrades']);
             Route::get('courses/{course}/enrollable-users', [AdminCourseController::class, 'searchEnrollableUsers']);
             Route::post('courses/{course}/enrollments', [AdminCourseController::class, 'enrollStudent']);
-            Route::patch('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'updateEnrollmentTrack']);
             Route::delete('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'removeEnrollment']);
             Route::post('courses/{course}/certificates/{certificate}/revoke', [AdminCourseController::class, 'revokeCertificate']);
             Route::post('courses/{course}/certificates/{certificate}/reissue', [AdminCourseController::class, 'reissueCertificate']);
+            // Quản lý mẫu chứng chỉ (editor canvas)
+            Route::post('certificate-templates', [AdminCertificateTemplateController::class, 'store']);
+            Route::post('certificate-templates/assets', [AdminCertificateTemplateController::class, 'uploadAsset']);
+            Route::post('certificate-templates/preview', [AdminCertificateTemplateController::class, 'preview']);
+            Route::put('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'update']);
+            Route::delete('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'destroy']);
+            Route::post('certificate-templates/{certificateTemplate}/default', [AdminCertificateTemplateController::class, 'setDefault']);
+            Route::post('certificate-templates/{certificateTemplate}/duplicate', [AdminCertificateTemplateController::class, 'duplicate']);
         });
         // quiz của buổi học — quyền riêng cho Trung tâm đào tạo
         Route::middleware('permission:quizzes.manage')->group(function () {
             Route::get('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'show']);
             Route::put('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert']);
+            Route::delete('courses/{course}/lessons/{lesson}/quiz', [AdminQuizController::class, 'destroy']);
         });
 
         // events (admin)
@@ -574,6 +656,14 @@ Route::prefix('v1')->group(function () {
             Route::get('blog-reports', [BlogReportController::class, 'index']);
             Route::patch('blog-reports/{report}/status', [BlogReportController::class, 'updateStatus']);
             Route::post('blog-reports/{report}/hide-blog', [BlogReportController::class, 'hideBlog']);
+        });
+
+        // resource reports
+        Route::middleware('permission:community.reports.view')->group(function () {
+            Route::get('resource-reports/stats', [ResourceReportController::class, 'stats']);
+            Route::get('resource-reports', [ResourceReportController::class, 'index']);
+            Route::post('resource-reports/{report}/dismiss', [ResourceReportController::class, 'dismiss']);
+            Route::post('resource-reports/{report}/hide', [ResourceReportController::class, 'hide']);
         });
 
         // unified reports (post + blog)

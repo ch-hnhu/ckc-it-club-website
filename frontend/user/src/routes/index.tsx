@@ -11,6 +11,8 @@ import BlogFeedPage from "@/pages/blog/BlogFeedPage";
 import BlogCreatePage from "@/pages/blog/BlogCreatePage";
 import BlogDetailPage from "@/pages/blog/BlogDetailPage";
 import BlogEditPage from "@/pages/blog/BlogEditPage";
+import ResourceListPage from "@/pages/resource/ResourceListPage";
+import ResourceCreatePage from "@/pages/resource/ResourceCreatePage";
 import LearningFeedPage from "@/pages/learning/LearningFeedPage";
 import CourseDetailPage from "@/pages/learning/CourseDetailPage";
 import LessonDetailPage from "@/pages/learning/LessonDetailPage";
@@ -74,6 +76,14 @@ const router = createBrowserRouter([
 			{
 				path: "blog/:slug",
 				element: <BlogDetailPage />,
+			},
+			{
+				path: "tai-nguyen",
+				element: <ResourceListPage />,
+			},
+			{
+				path: "tai-nguyen/gui",
+				element: <ResourceCreatePage />,
 			},
 			{
 				path: "khoa-hoc",

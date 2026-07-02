@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\User;
 
+use App\Enums\CourseAudience;
 use App\Enums\CourseStatus;
 use App\Enums\LessonSectionType;
 use App\Enums\TagModelType;
@@ -15,15 +16,18 @@ use App\Models\LessonQrTicket;
 use App\Models\PointRule;
 use App\Models\PointTransaction;
 use App\Models\Tag;
+use App\Models\CourseCertificate;
 use App\Services\CourseCompletionService;
 use App\Services\CourseEnrollmentService;
 use App\Services\PointService;
+use App\Traits\HasSequentialLessonLock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CourseController extends BaseApiController
 {
+    use HasSequentialLessonLock;
     /**
      * Danh sách khoá học đã xuất bản (catalog). Trả về shape `Course[]`.
      */
@@ -32,6 +36,7 @@ class CourseController extends BaseApiController
         $perPage = min((int) $request->query('per_page', 9), 50);
         $search = $request->query('search');
         $category = $request->query('category');
+        $audience = $request->query('audience');
         $level = $request->query('level');
         $sort = in_array($request->query('sort'), ['created_at', 'enrolled_count'], true)
             ? $request->query('sort')
@@ -50,6 +55,10 @@ class CourseController extends BaseApiController
                 'lessons as total_video_seconds' => fn ($q) => $q->where('status', CourseStatus::PUBLISHED->value),
             ], 'video_duration')
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
+            ->when(
+                $audience && in_array($audience, CourseAudience::values(), true),
+                fn ($q) => $q->where('audience', $audience)
+            )
             ->when($level, fn ($q) => $q->where('level', $level))
             ->when($category, fn ($q) => $q->whereHas(
                 'tags',
@@ -106,7 +115,7 @@ class CourseController extends BaseApiController
 
         $lessons = $course->lessons()
             ->where('status', CourseStatus::PUBLISHED->value)
-            ->with('quiz')
+            ->with(['quiz' => fn ($q) => $q->where('is_published', true)])
             ->get();
 
         // Aggregate mà transformCourseCard cần (show() không đi qua withCount/withSum của index()).
@@ -117,13 +126,16 @@ class CourseController extends BaseApiController
 
         $card = $this->transformCourseCard($course, $userId, $lessons->count());
 
+        $lockedIds = $this->lockedLessonIds($course, $lessons, $userId, $enrollment?->track);
+
         $data = array_merge($card, [
             'description' => $course->description ?? '',
             'enrollment_track' => $enrollment?->track,
             'enrollment_start' => $course->enrollment_start?->toIso8601String(),
             'enrollment_deadline' => $course->enrollment_deadline?->toIso8601String(),
             'course_end' => $course->course_end?->toIso8601String(),
-            'lessons' => $lessons->map(fn (Lesson $l) => $this->transformLessonRow($l, $userId, $enrollment?->track))->all(),
+            'max_offline_slots' => $course->max_offline_slots,
+            'lessons' => $lessons->map(fn (Lesson $l) => $this->transformLessonRow($l, $userId, $enrollment?->track, $lockedIds))->all(),
             'stats' => $this->buildStats($course, $lessons, $userId, $enrollment),
         ]);
 
@@ -143,11 +155,21 @@ class CourseController extends BaseApiController
 
         /** @var Lesson $lesson */
         $lesson = $lessons[$idx];
-        $lesson->load('quiz.questions');
+        $lesson->load(['quiz' => fn ($q) => $q->where('is_published', true)->with('questions')]);
+        app(CourseEnrollmentService::class)->assertCanLearn($course, auth('sanctum')->user());
+
         $userId = auth('sanctum')->id();
         $enrollment = $course->enrollmentFor($userId);
 
-        $progress = $this->lessonProgressPercent($lesson, $userId);
+        // Chặn truy cập buổi học đang bị khoá (kể cả khi gõ URL trực tiếp).
+        $lockedIds = $this->lockedLessonIds($course, $lessons, $userId, $enrollment?->track);
+        abort_if(
+            in_array($lesson->id, $lockedIds, true),
+            403,
+            'Buổi học này đang bị khoá. Hãy hoàn thành buổi học trước để mở khoá.'
+        );
+
+        $progress = $this->lessonProgressPercent($lesson, $userId, $enrollment?->track);
         $sections = $this->sectionCompletionMap($lesson, $userId);
 
         $prev = $idx > 0 ? $lessons[$idx - 1] : null;
@@ -170,8 +192,16 @@ class CourseController extends BaseApiController
                 'title' => $course->title,
                 'level' => $course->level->value,
             ],
-            'prev' => $prev ? ['slug' => $prev->slug, 'title' => $prev->title] : null,
-            'next' => $next ? ['slug' => $next->slug, 'title' => $next->title] : null,
+            'prev' => $prev ? [
+                'slug' => $prev->slug,
+                'title' => $prev->title,
+                'locked' => in_array($prev->id, $lockedIds, true),
+            ] : null,
+            'next' => $next ? [
+                'slug' => $next->slug,
+                'title' => $next->title,
+                'locked' => in_array($next->id, $lockedIds, true),
+            ] : null,
             'video' => $videoUrl ? [
                 'id' => $lesson->id,
                 'slug' => 'video',
@@ -182,7 +212,7 @@ class CourseController extends BaseApiController
             ] : null,
             'reference' => $lesson->resource_url ? [
                 'id' => $lesson->id,
-                'title' => $lesson->resource_label ?: 'Tài nguyên tham khảo',
+                'title' => 'Tài nguyên tham khảo',
                 'meta' => 'Tài liệu',
                 'url' => $lesson->resource_url,
                 'completed' => false,
@@ -225,8 +255,20 @@ class CourseController extends BaseApiController
         $lesson = $lessons[$idx];
         $videoUrl = $lesson->playableVideoUrl();
         abort_if(! $videoUrl, 404, 'Buổi học này chưa có video bài giảng.');
+        app(CourseEnrollmentService::class)->assertCanLearn($course, auth('sanctum')->user());
+        $this->assertLessonContentOpen($lesson);
 
         $userId = auth('sanctum')->id();
+        $enrollment = $course->enrollmentFor($userId);
+
+        // Chặn xem video của buổi học đang bị khoá (kể cả khi gõ URL trực tiếp).
+        $lockedIds = $this->lockedLessonIds($course, $lessons, $userId, $enrollment?->track);
+        abort_if(
+            in_array($lesson->id, $lockedIds, true),
+            403,
+            'Buổi học này đang bị khoá. Hãy hoàn thành buổi học trước để mở khoá.'
+        );
+
         $completed = ($this->sectionCompletionMap($lesson, $userId)['video'] ?? false);
         $prev = $idx > 0 ? $lessons[$idx - 1] : null;
         $next = $idx < $lessons->count() - 1 ? $lessons[$idx + 1] : null;
@@ -243,10 +285,21 @@ class CourseController extends BaseApiController
             'duration' => $this->formatDurationClock($lesson->video_duration),
             'xp' => 0, // TODO(G2): tích hợp gamification
             'completed' => $completed,
+            'enrollment_track' => $enrollment?->track,
             'course' => ['slug' => $course->slug, 'title' => $course->title],
             'lesson' => ['slug' => $lesson->slug, 'title' => $lesson->title, 'order' => $lesson->order],
-            'prev_lesson' => $prev ? ['slug' => $prev->slug, 'title' => $prev->title] : null,
-            'next_lesson' => $next ? ['slug' => $next->slug, 'title' => $next->title] : null,
+            'prev_lesson' => $prev ? [
+                'slug' => $prev->slug,
+                'title' => $prev->title,
+                'session_start' => $prev->session_start?->toIso8601String(),
+                'locked' => in_array($prev->id, $lockedIds, true),
+            ] : null,
+            'next_lesson' => $next ? [
+                'slug' => $next->slug,
+                'title' => $next->title,
+                'session_start' => $next->session_start?->toIso8601String(),
+                'locked' => in_array($next->id, $lockedIds, true),
+            ] : null,
         ];
 
         return $this->successResponse(true, $data, 'Lấy thông tin video thành công.');
@@ -316,6 +369,8 @@ class CourseController extends BaseApiController
             ->first();
         abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
 
+        app(CourseEnrollmentService::class)->assertCanLearn($course, $request->user());
+
         $userId = $request->user()->id;
 
         // Vé QR chỉ dành cho học viên đã ghi danh lớp offline.
@@ -360,10 +415,12 @@ class CourseController extends BaseApiController
             ->first();
         abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
         abort_if(! $lesson->playableVideoUrl(), 422, 'Buổi học này chưa có video bài giảng.');
+        app(CourseEnrollmentService::class)->assertCanLearn($course, $request->user());
+        $this->assertLessonContentOpen($lesson);
 
         $userId = $request->user()->id;
-        $enrollment = $course->enrollmentFor($userId);
-        abort_if(! $enrollment, 403, 'Bạn cần ghi danh khoá học trước khi xem video.');
+        // Vào học là tự ghi danh (track online) — không cần bước ghi danh thủ công.
+        $enrollment = app(CourseEnrollmentService::class)->ensureEnrolledOnline($course, $request->user());
 
         $validated = $request->validate([
             'watch_percentage' => ['required', 'integer', 'min:0', 'max:100'],
@@ -375,7 +432,7 @@ class CourseController extends BaseApiController
             ->first();
 
         $bestPercentage = max((int) $validated['watch_percentage'], (int) ($existing?->watch_percentage ?? 0));
-        $isCompleted = $bestPercentage >= LessonSectionType::VIDEO->completionThreshold();
+        $isCompleted = $bestPercentage >= LessonSectionType::VIDEO->videoWatchThreshold();
         $wasCompleted = (bool) ($existing?->is_completed);
 
         $progress = LessonProgress::updateOrCreate(
@@ -404,6 +461,34 @@ class CourseController extends BaseApiController
         );
     }
 
+    /**
+     * Chứng chỉ khoá học của user hiện tại. 404 nếu chưa hoàn thành/chưa được cấp,
+     * hoặc đã bị thu hồi.
+     */
+    public function certificate(Request $request, Course $course): JsonResponse
+    {
+        $enrollment = $course->enrollmentFor($request->user()->id);
+        abort_if(! $enrollment, 404, 'Bạn chưa ghi danh khoá học này.');
+
+        $certificate = CourseCertificate::where([
+            'user_id' => $request->user()->id,
+            'course_id' => $course->id,
+            'track' => $enrollment->track,
+        ])->whereNull('revoked_at')->first();
+
+        abort_if(! $certificate, 404, 'Bạn chưa có chứng chỉ cho khoá học này.');
+
+        return $this->successResponse(
+            true,
+            [
+                'cert_code' => $certificate->cert_code,
+                'cert_url' => $certificate->cert_url,
+                'issued_at' => $certificate->issued_at?->toIso8601String(),
+            ],
+            'Lấy chứng chỉ thành công.',
+        );
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
@@ -420,6 +505,7 @@ class CourseController extends BaseApiController
             'excerpt' => $course->description ? mb_substr($course->description, 0, 160) : null,
             'thumbnail' => $this->resolveUrl($course->thumbnail),
             'level' => $course->level->value,
+            'audience' => $course->audience->value,
             'instructor' => $course->creator ? [
                 'id' => $course->creator->id,
                 'full_name' => $course->creator->full_name,
@@ -444,11 +530,13 @@ class CourseController extends BaseApiController
 
     /**
      * Map Lesson → shape `CourseLesson` (dòng trong danh sách buổi học).
+     *
+     * @param array<int,int> $lockedIds  lesson IDs blocked by sequential lock
      */
-    private function transformLessonRow(Lesson $lesson, ?int $userId, ?string $track): array
+    private function transformLessonRow(Lesson $lesson, ?int $userId, ?string $track, array $lockedIds = []): array
     {
         $sections = $this->sectionCompletionMap($lesson, $userId);
-        $isCompleted = $this->lessonProgressPercent($lesson, $userId) === 100;
+        $isCompleted = $this->lessonProgressPercent($lesson, $userId, $track) === 100;
 
         $qrTicket = null;
         $isAttended = false;
@@ -460,6 +548,9 @@ class CourseController extends BaseApiController
             $isAttended = $lesson->attendances()->where('user_id', $userId)->exists();
         }
 
+        // session_start > now → content (video/quiz) blocked by assertLessonContentOpen().
+        $isContentAvailable = ! ($lesson->session_start && now()->lt($lesson->session_start));
+
         return [
             'id' => $lesson->id,
             'slug' => $lesson->slug,
@@ -467,7 +558,8 @@ class CourseController extends BaseApiController
             'title' => $lesson->title,
             'summary' => $lesson->description,
             'club_only' => false,
-            'is_locked' => false,
+            'is_locked' => in_array($lesson->id, $lockedIds, true),
+            'is_content_available' => $isContentAvailable,
             'completed' => $isCompleted,
             'items_count' => $lesson->itemsCount(),
             'session_start' => $lesson->session_start?->toIso8601String(),
@@ -477,53 +569,11 @@ class CourseController extends BaseApiController
         ];
     }
 
-    /**
-     * Trạng thái hoàn thành từng section (video/assignment/quiz) của user trong buổi học.
-     *
-     * @return array<string,bool>
-     */
-    private function sectionCompletionMap(Lesson $lesson, ?int $userId): array
+    private function assertLessonContentOpen(Lesson $lesson): void
     {
-        if (! $userId) {
-            return [];
+        if ($lesson->session_start && now()->lt($lesson->session_start)) {
+            abort(403, 'Buổi học chưa bắt đầu. Vui lòng quay lại vào ngày ' . $lesson->session_start->format('d/m/Y') . '.');
         }
-
-        return $lesson->progress()
-            ->where('user_id', $userId)
-            ->where('is_completed', true)
-            ->pluck('section_type')
-            ->mapWithKeys(fn ($type) => [
-                $type instanceof LessonSectionType ? $type->value : $type => true,
-            ])
-            ->all();
-    }
-
-    /**
-     * % tiến độ buổi học = số section đã hoàn thành / số section có mặt (video/assignment/quiz).
-     * null nếu buổi học chưa có section nào để tính tiến độ.
-     */
-    private function lessonProgressPercent(Lesson $lesson, ?int $userId): ?int
-    {
-        $present = [];
-        if ($lesson->playableVideoUrl()) {
-            $present[] = 'video';
-        }
-        if ($lesson->assignment_url) {
-            $present[] = 'assignment';
-        }
-        $hasQuiz = $lesson->relationLoaded('quiz') ? (bool) $lesson->quiz : $lesson->quiz()->exists();
-        if ($hasQuiz) {
-            $present[] = 'quiz';
-        }
-
-        if (empty($present)) {
-            return null;
-        }
-
-        $done = $this->sectionCompletionMap($lesson, $userId);
-        $completed = count(array_intersect($present, array_keys($done)));
-
-        return (int) round($completed / count($present) * 100);
     }
 
     /**

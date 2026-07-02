@@ -727,6 +727,12 @@ body {
 	background: #fff;
 }
 
+/* Compact Stacks editor inside club information value dialogs. */
+.so-editor-outer.club-info-markdown-editor {
+	min-width: 0;
+	max-width: 100%;
+}
+
 /* ─────────────────────────────────────────────
    SYNTAX HIGHLIGHTING — Catppuccin Mocha palette
    ───────────────────────────────────────────── */

@@ -19,6 +19,8 @@ import { LoginForm } from "@/pages/auth/LoginForm";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { PermissionRoute } from "@/components/auth/PermissionRoute";
 import NotFound from "@/pages/NotFound";
+import ProjectHubListPage from "@/pages/projecthub/ProjectHubListPage";
+import ProjectBoardPage from "@/pages/projecthub/ProjectBoardPage";
 import RoleList from "@/pages/role/RoleList";
 import RoleDetailPage from "@/pages/role/RoleDetailPage";
 import DivisionManagementPage from "@/pages/division/DivisionManagementPage";
@@ -42,6 +44,8 @@ import MediaListPage from "@/pages/community/MediaListPage";
 import SkillListPage from "@/pages/community/SkillListPage";
 import ReportListPage from "@/pages/community/ReportListPage";
 import BlogReportListPage from "@/pages/community/BlogReportListPage";
+import ResourceListPage from "@/pages/community/ResourceListPage";
+import ResourceReportListPage from "@/pages/community/ResourceReportListPage";
 import MailTemplateListPage from "@/pages/mail-template/MailTemplateListPage";
 import MailTemplateDetailPage from "@/pages/mail-template/MailTemplateDetailPage";
 import EventListPage from "@/pages/event/EventListPage";
@@ -49,10 +53,14 @@ import EventCreatePage from "@/pages/event/EventCreatePage";
 import EventEditPage from "@/pages/event/EventEditPage";
 import EventDetailPage from "@/pages/event/EventDetailPage";
 import CourseListPage from "@/pages/learning/CourseListPage";
+import CourseCategoryListPage from "@/pages/learning/CourseCategoryListPage";
 import CourseFormPage from "@/pages/learning/CourseFormPage";
 import CourseDetailPage from "@/pages/learning/CourseDetailPage";
 import CourseTrashPage from "@/pages/learning/CourseTrashPage";
+import LessonFormPage from "@/pages/learning/LessonFormPage";
+import LessonDetailPage from "@/pages/learning/LessonDetailPage";
 import CertificateTemplateListPage from "@/pages/learning/CertificateTemplateListPage";
+import CertificateTemplateEditorPage from "@/pages/learning/CertificateTemplateEditorPage";
 import PointRulesPage from "@/pages/gamification/PointRulesPage";
 import RanksPage from "@/pages/gamification/RanksPage";
 import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
@@ -335,7 +343,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/channels",
 				element: (
-					<PermissionRoute permission="community.channels.manage">
+					<PermissionRoute permission='community.channels.manage'>
 						<ChannelListPage />
 					</PermissionRoute>
 				),
@@ -343,7 +351,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/posts",
 				element: (
-					<PermissionRoute permission="community.posts.view">
+					<PermissionRoute permission='community.posts.view'>
 						<PostListPage />
 					</PermissionRoute>
 				),
@@ -351,7 +359,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/blogs",
 				element: (
-					<PermissionRoute permission="community.blogs.view">
+					<PermissionRoute permission='community.blogs.view'>
 						<BlogListPage />
 					</PermissionRoute>
 				),
@@ -359,7 +367,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/blogs/create",
 				element: (
-					<PermissionRoute permission="community.blogs.manage">
+					<PermissionRoute permission='community.blogs.manage'>
 						<BlogCreatePage />
 					</PermissionRoute>
 				),
@@ -367,7 +375,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/blogs/:id",
 				element: (
-					<PermissionRoute permission="community.blogs.view">
+					<PermissionRoute permission='community.blogs.view'>
 						<BlogDetailPage />
 					</PermissionRoute>
 				),
@@ -375,7 +383,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/comments",
 				element: (
-					<PermissionRoute permission="community.comments.view">
+					<PermissionRoute permission='community.comments.view'>
 						<CommentListPage />
 					</PermissionRoute>
 				),
@@ -383,7 +391,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/tags",
 				element: (
-					<PermissionRoute permission="community.tags.manage">
+					<PermissionRoute permission='community.tags.manage'>
 						<TagListPage />
 					</PermissionRoute>
 				),
@@ -391,7 +399,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/chat",
 				element: (
-					<PermissionRoute permission="community.chat.view">
+					<PermissionRoute permission='community.chat.view'>
 						<ChatRoomListPage />
 					</PermissionRoute>
 				),
@@ -399,12 +407,12 @@ const router = createBrowserRouter([
 			{
 				// Redirect alias — xử lý link cũ trong thông báo
 				path: "community/chat-rooms",
-				element: <Navigate to="/community/chat" replace />,
+				element: <Navigate to='/community/chat' replace />,
 			},
 			{
 				path: "community/media",
 				element: (
-					<PermissionRoute permission="community.media.view">
+					<PermissionRoute permission='community.media.view'>
 						<MediaListPage />
 					</PermissionRoute>
 				),
@@ -412,7 +420,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/skills",
 				element: (
-					<PermissionRoute permission="community.skills.manage">
+					<PermissionRoute permission='community.skills.manage'>
 						<SkillListPage />
 					</PermissionRoute>
 				),
@@ -420,7 +428,7 @@ const router = createBrowserRouter([
 			{
 				path: "community/reports",
 				element: (
-					<PermissionRoute permission="community.reports.view">
+					<PermissionRoute permission='community.reports.view'>
 						<ReportListPage />
 					</PermissionRoute>
 				),
@@ -428,8 +436,24 @@ const router = createBrowserRouter([
 			{
 				path: "community/blog-reports",
 				element: (
-					<PermissionRoute permission="community.reports.view">
+					<PermissionRoute permission='community.reports.view'>
 						<BlogReportListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/resources",
+				element: (
+					<PermissionRoute permission='community.resources.view'>
+						<ResourceListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "community/resource-reports",
+				element: (
+					<PermissionRoute permission='community.reports.view'>
+						<ResourceReportListPage />
 					</PermissionRoute>
 				),
 			},
@@ -446,6 +470,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='courses.view'>
 						<CourseTrashPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "course-categories",
+				element: (
+					<PermissionRoute permission='courses.view'>
+						<CourseCategoryListPage />
 					</PermissionRoute>
 				),
 			},
@@ -474,6 +506,30 @@ const router = createBrowserRouter([
 				),
 			},
 			{
+				path: "courses/:slug/lessons/:lessonId",
+				element: (
+					<PermissionRoute permission='courses.view'>
+						<LessonDetailPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "courses/:slug/lessons/create",
+				element: (
+					<PermissionRoute permission='courses.manage'>
+						<LessonFormPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "courses/:slug/lessons/:lessonId/edit",
+				element: (
+					<PermissionRoute permission='courses.manage'>
+						<LessonFormPage />
+					</PermissionRoute>
+				),
+			},
+			{
 				path: "certificate-templates",
 				element: (
 					<PermissionRoute permission='courses.view'>
@@ -482,9 +538,25 @@ const router = createBrowserRouter([
 				),
 			},
 			{
+				path: "certificate-templates/create",
+				element: (
+					<PermissionRoute permission='courses.manage'>
+						<CertificateTemplateEditorPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "certificate-templates/:id/edit",
+				element: (
+					<PermissionRoute permission='courses.manage'>
+						<CertificateTemplateEditorPage />
+					</PermissionRoute>
+				),
+			},
+			{
 				path: "gamification/point-rules",
 				element: (
-					<PermissionRoute permission="gamification.manage">
+					<PermissionRoute permission='gamification.manage'>
 						<PointRulesPage />
 					</PermissionRoute>
 				),
@@ -492,7 +564,7 @@ const router = createBrowserRouter([
 			{
 				path: "gamification/ranks",
 				element: (
-					<PermissionRoute permission="gamification.manage">
+					<PermissionRoute permission='gamification.manage'>
 						<RanksPage />
 					</PermissionRoute>
 				),
@@ -500,8 +572,24 @@ const router = createBrowserRouter([
 			{
 				path: "gamification/leaderboard",
 				element: (
-					<PermissionRoute permission="gamification.view">
+					<PermissionRoute permission='gamification.view'>
 						<LeaderboardPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "to-do-list",
+				element: (
+					<PermissionRoute permission='admin_panel.access'>
+						<ProjectHubListPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "to-do-list/:slug",
+				element: (
+					<PermissionRoute permission='admin_panel.access'>
+						<ProjectBoardPage />
 					</PermissionRoute>
 				),
 			},

@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('quiz_id')->constrained()->cascadeOnDelete();
             $table->foreignId('question_type_id')->constrained('question_types');
             $table->text('content');
+            $table->text('explanation')->nullable();
             $table->string('image')->nullable();
             $table->unsignedSmallInteger('order')->default(0);
             // Cấu hình đặc thù theo type, vd: {"case_sensitive": false} cho fill_blank

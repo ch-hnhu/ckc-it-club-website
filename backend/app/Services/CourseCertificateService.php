@@ -6,7 +6,6 @@ use App\Models\CertificateTemplate;
 use App\Models\CourseCertificate;
 use App\Models\CourseEnrollment;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -74,15 +73,26 @@ class CourseCertificateService
     private function generate(CourseEnrollment $enrollment, CertificateTemplate $template, ?CourseCertificate $existing): CourseCertificate
     {
         $certCode = $this->generateCertCode();
-        $html = $template->render([
+        $renderData = [
             'name' => $enrollment->user->full_name ?? '',
             'course' => $enrollment->course->title,
             'cert_code' => $certCode,
             'issued_at' => now()->format('d/m/Y'),
-        ]);
+            'track' => $enrollment->track === 'offline' ? 'Offline' : 'Online',
+            'verify_url' => rtrim((string) config('app.url'), '/').'/verify/'.$certCode,
+        ];
 
         $path = "certificates/{$certCode}.pdf";
-        Storage::disk('public')->put($path, Pdf::loadHTML($html)->setPaper('a4', 'landscape')->output());
+
+        abort_if(
+            ! is_array($template->design) || empty($template->design['canvas']),
+            422,
+            'Mẫu chứng chỉ chưa có thiết kế.',
+        );
+
+        $pdfBytes = app(CertificateRenderer::class)->renderPdf($template, $renderData);
+
+        Storage::disk('public')->put($path, $pdfBytes);
 
         $data = [
             'template_id' => $template->id,
@@ -91,6 +101,7 @@ class CourseCertificateService
             'issued_at' => now(),
             'revoked_at' => null,
             'revoked_by' => null,
+            'has_physical' => $enrollment->track === 'offline',
         ];
 
         if ($existing) {

@@ -24,6 +24,7 @@ interface VideoTab {
 }
 
 const isEmbedUrl = (url: string) => url.includes("youtube") || url.includes("/embed");
+const isFutureDate = (value?: string | null) => Boolean(value && new Date(value) > new Date());
 
 // ─── Skeleton ───────────────────────────────────────────────────────────────────
 
@@ -67,8 +68,13 @@ const VideoDetailPage: React.FC = () => {
 				// Ưu tiên video bài giảng; nếu chưa có thì mở bản ghi livestream
 				setActiveTab(res.data.lecture_url ? "lecture" : "live");
 			})
-			.catch(() => {
-				if (!cancelled) setError("Không tìm thấy video này.");
+			.catch((err) => {
+				if (!cancelled) {
+					setError(
+						(err as { response?: { data?: { message?: string } } })?.response?.data
+							?.message ?? "Không tìm thấy video này.",
+					);
+				}
 			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
@@ -94,6 +100,8 @@ const VideoDetailPage: React.FC = () => {
 	const activeUrl = tabs.find((t) => t.key === activeTab)?.url ?? tabs[0]?.url ?? "";
 	// Chỉ hiện thanh tab khi có cả 2 nguồn (không có bản ghi livestream → ẩn tab)
 	const showTabs = tabs.length > 1;
+	// Track offline điểm danh bằng QR/admin, xem video không thay thế điểm danh → ẩn nút.
+	const showMarkCompleted = video?.enrollment_track !== "offline";
 
 	// Nút đánh dấu tay (fallback của hybrid tracking) — một chiều, gửi 100% khi đánh dấu hoàn thành.
 	// % xem đã đạt không bị tụt lùi ở backend nên không hỗ trợ "bỏ đánh dấu".
@@ -121,6 +129,8 @@ const VideoDetailPage: React.FC = () => {
 	const nextHref = video?.next_lesson
 		? `/khoa-hoc/${slug}/${video.next_lesson.slug}/video`
 		: null;
+	const nextLessonLocked =
+		Boolean(video?.next_lesson?.locked) || isFutureDate(video?.next_lesson?.session_start);
 
 	return (
 		<div className='flex min-h-screen w-full flex-col bg-white pt-16 pb-28 lg:h-screen lg:overflow-hidden lg:pb-[74px]'>
@@ -230,7 +240,10 @@ const VideoDetailPage: React.FC = () => {
 			{/* ── Footer cố định: hoàn thành · Trước/Tiếp ── */}
 			{!loading && !error && video && (
 				<div className='fixed inset-x-0 bottom-0 z-40 border-t-2 border-black bg-white'>
-					<div className='neo-container mx-0 grid max-w-none grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-3 md:px-6 lg:px-8'>
+					<div
+						className={`neo-container mx-0 grid max-w-none items-center gap-3 px-4 py-3 md:px-6 lg:px-8 ${
+							showMarkCompleted ? "grid-cols-[1fr_auto_1fr]" : "grid-cols-[1fr_auto]"
+						}`}>
 						{/* Trái: về buổi học */}
 						<div className='flex min-w-0 items-center gap-3'>
 							<Link
@@ -244,22 +257,24 @@ const VideoDetailPage: React.FC = () => {
 							</p>
 						</div>
 
-						{/* Giữa: đánh dấu hoàn thành */}
-						<button
-							type='button'
-							onClick={handleMarkCompleted}
-							disabled={completed || markingProgress}
-							className={`inline-flex items-center justify-center gap-2 justify-self-center rounded-xl border-2 border-black px-5 py-2.5 font-heading text-sm font-extrabold shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed ${
-								completed
-									? "bg-[var(--color-pastel-green)] text-black"
-									: "bg-[var(--color-primary)] text-black"
-							}`}>
-							<Check className='h-4 w-4' strokeWidth={3} />
-							<span className='hidden sm:inline'>
-								{completed ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}
-							</span>
-							<span className='sm:hidden'>{completed ? "Xong" : "Hoàn thành"}</span>
-						</button>
+						{/* Giữa: đánh dấu hoàn thành — chỉ track online (offline điểm danh bằng QR/admin) */}
+						{showMarkCompleted && (
+							<button
+								type='button'
+								onClick={handleMarkCompleted}
+								disabled={completed || markingProgress}
+								className={`inline-flex items-center justify-center gap-2 justify-self-center rounded-xl border-2 border-black px-5 py-2.5 font-heading text-sm font-extrabold shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed ${
+									completed
+										? "bg-[var(--color-pastel-green)] text-black"
+										: "bg-[var(--color-primary)] text-black"
+								}`}>
+								<Check className='h-4 w-4' strokeWidth={3} />
+								<span className='hidden sm:inline'>
+									{completed ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}
+								</span>
+								<span className='sm:hidden'>{completed ? "Xong" : "Hoàn thành"}</span>
+							</button>
+						)}
 
 						{/* Phải: Trước / Tiếp (theo buổi học) */}
 						<div className='flex items-center justify-end gap-2'>
@@ -269,7 +284,7 @@ const VideoDetailPage: React.FC = () => {
 								<ArrowLeft className='h-4 w-4' />
 								<span className='hidden sm:inline'>Trước</span>
 							</Link>
-							{nextHref ? (
+							{nextHref && !nextLessonLocked ? (
 								<Link
 									to={nextHref}
 									className='inline-flex items-center gap-1.5 rounded-xl border-2 border-black bg-white px-4 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>

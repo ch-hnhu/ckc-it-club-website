@@ -28,7 +28,7 @@ class CourseCompletionService
         $course = $enrollment->course;
         $lessons = $course->lessons()
             ->where('status', CourseStatus::PUBLISHED->value)
-            ->with('quiz')
+            ->with(['quiz' => fn ($q) => $q->where('is_published', true)])
             ->get();
 
         if ($lessons->isEmpty()) {

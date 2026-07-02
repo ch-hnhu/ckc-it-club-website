@@ -1,14 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import axios from "axios";
-import {
-	ArrowLeft,
-	CalendarDays,
-	ImageIcon,
-	Loader2,
-	Send,
-	UploadCloud,
-	X,
-} from "lucide-react";
+import { ArrowLeft, CalendarDays, ImageIcon, Loader2, Send, UploadCloud, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -31,9 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import StacksEditorWrapper, {
-	type StacksEditorHandle,
-} from "@/components/ui/StacksEditorWrapper";
+import StacksEditorWrapper, { type StacksEditorHandle } from "@/components/ui/StacksEditorWrapper";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import departmentService from "@/services/department.service";
 import eventService from "@/services/event.service";
@@ -63,9 +53,7 @@ type FormState = {
 	department_id: string;
 };
 
-type FieldErrors = Partial<
-	Record<keyof FormState | "content" | "thumbnail", string>
->;
+type FieldErrors = Partial<Record<keyof FormState | "content" | "thumbnail", string>>;
 
 const getInitialForm = (): FormState => ({
 	title: "",
@@ -120,7 +108,10 @@ function EventCreatePage() {
 
 	// ── Image preview ──
 	useEffect(() => {
-		if (!imageFile) { setImagePreview(null); return; }
+		if (!imageFile) {
+			setImagePreview(null);
+			return;
+		}
 		const url = URL.createObjectURL(imageFile);
 		setImagePreview(url);
 		return () => URL.revokeObjectURL(url);
@@ -196,10 +187,16 @@ function EventCreatePage() {
 				formData.append("max_attendees", form.max_attendees);
 			}
 			if (form.registration_start_at) {
-				formData.append("registration_start_at", new Date(form.registration_start_at).toISOString());
+				formData.append(
+					"registration_start_at",
+					new Date(form.registration_start_at).toISOString(),
+				);
 			}
 			if (form.registration_end_at) {
-				formData.append("registration_end_at", new Date(form.registration_end_at).toISOString());
+				formData.append(
+					"registration_end_at",
+					new Date(form.registration_end_at).toISOString(),
+				);
 			}
 			if (form.department_id !== "none") formData.append("department_id", form.department_id);
 			if (imageFile) formData.append("thumbnail", imageFile);
@@ -213,7 +210,9 @@ function EventCreatePage() {
 				if (data?.errors) {
 					const mapped: FieldErrors = {};
 					for (const [key, msgs] of Object.entries(data.errors)) {
-						mapped[key as keyof FieldErrors] = Array.isArray(msgs) ? msgs[0] : String(msgs);
+						mapped[key as keyof FieldErrors] = Array.isArray(msgs)
+							? msgs[0]
+							: String(msgs);
 					}
 					setFieldErrors(mapped);
 					return;
@@ -228,160 +227,174 @@ function EventCreatePage() {
 	};
 
 	return (
-		<div className="flex flex-col gap-6 p-4 md:p-6 lg:p-8">
+		<div className='flex flex-col gap-6 p-4 md:p-6 lg:p-8'>
 			{/* Back */}
-			<Button asChild variant="outline" className="w-fit">
-				<Link to="/events">
-					<ArrowLeft className="h-4 w-4" />
+			<Button asChild variant='outline' className='w-fit'>
+				<Link to='/events'>
+					<ArrowLeft className='h-4 w-4' />
 					Quay lại
 				</Link>
 			</Button>
 
 			<form onSubmit={(e) => void handleSubmit(e)}>
-				<div className="grid gap-6 lg:grid-cols-3">
-
+				<div className='grid gap-6 lg:grid-cols-3'>
 					{/* ── Main ── */}
-					<div className="flex flex-col gap-6 lg:col-span-2">
-
+					<div className='flex flex-col gap-6 lg:col-span-2'>
 						{/* Thông tin cơ bản */}
-						<Card className="shadow-sm">
+						<Card className='shadow-sm'>
 							<CardHeader>
 								<CardTitle>Thông tin sự kiện</CardTitle>
 								<CardDescription>
 									Tên, mô tả ngắn và địa điểm tổ chức sự kiện.
 								</CardDescription>
 							</CardHeader>
-							<CardContent className="flex flex-col gap-5">
-
+							<CardContent className='flex flex-col gap-5'>
 								{/* Title */}
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="event-title">
-										Tên sự kiện <span className="text-destructive">*</span>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='event-title'>
+										Tên sự kiện <span className='text-destructive'>*</span>
 									</Label>
 									<Input
-										id="event-title"
-										placeholder="Nhập tên sự kiện..."
+										id='event-title'
+										placeholder='Nhập tên sự kiện...'
 										value={form.title}
 										onChange={(e) => setField("title", e.target.value)}
 										disabled={submitting}
 									/>
 									{fieldErrors.title && (
-										<p className="text-sm text-destructive">{fieldErrors.title}</p>
+										<p className='text-sm text-destructive'>
+											{fieldErrors.title}
+										</p>
 									)}
 								</div>
 
 								{/* Description */}
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="event-description">Mô tả ngắn</Label>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='event-description'>Mô tả ngắn</Label>
 									<Textarea
-										id="event-description"
-										placeholder="Mô tả ngắn về sự kiện (hiển thị ở trang danh sách sự kiện)..."
+										id='event-description'
+										placeholder='Mô tả ngắn về sự kiện (hiển thị ở trang danh sách sự kiện)...'
 										value={form.description}
 										onChange={(e) => setField("description", e.target.value)}
 										disabled={submitting}
 										rows={3}
-										className="resize-none"
+										className='resize-none'
 									/>
 									{fieldErrors.description && (
-										<p className="text-sm text-destructive">{fieldErrors.description}</p>
+										<p className='text-sm text-destructive'>
+											{fieldErrors.description}
+										</p>
 									)}
 								</div>
 
 								{/* Location */}
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="event-location">Địa điểm</Label>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='event-location'>Địa điểm</Label>
 									<Input
-										id="event-location"
-										placeholder="VD: Phòng A305, Trường Cao đẳng Kỹ thuật Cao Thắng..."
+										id='event-location'
+										placeholder='VD: Phòng A305, Trường Cao đẳng Kỹ thuật Cao Thắng...'
 										value={form.location}
 										onChange={(e) => setField("location", e.target.value)}
 										disabled={submitting}
 									/>
 									{fieldErrors.location && (
-										<p className="text-sm text-destructive">{fieldErrors.location}</p>
+										<p className='text-sm text-destructive'>
+											{fieldErrors.location}
+										</p>
 									)}
 								</div>
 
 								{/* Feedback form URL */}
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="event-feedback-form-url">Link form góp ý</Label>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='event-feedback-form-url'>Link form góp ý</Label>
 									<Input
-										id="event-feedback-form-url"
-										type="url"
-										placeholder="VD: https://docs.google.com/forms/..."
+										id='event-feedback-form-url'
+										type='url'
+										placeholder='VD: https://docs.google.com/forms/...'
 										value={form.feedback_form_url}
-										onChange={(e) => setField("feedback_form_url", e.target.value)}
+										onChange={(e) =>
+											setField("feedback_form_url", e.target.value)
+										}
 										disabled={submitting}
 									/>
-									<p className="text-xs text-muted-foreground">
-										Link Google Form/Docs để người tham gia góp ý. Khi có link, nút góp ý sẽ hiển thị ở trang chi tiết sự kiện.
+									<p className='text-xs text-muted-foreground'>
+										Link Google Form/Docs để người tham gia góp ý. Khi có link,
+										nút góp ý sẽ hiển thị ở trang chi tiết sự kiện.
 									</p>
 									{fieldErrors.feedback_form_url && (
-										<p className="text-sm text-destructive">{fieldErrors.feedback_form_url}</p>
+										<p className='text-sm text-destructive'>
+											{fieldErrors.feedback_form_url}
+										</p>
 									)}
 								</div>
 							</CardContent>
 						</Card>
 
 						{/* Thời gian & đăng ký */}
-						<Card className="shadow-sm">
+						<Card className='shadow-sm'>
 							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<CalendarDays className="h-5 w-5 text-muted-foreground" />
+								<CardTitle className='flex items-center gap-2'>
+									<CalendarDays className='h-5 w-5 text-muted-foreground' />
 									Thời gian & đăng ký
 								</CardTitle>
 								<CardDescription>
 									Thời gian diễn ra và cấu hình đăng ký tham gia sự kiện.
 								</CardDescription>
 							</CardHeader>
-							<CardContent className="flex flex-col gap-5">
-
-								<div className="grid gap-5 sm:grid-cols-2">
+							<CardContent className='flex flex-col gap-5'>
+								<div className='grid gap-5 sm:grid-cols-2'>
 									{/* Start */}
-									<div className="flex flex-col gap-2">
-										<Label htmlFor="event-start">
-											Bắt đầu <span className="text-destructive">*</span>
+									<div className='flex flex-col gap-2'>
+										<Label htmlFor='event-start'>
+											Bắt đầu <span className='text-destructive'>*</span>
 										</Label>
 										<Input
-											id="event-start"
-											type="datetime-local"
+											id='event-start'
+											type='datetime-local'
 											value={form.start_at}
 											onChange={(e) => setField("start_at", e.target.value)}
 											disabled={submitting}
 										/>
 										{fieldErrors.start_at && (
-											<p className="text-sm text-destructive">{fieldErrors.start_at}</p>
+											<p className='text-sm text-destructive'>
+												{fieldErrors.start_at}
+											</p>
 										)}
 									</div>
 
 									{/* End */}
-									<div className="flex flex-col gap-2">
-										<Label htmlFor="event-end">
-											Kết thúc <span className="text-destructive">*</span>
+									<div className='flex flex-col gap-2'>
+										<Label htmlFor='event-end'>
+											Kết thúc <span className='text-destructive'>*</span>
 										</Label>
 										<Input
-											id="event-end"
-											type="datetime-local"
+											id='event-end'
+											type='datetime-local'
 											value={form.end_at}
 											onChange={(e) => setField("end_at", e.target.value)}
 											disabled={submitting}
 										/>
 										{fieldErrors.end_at && (
-											<p className="text-sm text-destructive">{fieldErrors.end_at}</p>
+											<p className='text-sm text-destructive'>
+												{fieldErrors.end_at}
+											</p>
 										)}
 									</div>
 								</div>
 
 								{/* Members only */}
-								<div className="flex items-center justify-between rounded-lg border p-4">
-									<div className="space-y-0.5">
-										<Label htmlFor="event-members-only">Yêu cầu thành viên CLB</Label>
-										<p className="text-xs text-muted-foreground">
-											Khi bật, chỉ thành viên câu lạc bộ mới được đăng ký tham gia sự kiện.
+								<div className='flex items-center justify-between rounded-lg border p-4'>
+									<div className='space-y-0.5'>
+										<Label htmlFor='event-members-only'>
+											Yêu cầu thành viên CLB
+										</Label>
+										<p className='text-xs text-muted-foreground'>
+											Khi bật, chỉ thành viên câu lạc bộ mới được đăng ký tham
+											gia sự kiện.
 										</p>
 									</div>
 									<Switch
-										id="event-members-only"
+										id='event-members-only'
 										checked={form.is_members_only}
 										onCheckedChange={(c) => setField("is_members_only", c)}
 										disabled={submitting}
@@ -389,106 +402,122 @@ function EventCreatePage() {
 								</div>
 
 								{/* Registration window */}
-								<div className="grid gap-5 sm:grid-cols-2">
-									<div className="flex flex-col gap-2">
-										<Label htmlFor="event-registration-start">Mở đăng ký</Label>
+								<div className='grid gap-5 sm:grid-cols-2'>
+									<div className='flex flex-col gap-2'>
+										<Label htmlFor='event-registration-start'>Mở đăng ký</Label>
 										<Input
-											id="event-registration-start"
-											type="datetime-local"
+											id='event-registration-start'
+											type='datetime-local'
 											value={form.registration_start_at}
-											onChange={(e) => setField("registration_start_at", e.target.value)}
+											onChange={(e) =>
+												setField("registration_start_at", e.target.value)
+											}
 											disabled={submitting}
 										/>
-										<p className="text-xs text-muted-foreground">
+										<p className='text-xs text-muted-foreground'>
 											Để trống nếu mở đăng ký ngay khi đăng sự kiện.
 										</p>
 										{fieldErrors.registration_start_at && (
-											<p className="text-sm text-destructive">{fieldErrors.registration_start_at}</p>
+											<p className='text-sm text-destructive'>
+												{fieldErrors.registration_start_at}
+											</p>
 										)}
 									</div>
 
-									<div className="flex flex-col gap-2">
-										<Label htmlFor="event-registration-end">Đóng đăng ký</Label>
+									<div className='flex flex-col gap-2'>
+										<Label htmlFor='event-registration-end'>Đóng đăng ký</Label>
 										<Input
-											id="event-registration-end"
-											type="datetime-local"
+											id='event-registration-end'
+											type='datetime-local'
 											value={form.registration_end_at}
-											onChange={(e) => setField("registration_end_at", e.target.value)}
+											onChange={(e) =>
+												setField("registration_end_at", e.target.value)
+											}
 											disabled={submitting}
 										/>
-										<p className="text-xs text-muted-foreground">
+										<p className='text-xs text-muted-foreground'>
 											Để trống nếu nhận đăng ký đến khi sự kiện bắt đầu.
 										</p>
 										{fieldErrors.registration_end_at && (
-											<p className="text-sm text-destructive">{fieldErrors.registration_end_at}</p>
+											<p className='text-sm text-destructive'>
+												{fieldErrors.registration_end_at}
+											</p>
 										)}
 									</div>
 								</div>
 
 								{/* Max attendees */}
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="event-max-attendees">Số người tham gia tối đa</Label>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='event-max-attendees'>
+										Số người tham gia tối đa
+									</Label>
 									<Input
-										id="event-max-attendees"
-										type="number"
+										id='event-max-attendees'
+										type='number'
 										min={1}
-										placeholder="Để trống nếu không giới hạn"
+										placeholder='Để trống nếu không giới hạn'
 										value={form.max_attendees}
 										onChange={(e) => setField("max_attendees", e.target.value)}
 										disabled={submitting}
 									/>
 									{fieldErrors.max_attendees && (
-										<p className="text-sm text-destructive">{fieldErrors.max_attendees}</p>
+										<p className='text-sm text-destructive'>
+											{fieldErrors.max_attendees}
+										</p>
 									)}
 								</div>
 							</CardContent>
 						</Card>
 
 						{/* Nội dung chi tiết — StacksEditor */}
-						<Card className="shadow-sm">
+						<Card className='shadow-sm'>
 							<CardHeader>
 								<CardTitle>Nội dung chi tiết</CardTitle>
 								<CardDescription>
-									Nội dung đầy đủ của sự kiện với editor hỗ trợ Markdown và Rich text (tuỳ chọn).
+									Nội dung đầy đủ của sự kiện với editor hỗ trợ Markdown và Rich
+									text (tuỳ chọn).
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
 								<div
-									className="overflow-hidden rounded-md border bg-background"
+									className='overflow-hidden rounded-md border bg-background'
 									onClick={() => editorRef.current?.focus()}
 									style={{ cursor: "text" }}>
 									<StacksEditorWrapper
 										ref={editorRef}
-										placeholder="Mô tả chi tiết về chương trình, nội dung sự kiện..."
+										placeholder='Mô tả chi tiết về chương trình, nội dung sự kiện...'
 									/>
 								</div>
 								{fieldErrors.content && (
-									<p className="mt-2 text-sm text-destructive">{fieldErrors.content}</p>
+									<p className='mt-2 text-sm text-destructive'>
+										{fieldErrors.content}
+									</p>
 								)}
 							</CardContent>
 						</Card>
 
 						{/* Ảnh thumbnail */}
-						<Card className="shadow-sm">
+						<Card className='shadow-sm'>
 							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<ImageIcon className="h-5 w-5 text-muted-foreground" />
+								<CardTitle className='flex items-center gap-2'>
+									<ImageIcon className='h-5 w-5 text-muted-foreground' />
 									Ảnh sự kiện
 								</CardTitle>
 								<CardDescription>
-									Ảnh thumbnail hiển thị ở trang danh sách và trang chi tiết sự kiện (tuỳ chọn).
+									Ảnh thumbnail hiển thị ở trang danh sách và trang chi tiết sự
+									kiện (tuỳ chọn).
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
 								<input
 									ref={imageInputRef}
-									type="file"
-									accept="image/*"
-									className="sr-only"
+									type='file'
+									accept='image/*'
+									className='sr-only'
 									onChange={handleImageChange}
 								/>
 								<div
-									role="button"
+									role='button'
 									tabIndex={0}
 									onClick={openImageDialog}
 									onKeyDown={(e) => {
@@ -496,127 +525,145 @@ function EventCreatePage() {
 										e.preventDefault();
 										openImageDialog();
 									}}
-									aria-label="Tải ảnh sự kiện"
-									className="group relative flex min-h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 px-6 py-8 text-center transition hover:border-muted-foreground/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+									aria-label='Tải ảnh sự kiện'
+									className='group relative flex min-h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 px-6 py-8 text-center transition hover:border-muted-foreground/50 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring'>
 									{imagePreview ? (
-										<div className="w-full space-y-3">
-											<div className="mx-auto max-w-sm overflow-hidden rounded-lg border bg-background shadow-sm">
-												<div className="relative aspect-video w-full bg-muted">
+										<div className='w-full space-y-3'>
+											<div className='mx-auto max-w-sm overflow-hidden rounded-lg border bg-background shadow-sm'>
+												<div className='relative aspect-video w-full bg-muted'>
 													<img
 														src={imagePreview}
-														alt="Preview"
-														className="h-full w-full object-cover"
+														alt='Preview'
+														className='h-full w-full object-cover'
 													/>
 												</div>
-												<div className="flex items-center justify-between border-t px-3 py-2">
-													<p className="truncate text-xs text-muted-foreground">
+												<div className='flex items-center justify-between border-t px-3 py-2'>
+													<p className='truncate text-xs text-muted-foreground'>
 														{imageFile?.name}
 													</p>
 													<button
-														type="button"
+														type='button'
 														onClick={removeImage}
-														aria-label="Xoá ảnh"
-														className="ml-2 shrink-0 rounded p-0.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive">
-														<X className="h-3.5 w-3.5" />
+														aria-label='Xoá ảnh'
+														className='ml-2 shrink-0 rounded p-0.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive'>
+														<X className='h-3.5 w-3.5' />
 													</button>
 												</div>
 											</div>
-											<p className="text-sm text-muted-foreground">Nhấn để thay đổi ảnh</p>
+											<p className='text-sm text-muted-foreground'>
+												Nhấn để thay đổi ảnh
+											</p>
 										</div>
 									) : (
 										<>
-											<UploadCloud className="h-10 w-10 text-muted-foreground/50 transition group-hover:text-muted-foreground" />
-											<p className="mt-3 text-sm font-medium text-muted-foreground">
+											<UploadCloud className='h-10 w-10 text-muted-foreground/50 transition group-hover:text-muted-foreground' />
+											<p className='mt-3 text-sm font-medium text-muted-foreground'>
 												Kéo & thả hoặc nhấn để chọn ảnh
 											</p>
-											<p className="mt-1 text-xs text-muted-foreground/60">
-												Hỗ trợ PNG, JPG, WebP, tối đa 5MB (khuyến nghị 1200×630px)
+											<p className='mt-1 text-xs text-muted-foreground/60'>
+												Hỗ trợ PNG, JPG, WebP, tối đa 5MB (khuyến nghị
+												1200×630px)
 											</p>
 										</>
 									)}
 								</div>
 								{fieldErrors.thumbnail && (
-									<p className="mt-2 text-sm text-destructive">{fieldErrors.thumbnail}</p>
+									<p className='mt-2 text-sm text-destructive'>
+										{fieldErrors.thumbnail}
+									</p>
 								)}
 							</CardContent>
 						</Card>
 					</div>
 
 					{/* ── Sidebar ── */}
-					<div className="flex flex-col gap-6">
-
+					<div className='flex flex-col gap-6'>
 						{/* Trạng thái */}
-						<Card className="shadow-sm">
+						<Card className='shadow-sm'>
 							<CardHeader>
 								<CardTitle>Đăng sự kiện</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="event-status">Trạng thái</Label>
+								<div className='flex flex-col gap-2'>
+									<Label htmlFor='event-status'>Trạng thái</Label>
 									<Select
 										value={form.status}
 										onValueChange={(v) => setField("status", v as CreateStatus)}
 										disabled={submitting}>
-										<SelectTrigger id="event-status" className="w-full">
+										<SelectTrigger id='event-status' className='w-full'>
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="draft">Bản nháp</SelectItem>
-											<SelectItem value="published">Đăng ngay</SelectItem>
+											<SelectItem value='draft'>Bản nháp</SelectItem>
+											<SelectItem value='published'>Đăng ngay</SelectItem>
 										</SelectContent>
 									</Select>
-									<p className="text-xs text-muted-foreground">
-										{form.status === "draft" && "Lưu nháp, chưa hiển thị với thành viên."}
-										{form.status === "published" && "Đăng ngay và cho phép thành viên xem, đăng ký."}
+									<p className='text-xs text-muted-foreground'>
+										{form.status === "draft" &&
+											"Lưu nháp, chưa hiển thị với thành viên."}
+										{form.status === "published" &&
+											"Đăng ngay và cho phép thành viên xem, đăng ký."}
 									</p>
 								</div>
 							</CardContent>
 						</Card>
 
 						{/* Ban tổ chức */}
-						<Card className="shadow-sm">
+						<Card className='shadow-sm'>
 							<CardHeader>
 								<CardTitle>Ban tổ chức</CardTitle>
-								<CardDescription>Ban phụ trách tổ chức sự kiện (tuỳ chọn).</CardDescription>
+								<CardDescription>
+									Ban phụ trách tổ chức sự kiện (tuỳ chọn).
+								</CardDescription>
 							</CardHeader>
 							<CardContent>
 								{departmentsLoading ? (
-									<p className="text-sm text-muted-foreground">Đang tải danh sách ban...</p>
+									<p className='text-sm text-muted-foreground'>
+										Đang tải danh sách ban...
+									</p>
 								) : (
 									<Select
 										value={form.department_id}
 										onValueChange={(v) => setField("department_id", v)}
 										disabled={submitting}>
-										<SelectTrigger id="event-department" className="w-full">
+										<SelectTrigger id='event-department' className='w-full'>
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="none">Không thuộc ban nào</SelectItem>
+											<SelectItem value='none'>
+												Không thuộc ban nào
+											</SelectItem>
 											{departments.map((d) => (
-												<SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+												<SelectItem key={d.id} value={String(d.id)}>
+													{d.name}
+												</SelectItem>
 											))}
 										</SelectContent>
 									</Select>
 								)}
 								{fieldErrors.department_id && (
-									<p className="mt-2 text-sm text-destructive">{fieldErrors.department_id}</p>
+									<p className='mt-2 text-sm text-destructive'>
+										{fieldErrors.department_id}
+									</p>
 								)}
 							</CardContent>
 						</Card>
 
 						{/* Actions */}
-						<Card className="shadow-sm">
-							<CardFooter className="flex flex-col gap-3 pt-6">
-								<Button type="submit" className="w-full" disabled={submitting}>
-									{submitting
-										? <Loader2 className="h-4 w-4 animate-spin" />
-										: <Send className="h-4 w-4" />}
+						<Card className='shadow-sm'>
+							<CardFooter className='flex flex-col gap-3'>
+								<Button type='submit' className='w-full' disabled={submitting}>
+									{submitting ? (
+										<Loader2 className='h-4 w-4 animate-spin' />
+									) : (
+										<Send className='h-4 w-4' />
+									)}
 									{submitting ? "Đang lưu..." : "Lưu sự kiện"}
 								</Button>
 								<Button
-									type="button"
-									variant="outline"
-									className="w-full"
+									type='button'
+									variant='outline'
+									className='w-full'
 									onClick={() => navigate("/events")}
 									disabled={submitting}>
 									Hủy

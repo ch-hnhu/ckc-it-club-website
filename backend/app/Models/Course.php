@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CourseLevel;
+use App\Enums\CourseAudience;
 use App\Enums\CourseStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,7 @@ class Course extends Model
         'thumbnail',
         'level',
         'status',
+        'audience',
         'enrollment_start',
         'enrollment_deadline',
         'course_end',
@@ -38,6 +40,7 @@ class Course extends Model
         return [
             'level' => CourseLevel::class,
             'status' => CourseStatus::class,
+            'audience' => CourseAudience::class,
             'enrollment_start' => 'datetime',
             'enrollment_deadline' => 'datetime',
             'course_end' => 'datetime',
@@ -85,6 +88,14 @@ class Course extends Model
     public function followers(): HasMany
     {
         return $this->hasMany(CourseFollower::class);
+    }
+
+    /**
+     * Các board ProjectHub liên kết với khoá học này.
+     */
+    public function boards(): HasMany
+    {
+        return $this->hasMany(Board::class);
     }
 
     /**

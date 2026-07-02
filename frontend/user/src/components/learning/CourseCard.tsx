@@ -1,7 +1,7 @@
 import React from "react";
-import { ArrowRight, BarChart3 } from "lucide-react";
+import { ArrowRight, BarChart3, Globe2, School, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { Course, CourseLevel } from "@/types/learning.types";
+import type { Course, CourseAudience, CourseLevel } from "@/types/learning.types";
 
 interface CourseCardProps {
 	course: Course;
@@ -16,20 +16,59 @@ const LEVEL_LABEL: Record<CourseLevel, string> = {
 	advanced: "Nâng cao",
 };
 
+const AUDIENCE_META: Record<
+	CourseAudience,
+	{
+		label: string;
+		icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+		className: string;
+	}
+> = {
+	club_member: {
+		label: "Thành viên CLB",
+		icon: Users,
+		className: "bg-[var(--color-pastel-green)]",
+	},
+	cao_thang_student: {
+		label: "Sinh viên Cao Thắng",
+		icon: School,
+		className: "bg-[var(--color-pastel-blue)]",
+	},
+	public: {
+		label: "Công khai",
+		icon: Globe2,
+		className: "bg-[var(--color-pastel-purple)]",
+	},
+};
+
 const Placeholder: React.FC<{ title: string; size?: string }> = ({ title, size = "text-6xl" }) => (
 	<div className='flex h-full w-full items-center justify-center bg-[var(--color-pastel-green)]'>
-		<span className={`font-heading font-extrabold text-[var(--color-text-primary)] opacity-20 ${size}`}>
+		<span
+			className={`font-heading font-extrabold text-[var(--color-text-primary)] opacity-20 ${size}`}>
 			{title.charAt(0).toUpperCase()}
 		</span>
 	</div>
 );
 
 const LevelPill: React.FC<{ level: CourseLevel }> = ({ level }) => (
-	<span className='inline-flex items-center gap-2 rounded-full border-2 border-black bg-[var(--color-pastel-green)] px-3.5 py-1.5 font-heading text-[11px] font-extrabold uppercase tracking-[0.1em] text-black shadow-[2px_2px_0_#111]'>
+	<span className='inline-flex items-center gap-2 rounded-full border-2 border-black bg-[var(--color-pastel-green)] px-3 py-1 font-heading text-[10px] font-extrabold uppercase tracking-[0.1em] text-black'>
 		<BarChart3 className='h-3.5 w-3.5' strokeWidth={2.5} />
 		{LEVEL_LABEL[level]}
 	</span>
 );
+
+const AudiencePill: React.FC<{ audience: CourseAudience }> = ({ audience }) => {
+	const meta = AUDIENCE_META[audience];
+	const Icon = meta.icon;
+
+	return (
+		<span
+			className={`inline-flex items-center gap-2 rounded-full border-2 border-black px-3 py-1 font-heading text-[10px] font-extrabold uppercase tracking-[0.1em] text-black ${meta.className}`}>
+			<Icon className='h-3.5 w-3.5' strokeWidth={2.5} />
+			{meta.label}
+		</span>
+	);
+};
 
 // Card light theme giống blog card: nền trắng, viền đen, shadow cứng, hover dịch nhẹ
 const CARD_BASE =
@@ -45,8 +84,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, featured = false
 				to={detailUrl}
 				className='group block overflow-hidden rounded-2xl border-2 border-black bg-white'>
 				<div className='flex flex-col md:flex-row'>
-					{/* Image — 58% width on desktop */}
-					<div className='relative aspect-[4/3] max-h-[340px] shrink-0 overflow-hidden bg-gray-100 md:h-[380px] md:max-h-[420px] md:w-[58%] md:aspect-auto lg:h-[420px]'>
+					{/* Image — full width on mobile, 58% on desktop */}
+					<div className='relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-gray-100 md:aspect-auto md:min-h-[380px] md:w-[58%] md:self-stretch lg:min-h-[420px]'>
 						{course.thumbnail ? (
 							<img
 								src={course.thumbnail}
@@ -62,7 +101,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, featured = false
 					<div className='flex flex-col justify-center p-7 md:flex-1 md:p-10 lg:p-12'>
 						<div className='mb-4'>
 							<span className='inline-flex items-center gap-1 rounded-full border-2 border-black bg-[var(--color-primary)] px-3 py-1 font-heading text-[11px] font-extrabold uppercase tracking-wide text-black shadow-[2px_2px_0_#111]'>
-								✦ Nổi bật
+								✦ Mới
 							</span>
 						</div>
 
@@ -76,12 +115,15 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, featured = false
 							</p>
 						)}
 
+						<div className='mt-4 flex flex-wrap items-center gap-3'>
+							<LevelPill level={course.level} />
+							<AudiencePill audience={course.audience} />
+						</div>
 						<div className='mt-7 flex flex-wrap items-center gap-3'>
-							<span className='inline-flex items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition group-hover:translate-x-[1px] group-hover:translate-y-[1px] group-hover:shadow-none'>
+							<span className='inline-flex items-center gap-2 rounded-lg border-2 border-black bg-[var(--color-primary)] px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
 								Vào học
 								<ArrowRight className='h-4 w-4' />
 							</span>
-							<LevelPill level={course.level} />
 						</div>
 					</div>
 				</div>
@@ -118,7 +160,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, featured = false
 				<div className='min-h-4 flex-1' />
 
 				<div className='mt-6'>
-					<LevelPill level={course.level} />
+					<div className='flex flex-wrap gap-2'>
+						<LevelPill level={course.level} />
+						<AudiencePill audience={course.audience} />
+					</div>
 				</div>
 			</div>
 		</Link>

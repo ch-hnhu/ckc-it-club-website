@@ -19,6 +19,11 @@ class Tag extends Model
         return $this->belongsToMany(Blog::class, 'blog_tags');
     }
 
+    public function courses(): BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'course_tags');
+    }
+
     public function scopeOfType(Builder $query, TagModelType|string $modelType): Builder
     {
         $value = $modelType instanceof TagModelType ? $modelType->value : $modelType;

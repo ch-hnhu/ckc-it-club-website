@@ -2,6 +2,8 @@ import {
 	Award,
 	Building,
 	CalendarDays,
+	CircleCheckBig,
+	FolderOpen,
 	Globe,
 	GraduationCap,
 	House,
@@ -186,11 +188,11 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/community/chat",
 				permission: "community.chat.view",
 			},
-			{
-				title: "Tài nguyên",
-				url: "/community/media",
-				permission: "community.media.view",
-			},
+			// {
+			// 	title: "Tài nguyên",
+			// 	url: "/community/media",
+			// 	permission: "community.media.view",
+			// },
 			{
 				title: "Skills",
 				url: "/community/skills",
@@ -199,6 +201,24 @@ export const adminNavMain: AdminNavItem[] = [
 			{
 				title: "Báo cáo vi phạm",
 				url: "/community/reports",
+				permission: "community.reports.view",
+			},
+		],
+	},
+	{
+		title: "Kho tài nguyên",
+		url: "/community/resources",
+		icon: FolderOpen,
+		permission: "community.resources.view",
+		items: [
+			{
+				title: "Danh sách tài nguyên",
+				url: "/community/resources",
+				permission: "community.resources.view",
+			},
+			{
+				title: "Báo cáo",
+				url: "/community/resource-reports",
 				permission: "community.reports.view",
 			},
 		],
@@ -215,22 +235,14 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "courses.view",
 			},
 			{
+				title: "Danh mục khóa học",
+				url: "/course-categories",
+				permission: "courses.view",
+			},
+			{
 				title: "Giấy chứng nhận",
 				url: "/certificate-templates",
 				permission: "courses.view",
-			},
-		],
-	},
-	{
-		title: "Quản lý sự kiện",
-		url: "/events",
-		icon: CalendarDays,
-		permission: "events.view",
-		items: [
-			{
-				title: "Sự kiện",
-				url: "/events",
-				permission: "events.view",
 			},
 		],
 	},
@@ -258,10 +270,22 @@ export const adminNavMain: AdminNavItem[] = [
 		],
 	},
 	{
+		title: "Quản lý sự kiện",
+		url: "/events",
+		icon: CalendarDays,
+		permission: "events.view",
+	},
+	{
 		title: "Quản lý liên hệ",
 		url: "/contacts",
 		icon: MailOpen,
 		permission: "contacts.view",
+	},
+	{
+		title: "Việc cần làm",
+		url: "/to-do-list",
+		icon: CircleCheckBig,
+		permission: "admin_panel.access",
 	},
 ];
 
@@ -316,12 +340,18 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/community\/skills$/, permission: "community.skills.manage" },
 	{ pattern: /^\/community\/reports$/, permission: "community.reports.view" },
 	{ pattern: /^\/community\/blog-reports$/, permission: "community.reports.view" },
+	{ pattern: /^\/community\/resources$/, permission: "community.resources.view" },
+	{ pattern: /^\/community\/resource-reports$/, permission: "community.reports.view" },
 	{ pattern: /^\/courses$/, permission: "courses.view" },
 	{ pattern: /^\/courses\/trash$/, permission: "courses.view" },
+	{ pattern: /^\/course-categories$/, permission: "courses.view" },
 	{ pattern: /^\/courses\/create$/, permission: "courses.manage" },
 	{ pattern: /^\/courses\/[^/]+$/, permission: "courses.view" },
 	{ pattern: /^\/courses\/[^/]+\/edit$/, permission: "courses.manage" },
+	{ pattern: /^\/courses\/[^/]+\/lessons\/[^/]+$/, permission: "courses.view" },
 	{ pattern: /^\/certificate-templates$/, permission: "courses.view" },
+	{ pattern: /^\/certificate-templates\/create$/, permission: "courses.manage" },
+	{ pattern: /^\/certificate-templates\/[^/]+\/edit$/, permission: "courses.manage" },
 	{ pattern: /^\/events$/, permission: "events.view" },
 	{ pattern: /^\/events\/create$/, permission: "events.manage" },
 	{ pattern: /^\/events\/[^/]+\/edit$/, permission: "events.manage" },

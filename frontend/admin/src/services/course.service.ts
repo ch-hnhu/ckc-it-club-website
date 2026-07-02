@@ -1,12 +1,12 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
-import type { AdminCourse, CourseListParams } from "@/pages/learning/course-mock";
+import type { AdminCourse, CourseListParams } from "@/pages/learning/course.types";
 import type {
 	AdminCourseDetail,
 	CourseCertificateRow,
 	CourseEnrollmentRow,
 	EnrollmentTrack,
-} from "@/pages/learning/course-detail-mock";
+} from "@/pages/learning/course-detail.types";
 import type { CourseStatus } from "@/pages/learning/course-meta";
 
 /** Một user gợi ý khi tìm để ghi danh thay (chưa ghi danh khóa học). */
@@ -35,10 +35,10 @@ export interface LessonFull {
 	session_start: string | null;
 	session_end: string | null;
 	resource_url: string | null;
-	resource_label: string | null;
 	video_url: string | null;
 	video_duration: number | null;
 	live_url: string | null;
+	live_duration: number | null;
 	document: string | null;
 	assignment_url: string | null;
 	assignment_deadline: string | null;
@@ -65,13 +65,13 @@ export interface AssignmentGradeDTO {
 	email: string | null;
 	avatar: string | null;
 	track: "offline" | "online";
-	/** null = chưa chấm */
-	score: number | null;
+	/** null = chưa chấm, true = đạt, false = không đạt */
+	passed: boolean | null;
 }
 
 export interface GradeInput {
 	user_id: number;
-	score: number | null;
+	passed: boolean | null;
 }
 
 /** Một đáp án của câu hỏi quiz (shape khớp backend QuizController). */
@@ -100,11 +100,13 @@ export interface QuizQuestionDTO {
 export interface QuizDTO {
 	id: number;
 	lesson_id: number;
+	is_published: boolean;
 	questions: QuizQuestionDTO[];
 }
 
-/** Payload gửi lên khi lưu quiz: chỉ cần danh sách câu hỏi. */
+/** Payload gửi lên khi lưu quiz. */
 export interface QuizPayload {
+	is_published: boolean;
 	questions: QuizQuestionDTO[];
 }
 
@@ -122,6 +124,7 @@ const courseService = {
 		if (params.search) query.search = params.search;
 		if (params.status && params.status !== "all") query.status = params.status;
 		if (params.level && params.level !== "all") query.level = params.level;
+		if (params.audience && params.audience !== "all") query.audience = params.audience;
 		if (params.offline && params.offline !== "all") query.offline = params.offline;
 		if (params.sort) query.sort = params.sort;
 		if (params.order) query.order = params.order;
@@ -152,6 +155,11 @@ const courseService = {
 	/** Danh mục (tag) khóa học để chọn khi tạo/sửa — dùng endpoint công khai. */
 	async getCategories(): Promise<ApiResponse<CourseCategoryOption[]>> {
 		return api.get("/learning/categories");
+	},
+
+	/** Lấy thời lượng video YouTube (giây + nhãn "X tiếng Y phút") từ URL qua backend. */
+	async getYoutubeDuration(url: string): Promise<ApiResponse<{ seconds: number; label: string }>> {
+		return api.get("/lessons/youtube-duration", { url });
 	},
 
 	// ── Xóa / thùng rác ──
@@ -214,6 +222,11 @@ const courseService = {
 		return api.put(`/courses/${courseSlug}/lessons/${lessonId}/quiz`, payload);
 	},
 
+	/** Xoá toàn bộ quiz của buổi học. */
+	async deleteQuiz(courseSlug: string, lessonId: number): Promise<ApiResponse<null>> {
+		return api.delete(`/courses/${courseSlug}/lessons/${lessonId}/quiz`);
+	},
+
 	/** Điểm danh buổi học bằng mã QR (token trên vé học viên). */
 	async checkInLesson(
 		courseSlug: string,
@@ -221,6 +234,21 @@ const courseService = {
 		qrToken: string,
 	): Promise<ApiResponse<LessonCheckInResult>> {
 		return api.post(`/courses/${courseSlug}/lessons/${lessonId}/check-in`, { qr_token: qrToken });
+	},
+
+	/** Điểm danh thủ công (toggle có mặt/vắng) một học viên cho buổi học offline. */
+	async toggleAttendance(
+		courseSlug: string,
+		lessonId: number,
+		userId: number,
+		present: boolean,
+		note?: string,
+	): Promise<ApiResponse<{ user_id: number; lesson_id: number; present: boolean }>> {
+		return api.post(`/courses/${courseSlug}/lessons/${lessonId}/attendance`, {
+			user_id: userId,
+			present,
+			...(note ? { note } : {}),
+		});
 	},
 
 	/** Danh sách học viên + điểm bài tập hiện tại của buổi học. */
@@ -256,15 +284,6 @@ const courseService = {
 		track: EnrollmentTrack,
 	): Promise<ApiResponse<CourseEnrollmentRow>> {
 		return api.post(`/courses/${courseSlug}/enrollments`, { user_id: userId, track });
-	},
-
-	/** Đổi track (offline/online) của một ghi danh. */
-	async updateEnrollmentTrack(
-		courseSlug: string,
-		enrollmentId: number,
-		track: EnrollmentTrack,
-	): Promise<ApiResponse<CourseEnrollmentRow>> {
-		return api.patch(`/courses/${courseSlug}/enrollments/${enrollmentId}`, { track });
 	},
 
 	/** Xoá ghi danh (cascade xoá tiến độ/điểm danh liên quan). */

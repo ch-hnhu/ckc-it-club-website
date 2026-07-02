@@ -11,14 +11,18 @@ use App\Models\LessonProgress;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Services\CourseCompletionService;
+use App\Services\CourseEnrollmentService;
 use App\Services\PointService;
 use App\Services\QuizGradingService;
+use App\Traits\HasSequentialLessonLock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class QuizController extends BaseApiController
 {
+    use HasSequentialLessonLock;
+
     public function __construct(private readonly QuizGradingService $grader)
     {
         parent::__construct();
@@ -30,12 +34,23 @@ class QuizController extends BaseApiController
      */
     public function show(Request $request, Course $course, string $lessonSlug): JsonResponse
     {
-        $lesson = $this->resolveLesson($course, $lessonSlug);
-        $quiz = $lesson->quiz()->with(['questions.options', 'questions.type'])->first();
+        [$lesson, $lessons] = $this->resolveLessonWithSiblings($course, $lessonSlug);
+        app(CourseEnrollmentService::class)->assertCanLearn($course, auth('sanctum')->user());
+        $this->assertLessonContentOpen($lesson);
+
+        $userId = auth('sanctum')->id();
+        $enrollment = $course->enrollmentFor($userId);
+        $lockedIds = $this->lockedLessonIds($course, $lessons, $userId, $enrollment?->track);
+        abort_if(
+            in_array($lesson->id, $lockedIds, true),
+            403,
+            'Buổi học này đang bị khoá. Hãy hoàn thành buổi học trước để mở khoá.'
+        );
+
+        $quiz = $lesson->quiz()->where('is_published', true)->with(['questions.options', 'questions.type'])->first();
 
         abort_if(! $quiz || $quiz->questions->isEmpty(), 404, 'Buổi học này chưa có quiz.');
 
-        $userId = auth('sanctum')->id();
         $completed = $userId
             ? $lesson->progress()
                 ->where('user_id', $userId)
@@ -82,8 +97,20 @@ class QuizController extends BaseApiController
      */
     public function submit(Request $request, Course $course, string $lessonSlug): JsonResponse
     {
-        $lesson = $this->resolveLesson($course, $lessonSlug);
-        $quiz = $lesson->quiz()->with(['questions.options', 'questions.type'])->first();
+        [$lesson, $lessons] = $this->resolveLessonWithSiblings($course, $lessonSlug);
+        app(CourseEnrollmentService::class)->assertCanLearn($course, $request->user());
+        $this->assertLessonContentOpen($lesson);
+
+        $userId = $request->user()->id;
+        $enrollment = $course->enrollmentFor($userId);
+        $lockedIds = $this->lockedLessonIds($course, $lessons, $userId, $enrollment?->track);
+        abort_if(
+            in_array($lesson->id, $lockedIds, true),
+            403,
+            'Buổi học này đang bị khoá. Hãy hoàn thành buổi học trước để mở khoá.'
+        );
+
+        $quiz = $lesson->quiz()->where('is_published', true)->with(['questions.options', 'questions.type'])->first();
         abort_if(! $quiz || $quiz->questions->isEmpty(), 404, 'Buổi học này chưa có quiz.');
 
         $validated = $request->validate([
@@ -92,7 +119,6 @@ class QuizController extends BaseApiController
             'answers.*.answer_data' => 'present|array',
         ]);
 
-        $userId = $request->user()->id;
         $questionsById = $quiz->questions->keyBy('id');
         $total = $quiz->questions->count();
 
@@ -166,9 +192,9 @@ class QuizController extends BaseApiController
             PointService::award($request->user(), 'learning_center.quiz_passed', $quizProgress);
         }
 
-        if ($enrollment = $course->enrollmentFor($userId)) {
-            app(CourseCompletionService::class)->recalc($enrollment);
-        }
+        // Làm quiz cũng là học → tự ghi danh (track online) nếu chưa, để tính tiến độ.
+        $enrollment = app(CourseEnrollmentService::class)->ensureEnrolledOnline($course, $request->user());
+        app(CourseCompletionService::class)->recalc($enrollment);
 
         return $this->successResponse(true, [
             'score' => $score,
@@ -185,17 +211,27 @@ class QuizController extends BaseApiController
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private function resolveLesson(Course $course, string $lessonSlug): Lesson
+    /**
+     * @return array{0: Lesson, 1: \Illuminate\Support\Collection<int,Lesson>}
+     */
+    private function resolveLessonWithSiblings(Course $course, string $lessonSlug): array
     {
         abort_if($course->status !== CourseStatus::PUBLISHED, 404);
 
-        $lesson = $course->lessons()
+        $lessons = $course->lessons()
             ->where('status', CourseStatus::PUBLISHED->value)
-            ->where('slug', $lessonSlug)
-            ->first();
+            ->get();
 
+        $lesson = $lessons->first(fn (Lesson $l) => $l->slug === $lessonSlug);
         abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
 
-        return $lesson;
+        return [$lesson, $lessons];
+    }
+
+    private function assertLessonContentOpen(Lesson $lesson): void
+    {
+        if ($lesson->session_start && now()->lt($lesson->session_start)) {
+            abort(403, 'Buổi học chưa bắt đầu. Vui lòng quay lại vào ngày ' . $lesson->session_start->format('d/m/Y') . '.');
+        }
     }
 }

@@ -8,18 +8,32 @@ import {
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
-	Eye,
+	Copy,
 	ImageIcon,
 	MoreHorizontal,
+	Pencil,
+	Plus,
+	Star,
+	Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -61,16 +75,17 @@ function formatDate(value: string | null) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function CertificateTemplateListPage() {
-	useBreadcrumb([
-		{ title: "Dashboard", link: "/" },
-		{ title: "Trung tâm đào tạo" },
-		{ title: "Giấy chứng nhận" },
-	]);
+	useBreadcrumb([{ title: "Khoá học", link: "/courses" }, { title: "Giấy chứng nhận" }]);
+
+	const navigate = useNavigate();
 
 	const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const [reloadToken, setReloadToken] = useState(0);
+	const [deleteTarget, setDeleteTarget] = useState<CertificateTemplate | null>(null);
+	const [busy, setBusy] = useState(false);
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
 	const [sortConfig, setSortConfig] = useState<{
 		key: CertificateTemplateSortKey | null;
@@ -108,7 +123,7 @@ function CertificateTemplateListPage() {
 				setMeta((p) => ({ ...p, last_page: res.meta.last_page, total: res.meta.total }));
 			})
 			.catch(() => {
-				if (!cancelled) toast.error("Không thể tải danh sách mẫu chứng chỉ.");
+				if (!cancelled) toast.error("Không thể tải danh sách mẫu giấy chứng nhận.");
 			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
@@ -117,7 +132,44 @@ function CertificateTemplateListPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [debouncedSearch, meta.current_page, meta.per_page, sortConfig]);
+	}, [debouncedSearch, meta.current_page, meta.per_page, sortConfig, reloadToken]);
+
+	const reload = () => setReloadToken((p) => p + 1);
+
+	const handleSetDefault = async (template: CertificateTemplate) => {
+		try {
+			await certificateTemplateService.setDefault(template.id);
+			toast.success(`Đã đặt "${template.name}" làm mẫu mặc định.`);
+			reload();
+		} catch {
+			toast.error("Không thể đặt mẫu mặc định.");
+		}
+	};
+
+	const handleDuplicate = async (template: CertificateTemplate) => {
+		try {
+			const res = await certificateTemplateService.duplicate(template.id);
+			toast.success("Đã nhân bản mẫu.");
+			navigate(`/certificate-templates/${res.data.id}/edit`);
+		} catch {
+			toast.error("Không thể nhân bản mẫu.");
+		}
+	};
+
+	const handleDelete = async () => {
+		if (!deleteTarget) return;
+		setBusy(true);
+		try {
+			await certificateTemplateService.deleteTemplate(deleteTarget.id);
+			toast.success("Đã xoá mẫu giấy chứng nhận.");
+			setDeleteTarget(null);
+			reload();
+		} catch {
+			toast.error("Không thể xoá mẫu (có thể đang là mẫu mặc định).");
+		} finally {
+			setBusy(false);
+		}
+	};
 
 	const handleSort = (key: CertificateTemplateSortKey) => {
 		let order: "asc" | "desc" | null = "asc";
@@ -155,11 +207,18 @@ function CertificateTemplateListPage() {
 				<div className='flex flex-col gap-4'>
 					<div className='flex flex-col gap-3 md:flex-row md:items-center'>
 						<Input
-							placeholder='Tìm theo tên mẫu chứng chỉ...'
+							placeholder='Tìm theo tên mẫu giấy chứng nhận...'
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className='h-8 min-w-0 flex-1 md:max-w-80'
 						/>
+						<Button
+							size='sm'
+							className='h-8 md:ml-auto'
+							onClick={() => navigate("/certificate-templates/create")}>
+							<Plus className='h-4 w-4' />
+							Thêm mẫu
+						</Button>
 					</div>
 
 					<div className='overflow-hidden rounded-md border'>
@@ -256,16 +315,28 @@ function CertificateTemplateListPage() {
 															<ImageIcon className='h-4 w-4 text-muted-foreground' />
 														)}
 													</div>
-													<span className='block max-w-[360px] truncate text-sm font-medium'>
+													<button
+														type='button'
+														onClick={() =>
+															navigate(
+																`/certificate-templates/${template.id}/edit`,
+															)
+														}
+														className='block max-w-[360px] truncate text-left text-sm font-medium hover:underline'>
 														{template.name}
-													</span>
+													</button>
 												</div>
 											</TableCell>
 											<TableCell>
-												<Checkbox
-													aria-label={`Template ${template.id} is default`}
-													checked={Boolean(template.is_default)}
-												/>
+												{template.is_default ? (
+													<Badge
+														variant='outline'
+														className='rounded-full border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-400'>
+														Mặc định
+													</Badge>
+												) : (
+													<span className='text-sm text-muted-foreground'>--</span>
+												)}
 											</TableCell>
 											<TableCell>
 												{template.creator ? (
@@ -313,12 +384,34 @@ function CertificateTemplateListPage() {
 														className='w-[180px]'>
 														<DropdownMenuItem
 															onClick={() =>
-																toast.info(
-																	"Tính năng xem chi tiết mẫu chứng chỉ đang được phát triển.",
+																navigate(
+																	`/certificate-templates/${template.id}/edit`,
 																)
 															}>
-															<Eye className='h-4 w-4' />
-															Xem chi tiết
+															<Pencil className='h-4 w-4' />
+															Chỉnh sửa
+														</DropdownMenuItem>
+														<DropdownMenuItem
+															onClick={() => handleDuplicate(template)}>
+															<Copy className='h-4 w-4' />
+															Nhân bản
+														</DropdownMenuItem>
+														{!template.is_default && (
+															<DropdownMenuItem
+																onClick={() =>
+																	handleSetDefault(template)
+																}>
+																<Star className='h-4 w-4' />
+																Đặt mặc định
+															</DropdownMenuItem>
+														)}
+														<DropdownMenuSeparator />
+														<DropdownMenuItem
+															className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+															disabled={template.is_default}
+															onClick={() => setDeleteTarget(template)}>
+															<Trash2 className='h-4 w-4 text-destructive' />
+															Xoá
 														</DropdownMenuItem>
 													</DropdownMenuContent>
 												</DropdownMenu>
@@ -332,7 +425,7 @@ function CertificateTemplateListPage() {
 											className='h-32 text-center text-muted-foreground'>
 											<div className='flex flex-col items-center justify-center gap-2'>
 												<Award className='h-8 w-8 text-muted-foreground/50' />
-												Chưa có mẫu chứng chỉ nào.
+												Chưa có mẫu giấy chứng nhận nào.
 											</div>
 										</TableCell>
 									</TableRow>
@@ -345,7 +438,7 @@ function CertificateTemplateListPage() {
 										<div className='flex items-center justify-between px-2'>
 											<div className='flex flex-1 items-center gap-3 text-sm text-muted-foreground'>
 												Đang hiển thị {templates.length} trên tổng{" "}
-												{meta.total} mẫu chứng chỉ.
+												{meta.total} mẫu giấy chứng nhận.
 												{selectedIds.length > 0 && (
 													<>
 														<span className='text-border'>|</span>
@@ -453,6 +546,34 @@ function CertificateTemplateListPage() {
 					</div>
 				</div>
 			</div>
+
+			<Dialog
+				open={Boolean(deleteTarget)}
+				onOpenChange={(o) => !o && setDeleteTarget(null)}>
+				<DialogContent className='sm:max-w-[440px]'>
+					<DialogHeader>
+						<DialogTitle>Xác nhận xoá mẫu</DialogTitle>
+					</DialogHeader>
+					<p className='text-sm text-muted-foreground'>
+						Bạn sắp xoá mẫu{" "}
+						<span className='font-semibold text-foreground'>
+							"{deleteTarget?.name}"
+						</span>
+						. Các chứng chỉ đã cấp từ mẫu này vẫn được giữ. Hành động không thể hoàn tác.
+					</p>
+					<DialogFooter>
+						<Button
+							variant='outline'
+							onClick={() => setDeleteTarget(null)}
+							disabled={busy}>
+							Huỷ
+						</Button>
+						<Button variant='destructive' onClick={handleDelete} disabled={busy}>
+							{busy ? "Đang xoá..." : "Xoá"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

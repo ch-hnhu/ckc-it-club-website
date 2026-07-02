@@ -10,6 +10,11 @@ class Quiz extends Model
 {
     protected $fillable = [
         'lesson_id',
+        'is_published',
+    ];
+
+    protected $casts = [
+        'is_published' => 'boolean',
     ];
 
     public function lesson(): BelongsTo

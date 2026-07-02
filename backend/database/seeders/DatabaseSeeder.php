@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             TagSeeder::class,
             PostSeeder::class,
             BlogSeeder::class,
+            ResourceSeeder::class,
             CommentSeeder::class,
             ReactionSeeder::class,
             MediaFileSeeder::class,
@@ -40,6 +41,7 @@ class DatabaseSeeder extends Seeder
             QuestionTypeSeeder::class,
             LearningCenterSeeder::class,
             CertificateTemplateSeeder::class,
+            CourseCertificateTestSeeder::class,
         ]);
     }
 }

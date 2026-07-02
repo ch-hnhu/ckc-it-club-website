@@ -1,4 +1,4 @@
-import type { AdminCourse } from "@/pages/learning/course-mock";
+import type { AdminCourse } from "@/pages/learning/course.types";
 import type { CourseStatus } from "@/pages/learning/course-meta";
 
 // Types cho trang chi tiết khóa học (admin). Dữ liệu lấy từ course.service.ts.
@@ -45,8 +45,27 @@ export interface CourseCertificateRow {
 	revoked_at: string | null;
 }
 
+/** Một ô đã điểm danh trong ma trận học viên × buổi (chỉ buổi offline đã xếp lịch) */
+export interface AttendanceCell {
+	user_id: number;
+	lesson_id: number;
+	/** Cách điểm danh: qr (học viên tự quét) hoặc manual (admin điểm danh tay) */
+	type: "qr" | "manual";
+	note: string | null;
+	attended_at: string | null;
+	recorded_by_name: string | null;
+}
+
+/** Một đăng ký "sẽ tham gia" (vé QR) của học viên cho một buổi offline */
+export interface RegistrationCell {
+	user_id: number;
+	lesson_id: number;
+}
+
 export interface AdminCourseDetail extends AdminCourse {
 	lessons: CourseLessonRow[];
 	enrollments: CourseEnrollmentRow[];
 	certificates: CourseCertificateRow[];
+	attendances: AttendanceCell[];
+	registrations: RegistrationCell[];
 }

@@ -23,10 +23,10 @@ class Lesson extends Model
         'session_start',
         'session_end',
         'resource_url',
-        'resource_label',
         'video_url',
         'video_duration',
         'live_url',
+        'live_duration',
         'document',
         'assignment_url',
         'assignment_deadline',
@@ -41,6 +41,7 @@ class Lesson extends Model
             'status' => CourseStatus::class,
             'order' => 'integer',
             'video_duration' => 'integer',
+            'live_duration' => 'integer',
             'session_start' => 'datetime',
             'session_end' => 'datetime',
             'assignment_deadline' => 'datetime',
@@ -87,7 +88,7 @@ class Lesson extends Model
     {
         $hasQuiz = $this->relationLoaded('quiz')
             ? (bool) $this->quiz
-            : $this->quiz()->exists();
+            : $this->quiz()->where('is_published', true)->exists();
 
         return (int) (bool) $this->playableVideoUrl()
             + (int) (bool) $this->resource_url

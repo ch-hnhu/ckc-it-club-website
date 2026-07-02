@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, Search, X } from "lucide-react";
 import { learningService } from "@/services/learning.service";
-import type { Course, CourseCategory } from "@/types/learning.types";
+import type { Course, CourseAudience, CourseCategory } from "@/types/learning.types";
 import CourseCard from "@/components/learning/CourseCard";
+import NeoSelect, { type NeoSelectOption } from "@/components/ui/NeoSelect";
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,13 @@ const CardSkeleton: React.FC = () => (
 
 const PER_PAGE = 6; // mỗi lượt tải 6 khóa (2 hàng × 3)
 
+const AUDIENCE_OPTIONS: NeoSelectOption[] = [
+	{ value: "all", label: "Tất cả đối tượng" },
+	{ value: "club_member", label: "Thành viên CLB" },
+	{ value: "cao_thang_student", label: "Sinh viên Cao Thắng" },
+	{ value: "public", label: "Công khai" },
+];
+
 const LearningFeedPage: React.FC = () => {
 	const [courses, setCourses] = useState<Course[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -52,6 +60,7 @@ const LearningFeedPage: React.FC = () => {
 
 	const [searchInput, setSearchInput] = useState("");
 	const [search, setSearch] = useState("");
+	const [activeAudience, setActiveAudience] = useState<CourseAudience | null>(null);
 	const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
 	const [allCategories, setAllCategories] = useState<CourseCategory[]>([]);
@@ -111,6 +120,7 @@ const LearningFeedPage: React.FC = () => {
 				per_page: PER_PAGE,
 				page: 1,
 				...(search ? { search } : {}),
+				...(activeAudience ? { audience: activeAudience } : {}),
 				...(activeCategory ? { category: activeCategory } : {}),
 			})
 			.then((res) => {
@@ -129,11 +139,14 @@ const LearningFeedPage: React.FC = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [search, activeCategory]);
+	}, [search, activeAudience, activeCategory]);
 
 	// Load tất cả category một lần khi mount
 	useEffect(() => {
-		learningService.getCategories().then((res) => setAllCategories(res.data)).catch(() => {});
+		learningService
+			.getCategories()
+			.then((res) => setAllCategories(res.data))
+			.catch(() => {});
 	}, []);
 
 	useEffect(() => {
@@ -154,6 +167,7 @@ const LearningFeedPage: React.FC = () => {
 				per_page: PER_PAGE,
 				page: nextPage,
 				...(search ? { search } : {}),
+				...(activeAudience ? { audience: activeAudience } : {}),
 				...(activeCategory ? { category: activeCategory } : {}),
 			})
 			.then((res) => {
@@ -163,7 +177,7 @@ const LearningFeedPage: React.FC = () => {
 			})
 			.catch(() => {})
 			.finally(() => setLoadingMore(false));
-	}, [page, search, activeCategory, loadingMore, hasMore]);
+	}, [page, search, activeAudience, activeCategory, loadingMore, hasMore]);
 
 	// Tự động tải thêm khi sentinel lọt vào vùng nhìn (infinite scroll)
 	useEffect(() => {
@@ -179,7 +193,7 @@ const LearningFeedPage: React.FC = () => {
 		return () => observer.disconnect();
 	}, [handleLoadMore, loading, hasMore]);
 
-	const isFiltered = Boolean(search || activeCategory);
+	const isFiltered = Boolean(search || activeAudience || activeCategory);
 
 	// Khóa học nổi bật: luôn ghim trên cùng trừ khi đang filter (search/category)
 	const featuredCourse =
@@ -223,14 +237,14 @@ const LearningFeedPage: React.FC = () => {
 			<div className='border-b-2 border-black bg-white py-4'>
 				<div className='neo-container flex flex-col gap-3 px-6 md:flex-row md:items-center'>
 					{/* Search */}
-					<div className='group/search relative order-1 shrink-0 md:order-2 md:w-72'>
+					<div className='group/search relative order-1 shrink-0 md:w-72'>
 						<Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-focus-within/search:text-[var(--color-primary)]' />
 						<input
 							type='text'
 							value={searchInput}
 							onChange={(e) => handleSearchChange(e.target.value)}
 							placeholder='Tìm khóa học...'
-							className='w-full rounded-xl border-2 border-black bg-white py-2 pl-10 pr-9 text-sm font-medium text-black outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
+							className='h-[3.25rem] w-full rounded-[10px] border-2 border-black bg-white py-2 pl-10 pr-9 text-sm font-medium text-black outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
 						/>
 						{searchInput && (
 							<button
@@ -246,6 +260,17 @@ const LearningFeedPage: React.FC = () => {
 
 					{/* Divider */}
 					<div className='hidden h-6 w-px bg-gray-200 md:order-3 md:block' />
+
+					{/* Audience */}
+					<NeoSelect
+						id='course-audience-filter'
+						options={AUDIENCE_OPTIONS}
+						value={activeAudience ?? "all"}
+						onChange={(value) =>
+							setActiveAudience(value === "all" ? null : (value as CourseAudience))
+						}
+						className='order-1 shrink-0 md:w-60'
+					/>
 
 					{/* Category chips */}
 					<div className='relative order-2 flex min-w-0 flex-1 md:order-4'>
@@ -272,7 +297,9 @@ const LearningFeedPage: React.FC = () => {
 								<button
 									key={cat.id}
 									onClick={() =>
-										setActiveCategory(activeCategory === cat.name ? null : cat.name)
+										setActiveCategory(
+											activeCategory === cat.name ? null : cat.name,
+										)
 									}
 									className={`${tagButtonClass} ${
 										activeCategory === cat.name
@@ -307,7 +334,9 @@ const LearningFeedPage: React.FC = () => {
 					</div>
 				) : error ? (
 					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
-						<p className='font-heading text-xl font-extrabold text-black'>Có lỗi xảy ra</p>
+						<p className='font-heading text-xl font-extrabold text-black'>
+							Có lỗi xảy ra
+						</p>
 						<p className='mt-2 text-sm text-gray-600'>{error}</p>
 						<button
 							onClick={() => setSearch((s) => s)}

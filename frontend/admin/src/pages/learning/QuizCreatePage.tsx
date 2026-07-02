@@ -25,6 +25,13 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -357,7 +364,7 @@ function QuizCreatePage() {
 		},
 		{
 			title: lessonTitle || (lessonId ? `Buổi #${lessonId}` : "Buổi học chưa xác định"),
-			link: lessonId ? `/courses/${courseId}/${lessonId}` : undefined,
+			link: lessonId ? `/courses/${courseId}/lessons/${lessonId}` : undefined,
 		},
 		{ title: "Tạo quiz" },
 	]);
@@ -385,6 +392,10 @@ function QuizCreatePage() {
 	);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+	const [isPublished, setIsPublished] = useState(false);
+	const [hasExistingQuiz, setHasExistingQuiz] = useState(false);
 
 	// Prefill nội dung quiz đã lưu (nếu có) khi mở trình tạo.
 	useEffect(() => {
@@ -411,6 +422,10 @@ function QuizCreatePage() {
 					}
 				}
 
+				if (quizRes.data) {
+					setHasExistingQuiz(true);
+					setIsPublished(quizRes.data.is_published ?? false);
+				}
 				const loaded = quizRes.data?.questions?.map(fromQuestionDTO) ?? [];
 				if (loaded.length > 0) {
 					setQuestions(loaded);
@@ -935,7 +950,7 @@ function QuizCreatePage() {
 		setPreviewTextAnswer(event.target.value);
 	};
 
-	const persistQuiz = async (successMessage: string) => {
+	const persistQuiz = async (publishFlag: boolean, successMessage: string) => {
 		if (!courseId || !lessonId) {
 			toast.error("Thiếu thông tin khóa học hoặc buổi học.", { position: "top-right" });
 			return;
@@ -943,8 +958,11 @@ function QuizCreatePage() {
 		setIsSaving(true);
 		try {
 			await courseService.saveQuiz(courseId, Number(lessonId), {
+				is_published: publishFlag,
 				questions: questions.map(toQuestionPayload),
 			});
+			setIsPublished(publishFlag);
+			setHasExistingQuiz(true);
 			toast.success(successMessage, { position: "top-right" });
 		} catch {
 			toast.error("Lưu quiz thất bại. Vui lòng thử lại.", { position: "top-right" });
@@ -954,7 +972,7 @@ function QuizCreatePage() {
 	};
 
 	const saveDraft = () => {
-		void persistQuiz("Đã lưu bản nháp quiz.");
+		void persistQuiz(false, "Đã lưu bản nháp quiz.");
 	};
 
 	const publishQuiz = () => {
@@ -971,7 +989,21 @@ function QuizCreatePage() {
 			return;
 		}
 
-		void persistQuiz("Đã xuất bản quiz cho buổi học.");
+		void persistQuiz(true, "Đã xuất bản quiz cho buổi học.");
+	};
+
+	const handleDeleteQuiz = async () => {
+		if (!courseId || !lessonId) return;
+		setIsDeleting(true);
+		try {
+			await courseService.deleteQuiz(courseId, Number(lessonId));
+			toast.success("Đã xoá quiz của buổi học.", { position: "top-right" });
+			navigate(-1);
+		} catch {
+			toast.error("Xoá quiz thất bại. Vui lòng thử lại.", { position: "top-right" });
+		} finally {
+			setIsDeleting(false);
+		}
 	};
 
 	if (isLoading) {
@@ -1078,25 +1110,44 @@ function QuizCreatePage() {
 							<ArrowLeft />
 						</Button>
 						<div className='min-w-0'>
-							<h1 className='text-2xl font-semibold tracking-tight md:text-3xl'>
-								Tạo quiz cho buổi học
-							</h1>
+							<div className='flex items-center gap-2'>
+								<h1 className='text-2xl font-semibold tracking-tight md:text-3xl'>
+									Tạo quiz cho buổi học
+								</h1>
+								{hasExistingQuiz && (
+									<Badge
+										variant={isPublished ? "default" : "secondary"}
+										className='shrink-0'>
+										{isPublished ? "Đã xuất bản" : "Bản nháp"}
+									</Badge>
+								)}
+							</div>
 						</div>
 					</div>
 
 					<div className='flex flex-wrap items-center gap-2'>
+						{hasExistingQuiz && (
+							<Button
+								type='button'
+								variant='destructive'
+								disabled={isSaving || isDeleting || isLoading}
+								onClick={() => setShowDeleteDialog(true)}>
+								<Trash2 />
+								Xoá quiz
+							</Button>
+						)}
 						<Button
 							type='button'
 							variant='outline'
 							onClick={saveDraft}
-							disabled={isSaving || isLoading}>
+							disabled={isSaving || isDeleting || isLoading}>
 							<Save />
-							Lưu bản nháp
+							{isPublished ? "Chuyển về nháp" : "Lưu bản nháp"}
 						</Button>
 						<Button
 							type='button'
 							onClick={publishQuiz}
-							disabled={isSaving || isLoading}>
+							disabled={isSaving || isDeleting || isLoading}>
 							<Send />
 							Xuất bản quiz
 						</Button>
@@ -1105,7 +1156,7 @@ function QuizCreatePage() {
 
 				<div className='space-y-6'>
 					<div className='grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]'>
-						<aside className='relative'>
+						<aside className='relative h-[280px] xl:h-auto'>
 							<Card className='absolute inset-0 flex flex-col'>
 								<CardHeader className='shrink-0 gap-3'>
 									<div className='flex items-center justify-between gap-3'>
@@ -2375,6 +2426,41 @@ function QuizCreatePage() {
 					</aside>
 				</div>
 			</div>
+
+			<Dialog open={showDeleteDialog} onOpenChange={(o) => !o && setShowDeleteDialog(false)}>
+				<DialogContent className='sm:max-w-[440px]'>
+					<DialogHeader>
+						<DialogTitle>Xác nhận xoá quiz</DialogTitle>
+					</DialogHeader>
+					<div className='space-y-2 text-sm text-muted-foreground'>
+						<p>
+							Bạn sắp xoá quiz của buổi học{" "}
+							<span className='font-semibold text-foreground'>
+								"{lessonTitle}"
+							</span>
+							.
+						</p>
+						<p>
+							Hành động này không thể hoàn tác. Toàn bộ câu hỏi và đáp án sẽ
+							bị xoá vĩnh viễn.
+						</p>
+					</div>
+					<DialogFooter>
+						<Button
+							variant='outline'
+							onClick={() => setShowDeleteDialog(false)}
+							disabled={isDeleting}>
+							Huỷ
+						</Button>
+						<Button
+							variant='destructive'
+							onClick={() => void handleDeleteQuiz()}
+							disabled={isDeleting}>
+							{isDeleting ? "Đang xoá..." : "Xoá quiz"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

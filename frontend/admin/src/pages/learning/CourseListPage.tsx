@@ -61,12 +61,19 @@ import { useTableSelection } from "@/hooks/useTableSelection";
 import { cn } from "@/lib/utils";
 import {
 	COURSE_LEVEL_MAP,
+	COURSE_AUDIENCE_MAP,
 	COURSE_STATUS_MAP,
+	type CourseAudience,
 	type CourseLevel,
 	type CourseStatus,
 } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
-import type { AdminCourse, CourseOfflineFilter, CourseSortKey } from "@/pages/learning/course-mock";
+import type {
+	AdminCourse,
+	CourseAudienceFilter,
+	CourseOfflineFilter,
+	CourseSortKey,
+} from "@/pages/learning/course.types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -96,6 +103,15 @@ function getLevelBadge(level: CourseLevel) {
 	);
 }
 
+function getAudienceBadge(audience: CourseAudience) {
+	const { label, className } = COURSE_AUDIENCE_MAP[audience];
+	return (
+		<Badge variant='outline' className={cn("rounded-full px-3 py-1", className)}>
+			{label}
+		</Badge>
+	);
+}
+
 const levelOptions: Array<{ value: CourseLevel | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trình độ" },
 	{ value: "beginner", label: "Cơ bản" },
@@ -107,6 +123,13 @@ const offlineOptions: Array<{ value: CourseOfflineFilter; label: string }> = [
 	{ value: "all", label: "Tất cả khóa" },
 	{ value: "has_offline", label: "Có lớp offline" },
 	{ value: "online_only", label: "Chỉ online" },
+];
+
+const audienceOptions: Array<{ value: CourseAudienceFilter; label: string }> = [
+	{ value: "all", label: "Tất cả đối tượng" },
+	{ value: "club_member", label: COURSE_AUDIENCE_MAP.club_member.label },
+	{ value: "cao_thang_student", label: COURSE_AUDIENCE_MAP.cao_thang_student.label },
+	{ value: "public", label: COURSE_AUDIENCE_MAP.public.label },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -121,6 +144,7 @@ function CourseListPage() {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [levelFilter, setLevelFilter] = useState<CourseLevel | "all">("all");
+	const [audienceFilter, setAudienceFilter] = useState<CourseAudienceFilter>("all");
 	const [offlineFilter, setOfflineFilter] = useState<CourseOfflineFilter>("all");
 	const [deleteTarget, setDeleteTarget] = useState<AdminCourse | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -144,7 +168,7 @@ function CourseListPage() {
 
 	useEffect(() => {
 		setMeta((p) => ({ ...p, current_page: 1 }));
-	}, [debouncedSearch, levelFilter, offlineFilter, sortConfig]);
+	}, [debouncedSearch, levelFilter, audienceFilter, offlineFilter, sortConfig]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -156,6 +180,7 @@ function CourseListPage() {
 				per_page: meta.per_page,
 				search: debouncedSearch || undefined,
 				level: levelFilter,
+				audience: audienceFilter,
 				offline: offlineFilter,
 				sort: sortConfig.key,
 				order: sortConfig.order,
@@ -182,6 +207,7 @@ function CourseListPage() {
 		reloadToken,
 		sortConfig,
 		levelFilter,
+		audienceFilter,
 		offlineFilter,
 	]);
 
@@ -313,6 +339,34 @@ function CourseListPage() {
 								</DropdownMenuContent>
 							</DropdownMenu>
 
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant='outline' size='sm' className='h-8'>
+										<Filter className='h-4 w-4' />
+										{
+											audienceOptions.find((o) => o.value === audienceFilter)
+												?.label
+										}
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align='end' className='w-[210px]'>
+									<DropdownMenuLabel>Đối tượng học</DropdownMenuLabel>
+									<DropdownMenuSeparator />
+									{audienceOptions.map((opt) => (
+										<DropdownMenuItem
+											key={opt.value}
+											onClick={() => setAudienceFilter(opt.value)}
+											className={
+												audienceFilter === opt.value
+													? "bg-muted font-medium"
+													: ""
+											}>
+											{opt.label}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+
 							<Button
 								size='sm'
 								variant='outline'
@@ -365,6 +419,14 @@ function CourseListPage() {
 											onClick={() => handleSort("level")}
 											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
 											Trình độ {getSortIcon("level")}
+										</Button>
+									</TableHead>
+									<TableHead className='w-[170px]'>
+										<Button
+											variant='ghost'
+											onClick={() => handleSort("audience")}
+											className='-ml-2.5 h-8 hover:bg-muted-foreground/10'>
+											Đối tượng {getSortIcon("audience")}
 										</Button>
 									</TableHead>
 									<TableHead className='w-[120px]'>
@@ -426,7 +488,7 @@ function CourseListPage() {
 											<TableCell>
 												<Skeleton className='h-4 w-4' />
 											</TableCell>
-											<TableCell colSpan={10}>
+											<TableCell colSpan={11}>
 												<Skeleton className='h-4 w-full' />
 											</TableCell>
 										</TableRow>
@@ -480,6 +542,9 @@ function CourseListPage() {
 												</div>
 											</TableCell>
 											<TableCell>{getLevelBadge(course.level)}</TableCell>
+											<TableCell>
+												{getAudienceBadge(course.audience)}
+											</TableCell>
 											<TableCell>
 												{course.max_offline_slots !== null ? (
 													<div className='space-y-0.5 text-sm'>
@@ -569,7 +634,7 @@ function CourseListPage() {
 													</DropdownMenuTrigger>
 													<DropdownMenuContent
 														align='end'
-														className='w-[200px]'>
+														className='w-[160px]'>
 														<DropdownMenuItem
 															onClick={() =>
 																navigate(`/courses/${course.slug}`)
@@ -601,7 +666,7 @@ function CourseListPage() {
 								) : (
 									<TableRow>
 										<TableCell
-											colSpan={11}
+											colSpan={12}
 											className='h-32 text-center text-muted-foreground'>
 											Không tìm thấy khóa học nào phù hợp.
 										</TableCell>
@@ -611,7 +676,7 @@ function CourseListPage() {
 
 							<TableFooter className='bg-transparent'>
 								<TableRow>
-									<TableCell colSpan={11}>
+									<TableCell colSpan={12}>
 										<div className='flex items-center justify-between px-2'>
 											<div className='flex flex-1 items-center gap-3 text-sm text-muted-foreground'>
 												Đang hiển thị {courses.length} trên tổng{" "}

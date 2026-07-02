@@ -8,15 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('quiz_questions', function (Blueprint $table) {
-            $table->text('explanation')->nullable()->after('content');
+        Schema::table('quizzes', function (Blueprint $table) {
+            $table->boolean('is_published')->default(false)->after('lesson_id');
         });
     }
 
     public function down(): void
     {
-        Schema::table('quiz_questions', function (Blueprint $table) {
-            $table->dropColumn('explanation');
+        Schema::table('quizzes', function (Blueprint $table) {
+            $table->dropColumn('is_published');
         });
     }
 };

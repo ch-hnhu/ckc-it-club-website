@@ -1,6 +1,7 @@
 export const CLUB_INFORMATION_TYPES = [
 	{ value: "text", label: "Text" },
 	{ value: "html", label: "HTML" },
+	{ value: "markdown", label: "Markdown" },
 	{ value: "url", label: "URL" },
 	{ value: "image", label: "Image" },
 	{ value: "banner", label: "Banner" },

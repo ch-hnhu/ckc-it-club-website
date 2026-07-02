@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import courseService, { type EnrollableUserDTO } from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import type { EnrollmentTrack } from "@/pages/learning/course-detail-mock";
+import type { EnrollmentTrack } from "@/pages/learning/course-detail.types";
 
 interface EnrollStudentDialogProps {
 	open: boolean;

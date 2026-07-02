@@ -11,11 +11,14 @@ import {
 	Clock,
 	Download,
 	Dumbbell,
+	Globe2,
+	Info,
 	GraduationCap,
 	ListChecks,
 	Lock,
 	MessagesSquare,
 	QrCode,
+	School,
 	Sparkles,
 	Users,
 	X,
@@ -27,30 +30,56 @@ import { learningService } from "@/services/learning.service";
 import type { AuthUser } from "@/services/auth.service";
 import type {
 	CourseDetail,
+	CourseAudience,
 	CourseLesson,
 	CourseLevel,
 	CourseProgressStats,
 	CourseTrack,
 } from "@/types/learning.types";
 
-// ─── Phase khoá học theo timeline ────────────────────────────────────────────────
-
-type CoursePhase = "upcoming" | "enrollment_open" | "in_progress" | "ended";
-
-function getCoursePhase(course: CourseDetail): CoursePhase {
-	const now = new Date();
-	if (course.enrollment_start && new Date(course.enrollment_start) > now) return "upcoming";
-	if (course.enrollment_deadline && new Date(course.enrollment_deadline) > now)
-		return "enrollment_open";
-	if (course.course_end && new Date(course.course_end) <= now) return "ended";
-	return "in_progress";
-}
-
 const LEVEL_LABEL: Record<CourseLevel, string> = {
 	beginner: "Cơ bản",
 	intermediate: "Trung cấp",
 	advanced: "Nâng cao",
 };
+
+const AUDIENCE_META: Record<
+	CourseAudience,
+	{
+		label: string;
+		notice: string;
+		icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+		className: string;
+	}
+> = {
+	club_member: {
+		label: "Thành viên CLB",
+		notice: "Chỉ thành viên câu lạc bộ được học khóa này.",
+		icon: Users,
+		className: "bg-[var(--color-pastel-green)]",
+	},
+	cao_thang_student: {
+		label: "Sinh viên Cao Thắng",
+		notice: "Chỉ tài khoản sinh viên Cao Thắng được học khóa này.",
+		icon: School,
+		className: "bg-[var(--color-pastel-blue)]",
+	},
+	public: {
+		label: "Công khai",
+		notice: "Đăng nhập để học khóa học công khai này.",
+		icon: Globe2,
+		className: "bg-[var(--color-pastel-purple)]",
+	},
+};
+
+const isCaoThangStudentEmail = (email?: string | null) =>
+	Boolean(email && /^\d{10}@caothang\.edu\.vn$/i.test(email));
+
+const isFutureDate = (value?: string | null, now = new Date()) =>
+	Boolean(value && new Date(value) > now);
+
+const hasStarted = (value?: string | null, now = new Date()) =>
+	Boolean(value && new Date(value) <= now);
 
 // ─── Hàng buổi học ───────────────────────────────────────────────────────────────
 
@@ -74,7 +103,7 @@ const LessonRow: React.FC<{
 	onShowTicket,
 }) => {
 	const navigate = useNavigate();
-	const locked = Boolean(lesson.is_locked) || isFrontendLocked;
+	const locked = isFrontendLocked;
 	const isOffline = track === "offline";
 
 	return (
@@ -432,11 +461,11 @@ const SidebarCard: React.FC<{ children: React.ReactNode; className?: string }> =
 );
 
 const Sidebar: React.FC<{
-	canClaimCertificate: boolean;
 	stats: CourseProgressStats;
 	track: CourseTrack | null;
 	user: AuthUser | null;
-}> = ({ canClaimCertificate, stats, track, user }) => {
+	canLearn: boolean;
+}> = ({ stats, track, user, canLearn }) => {
 	const trackLabel =
 		track === "offline"
 			? "Hình thức học: Offline"
@@ -498,7 +527,7 @@ const Sidebar: React.FC<{
 	return (
 		<div className='space-y-5'>
 			{/* Hồ sơ học viên — chỉ hiện khi đã ghi danh */}
-			{track && (
+			{track && canLearn && (
 				<SidebarCard>
 					<div className='flex items-center gap-3'>
 						<span className='flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-black bg-[var(--color-pastel-green)]'>
@@ -521,24 +550,22 @@ const Sidebar: React.FC<{
 							)}
 						</div>
 					</div>
-					{canClaimCertificate && (
-						<button
-							type='button'
-							className='mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-3 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-							<Award className='h-4 w-4' strokeWidth={2.5} />
-							Nhận chứng chỉ
-						</button>
-					)}
 				</SidebarCard>
 			)}
 
 			{/* Tiến độ — chỉ hiện khi đã ghi danh và có items */}
 			{track && progressItems.length > 0 && (
-				<SidebarCard>
+				<SidebarCard className={canLearn ? "" : "bg-[var(--color-surface)]"}>
 					<h3 className='mb-4 font-heading text-lg font-extrabold text-black'>
 						Tiến độ khóa học
 					</h3>
-					<div className='space-y-4'>
+					{!canLearn && (
+						<span className='mb-4 inline-flex rounded-full border-2 border-black bg-[var(--color-pastel-yellow)] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-black'>
+							Bị khóa
+						</span>
+					)}
+					<div
+						className={`space-y-4 ${canLearn ? "" : "pointer-events-none opacity-45 grayscale"}`}>
 						{progressItems.map((item) => (
 							<MiniProgress
 								key={item.label}
@@ -550,6 +577,11 @@ const Sidebar: React.FC<{
 							/>
 						))}
 					</div>
+					{!canLearn && (
+						<p className='mt-4 rounded-xl border-2 border-black bg-white px-3 py-2 text-xs font-semibold leading-5 text-gray-600'>
+							Tiến độ chỉ mở khi tài khoản đủ điều kiện học khóa này.
+						</p>
+					)}
 				</SidebarCard>
 			)}
 
@@ -650,18 +682,20 @@ const CourseDetailPage: React.FC = () => {
 	const [lessons, setLessons] = useState<CourseLesson[]>([]);
 	const [interested, setInterested] = useState(false);
 	const [followersCount, setFollowersCount] = useState(0);
-	const [enrolling, setEnrolling] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	// Buổi học đang mở modal vé QR; id buổi đang gọi API cấp vé.
 	const [ticketLesson, setTicketLesson] = useState<CourseLesson | null>(null);
 	const [creatingTicketId, setCreatingTicketId] = useState<number | null>(null);
+	const [enrollingOffline, setEnrollingOffline] = useState(false);
+	const [certificateUrl, setCertificateUrl] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!slug) return;
 		let cancelled = false;
 		setLoading(true);
 		setError(null);
+		setCertificateUrl(null);
 		learningService
 			.getCourse(slug)
 			.then((res) => {
@@ -683,45 +717,138 @@ const CourseDetailPage: React.FC = () => {
 		};
 	}, [slug]);
 
+	useEffect(() => {
+		if (!slug || (course?.progress ?? 0) < 100) return;
+		let cancelled = false;
+		learningService
+			.getCertificate(slug)
+			.then((res) => {
+				if (!cancelled) setCertificateUrl(res.data.cert_url ?? null);
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	}, [slug, course?.progress]);
+
 	// ─── Derived state ────────────────────────────────────────────────────────────
 
-	const phase = course ? getCoursePhase(course) : "in_progress";
 	const isEnrolled = Boolean(course?.enrollment_track);
 	const hasLessons = lessons.length > 0;
+	const hasOfflineClass = Boolean(course && course.max_offline_slots !== null);
 	const hasAccessToken = Boolean(localStorage.getItem("access_token"));
 	const shouldWaitForUser = loadingUser && hasAccessToken;
 	const showSidebar = Boolean(user) && !shouldWaitForUser;
-	const resumeLesson = lessons.find((l) => !l.completed) ?? lessons[0];
 	const canClaimCertificate = (course?.progress ?? 0) >= 100;
-	// CTA "Quan tâm" chỉ hiện khi khoá chưa mở đăng ký và chưa có bài học để vào học
-	const showInterestCta =
+	const isClubMember = Boolean(user?.roles?.some((role) => role !== "user"));
+	const isSchoolStudent = user?.is_school_student === true || isCaoThangStudentEmail(user?.email);
+	const audience = course?.audience ?? "cao_thang_student";
+	const audienceMeta = AUDIENCE_META[audience];
+	const viewerCanLearn = Boolean(
+		user &&
+		(isEnrolled ||
+			audience === "public" ||
+			(audience === "club_member" && isClubMember) ||
+			(audience === "cao_thang_student" && isSchoolStudent)),
+	);
+	const now = new Date();
+	const firstLesson = lessons[0] ?? null;
+	const firstLessonHasNotStarted = Boolean(
+		firstLesson?.session_start && isFutureDate(firstLesson.session_start, now),
+	);
+	const registrationNotStarted = Boolean(
+		hasOfflineClass && course?.enrollment_start && isFutureDate(course.enrollment_start, now),
+	);
+	const registrationOpen = Boolean(
+		hasOfflineClass &&
+		(!course?.enrollment_start || !isFutureDate(course.enrollment_start, now)) &&
+		(!course?.enrollment_deadline || new Date(course.enrollment_deadline) >= now),
+	);
+	const registrationClosedBeforeFirstLesson = Boolean(
+		hasOfflineClass &&
+		course?.enrollment_deadline &&
+		new Date(course.enrollment_deadline) <= now &&
+		firstLessonHasNotStarted,
+	);
+	const showInterestCta = Boolean(
 		!isEnrolled &&
-		phase !== "enrollment_open" &&
-		!(hasLessons && phase !== "upcoming");
-	// Lớp chưa khai giảng → mọi buổi đang bị khoá, chưa thể bắt đầu học
-	const beforeKickoff = phase === "upcoming" || phase === "enrollment_open";
+		hasOfflineClass &&
+		(registrationNotStarted || registrationClosedBeforeFirstLesson),
+	);
+	const canRegisterOffline = Boolean(
+		user && viewerCanLearn && hasOfflineClass && !isEnrolled && registrationOpen,
+	);
 
-	// Khoá đã đóng đăng ký và có lesson → tự động coi là học online cho sidebar
+	// Chưa ghi danh offline nhưng khóa đã/đang mở nội dung thì học online tự bắt đầu khi vào video/quiz.
 	const effectiveTrack =
 		course?.enrollment_track ??
-		((phase === "in_progress" || phase === "ended") && hasLessons ? "online" : null);
+		(hasLessons && (!hasOfflineClass || !firstLessonHasNotStarted) ? "online" : null);
 
-	// Lock lesson theo phase + session_start:
-	// - upcoming/enrollment_open → lock toàn bộ (chưa có buổi nào diễn ra)
-	// - in_progress/ended → chỉ lock lesson có session_start trong tương lai,
-	//   trừ lesson gần nhất (mở để click vào xem, nhưng hiện panel "chưa diễn ra")
 	const frontendLockedIds = (() => {
-		if (phase === "upcoming" || phase === "enrollment_open") {
+		if (!viewerCanLearn) {
 			return new Set<number>(lessons.map((l) => l.id));
 		}
-		const now = new Date();
+
+		if (!hasOfflineClass) {
+			const nextLessonId = lessons.find((l) => !l.completed)?.id ?? null;
+			return new Set(
+				lessons.filter((l) => !l.completed && l.id !== nextLessonId).map((l) => l.id),
+			);
+		}
+
 		const upcoming = lessons
 			.filter((l) => l.session_start && new Date(l.session_start) > now)
 			.sort(
 				(a, b) =>
 					new Date(a.session_start!).getTime() - new Date(b.session_start!).getTime(),
 			);
-		return new Set<number>(upcoming.slice(1).map((l) => l.id));
+		const nearestUpcomingId = upcoming[0]?.id ?? null;
+
+		return new Set(
+			lessons
+				.filter((l) => {
+					if (l.completed) return false;
+					if (hasStarted(l.session_start, now)) return false;
+					return l.id !== nearestUpcomingId;
+				})
+				.map((l) => l.id),
+		);
+	})();
+	const resumeLesson =
+		lessons.find((l) => !frontendLockedIds.has(l.id) && !l.completed) ??
+		lessons.find((l) => !frontendLockedIds.has(l.id)) ??
+		lessons[0];
+	const canStartLearning = Boolean(
+		viewerCanLearn &&
+		resumeLesson &&
+		!frontendLockedIds.has(resumeLesson.id) &&
+		!canRegisterOffline &&
+		!showInterestCta,
+	);
+	const ctaSupportText = (() => {
+		if (shouldWaitForUser) return "Đang đồng bộ phiên đăng nhập của bạn.";
+		if (!user) return "Đăng nhập ngay để tham gia lớp học.";
+		if (!viewerCanLearn) return audienceMeta.notice;
+		if (canRegisterOffline) return "Đăng ký để tham gia lớp học trực tiếp cùng mentor.";
+		if (showInterestCta) {
+			return registrationNotStarted
+				? "Khóa học chưa đến hạn đăng ký lớp offline."
+				: "Khóa học đã qua hạn đăng ký lớp offline; buổi đầu tiên chưa diễn ra.";
+		}
+		if (canStartLearning && resumeLesson) {
+			if (
+				hasOfflineClass &&
+				course?.enrollment_track === "offline" &&
+				isFutureDate(resumeLesson.session_start, now)
+			) {
+				return "Bạn có thể xem thông tin buổi sắp diễn ra trước khi lớp bắt đầu.";
+			}
+			if (hasOfflineClass && course?.enrollment_track !== "offline") {
+				return "Bạn có thể học online với những buổi đã được mở.";
+			}
+			return "Học online không cần đăng ký trước; vào buổi học để bắt đầu.";
+		}
+		return hasLessons ? "Buổi học tiếp theo sẽ mở khi bạn hoàn thành buổi trước." : null;
 	})();
 
 	// Lesson offline active: lesson chưa điểm danh + session_end chưa qua (hoặc chưa set), đầu tiên theo thứ tự
@@ -736,6 +863,7 @@ const CourseDetailPage: React.FC = () => {
 			})?.id ?? null
 		);
 	})();
+	const AudienceIcon = audienceMeta.icon;
 
 	// ─── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -746,66 +874,6 @@ const CourseDetailPage: React.FC = () => {
 			return false;
 		}
 		return true;
-	};
-
-	const handleEnrollOffline = async () => {
-		if (enrolling) return;
-		if (!requireAuth()) return;
-
-		// Chỉ email sinh viên Cao Thắng hoặc thành viên CLB mới được đăng ký lớp offline.
-		const isClubMember = Boolean(user?.roles?.some((role) => role !== "user"));
-		const isStudentEmail = Boolean(user?.email?.toLowerCase().endsWith("@caothang.edu.vn"));
-		if (!isClubMember && !isStudentEmail) {
-			toast.error(
-				"Chỉ tài khoản email sinh viên Cao Thắng (@caothang.edu.vn) hoặc thành viên CLB mới được đăng ký lớp offline.",
-			);
-			return;
-		}
-
-		setEnrolling(true);
-		try {
-			await learningService.enroll(slug!, "offline");
-			// Reload course để lấy enrollment_track mới
-			const res = await learningService.getCourse(slug!);
-			setCourse(res.data);
-			setLessons(res.data.lessons);
-			toast.success("Đăng ký lớp học offline thành công.");
-		} catch (err) {
-			toast.error(
-				(err as { response?: { data?: { message?: string } } })?.response?.data
-					?.message ?? "Không thể đăng ký lớp offline. Vui lòng thử lại.",
-			);
-		} finally {
-			setEnrolling(false);
-		}
-	};
-
-	const handleStartOnline = async () => {
-		if (enrolling) return;
-		if (!requireAuth()) return;
-
-		// Đã ghi danh → vào học luôn
-		if (isEnrolled) {
-			if (resumeLesson) navigate(`/khoa-hoc/${slug}/${resumeLesson.slug}`);
-			return;
-		}
-
-		setEnrolling(true);
-		try {
-			await learningService.enroll(slug!, "online");
-			const res = await learningService.getCourse(slug!);
-			setCourse(res.data);
-			setLessons(res.data.lessons);
-			const target = res.data.lessons.find((l) => !l.completed) ?? res.data.lessons[0];
-			if (target) navigate(`/khoa-hoc/${slug}/${target.slug}`);
-		} catch (err) {
-			toast.error(
-				(err as { response?: { data?: { message?: string } } })?.response?.data
-					?.message ?? "Không thể ghi danh học online. Vui lòng thử lại.",
-			);
-		} finally {
-			setEnrolling(false);
-		}
 	};
 
 	const handleToggleInterest = async () => {
@@ -831,6 +899,26 @@ const CourseDetailPage: React.FC = () => {
 		}
 	};
 
+	const handleEnrollOffline = async () => {
+		if (!requireAuth() || !slug || enrollingOffline) return;
+		setEnrollingOffline(true);
+		try {
+			const res = await learningService.enroll(slug, "offline");
+			setCourse((prev) => (prev ? { ...prev, enrollment_track: res.data.track } : prev));
+			setInterested(false);
+			toast.success("Đã đăng ký học offline.", {
+				description: "Hãy nhấn tham gia các buổi học sắp diễn ra để nhận mã QR điểm danh.",
+			});
+		} catch (err) {
+			toast.error(
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+					"Không thể đăng ký học offline. Vui lòng thử lại.",
+			);
+		} finally {
+			setEnrollingOffline(false);
+		}
+	};
+
 	// Đăng ký "sẽ tham gia" buổi học offline → server cấp vé QR rồi mở modal QR.
 	const handleCreateTicket = async (lesson: CourseLesson) => {
 		if (!requireAuth() || !slug || creatingTicketId !== null) return;
@@ -844,8 +932,8 @@ const CourseDetailPage: React.FC = () => {
 			toast.success("Đã đăng ký tham gia buổi học.");
 		} catch (err) {
 			toast.error(
-				(err as { response?: { data?: { message?: string } } })?.response?.data
-					?.message ?? "Không thể đăng ký tham gia. Vui lòng thử lại.",
+				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+					"Không thể đăng ký tham gia. Vui lòng thử lại.",
 			);
 		} finally {
 			setCreatingTicketId(null);
@@ -854,6 +942,11 @@ const CourseDetailPage: React.FC = () => {
 
 	const handleShowTicket = (lesson: CourseLesson) => {
 		if (lesson.qr_ticket) setTicketLesson(lesson);
+	};
+
+	const handleClaimCertificate = () => {
+		if (!requireAuth() || !certificateUrl) return;
+		window.open(certificateUrl, "_blank", "noopener,noreferrer");
 	};
 
 	return (
@@ -899,10 +992,15 @@ const CourseDetailPage: React.FC = () => {
 								<div className='absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/20' />
 							</div>
 
-							<div className='relative max-w-2xl p-6 md:p-10'>
-								<span className='inline-flex w-fit items-center gap-2 rounded-full border-2 border-black bg-[var(--color-primary)] px-3 py-1 font-heading text-[11px] font-extrabold uppercase tracking-[0.1em] text-black shadow-[2px_2px_0_#111]'>
+							<div className='relative max-w-3xl p-6 md:p-10'>
+								<span className='inline-flex w-fit items-center gap-2 rounded-full border-2 border-black bg-[var(--color-primary)] px-3 py-1 font-heading text-[10px] font-extrabold uppercase tracking-[0.1em] text-black mr-1'>
 									<BarChart3 className='h-3.5 w-3.5' strokeWidth={2.5} />
-									{LEVEL_LABEL[course.level]} · Khóa học
+									{LEVEL_LABEL[course.level]}
+								</span>
+								<span
+									className={`mt-2 inline-flex w-fit items-center gap-2 rounded-full border-2 border-black px-3 py-1 font-heading text-[10px] font-extrabold uppercase tracking-[0.1em] text-black ${audienceMeta.className}`}>
+									<AudienceIcon className='h-3.5 w-3.5' strokeWidth={2.5} />
+									{audienceMeta.label}
 								</span>
 
 								<h1 className='mt-4 font-heading text-4xl font-extrabold leading-tight text-white drop-shadow-[2px_2px_0_#111] md:text-5xl'>
@@ -915,92 +1013,111 @@ const CourseDetailPage: React.FC = () => {
 								)}
 
 								{/* ── CTA chính ── */}
-								<div className='mt-6 flex flex-wrap items-center gap-3'>
-									{isEnrolled ? (
-										beforeKickoff ? (
-											/* Đã ghi danh nhưng lớp chưa khai giảng → các buổi còn khoá */
-											<span
-												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111]'>
+								<div className='mt-6 flex flex-col items-start gap-3'>
+									<div className='flex flex-wrap gap-3'>
+										{shouldWaitForUser ? (
+											<span className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111]'>
 												<Lock className='h-4 w-4' strokeWidth={2.5} />
-												Đã đăng ký · Chờ khai giảng
+												Đang kiểm tra tài khoản...
 											</span>
-										) : (
-											/* Đã ghi danh, lớp đã khai giảng → tiếp tục / bắt đầu học */
-											resumeLesson && (
-												<Link
-													to={`/khoa-hoc/${course.slug}/${resumeLesson.slug}`}
-													className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-													<GraduationCap
-														className='h-4 w-4'
-														strokeWidth={2.5}
-													/>
-													{(course.progress ?? 0) > 0
-														? "Tiếp tục học"
-														: "Bắt đầu học"}
-												</Link>
-											)
-										)
-									) : phase === "enrollment_open" ? (
-										/* Đang mở đăng ký → đăng ký offline */
-										<button
-											type='button'
-											onClick={handleEnrollOffline}
-											disabled={enrolling}
-											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60 disabled:cursor-not-allowed'>
-											<Users className='h-4 w-4' strokeWidth={2.5} />
-											{enrolling
-												? "Đang đăng ký..."
-												: "Đăng ký lớp học offline"}
-										</button>
-									) : hasLessons && phase !== "upcoming" ? (
-										/* Đã đóng đăng ký, có bài học → ghi danh học online rồi vào học */
-										<button
-											type='button'
-											onClick={handleStartOnline}
-											disabled={enrolling}
-											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60 disabled:cursor-not-allowed'>
-											<GraduationCap className='h-4 w-4' strokeWidth={2.5} />
-											{enrolling ? "Đang ghi danh..." : "Bắt đầu học"}
-										</button>
-									) : (
-										/* Khoá chưa mở hoặc chưa có bài học → quan tâm */
-										<button
-											type='button'
-											onClick={handleToggleInterest}
-											className={`inline-flex items-center gap-2 rounded-xl border-2 border-black px-6 py-3 font-heading text-sm font-extrabold shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${
-												interested
-													? "bg-white text-black shadow-none translate-x-[1px] translate-y-[1px]"
-													: "bg-[var(--color-primary)] text-black"
-											}`}>
-											{interested ? (
-												<BookmarkCheck
+										) : !user ? (
+											<Link
+												to={`/login?returnTo=${encodeURIComponent(`/khoa-hoc/${course.slug}`)}`}
+												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+												<GraduationCap
 													className='h-4 w-4'
 													strokeWidth={2.5}
 												/>
-											) : (
-												<Bookmark className='h-4 w-4' strokeWidth={2.5} />
-											)}
-											{interested ? "Đã quan tâm" : "Quan tâm"}
-										</button>
-									)}
-								</div>
-
-								{/* Meta */}
-								<div className='mt-5 flex flex-wrap items-center gap-5 text-sm font-semibold text-white/80'>
-									<span className='flex items-center gap-1.5'>
-										<GraduationCap className='h-4 w-4' />
-										{course.lessons_count} buổi
-									</span>
-									<span className='flex items-center gap-1.5'>
-										<Clock className='h-4 w-4' />
-										{Math.round(course.duration_minutes / 60)} giờ
-									</span>
-									{showInterestCta && (
-										<span className='flex items-center gap-1.5'>
-											<Bookmark className='h-4 w-4' />
-											{followersCount} quan tâm
+												Đăng nhập để học
+											</Link>
+										) : !viewerCanLearn ? (
+											<span className='inline-flex max-w-full items-start gap-2 rounded-xl border-2 border-black bg-[var(--color-pastel-pink)] px-5 py-3 font-heading text-sm font-extrabold leading-6 text-red-700 shadow-[4px_4px_0_#111]'>
+												<Info
+													className='mt-0.5 h-4 w-4 shrink-0'
+													strokeWidth={2.5}
+												/>
+												{audienceMeta.notice}
+											</span>
+										) : canRegisterOffline ? (
+											<button
+												type='button'
+												onClick={handleEnrollOffline}
+												disabled={enrollingOffline}
+												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-70'>
+												<CalendarCheck
+													className='h-4 w-4'
+													strokeWidth={2.5}
+												/>
+												{enrollingOffline
+													? "Đang đăng ký..."
+													: "Đăng ký học offline"}
+											</button>
+										) : canClaimCertificate && certificateUrl ? (
+											<button
+												type='button'
+												onClick={handleClaimCertificate}
+												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+												<Award className='h-4 w-4' strokeWidth={2.5} />
+												Xem chứng chỉ
+											</button>
+										) : canStartLearning && resumeLesson ? (
+											<Link
+												to={`/khoa-hoc/${course.slug}/${resumeLesson.slug}`}
+												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+												<GraduationCap
+													className='h-4 w-4'
+													strokeWidth={2.5}
+												/>
+												{(course.progress ?? 0) > 0
+													? "Tiếp tục học"
+													: "Bắt đầu học"}
+											</Link>
+										) : showInterestCta ? (
+											<button
+												type='button'
+												onClick={handleToggleInterest}
+												className={`inline-flex items-center gap-2 rounded-xl border-2 border-black px-6 py-3 font-heading text-sm font-extrabold shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${interested ? "bg-white text-black shadow-none translate-x-[1px] translate-y-[1px]" : "bg-[var(--color-primary)] text-black"}`}>
+												{interested ? (
+													<BookmarkCheck
+														className='h-4 w-4'
+														strokeWidth={2.5}
+													/>
+												) : (
+													<Bookmark
+														className='h-4 w-4'
+														strokeWidth={2.5}
+													/>
+												)}
+												{interested ? "Đã quan tâm" : "Quan tâm"}
+											</button>
+										) : (
+											<span className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111]'>
+												<Lock className='h-4 w-4' strokeWidth={2.5} />
+												Chờ mở buổi học
+											</span>
+										)}
+									</div>
+									{ctaSupportText && !canStartLearning && (
+										<span className='max-w-sm text-xs font-semibold leading-5 text-white/85'>
+											{ctaSupportText}
 										</span>
 									)}
+									<div className='flex flex-wrap items-center gap-5 text-sm font-semibold text-white/80'>
+										<span className='flex items-center gap-1.5'>
+											<GraduationCap className='h-4 w-4' />
+											{course.lessons_count} buổi
+										</span>
+										<span className='flex items-center gap-1.5'>
+											<Clock className='h-4 w-4' />
+											{Math.round(course.duration_minutes / 60)} giờ
+										</span>
+										{showInterestCta && (
+											<span className='flex items-center gap-1.5'>
+												<Bookmark className='h-4 w-4' />
+												{followersCount} quan tâm
+											</span>
+										)}
+									</div>
 								</div>
 							</div>
 						</div>
@@ -1025,20 +1142,39 @@ const CourseDetailPage: React.FC = () => {
 								) : !user ? (
 									<CourseContentLoginPanel courseSlug={course.slug} />
 								) : hasLessons ? (
-									<div className='overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111] divide-y-2 divide-black'>
-										{lessons.map((lesson) => (
-											<LessonRow
-												key={lesson.id}
-												courseSlug={course.slug}
-												lesson={lesson}
-												track={effectiveTrack}
-												isActiveQrLesson={lesson.id === activeQrLessonId}
-												isFrontendLocked={frontendLockedIds.has(lesson.id)}
-												creatingTicket={creatingTicketId === lesson.id}
-												onCreateTicket={handleCreateTicket}
-												onShowTicket={handleShowTicket}
-											/>
-										))}
+									<div className='space-y-4'>
+										{!viewerCanLearn && (
+											<div className='flex items-start gap-3 rounded-2xl border-2 border-black bg-[var(--color-pastel-pink)] px-4 py-3 shadow-[3px_3px_0_#111]'>
+												<Info
+													className='mt-0.5 h-5 w-5 shrink-0 text-red-700'
+													strokeWidth={2.5}
+												/>
+												<p className='text-sm font-semibold leading-6 text-red-700'>
+													{audienceMeta.notice} Bạn vẫn có thể xem danh
+													sách buổi học, nhưng chưa thể mở nội dung.
+												</p>
+											</div>
+										)}
+										<div
+											className={`overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_#111] divide-y-2 divide-black ${viewerCanLearn ? "" : "opacity-55 grayscale"}`}>
+											{lessons.map((lesson) => (
+												<LessonRow
+													key={lesson.id}
+													courseSlug={course.slug}
+													lesson={lesson}
+													track={effectiveTrack}
+													isActiveQrLesson={
+														lesson.id === activeQrLessonId
+													}
+													isFrontendLocked={frontendLockedIds.has(
+														lesson.id,
+													)}
+													creatingTicket={creatingTicketId === lesson.id}
+													onCreateTicket={handleCreateTicket}
+													onShowTicket={handleShowTicket}
+												/>
+											))}
+										</div>
 									</div>
 								) : (
 									<div className='rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center'>
@@ -1063,10 +1199,10 @@ const CourseDetailPage: React.FC = () => {
 							{showSidebar && (
 								<aside className='lg:sticky lg:top-24 lg:self-start lg:pt-[calc(2rem+1rem)]'>
 									<Sidebar
-										canClaimCertificate={canClaimCertificate}
 										stats={course.stats}
 										track={effectiveTrack}
 										user={user}
+										canLearn={viewerCanLearn}
 									/>
 								</aside>
 							)}

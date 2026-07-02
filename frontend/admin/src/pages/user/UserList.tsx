@@ -90,19 +90,7 @@ function UserList() {
 		return () => clearTimeout(handler);
 	}, [search]);
 
-	useEffect(() => {
-		setMeta((prev) => ({ ...prev, current_page: 1 }));
-	}, [debouncedSearch, roleFilter, sortConfig]);
-
-	useEffect(() => {
-		fetchUsers();
-	}, [meta.current_page, meta.per_page, debouncedSearch, roleFilter, sortConfig]);
-
-	useEffect(() => {
-		fetchRoles();
-	}, []);
-
-	const fetchRoles = async () => {
+	async function fetchRoles() {
 		try {
 			const response = await roleService.getRoles({ per_page: 100 });
 			setRoleOptions([
@@ -115,9 +103,9 @@ function UserList() {
 		} catch (error) {
 			console.error("Đã có lỗi xảy ra khi tải danh sách vai trò:", error);
 		}
-	};
+	}
 
-	const fetchUsers = async () => {
+	async function fetchUsers() {
 		try {
 			const response = await userService.getUsers({
 				page: meta.current_page,
@@ -137,7 +125,21 @@ function UserList() {
 		} catch (error) {
 			console.error("Đã có lỗi xảy ra:", error);
 		}
-	};
+	}
+
+	useEffect(() => {
+		setMeta((prev) => ({ ...prev, current_page: 1 }));
+	}, [debouncedSearch, roleFilter, sortConfig]);
+
+	useEffect(() => {
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		fetchUsers();
+	}, [meta.current_page, meta.per_page, debouncedSearch, roleFilter, sortConfig]);
+
+	useEffect(() => {
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		fetchRoles();
+	}, []);
 
 	const handleSort = (key: string) => {
 		let order: "asc" | "desc" | null = "asc";
