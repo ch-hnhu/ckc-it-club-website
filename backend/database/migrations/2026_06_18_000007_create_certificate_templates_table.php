@@ -13,9 +13,7 @@ return new class extends Migration
             $table->string('name');
             // Thiết kế canvas kéo-thả (Canva-style): { canvas:{...}, elements:[...] }.
             // Renderer (Browsershot) dựng lại scene này với dữ liệu thật khi cấp chứng chỉ.
-            $table->json('design')->nullable();
-            // HTML cũ (str_replace placeholder) — giữ làm fallback cho mẫu chưa có `design`.
-            $table->longText('html_content')->nullable();
+            $table->json('design');
             $table->string('thumbnail')->nullable(); // ảnh preview để admin chọn
             $table->boolean('is_default')->default(false);
             $table->foreignId('created_by')->constrained('users');

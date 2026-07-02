@@ -461,24 +461,11 @@ const SidebarCard: React.FC<{ children: React.ReactNode; className?: string }> =
 );
 
 const Sidebar: React.FC<{
-	canClaimCertificate: boolean;
-	claimingCertificate: boolean;
-	certificateUrl: string | null;
-	onClaimCertificate: () => void;
 	stats: CourseProgressStats;
 	track: CourseTrack | null;
 	user: AuthUser | null;
 	canLearn: boolean;
-}> = ({
-	canClaimCertificate,
-	claimingCertificate,
-	certificateUrl,
-	onClaimCertificate,
-	stats,
-	track,
-	user,
-	canLearn,
-}) => {
+}> = ({ stats, track, user, canLearn }) => {
 	const trackLabel =
 		track === "offline"
 			? "Hình thức học: Offline"
@@ -563,20 +550,6 @@ const Sidebar: React.FC<{
 							)}
 						</div>
 					</div>
-					{canClaimCertificate && (
-						<button
-							type='button'
-							onClick={onClaimCertificate}
-							disabled={claimingCertificate}
-							className='mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-3 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-60'>
-							<Award className='h-4 w-4' strokeWidth={2.5} />
-							{claimingCertificate
-								? "Đang xử lý..."
-								: certificateUrl
-									? "Xem chứng chỉ"
-									: "Nhận chứng chỉ"}
-						</button>
-					)}
 				</SidebarCard>
 			)}
 
@@ -715,7 +688,6 @@ const CourseDetailPage: React.FC = () => {
 	const [ticketLesson, setTicketLesson] = useState<CourseLesson | null>(null);
 	const [creatingTicketId, setCreatingTicketId] = useState<number | null>(null);
 	const [enrollingOffline, setEnrollingOffline] = useState(false);
-	const [claimingCertificate, setClaimingCertificate] = useState(false);
 	const [certificateUrl, setCertificateUrl] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -744,6 +716,20 @@ const CourseDetailPage: React.FC = () => {
 			cancelled = true;
 		};
 	}, [slug]);
+
+	useEffect(() => {
+		if (!slug || (course?.progress ?? 0) < 100) return;
+		let cancelled = false;
+		learningService
+			.getCertificate(slug)
+			.then((res) => {
+				if (!cancelled) setCertificateUrl(res.data.cert_url ?? null);
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	}, [slug, course?.progress]);
 
 	// ─── Derived state ────────────────────────────────────────────────────────────
 
@@ -958,29 +944,9 @@ const CourseDetailPage: React.FC = () => {
 		if (lesson.qr_ticket) setTicketLesson(lesson);
 	};
 
-	// Luồng 2 bước: bấm "Nhận chứng chỉ" → chỉ lấy link + báo thành công (chứng chỉ đã được hệ
-	// thống tự cấp khi hoàn thành khoá); nút đổi thành "Xem chứng chỉ" → bấm lần sau mới mở PDF.
-	const handleClaimCertificate = async () => {
-		if (!requireAuth() || !slug || claimingCertificate) return;
-
-		if (certificateUrl) {
-			window.open(certificateUrl, "_blank", "noopener,noreferrer");
-			return;
-		}
-
-		setClaimingCertificate(true);
-		try {
-			const res = await learningService.getCertificate(slug);
-			setCertificateUrl(res.data.cert_url);
-			toast.success("Nhận chứng chỉ thành công.");
-		} catch (err) {
-			toast.error(
-				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-					"Không thể lấy chứng chỉ. Vui lòng thử lại.",
-			);
-		} finally {
-			setClaimingCertificate(false);
-		}
+	const handleClaimCertificate = () => {
+		if (!requireAuth() || !certificateUrl) return;
+		window.open(certificateUrl, "_blank", "noopener,noreferrer");
 	};
 
 	return (
@@ -1027,12 +993,12 @@ const CourseDetailPage: React.FC = () => {
 							</div>
 
 							<div className='relative max-w-3xl p-6 md:p-10'>
-								<span className='inline-flex w-fit items-center gap-2 rounded-full border-2 border-black bg-[var(--color-primary)] px-3 py-1 font-heading text-[11px] font-extrabold uppercase tracking-[0.1em] text-black shadow-[2px_2px_0_#111] mr-1'>
+								<span className='inline-flex w-fit items-center gap-2 rounded-full border-2 border-black bg-[var(--color-primary)] px-3 py-1 font-heading text-[10px] font-extrabold uppercase tracking-[0.1em] text-black mr-1'>
 									<BarChart3 className='h-3.5 w-3.5' strokeWidth={2.5} />
 									{LEVEL_LABEL[course.level]}
 								</span>
 								<span
-									className={`mt-2 inline-flex w-fit items-center gap-2 rounded-full border-2 border-black px-3 py-1 font-heading text-[11px] font-extrabold uppercase tracking-[0.1em] text-black shadow-[2px_2px_0_#111] ${audienceMeta.className}`}>
+									className={`mt-2 inline-flex w-fit items-center gap-2 rounded-full border-2 border-black px-3 py-1 font-heading text-[10px] font-extrabold uppercase tracking-[0.1em] text-black ${audienceMeta.className}`}>
 									<AudienceIcon className='h-3.5 w-3.5' strokeWidth={2.5} />
 									{audienceMeta.label}
 								</span>
@@ -1047,89 +1013,111 @@ const CourseDetailPage: React.FC = () => {
 								)}
 
 								{/* ── CTA chính ── */}
-								<div className='mt-6 flex flex-wrap items-center gap-3'>
-									{shouldWaitForUser ? (
-										<span className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111]'>
-											<Lock className='h-4 w-4' strokeWidth={2.5} />
-											Đang kiểm tra tài khoản...
-										</span>
-									) : !user ? (
-										<Link
-											to={`/login?returnTo=${encodeURIComponent(`/khoa-hoc/${course.slug}`)}`}
-											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-											<GraduationCap className='h-4 w-4' strokeWidth={2.5} />
-											Đăng nhập để học
-										</Link>
-									) : !viewerCanLearn ? (
-										<span className='inline-flex max-w-full items-start gap-2 rounded-xl border-2 border-black bg-[var(--color-pastel-pink)] px-5 py-3 font-heading text-sm font-extrabold leading-6 text-red-700 shadow-[4px_4px_0_#111]'>
-											<Info
-												className='mt-0.5 h-4 w-4 shrink-0'
-												strokeWidth={2.5}
-											/>
-											{audienceMeta.notice}
-										</span>
-									) : canRegisterOffline ? (
-										<button
-											type='button'
-											onClick={handleEnrollOffline}
-											disabled={enrollingOffline}
-											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-70'>
-											<CalendarCheck className='h-4 w-4' strokeWidth={2.5} />
-											{enrollingOffline
-												? "Đang đăng ký..."
-												: "Đăng ký học offline"}
-										</button>
-									) : canStartLearning && resumeLesson ? (
-										<Link
-											to={`/khoa-hoc/${course.slug}/${resumeLesson.slug}`}
-											className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-											<GraduationCap className='h-4 w-4' strokeWidth={2.5} />
-											{(course.progress ?? 0) > 0
-												? "Tiếp tục học"
-												: "Bắt đầu học"}
-										</Link>
-									) : showInterestCta ? (
-										<button
-											type='button'
-											onClick={handleToggleInterest}
-											className={`inline-flex items-center gap-2 rounded-xl border-2 border-black px-6 py-3 font-heading text-sm font-extrabold shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${interested ? "bg-white text-black shadow-none translate-x-[1px] translate-y-[1px]" : "bg-[var(--color-primary)] text-black"}`}>
-											{interested ? (
-												<BookmarkCheck
+								<div className='mt-6 flex flex-col items-start gap-3'>
+									<div className='flex flex-wrap gap-3'>
+										{shouldWaitForUser ? (
+											<span className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111]'>
+												<Lock className='h-4 w-4' strokeWidth={2.5} />
+												Đang kiểm tra tài khoản...
+											</span>
+										) : !user ? (
+											<Link
+												to={`/login?returnTo=${encodeURIComponent(`/khoa-hoc/${course.slug}`)}`}
+												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+												<GraduationCap
 													className='h-4 w-4'
 													strokeWidth={2.5}
 												/>
-											) : (
-												<Bookmark className='h-4 w-4' strokeWidth={2.5} />
-											)}
-											{interested ? "Đã quan tâm" : "Quan tâm"}
-										</button>
-									) : (
-										<span className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111]'>
-											<Lock className='h-4 w-4' strokeWidth={2.5} />
-											Chờ mở buổi học
-										</span>
-									)}
+												Đăng nhập để học
+											</Link>
+										) : !viewerCanLearn ? (
+											<span className='inline-flex max-w-full items-start gap-2 rounded-xl border-2 border-black bg-[var(--color-pastel-pink)] px-5 py-3 font-heading text-sm font-extrabold leading-6 text-red-700 shadow-[4px_4px_0_#111]'>
+												<Info
+													className='mt-0.5 h-4 w-4 shrink-0'
+													strokeWidth={2.5}
+												/>
+												{audienceMeta.notice}
+											</span>
+										) : canRegisterOffline ? (
+											<button
+												type='button'
+												onClick={handleEnrollOffline}
+												disabled={enrollingOffline}
+												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed disabled:opacity-70'>
+												<CalendarCheck
+													className='h-4 w-4'
+													strokeWidth={2.5}
+												/>
+												{enrollingOffline
+													? "Đang đăng ký..."
+													: "Đăng ký học offline"}
+											</button>
+										) : canClaimCertificate && certificateUrl ? (
+											<button
+												type='button'
+												onClick={handleClaimCertificate}
+												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+												<Award className='h-4 w-4' strokeWidth={2.5} />
+												Xem chứng chỉ
+											</button>
+										) : canStartLearning && resumeLesson ? (
+											<Link
+												to={`/khoa-hoc/${course.slug}/${resumeLesson.slug}`}
+												className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+												<GraduationCap
+													className='h-4 w-4'
+													strokeWidth={2.5}
+												/>
+												{(course.progress ?? 0) > 0
+													? "Tiếp tục học"
+													: "Bắt đầu học"}
+											</Link>
+										) : showInterestCta ? (
+											<button
+												type='button'
+												onClick={handleToggleInterest}
+												className={`inline-flex items-center gap-2 rounded-xl border-2 border-black px-6 py-3 font-heading text-sm font-extrabold shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${interested ? "bg-white text-black shadow-none translate-x-[1px] translate-y-[1px]" : "bg-[var(--color-primary)] text-black"}`}>
+												{interested ? (
+													<BookmarkCheck
+														className='h-4 w-4'
+														strokeWidth={2.5}
+													/>
+												) : (
+													<Bookmark
+														className='h-4 w-4'
+														strokeWidth={2.5}
+													/>
+												)}
+												{interested ? "Đã quan tâm" : "Quan tâm"}
+											</button>
+										) : (
+											<span className='inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-6 py-3 font-heading text-sm font-extrabold text-black shadow-[4px_4px_0_#111]'>
+												<Lock className='h-4 w-4' strokeWidth={2.5} />
+												Chờ mở buổi học
+											</span>
+										)}
+									</div>
 									{ctaSupportText && !canStartLearning && (
-										<span className='max-w-sm text-xs align-text-bottom font-semibold leading-5 text-white/85'>
+										<span className='max-w-sm text-xs font-semibold leading-5 text-white/85'>
 											{ctaSupportText}
 										</span>
 									)}
-								</div>
-								<div className='mt-5 flex flex-wrap items-center gap-5 text-sm font-semibold text-white/80'>
-									<span className='flex items-center gap-1.5'>
-										<GraduationCap className='h-4 w-4' />
-										{course.lessons_count} buổi
-									</span>
-									<span className='flex items-center gap-1.5'>
-										<Clock className='h-4 w-4' />
-										{Math.round(course.duration_minutes / 60)} giờ
-									</span>
-									{showInterestCta && (
+									<div className='flex flex-wrap items-center gap-5 text-sm font-semibold text-white/80'>
 										<span className='flex items-center gap-1.5'>
-											<Bookmark className='h-4 w-4' />
-											{followersCount} quan tâm
+											<GraduationCap className='h-4 w-4' />
+											{course.lessons_count} buổi
 										</span>
-									)}
+										<span className='flex items-center gap-1.5'>
+											<Clock className='h-4 w-4' />
+											{Math.round(course.duration_minutes / 60)} giờ
+										</span>
+										{showInterestCta && (
+											<span className='flex items-center gap-1.5'>
+												<Bookmark className='h-4 w-4' />
+												{followersCount} quan tâm
+											</span>
+										)}
+									</div>
 								</div>
 							</div>
 						</div>
@@ -1211,10 +1199,6 @@ const CourseDetailPage: React.FC = () => {
 							{showSidebar && (
 								<aside className='lg:sticky lg:top-24 lg:self-start lg:pt-[calc(2rem+1rem)]'>
 									<Sidebar
-										canClaimCertificate={canClaimCertificate}
-										claimingCertificate={claimingCertificate}
-										certificateUrl={certificateUrl}
-										onClaimCertificate={handleClaimCertificate}
 										stats={course.stats}
 										track={effectiveTrack}
 										user={user}

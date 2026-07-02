@@ -19,7 +19,7 @@ const LINK_TYPE_LABELS: Record<ResourceLinkType, string> = {
 	google_drive: "Google Drive",
 	youtube: "YouTube",
 	github: "GitHub",
-	document: "Tài liệu",
+	document: "Website",
 	other: "Khác",
 };
 
@@ -53,7 +53,7 @@ const ResourceCard: React.FC<{ resource: Resource; currentUserId?: string; onRep
 	};
 
 	return (
-		<div className='flex flex-col rounded-2xl border-2 border-black bg-white p-5 shadow-[4px_4px_0_#111]'>
+		<div className='flex h-full flex-col rounded-2xl border-2 border-black bg-white p-5 shadow-[4px_4px_0_#111]'>
 			<div className='mb-3 flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-[var(--color-pastel-green)]'>
 				<Icon className='h-5 w-5 text-black' />
 			</div>
@@ -68,7 +68,7 @@ const ResourceCard: React.FC<{ resource: Resource; currentUserId?: string; onRep
 				<span>·</span>
 				<span>{resource.uploader?.full_name ?? "Ẩn danh"}</span>
 			</div>
-			<div className='mt-4 flex items-center justify-between gap-2'>
+			<div className='mt-auto flex items-center justify-between gap-2 pt-4'>
 				<a
 					href={resource.url}
 					target='_blank'

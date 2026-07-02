@@ -67,7 +67,27 @@ const CANVAS_H = 794; // A4 ngang @ 96dpi
 const DISPLAY_W = 760; // bề rộng hiển thị canvas trong editor
 const SCALE = DISPLAY_W / CANVAS_W;
 
-const FONTS = ["Be Vietnam Pro", "Roboto", "Arial", "Times New Roman", "Georgia"];
+// Chỉ liệt kê font đã nhúng base64 trong cert-fonts.css — đảm bảo tiếng Việt đúng trong PDF.
+const FONTS = ["Be Vietnam Pro", "Roboto"];
+
+type FontStyleValue = "normal" | "bold" | "italic" | "italic bold";
+
+// Khai báo tường minh kiểu chữ nào được hỗ trợ theo từng font (tương ứng @font-face trong cert-fonts.css).
+// Khi thêm font mới vào FONTS, cập nhật map này luôn để UI tự ẩn kiểu không hỗ trợ.
+const FONT_STYLE_SUPPORT: Record<string, FontStyleValue[]> = {
+	"Be Vietnam Pro": ["normal", "bold", "italic", "italic bold"],
+	"Roboto":         ["normal", "bold", "italic", "italic bold"],
+};
+
+const ALL_FONT_STYLES: Array<{ value: FontStyleValue; label: string }> = [
+	{ value: "normal",      label: "Thường" },
+	{ value: "bold",        label: "Đậm" },
+	{ value: "italic",      label: "Nghiêng" },
+	{ value: "italic bold", label: "Đậm nghiêng" },
+];
+
+const supportedStyles = (fontFamily: string): FontStyleValue[] =>
+	FONT_STYLE_SUPPORT[fontFamily] ?? ["normal", "bold"];
 
 const PLACEHOLDERS: Array<{ token: string; label: string }> = [
 	{ token: "{{name}}", label: "Tên học viên" },
@@ -1365,7 +1385,14 @@ function PropertyPanel({
 						<Field label='Font'>
 							<Select
 								value={element.fontFamily ?? "Be Vietnam Pro"}
-								onValueChange={(v) => onChange({ fontFamily: v })}>
+								onValueChange={(v) => {
+									const styles = supportedStyles(v);
+									const cur = (element.fontStyle ?? "normal") as FontStyleValue;
+									onChange({
+										fontFamily: v,
+										...(styles.includes(cur) ? {} : { fontStyle: "normal" }),
+									});
+								}}>
 								<SelectTrigger className='h-8'>
 									<SelectValue />
 								</SelectTrigger>
@@ -1410,10 +1437,13 @@ function PropertyPanel({
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value='normal'>Thường</SelectItem>
-									<SelectItem value='bold'>Đậm</SelectItem>
-									<SelectItem value='italic'>Nghiêng</SelectItem>
-									<SelectItem value='italic bold'>Đậm nghiêng</SelectItem>
+									{ALL_FONT_STYLES.filter((s) =>
+										supportedStyles(element.fontFamily ?? "Be Vietnam Pro").includes(s.value),
+									).map((s) => (
+										<SelectItem key={s.value} value={s.value}>
+											{s.label}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 						</Field>

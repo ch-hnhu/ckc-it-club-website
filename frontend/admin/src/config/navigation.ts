@@ -3,6 +3,7 @@ import {
 	Building,
 	CalendarDays,
 	CircleCheckBig,
+	FolderOpen,
 	Globe,
 	GraduationCap,
 	House,
@@ -187,28 +188,36 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/community/chat",
 				permission: "community.chat.view",
 			},
-			{
-				title: "Tài nguyên",
-				url: "/community/media",
-				permission: "community.media.view",
-			},
+			// {
+			// 	title: "Tài nguyên",
+			// 	url: "/community/media",
+			// 	permission: "community.media.view",
+			// },
 			{
 				title: "Skills",
 				url: "/community/skills",
 				permission: "community.skills.manage",
 			},
 			{
-				title: "Kho tài nguyên",
-				url: "/community/resources",
-				permission: "community.resources.view",
-			},
-			{
 				title: "Báo cáo vi phạm",
 				url: "/community/reports",
 				permission: "community.reports.view",
 			},
+		],
+	},
+	{
+		title: "Kho tài nguyên",
+		url: "/community/resources",
+		icon: FolderOpen,
+		permission: "community.resources.view",
+		items: [
 			{
-				title: "Báo cáo vi phạm tài nguyên",
+				title: "Danh sách tài nguyên",
+				url: "/community/resources",
+				permission: "community.resources.view",
+			},
+			{
+				title: "Báo cáo",
 				url: "/community/resource-reports",
 				permission: "community.reports.view",
 			},

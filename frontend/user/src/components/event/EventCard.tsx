@@ -21,13 +21,13 @@ const STATUS_BADGE_CLASS: Record<EventStatus, string> = {
 	draft: "bg-gray-100 text-gray-600",
 	published: "bg-[var(--color-primary)] text-black",
 	ongoing: "bg-[var(--color-pastel-blue)] text-black",
-	ended: "bg-gray-100 text-gray-500",
+	ended: "bg-gray-100 text-black",
 	cancelled: "bg-[var(--color-pastel-pink)] text-black",
 };
 
 export const EventStatusBadge: React.FC<{ status: EventStatus }> = ({ status }) => (
 	<span
-		className={`inline-flex items-center rounded-full border-2 border-black px-3 py-1 font-heading text-[11px] font-extrabold uppercase tracking-wide shadow-[2px_2px_0_#111] ${STATUS_BADGE_CLASS[status]}`}>
+		className={`inline-flex items-center rounded-full border-2 border-black px-3 py-1 font-heading text-[10px] font-extrabold uppercase text-black tracking-wide ${STATUS_BADGE_CLASS[status]}`}>
 		{STATUS_LABEL[status]}
 	</span>
 );
@@ -37,7 +37,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, featured = false }) => {
 	const aspect = featured ? "aspect-[21/9]" : "aspect-[16/9]";
 
 	return (
-		<Link to={detailUrl} className='group neo-card relative flex flex-col overflow-hidden bg-white'>
+		<Link
+			to={detailUrl}
+			className='group neo-card neo-card-static relative flex flex-col overflow-hidden bg-white'>
 			<div className='absolute left-3 top-3 z-10'>
 				<EventStatusBadge status={event.status} />
 			</div>
@@ -50,7 +52,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, featured = false }) => {
 						className={`${aspect} w-full object-cover transition-transform duration-500 group-hover:scale-105`}
 					/>
 				) : (
-					<div className={`flex ${aspect} w-full items-center justify-center bg-[var(--color-pastel-green)]`}>
+					<div
+						className={`flex ${aspect} w-full items-center justify-center bg-[var(--color-pastel-green)]`}>
 						<span className='font-heading text-6xl font-extrabold text-[var(--color-text-primary)] opacity-20'>
 							{event.title.charAt(0).toUpperCase()}
 						</span>
@@ -64,14 +67,17 @@ const EventCard: React.FC<EventCardProps> = ({ event, featured = false }) => {
 				</h3>
 
 				{event.description && (
-					<p className='mt-2 line-clamp-2 text-sm leading-6 text-gray-600'>{event.description}</p>
+					<p className='mt-2 line-clamp-2 text-sm leading-6 text-gray-600'>
+						{event.description}
+					</p>
 				)}
 
 				<div className='mt-4 space-y-1.5 text-sm text-gray-700'>
 					<div className='flex items-center gap-2'>
 						<CalendarDays className='h-4 w-4 shrink-0 text-gray-400' />
 						<span className='font-medium'>
-							{formatEventDate(event.start_at)} · {formatEventTime(event.start_at)} - {formatEventTime(event.end_at)}
+							{formatEventDate(event.start_at)} · {formatEventTime(event.start_at)} -{" "}
+							{formatEventTime(event.end_at)}
 						</span>
 					</div>
 					{event.location && (
