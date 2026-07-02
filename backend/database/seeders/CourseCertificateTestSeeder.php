@@ -25,15 +25,15 @@ class CourseCertificateTestSeeder extends Seeder
         }
 
         // Backdate khoá học về trạng thái "đã kết thúc" để dữ liệu nhất quán
-        $enrollmentStart    = now()->subDays(60);
+        $enrollmentStart = now()->subDays(60);
         $enrollmentDeadline = now()->subDays(40);
-        $courseEnd          = now()->subDays(5);
+        $courseEnd = now()->subDays(5);
 
         DB::table('courses')->where('id', $courseId)->update([
             'certificate_template_id' => $templateId,
-            'enrollment_start'        => $enrollmentStart,
-            'enrollment_deadline'     => $enrollmentDeadline,
-            'course_end'              => $courseEnd,
+            'enrollment_start' => $enrollmentStart,
+            'enrollment_deadline' => $enrollmentDeadline,
+            'course_end' => $courseEnd,
         ]);
 
         // Backdate session của từng buổi học về quá khứ
@@ -48,7 +48,7 @@ class CourseCertificateTestSeeder extends Seeder
             $sessionStart = $enrollmentDeadline->copy()->addDays($i * 7)->setTime(18, 0);
             DB::table('lessons')->where('id', $lessonId)->update([
                 'session_start' => $sessionStart,
-                'session_end'   => $sessionStart->copy()->addHours(2),
+                'session_end' => $sessionStart->copy()->addHours(2),
             ]);
         }
 
@@ -64,14 +64,14 @@ class CourseCertificateTestSeeder extends Seeder
             ->get(['id', 'session_start'])
             ->keyBy('id');
 
-        $adminId     = DB::table('users')->orderBy('id')->value('id');
+        $adminId = DB::table('users')->orderBy('id')->value('id');
         $completedAt = $courseEnd->copy()->addDay();
-        $issuedAt    = $completedAt->copy()->addDay();
+        $issuedAt = $completedAt->copy()->addDay();
 
         // Dùng sinh viên Cao Thắng thực sự (có student_code) để khớp audience='cao_thang_student'
         $candidates = [
-            ['user_id' => 15, 'track' => 'offline'],
-            ['user_id' => 16, 'track' => 'online'],
+            ['user_id' => 4, 'track' => 'offline'],
+            ['user_id' => 5, 'track' => 'online'],
         ];
 
         // Đọc point_rule ids một lần
@@ -103,11 +103,11 @@ class CourseCertificateTestSeeder extends Seeder
             DB::table('course_enrollments')->updateOrInsert(
                 ['user_id' => $userId, 'course_id' => $courseId],
                 [
-                    'track'        => $track,
-                    'progress'     => 100,
+                    'track' => $track,
+                    'progress' => 100,
                     'completed_at' => $completedAt,
-                    'created_at'   => $enrollmentDeadline,
-                    'updated_at'   => $completedAt,
+                    'created_at' => $enrollmentDeadline,
+                    'updated_at' => $completedAt,
                 ]
             );
 
@@ -121,8 +121,8 @@ class CourseCertificateTestSeeder extends Seeder
                     DB::table('lesson_qr_tickets')->updateOrInsert(
                         ['user_id' => $userId, 'lesson_id' => $lessonId],
                         [
-                            'token'      => Str::uuid()->toString(),
-                            'used_at'    => $attendedAt, // đã quét
+                            'token' => Str::uuid()->toString(),
+                            'used_at' => $attendedAt, // đã quét
                             'created_at' => $enrollmentDeadline,
                             'updated_at' => $attendedAt,
                         ]
@@ -132,12 +132,12 @@ class CourseCertificateTestSeeder extends Seeder
                     DB::table('lesson_attendances')->updateOrInsert(
                         ['user_id' => $userId, 'lesson_id' => $lessonId],
                         [
-                            'type'        => 'qr',
-                            'note'        => null,
+                            'type' => 'qr',
+                            'note' => null,
                             'attended_at' => $attendedAt,
                             'recorded_by' => $adminId,
-                            'created_at'  => $attendedAt,
-                            'updated_at'  => $attendedAt,
+                            'created_at' => $attendedAt,
+                            'updated_at' => $attendedAt,
                         ]
                     );
                 }
@@ -149,12 +149,12 @@ class CourseCertificateTestSeeder extends Seeder
                     DB::table('lesson_progress')->updateOrInsert(
                         ['user_id' => $userId, 'lesson_id' => $lessonId, 'section_type' => $sectionType],
                         [
-                            'is_completed'     => true,
-                            'score'            => $sectionType === 'video' ? null : 90.00,
+                            'is_completed' => true,
+                            'score' => $sectionType === 'video' ? null : 90.00,
                             'watch_percentage' => $sectionType === 'video' ? 100 : null,
-                            'completed_at'     => $completedAt,
-                            'created_at'       => $enrollmentDeadline,
-                            'updated_at'       => $completedAt,
+                            'completed_at' => $completedAt,
+                            'created_at' => $enrollmentDeadline,
+                            'updated_at' => $completedAt,
                         ]
                     );
                 }
@@ -163,40 +163,43 @@ class CourseCertificateTestSeeder extends Seeder
             // Point transactions — chỉ insert nếu chưa có (tránh trùng khi chạy lại)
             $totalAwarded = 0;
             $sectionRuleMap = [
-                'video'      => 'learning_center.video_completed',
-                'quiz'       => 'learning_center.quiz_passed',
+                'video' => 'learning_center.video_completed',
+                'quiz' => 'learning_center.quiz_passed',
                 'assignment' => 'learning_center.assignment_completed',
             ];
 
             foreach ($lessonIds as $lessonId) {
                 foreach ($sectionRuleMap as $sectionType => $ruleKey) {
                     $ruleId = $ruleIdByKey[$ruleKey] ?? null;
-                    if (! $ruleId) continue;
+                    if (! $ruleId)
+                        continue;
 
                     $progressId = DB::table('lesson_progress')
                         ->where('user_id', $userId)
                         ->where('lesson_id', $lessonId)
                         ->where('section_type', $sectionType)
                         ->value('id');
-                    if (! $progressId) continue;
+                    if (! $progressId)
+                        continue;
 
                     $alreadyExists = DB::table('point_transactions')
                         ->where('point_rule_id', $ruleId)
                         ->where('source_type', 'lesson_progress')
                         ->where('source_id', $progressId)
                         ->exists();
-                    if ($alreadyExists) continue;
+                    if ($alreadyExists)
+                        continue;
 
                     $pts = $pointRules[$ruleId] ?? 0;
                     DB::table('point_transactions')->insert([
-                        'user_id'       => $userId,
+                        'user_id' => $userId,
                         'point_rule_id' => $ruleId,
-                        'points'        => $pts,
-                        'source_type'   => 'lesson_progress',
-                        'source_id'     => $progressId,
-                        'metadata'      => null,
-                        'created_at'    => $completedAt,
-                        'updated_at'    => $completedAt,
+                        'points' => $pts,
+                        'source_type' => 'lesson_progress',
+                        'source_id' => $progressId,
+                        'metadata' => null,
+                        'created_at' => $completedAt,
+                        'updated_at' => $completedAt,
                     ]);
                     $totalAwarded += $pts;
                 }
@@ -217,14 +220,14 @@ class CourseCertificateTestSeeder extends Seeder
                 if (! $alreadyExists && $enrollmentId) {
                     $pts = $pointRules[$courseRuleId] ?? 0;
                     DB::table('point_transactions')->insert([
-                        'user_id'       => $userId,
+                        'user_id' => $userId,
                         'point_rule_id' => $courseRuleId,
-                        'points'        => $pts,
-                        'source_type'   => 'course_enrollment',
-                        'source_id'     => $enrollmentId,
-                        'metadata'      => null,
-                        'created_at'    => $completedAt,
-                        'updated_at'    => $completedAt,
+                        'points' => $pts,
+                        'source_type' => 'course_enrollment',
+                        'source_id' => $enrollmentId,
+                        'metadata' => null,
+                        'created_at' => $completedAt,
+                        'updated_at' => $completedAt,
                     ]);
                     $totalAwarded += $pts;
                 }

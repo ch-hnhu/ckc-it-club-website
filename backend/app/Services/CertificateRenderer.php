@@ -72,7 +72,7 @@ class CertificateRenderer
         $shot = Browsershot::html($html)
             ->setNodeModulePath(base_path('node_modules'))
             ->timeout(90)
-            ->waitForFunction('window.__certReady === true', null, 12000);
+            ->waitForFunction('window.__certReady === true', null, 30000);
 
         // Chỉ định node tường minh để KHÔNG phụ thuộc PATH tiến trình (node thường cài qua nvm).
         if ($nodePath = $this->resolveNodeBinary()) {
@@ -278,20 +278,42 @@ function loadImage(src){
     im.src = src;
   });
 }
+function fontLoadTextFor(family) {
+  const sceneText = (scene.elements || [])
+    .filter(e => e.type === 'text' && (e.fontFamily || 'Be Vietnam Pro') === family)
+    .map(e => e.text || '')
+    .join(' ');
+  // Bắt Chrome load cả subset tiếng Việt trong @font-face unicode-range trước khi Konva vẽ canvas.
+  return (sceneText + ' ÀÁÂĂÈÉÊÌÍÒÓÔƠÙÚƯỲÝĐàáâăèéêìíòóôơùúưỳýđ ' +
+    'ạảãấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏõốồổỗộớờởỡợụủũứừửữựỳỵỷỹ ' +
+    'Trưởng ban Học thuật Truyền thông Nguyễn Minh Anh').slice(0, 3000);
+}
+async function waitUntilFontsUsable(families, descriptors, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const ready = families.every(f => {
+      const text = fontLoadTextFor(f);
+      return descriptors.every(d => document.fonts.check(d + ' "' + f + '"', text));
+    });
+    if (ready) return true;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return false;
+}
 (async () => {
   // Nạp tất cả variant cần thiết của font nhúng (base64 trong cert-fonts.css) trước khi Konva vẽ.
-  // Timeout 8s: base64 decode có thể chậm trên server yếu nhưng không để treo vô hạn.
+  // Timeout 15s: base64 decode có thể chậm trên server yếu nhưng không để treo vô hạn.
   const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
   try {
     const families = [...new Set((scene.elements||[]).filter(e=>e.type==='text').map(e=>e.fontFamily||'Be Vietnam Pro'))]
       .filter(f => EMBEDDED_FONTS.includes(f)); // chỉ load font có trong cert-fonts.css
-    await withTimeout(Promise.all(families.flatMap(f => [
-      document.fonts.load('400 40px "'+f+'"'),
-      document.fonts.load('700 40px "'+f+'"'),
-      document.fonts.load('italic 400 40px "'+f+'"'),
-      document.fonts.load('italic 700 40px "'+f+'"'),  // cần cho fontStyle: 'italic bold'
-    ])), 8000);
-    await withTimeout(document.fonts.ready, 1000);
+    const descriptors = ['400 40px', '700 40px', 'italic 400 40px', 'italic 700 40px'];
+    await withTimeout(Promise.all(families.flatMap(f => {
+      const text = fontLoadTextFor(f);
+      return descriptors.map(d => document.fonts.load(d + ' "' + f + '"', text));
+    })), 15000);
+    await withTimeout(document.fonts.ready, 3000);
+    await waitUntilFontsUsable(families, descriptors, 3000);
   } catch(e) {}
   try {
     const stage = new Konva.Stage({ container: 'stage', width: scene.canvas.width, height: scene.canvas.height });

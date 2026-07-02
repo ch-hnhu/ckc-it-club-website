@@ -374,6 +374,7 @@ npm run dev
 
 ## Change Log
 
+- `2026-07-02`: Certificate editor font preload now passes a Vietnamese probe string to `document.fonts.load()` for Be Vietnam Pro/Roboto, including italic/bold variants. This keeps the Konva editor canvas aligned with backend PDF rendering now that the embedded certificate fonts are split by `unicode-range` subsets.
 - `2026-06-30`: ProjectHub board detail (`/to-do-list/:slug`) replaced native HTML5 drag handlers with `@dnd-kit` sortable interactions for smoother Trello-like task and column dragging. Tasks and columns now animate/reorder optimistically while dragging, render drag overlays, support empty-column drops via column body droppable zones, and persist through the existing `moveTask` / `reorderColumns` service calls on drop.
 - `2026-06-30`: ProjectHub task assignee selection no longer renders all board members as preselectable chips. The task dialog now shows selected assignees plus an inline `+ Thêm` chip at the end of the list; its picker searches the current board members only. The board member management dialog now preloads assignable active users with `admin_panel.access` instead of requiring a 2-character search first.
 - `2026-06-30`: ProjectHub member role dropdown now only offers `Biên tập` and `Người xem`; owner remains a fixed board-creator badge and is not assignable/editable.
