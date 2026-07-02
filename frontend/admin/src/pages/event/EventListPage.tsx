@@ -76,6 +76,12 @@ export interface EventDepartment {
 	name: string;
 }
 
+export interface EventOrganizer {
+	id: number;
+	full_name: string | null;
+	avatar: string | null;
+}
+
 export interface EventRecord {
 	id: number;
 	title: string;
@@ -93,6 +99,7 @@ export interface EventRecord {
 	status: EventStatus;
 	creator: EventCreator | null;
 	department: EventDepartment | null;
+	organizer: EventOrganizer | null;
 	registrations_count: number;
 	check_ins_count: number;
 	created_at: string;

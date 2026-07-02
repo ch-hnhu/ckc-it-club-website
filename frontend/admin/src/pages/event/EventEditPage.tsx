@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
 	ArrowLeft,
@@ -20,6 +20,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,6 +39,7 @@ import StacksEditorWrapper, {
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import departmentService from "@/services/department.service";
 import eventService from "@/services/event.service";
+import userService from "@/services/user.service";
 import type { ApiErrorResponse } from "@/types/api.types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -45,6 +47,12 @@ import type { ApiErrorResponse } from "@/types/api.types";
 interface DepartmentOption {
 	id: number;
 	name: string;
+}
+
+interface UserOption {
+	id: number;
+	full_name: string;
+	email: string;
 }
 
 type FormState = {
@@ -59,6 +67,7 @@ type FormState = {
 	max_attendees: string;
 	is_members_only: boolean;
 	department_id: string;
+	organizer_id: string;
 };
 
 type FieldErrors = Partial<
@@ -99,6 +108,10 @@ function EventEditPage() {
 	const [departments, setDepartments] = useState<DepartmentOption[]>([]);
 	const [departmentsLoading, setDepartmentsLoading] = useState(true);
 
+	// Organizer (người phụ trách)
+	const [users, setUsers] = useState<UserOption[]>([]);
+	const [usersLoading, setUsersLoading] = useState(true);
+
 	// Thumbnail
 	const [existingThumbnail, setExistingThumbnail] = useState<string | null>(null);
 	const [imageFile, setImageFile] = useState<File | null>(null);
@@ -125,6 +138,7 @@ function EventEditPage() {
 				max_attendees: e.max_attendees ? String(e.max_attendees) : "",
 				is_members_only: e.is_members_only,
 				department_id: e.department ? String(e.department.id) : "none",
+				organizer_id: e.organizer ? String(e.organizer.id) : "",
 			});
 			setInitialContent(e.content ?? "");
 			setExistingThumbnail(e.thumbnail);
@@ -147,6 +161,21 @@ function EventEditPage() {
 			.finally(() => setDepartmentsLoading(false));
 	}, []);
 
+	// Chỉ hiển thị thành viên câu lạc bộ: có bất kỳ vai trò nào ngoài "user" thường.
+	useEffect(() => {
+		userService
+			.getUsers({ per_page: 100, sort: "full_name", order: "asc" })
+			.then((res) =>
+				setUsers(
+					res.data
+						.filter((u) => u.roles.some((r) => r.name !== "user"))
+						.map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })),
+				),
+			)
+			.catch(() => toast.error("Không thể tải danh sách người dùng."))
+			.finally(() => setUsersLoading(false));
+	}, []);
+
 	// ── Image preview ──
 	useEffect(() => {
 		if (!imageFile) { setImagePreview(null); return; }
@@ -154,6 +183,16 @@ function EventEditPage() {
 		setImagePreview(url);
 		return () => URL.revokeObjectURL(url);
 	}, [imageFile]);
+
+	const userOptions = useMemo(
+		() =>
+			users.map((u) => ({
+				value: String(u.id),
+				label: `${u.full_name} (${u.email})`,
+				keywords: [u.full_name, u.email],
+			})),
+		[users],
+	);
 
 	// ── Helpers ──
 	const setField = <K extends keyof FormState>(key: K, val: FormState[K]) => {
@@ -232,6 +271,8 @@ function EventEditPage() {
 				form.registration_end_at ? new Date(form.registration_end_at).toISOString() : "",
 			);
 			formData.append("department_id", form.department_id === "none" ? "" : form.department_id);
+			// Chuỗi rỗng → null (bỏ người phụ trách)
+			formData.append("organizer_id", form.organizer_id);
 			if (imageFile) formData.append("thumbnail", imageFile);
 
 			await eventService.updateEvent(id, formData);
@@ -625,6 +666,28 @@ function EventEditPage() {
 								)}
 								{fieldErrors.department_id && (
 									<p className="mt-2 text-sm text-destructive">{fieldErrors.department_id}</p>
+								)}
+							</CardContent>
+						</Card>
+
+						{/* Người phụ trách */}
+						<Card className="shadow-sm">
+							<CardHeader>
+								<CardTitle>Người phụ trách</CardTitle>
+								<CardDescription>Người chịu trách nhiệm chính cho sự kiện (tuỳ chọn).</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<Combobox
+									triggerId="event-organizer"
+									value={form.organizer_id}
+									onValueChange={(v) => setField("organizer_id", v)}
+									options={userOptions}
+									placeholder={usersLoading ? "Đang tải..." : "Chọn người phụ trách"}
+									searchPlaceholder="Tìm người dùng..."
+									disabled={usersLoading || submitting}
+								/>
+								{fieldErrors.organizer_id && (
+									<p className="mt-2 text-sm text-destructive">{fieldErrors.organizer_id}</p>
 								)}
 							</CardContent>
 						</Card>
