@@ -9,6 +9,7 @@ use App\Models\Channel;
 use App\Models\Comment;
 use App\Models\MediaFile;
 use App\Models\Post;
+use App\Jobs\ModerateCommentJob;
 use App\Models\Reaction;
 use App\Services\NotificationService;
 use App\Services\UserNotificationService;
@@ -658,6 +659,11 @@ class PostController extends BaseApiController
             'parent_id' => $parentId,
             'depth' => $depth,
         ]);
+
+        // Kiểm duyệt AI chạy nền: bình luận hiển thị ngay, tự ẩn sau nếu vi phạm.
+        if (config('services.gemini.moderation_enabled')) {
+            ModerateCommentJob::dispatch($comment->id);
+        }
 
         $comment->load('user:id,full_name,username,email,avatar');
 

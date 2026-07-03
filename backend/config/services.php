@@ -50,4 +50,14 @@ return [
     'youtube' => [
         'key' => env('YOUTUBE_API_KEY'),
     ],
+
+    'gemini' => [
+        'key'     => env('GEMINI_API_KEY'),
+        'model'   => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'timeout' => (int) env('GEMINI_TIMEOUT', 10),
+        // Bật/tắt kiểm duyệt bình luận tự động bằng AI.
+        'moderation_enabled' => filter_var(env('COMMENT_AI_MODERATION', false), FILTER_VALIDATE_BOOL),
+        // Xác minh SSL. Production để true; local Windows thiếu cacert.pem có thể để false.
+        'verify' => filter_var(env('GEMINI_HTTP_VERIFY', true), FILTER_VALIDATE_BOOL),
+    ],
 ];

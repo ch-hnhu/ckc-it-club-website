@@ -155,6 +155,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
 		`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserDisplayName)}&background=A3E635&color=111111&bold=true`;
 
 	if (comment.is_hidden) {
+		// Không có reply con → ẩn hẳn khỏi giao diện.
+		if (!(depth === 0 && hasReplies)) {
+			return null;
+		}
+
+		// Có reply con → chỉ ẩn nội dung bình luận cha, vẫn giữ các reply con.
 		return (
 			<div
 				id={`comment-${comment.id}`}
@@ -170,18 +176,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
 							<p className='text-sm italic text-gray-400'>Bình luận này đã bị ẩn.</p>
 						</div>
 
-						{depth === 0 && hasReplies && (
-							<button
-								onClick={() => setShowReplies((p) => !p)}
-								className='mt-2 ml-1 flex items-center gap-1.5 text-xs font-bold text-lime-700 transition hover:text-black'>
-								<MessageCircle className='h-3.5 w-3.5' />
-								{showReplies ? "Thu gọn" : `${comment.replies.length} trả lời`}
-							</button>
-						)}
+						<button
+							onClick={() => setShowReplies((p) => !p)}
+							className='mt-2 ml-1 flex items-center gap-1.5 text-xs font-bold text-lime-700 transition hover:text-black'>
+							<MessageCircle className='h-3.5 w-3.5' />
+							{showReplies ? "Thu gọn" : `${comment.replies.length} trả lời`}
+						</button>
 					</div>
 				</div>
 
-				{depth === 0 && hasReplies && showReplies && (
+				{showReplies && (
 					<div className='mt-1 space-y-3'>
 						{comment.replies.map((reply) => (
 							<CommentItem
