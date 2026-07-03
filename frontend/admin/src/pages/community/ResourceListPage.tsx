@@ -37,6 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	Table,
 	TableBody,
@@ -93,6 +94,16 @@ function getInitials(name: string | null, email: string) {
 
 const emptyStats: ResourceStats = { total: 0, pending_review: 0, published: 0, rejected: 0, hidden: 0 };
 
+// Lý do từ chối tài nguyên có sẵn. "__other__" cho phép nhập lý do tùy ý.
+const REJECT_REASONS = [
+	"Liên kết không hoạt động hoặc không truy cập được",
+	"Nội dung không liên quan đến CLB hoặc lĩnh vực CNTT",
+	"Tài nguyên trùng lặp với tài nguyên đã có",
+	"Nội dung vi phạm bản quyền hoặc thuần phong mỹ tục",
+	"Mô tả không đầy đủ hoặc không rõ ràng",
+] as const;
+const OTHER_REASON = "__other__";
+
 type SortKey = "id" | "title" | "status" | "link_type" | "click_count" | "created_at";
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -115,6 +126,8 @@ function ResourceListPage() {
 
 	const [reviewTarget, setReviewTarget] = useState<{ resource: ResourceRecord; status: "published" | "rejected" } | null>(null);
 	const [notify, setNotify] = useState(true);
+	const [reasonChoice, setReasonChoice] = useState<string>(REJECT_REASONS[0]);
+	const [customReason, setCustomReason] = useState("");
 	const [isReviewing, setIsReviewing] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<ResourceRecord | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -174,14 +187,27 @@ function ResourceListPage() {
 
 	const openReview = (resource: ResourceRecord, status: "published" | "rejected") => {
 		setNotify(true);
+		setReasonChoice(REJECT_REASONS[0]);
+		setCustomReason("");
 		setReviewTarget({ resource, status });
 	};
 
 	const handleConfirmReview = async () => {
 		if (!reviewTarget) return;
+
+		const isReject = reviewTarget.status === "rejected";
+		const reason = isReject
+			? (reasonChoice === OTHER_REASON ? customReason.trim() : reasonChoice)
+			: undefined;
+
+		if (isReject && !reason) {
+			toast.error("Vui lòng nhập lý do từ chối.");
+			return;
+		}
+
 		setIsReviewing(true);
 		try {
-			await resourceService.updateStatus(reviewTarget.resource.id, reviewTarget.status, notify);
+			await resourceService.updateStatus(reviewTarget.resource.id, reviewTarget.status, notify, reason);
 			setResources((prev) => prev.map((r) => r.id === reviewTarget.resource.id ? { ...r, status: reviewTarget.status } : r));
 			toast.success(reviewTarget.status === "published" ? "Đã duyệt tài nguyên." : "Đã từ chối tài nguyên.");
 			setReviewTarget(null);
@@ -465,6 +491,47 @@ function ResourceListPage() {
 									Tài nguyên <span className="font-semibold text-foreground">"{reviewTarget.resource.title}"</span> sẽ được{" "}
 									{reviewTarget.status === "published" ? "đăng công khai" : "từ chối"}.
 								</p>
+
+								{reviewTarget.status === "rejected" && (
+									<div className="space-y-2">
+										<p className="text-sm font-medium text-foreground">Lý do từ chối</p>
+										<div className="space-y-1.5">
+											{REJECT_REASONS.map((reason) => (
+												<label key={reason} className="flex items-start gap-2 text-sm">
+													<input
+														type="radio"
+														name="reject-reason"
+														className="mt-0.5"
+														checked={reasonChoice === reason}
+														onChange={() => setReasonChoice(reason)}
+													/>
+													<span>{reason}</span>
+												</label>
+											))}
+											<label className="flex items-start gap-2 text-sm">
+												<input
+													type="radio"
+													name="reject-reason"
+													className="mt-0.5"
+													checked={reasonChoice === OTHER_REASON}
+													onChange={() => setReasonChoice(OTHER_REASON)}
+												/>
+												<span>Khác (nhập lý do)</span>
+											</label>
+										</div>
+										{reasonChoice === OTHER_REASON && (
+											<Textarea
+												placeholder="Nhập lý do từ chối..."
+												value={customReason}
+												onChange={(e) => setCustomReason(e.target.value)}
+												maxLength={500}
+												rows={3}
+												autoFocus
+											/>
+										)}
+									</div>
+								)}
+
 								<label className="flex items-center gap-2 text-sm">
 									<Checkbox checked={notify} onCheckedChange={(c) => setNotify(c === true)} />
 									Gửi thông báo cho người gửi

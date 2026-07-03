@@ -340,14 +340,20 @@ class UserNotificationService
         User $actor,
         Resource $resource,
         string $status, // 'published' | 'rejected'
+        ?string $reason = null,
     ): void {
         $approved = $status === 'published';
+
+        $rejectMessage = "Tài nguyên \"{$resource->title}\" của bạn đã bị từ chối.";
+        if (! $approved && $reason !== null && $reason !== '') {
+            $rejectMessage .= " Lý do: {$reason}";
+        }
 
         self::send($recipient, $actor, [
             'title' => $approved ? 'Tài nguyên được duyệt' : 'Tài nguyên bị từ chối',
             'message' => $approved
                 ? "Tài nguyên \"{$resource->title}\" của bạn đã được duyệt và xuất bản."
-                : "Tài nguyên \"{$resource->title}\" của bạn đã bị từ chối.",
+                : $rejectMessage,
             'type' => 'resource_reviewed',
             'target_type' => 'resource',
             'target_id' => $resource->id,

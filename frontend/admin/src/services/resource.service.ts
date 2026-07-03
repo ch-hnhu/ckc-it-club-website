@@ -20,6 +20,7 @@ export interface ResourceRecord {
 	url: string;
 	status: ResourceStatus;
 	click_count: number;
+	rejection_reason: string | null;
 	reviewed_at: string | null;
 	created_at: string;
 	updated_at: string;
@@ -53,8 +54,9 @@ const resourceService = {
 		id: number,
 		status: "published" | "rejected",
 		notify: boolean,
+		reason?: string,
 	): Promise<ApiResponse<{ status: ResourceStatus }>> {
-		return api.patch(`/resources/${id}/status`, { status, notify });
+		return api.patch(`/resources/${id}/status`, { status, notify, reason });
 	},
 
 	async deleteResource(id: number): Promise<ApiResponse<null>> {
