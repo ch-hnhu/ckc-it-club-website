@@ -34,6 +34,7 @@ import { chatService } from "@/services/chat.service";
 import type { ChatMessage, ChatRoom } from "@/types/chat.types";
 import { buildAvatar, formatRelativeTime, getHandle } from "@/lib/utils";
 import echo from "@/config/echo";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -243,7 +244,8 @@ const MessageGroupItem: React.FC<{
 	<div
 		className={`flex items-end gap-2 px-4 py-1.5 hover:bg-black/[0.015] ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
 		{/* Avatar — cố định ở bottom của nhóm */}
-		<img
+		<AvatarImage
+			fallbackName={group.senderName}
 			src={group.senderAvatar}
 			alt={group.senderName}
 			className='h-8 w-8 shrink-0 self-end rounded-full border-2 border-black object-cover'
@@ -950,7 +952,8 @@ const CommunityChatPage: React.FC = () => {
 						{/* Input row */}
 						<div className='flex gap-2 px-4 py-3'>
 							{/* User avatar */}
-							<img
+							<AvatarImage
+								fallbackName={user.name ?? "Bạn"}
 								src={buildAvatar(user.name, user.picture)}
 								alt={user.name ?? "Bạn"}
 								className='h-10 w-10 shrink-0 rounded-full border-2 border-black object-cover'

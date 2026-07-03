@@ -106,6 +106,8 @@ class CommentController extends BaseApiController
             'parent_id'        => $comment->parent_id,
             'content'          => $comment->content,
             'is_hidden'        => (bool) $comment->is_hidden,
+            'moderation_reason' => $comment->moderation_reason,
+            'moderated_at'     => $comment->moderated_at?->toIso8601String(),
             'reactions_count'  => (int) ($comment->reactions_count ?? 0),
             'created_at'       => $comment->created_at?->toIso8601String(),
             'updated_at'       => $comment->updated_at?->toIso8601String(),

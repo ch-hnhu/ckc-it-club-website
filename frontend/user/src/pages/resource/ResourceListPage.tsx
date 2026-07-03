@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import {
 	ExternalLink,
 	Flag,
-	FileText,
+	FolderOpen,
 	Github,
+	Globe,
 	PlusSquare,
 	Search,
 	Youtube,
@@ -24,10 +25,10 @@ const LINK_TYPE_LABELS: Record<ResourceLinkType, string> = {
 };
 
 const LINK_TYPE_ICONS: Record<ResourceLinkType, React.ElementType> = {
-	google_drive: FileText,
+	google_drive: FolderOpen,
 	youtube: Youtube,
 	github: Github,
-	document: FileText,
+	document: Globe,
 	other: Link2,
 };
 

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Events\NotificationSent;
 use App\Models\Blog;
 use App\Models\Board;
+use App\Models\Comment;
 use App\Models\Post;
 use App\Models\Resource;
 use App\Models\User;
@@ -388,6 +389,36 @@ class UserNotificationService
             'target_type' => 'resource_report',
             'target_id' => 0,
             'link' => '/tai-nguyen',
+        ]);
+    }
+
+    /**
+     * Notify the comment author when AI moderation auto-hides their comment.
+     * Self-actor: hệ thống ẩn tự động, không có người thực hiện cụ thể.
+     */
+    public static function dispatchCommentModerated(
+        User $recipient,
+        Comment $comment,
+        string $reason,
+    ): void {
+        if ($comment->post_id) {
+            $targetType = 'post';
+            $targetId   = $comment->post_id;
+            $link       = "/cong-dong/bai-viet/{$comment->post_id}";
+        } else {
+            $targetType = 'blog';
+            $targetId   = (int) $comment->blog_id;
+            $slug       = $comment->blog?->slug;
+            $link       = $slug ? "/blog/{$slug}" : '';
+        }
+
+        self::send($recipient, $recipient, [
+            'title'       => 'Bình luận của bạn đã bị ẩn',
+            'message'     => "Bình luận của bạn đã bị ẩn tự động do vi phạm tiêu chuẩn cộng đồng. Lý do: {$reason}",
+            'type'        => 'comment_moderated',
+            'target_type' => $targetType,
+            'target_id'   => $targetId,
+            'link'        => $link,
         ]);
     }
 

@@ -23,12 +23,18 @@ function Avatar({
 
 function AvatarImage({
   className,
+  // Google avatar URLs (lh3.googleusercontent.com) can return HTTP 429 or a
+  // broken image when a Referer header is sent, making avatars disappear.
+  // Default to sending no referrer so Google is far less likely to block it;
+  // Radix falls back to <AvatarFallback> if the image still fails to load.
+  referrerPolicy = 'no-referrer',
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
       className={cn('aspect-square size-full', className)}
+      referrerPolicy={referrerPolicy}
       {...props}
     />
   )

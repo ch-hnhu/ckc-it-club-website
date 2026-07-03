@@ -27,6 +27,7 @@ import type { ApiResponse } from "@/types/api.types";
 import type { UserProfile } from "@/types/user.types";
 import NeoSelect, { type NeoSelectOption } from "@/components/ui/NeoSelect";
 import NeoDatePicker from "@/components/ui/NeoDatePicker";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 // ─── Academic types ───────────────────────────────────────────────────────────
 
@@ -424,7 +425,8 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, profile, onSaved }) => {
 							<div
 								className='group relative cursor-pointer'
 								onClick={() => avatarInputRef.current?.click()}>
-								<img
+								<AvatarImage
+									fallbackName={profile?.full_name ?? user.name ?? ""}
 									src={avatarSrc}
 									alt='Avatar'
 									className='h-40 w-40 rounded-full border-2 border-black object-cover'
