@@ -1910,3 +1910,63 @@ body {
 .so-editor-outer .js-content-policy-html {
 	display: none !important;
 }
+
+/* ============================================
+   Chatbot – markdown trong bong bóng tin nhắn
+   ============================================ */
+.chatbot-markdown {
+	line-height: 1.5;
+}
+.chatbot-markdown > *:first-child {
+	margin-top: 0;
+}
+.chatbot-markdown > *:last-child {
+	margin-bottom: 0;
+}
+.chatbot-markdown p {
+	margin: 0.35rem 0;
+}
+.chatbot-markdown ul,
+.chatbot-markdown ol {
+	margin: 0.35rem 0;
+	padding-left: 1.25rem;
+	list-style-position: outside;
+}
+.chatbot-markdown ul {
+	list-style-type: disc;
+}
+.chatbot-markdown ol {
+	list-style-type: decimal;
+}
+.chatbot-markdown li {
+	margin: 0.15rem 0;
+}
+.chatbot-markdown a {
+	color: #1d4ed8;
+	text-decoration: underline;
+	font-weight: 600;
+}
+.chatbot-markdown code {
+	background: #f3f4f6;
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	padding: 0.05rem 0.3rem;
+	font-size: 0.85em;
+}
+.chatbot-markdown pre.s-code-block {
+	margin: 0.5rem 0;
+	padding: 0.6rem;
+	border: 2px solid #111;
+	border-radius: 8px;
+	overflow-x: auto;
+	font-size: 0.8em;
+}
+.chatbot-markdown table {
+	border-collapse: collapse;
+	margin: 0.5rem 0;
+}
+.chatbot-markdown th,
+.chatbot-markdown td {
+	border: 1px solid #111;
+	padding: 0.2rem 0.4rem;
+}

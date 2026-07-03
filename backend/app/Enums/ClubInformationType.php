@@ -5,6 +5,7 @@ namespace App\Enums;
 enum ClubInformationType: string
 {
     case TEXT = 'text'; // Tên CLB, slogan, email
+    case LONGTEXT = 'longtext'; // Văn bản dài thuần: prompt AI, ghi chú dài
     case HTML = 'html'; // Trang chính sách, giới thiệu
     case MARKDOWN = 'markdown'; // Nội dung markdown dài
     case URL = 'url'; // Link mạng xã hội

@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\V1\Admin\SkillController;
 use App\Http\Controllers\Api\V1\Admin\TagController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\User\AcademicController;
+use App\Http\Controllers\Api\V1\User\ChatbotController;
 use App\Http\Controllers\Api\V1\User\BlogController as UserBlogController;
 use App\Http\Controllers\Api\V1\User\ResourceController as UserResourceController;
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
@@ -80,6 +81,9 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [CredentialAuthController::class, 'loginUser']);
     Route::post('/auth/admin/login', [CredentialAuthController::class, 'loginAdmin']);
     Route::post('/contacts', [PublicContactController::class, 'store']);
+
+    // Chatbot hỏi đáp (Gemini proxy) — giới hạn 20 request/phút mỗi IP chống spam.
+    Route::post('/chatbot', [ChatbotController::class, 'ask'])->middleware('throttle:20,1');
     Route::get('/community/channels', [ChannelController::class, 'index']);
 
     // Public club config — returns the active value for a given slug (no auth required)

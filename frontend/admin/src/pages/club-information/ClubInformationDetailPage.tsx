@@ -117,14 +117,25 @@ const getInitialValueForm = (): ValueFormState => ({
 const HTML_VALUE_TEXTAREA_CLASS =
 	"min-h-32 max-h-64 resize-y overflow-y-auto [field-sizing:fixed] whitespace-pre-wrap break-words";
 
-const isLongTextType = (type?: string | null) => type === "html" || type === "markdown";
+const isLongTextType = (type?: string | null) =>
+	type === "html" || type === "markdown" || type === "longtext";
 
 const isMarkdownType = (type?: string | null) => type === "markdown";
 
-const getLongTextTypeLabel = (type?: string | null) => (type === "markdown" ? "Markdown" : "HTML");
+// Các kiểu hiển thị bằng <Textarea> thô (không phải editor markdown WYSIWYG).
+const isPlainTextareaType = (type?: string | null) => type === "html" || type === "longtext";
 
-const getLongTextPlaceholder = (type?: string | null) =>
-	type === "markdown" ? "Nhập nội dung Markdown..." : "Nhập nội dung HTML...";
+const getLongTextTypeLabel = (type?: string | null) => {
+	if (type === "markdown") return "Markdown";
+	if (type === "longtext") return "Văn bản dài";
+	return "HTML";
+};
+
+const getLongTextPlaceholder = (type?: string | null) => {
+	if (type === "markdown") return "Nhập nội dung Markdown...";
+	if (type === "longtext") return "Nhập nội dung văn bản...";
+	return "Nhập nội dung HTML...";
+};
 
 const getValueFormFromRecord = (record: ClubInformationValue): ValueFormState => ({
 	value: record.value ?? "",
@@ -1547,7 +1558,7 @@ function ClubInformationDetailPage() {
 										className='club-info-markdown-editor'
 									/>
 								</div>
-							) : info.type === "html" ? (
+							) : isPlainTextareaType(info.type) ? (
 								<Textarea
 									id='val_value'
 									className={HTML_VALUE_TEXTAREA_CLASS}
@@ -1764,7 +1775,7 @@ function ClubInformationDetailPage() {
 												}}
 											/>
 										)
-									) : info.type === "html" ? (
+									) : isPlainTextareaType(info.type) ? (
 										<Textarea
 											id='detail_val_value'
 											value={

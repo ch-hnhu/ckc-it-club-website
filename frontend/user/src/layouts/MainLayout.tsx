@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import Navbar from "@/components/partials/Navbar";
 import Footer from "@/components/partials/Footer";
 import BackToTop from "@/components/partials/BackToTop";
+import ChatBubble from "@/components/partials/ChatBubble";
 import { getCurrentUser, type AuthUser } from "@/services/auth.service";
 import { Outlet, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -53,6 +54,9 @@ const MainLayout: React.FC = () => {
 
 			{/* Back to top button */}
 			{!isLectureVideoPage && <BackToTop />}
+
+			{/* Chatbot hỏi đáp CLB */}
+			<ChatBubble />
 
 			{/* Global toast notifications */}
 			<Toaster
