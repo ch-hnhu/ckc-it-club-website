@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import type { Blog } from "@/types/blog.types";
 import { buildAvatar, formatRelativeTime } from "@/lib/utils";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 import { blogService } from "@/services/blog.service";
 
 interface BlogCardProps {
@@ -130,7 +131,8 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 					)}
 					<div className='mt-5 flex flex-wrap items-center justify-between gap-3'>
 						<div className='flex items-center gap-3'>
-							<img
+							<AvatarImage
+								fallbackName={authorName}
 								src={authorAvatar}
 								alt={authorName}
 								className='h-9 w-9 rounded-full border-2 border-black object-cover'
@@ -222,7 +224,8 @@ export const BlogCard: React.FC<BlogCardProps> = ({
 				<div className='min-h-5 flex-1' />
 				<div className='flex items-center justify-between border-t-2 border-black pt-3'>
 					<div className='flex min-w-0 items-center gap-2'>
-						<img
+						<AvatarImage
+							fallbackName={authorName}
 							src={authorAvatar}
 							alt={authorName}
 							className='h-7 w-7 shrink-0 rounded-full border-2 border-black object-cover'

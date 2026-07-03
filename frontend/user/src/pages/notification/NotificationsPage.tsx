@@ -5,6 +5,7 @@ import notificationService from "@/services/notification.service";
 import type { AuthUser } from "@/services/auth.service";
 import type { UserNotification } from "@/types/notification.types";
 import { buildAvatar, formatNotificationTime } from "@/lib/utils";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 const PER_PAGE = 20;
 
@@ -192,7 +193,8 @@ function NotificationsPage() {
 										: "bg-white hover:bg-[var(--color-surface)]"
 								}`}>
 								<span className='relative shrink-0'>
-									<img
+									<AvatarImage
+										fallbackName={actor.full_name}
 										src={buildAvatar(actor.full_name, actor.avatar)}
 										alt={actor.full_name}
 										className='h-11 w-11 rounded-full border-2 border-black object-cover'

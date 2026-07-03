@@ -25,6 +25,7 @@ import {
 import PrivacyBlogModal from "@/components/community/PrivacyBlogModal";
 import ReportBlogModal from "@/components/community/ReportBlogModal";
 import LikedByModal from "@/components/community/LikedByModal";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
 	Breadcrumb,
@@ -271,7 +272,8 @@ const AuthorBioCard: React.FC<AuthorBioCardProps> = ({
 			<div className='flex flex-col gap-5 sm:flex-row sm:items-start'>
 				<div className='shrink-0'>
 					<Link to={profileUrl}>
-						<img
+						<AvatarImage
+							fallbackName={author.full_name}
 							src={avatar}
 							alt={author.full_name}
 							className='h-20 w-20 rounded-full border-2 border-black object-cover shadow-[3px_3px_0_#111] transition hover:opacity-80'
@@ -394,7 +396,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 			<div
 				className={`flex gap-3 rounded-xl transition-all duration-700 ${isHighlighted ? "bg-[var(--color-primary)]/15 p-1.5 ring-2 ring-[var(--color-primary)] ring-offset-2" : ""}`}>
 				<div className='shrink-0'>
-					<img
+					<AvatarImage
+						fallbackName={name}
 						src={avatar}
 						alt={name}
 						className='h-9 w-9 rounded-full border-2 border-black object-cover'
@@ -456,7 +459,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
 					{depth === 0 && showReplyForm && (
 						<div className='mt-3 flex gap-2'>
-							<img
+							<AvatarImage
+								fallbackName={currentUserDisplayName}
 								src={currentUserAvatar}
 								alt={currentUserDisplayName}
 								className='h-8 w-8 shrink-0 rounded-full border-2 border-black object-cover'
@@ -985,7 +989,8 @@ const BlogDetailPage: React.FC = () => {
 									{/* Author + meta */}
 									<div className='mt-5 flex items-start justify-between gap-3'>
 										<div className='flex items-center gap-3'>
-											<img
+											<AvatarImage
+												fallbackName={authorName}
 												src={authorAvatar}
 												alt={authorName}
 												className='h-12 w-12 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
@@ -1260,7 +1265,8 @@ const BlogDetailPage: React.FC = () => {
 
 						{user ? (
 							<div className='mb-6 flex gap-3'>
-								<img
+								<AvatarImage
+									fallbackName={userDisplayName}
 									src={userAvatar}
 									alt={userDisplayName}
 									className='h-10 w-10 shrink-0 rounded-full border-2 border-black object-cover'

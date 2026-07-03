@@ -10,6 +10,8 @@ use App\Models\EventCheckIn;
 use App\Models\EventFeedback;
 use App\Models\EventGalleryItem;
 use App\Models\EventRegistration;
+use App\Models\User;
+use App\Notifications\AdminActionNotification;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,7 +35,7 @@ class EventController extends BaseApiController
 
         $events = Event::query()
             ->withCount(['registrations', 'checkIns'])
-            ->with('creator:id,full_name,avatar', 'department:id,name')
+            ->with('creator:id,full_name,avatar', 'department:id,name', 'organizer:id,full_name,avatar')
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
             ->when($status && $status !== 'all', fn ($q) => $q->where('status', $status))
             ->when($sort === 'department_name', fn ($q) => $q->orderByRaw("(SELECT name FROM departments WHERE departments.id = events.department_id) {$order}"))
@@ -62,6 +64,7 @@ class EventController extends BaseApiController
             'is_members_only' => 'boolean',
             'status' => 'nullable|in:draft,published',
             'department_id' => 'nullable|exists:departments,id',
+            'organizer_id' => 'nullable|exists:users,id',
             'thumbnail' => 'nullable|image|max:5120',
         ]);
 
@@ -81,7 +84,11 @@ class EventController extends BaseApiController
         });
 
         $event->syncStatusFromSchedule();
-        $event->load('creator:id,full_name,avatar', 'department:id,name');
+        $event->load('creator:id,full_name,avatar', 'department:id,name', 'organizer:id,full_name,avatar');
+
+        if (($data['status'] ?? 'draft') === 'published') {
+            $this->notifyOrganizerEventPublished($event, $request->user());
+        }
 
         return $this->createdResponse($this->transform($event), 'Tạo sự kiện thành công.');
     }
@@ -89,7 +96,7 @@ class EventController extends BaseApiController
     public function show(Event $event): JsonResponse
     {
         $event->loadCount(['registrations', 'checkIns', 'feedbacks'])
-            ->load('creator:id,full_name,avatar', 'department:id,name');
+            ->load('creator:id,full_name,avatar', 'department:id,name', 'organizer:id,full_name,avatar');
 
         $data = $this->transform($event);
         $data['content'] = $event->content;
@@ -112,6 +119,7 @@ class EventController extends BaseApiController
             'max_attendees' => 'nullable|integer|min:1',
             'is_members_only' => 'boolean',
             'department_id' => 'nullable|exists:departments,id',
+            'organizer_id' => 'nullable|exists:users,id',
             'thumbnail' => 'nullable|image|max:5120',
         ]);
 
@@ -122,11 +130,18 @@ class EventController extends BaseApiController
             $data['thumbnail'] = $request->file('thumbnail')->store('event-thumbnails', 'public');
         }
 
+        $isAlreadyPublished = in_array($event->status->value, ['published', 'ongoing', 'ended'], true);
+        $previousOrganizerId = $event->organizer_id;
+
         $event->update($data);
         $event->refresh();
         $event->syncStatusFromSchedule();
 
-        $event->load('creator:id,full_name,avatar', 'department:id,name');
+        $event->load('creator:id,full_name,avatar', 'department:id,name', 'organizer:id,full_name,avatar');
+
+        if ($isAlreadyPublished && $event->organizer_id && $event->organizer_id !== $previousOrganizerId) {
+            $this->notifyOrganizerAssigned($event, $request->user());
+        }
 
         return $this->successResponse(true, $this->transform($event), 'Cập nhật sự kiện thành công.');
     }
@@ -138,11 +153,62 @@ class EventController extends BaseApiController
             'status' => 'required|in:draft,published,cancelled',
         ]);
 
-        $event->update(['status' => $request->input('status')]);
+        $newStatus = $request->input('status');
+        $shouldNotifyOrganizer = $newStatus === 'published' && $event->status->value !== 'published';
+
+        $event->update(['status' => $newStatus]);
         $event->refresh();
         $event->syncStatusFromSchedule();
 
+        if ($shouldNotifyOrganizer) {
+            $this->notifyOrganizerEventPublished($event, $request->user());
+        }
+
         return $this->successResponse(true, ['status' => $event->status->value], 'Cập nhật trạng thái thành công.');
+    }
+
+    /**
+     * Thông báo cho người phụ trách khi sự kiện được đăng (không tự thông báo cho chính người thao tác).
+     */
+    private function notifyOrganizerEventPublished(Event $event, User $performedBy): void
+    {
+        $organizer = $event->organizer ?? ($event->organizer_id ? User::find($event->organizer_id) : null);
+
+        if (! $organizer || $organizer->id === $performedBy->id) {
+            return;
+        }
+
+        $organizer->notify(new AdminActionNotification(
+            'Sự kiện đã được đăng',
+            "Sự kiện \"{$event->title}\" mà bạn phụ trách đã được đăng.",
+            'event_published',
+            'event',
+            $event->id,
+            $performedBy->full_name,
+            "/events/{$event->id}"
+        ));
+    }
+
+    /**
+     * Thông báo cho người phụ trách mới khi được gán vào một sự kiện đã đăng.
+     */
+    private function notifyOrganizerAssigned(Event $event, User $performedBy): void
+    {
+        $organizer = $event->organizer;
+
+        if (! $organizer || $organizer->id === $performedBy->id) {
+            return;
+        }
+
+        $organizer->notify(new AdminActionNotification(
+            'Được gán làm người phụ trách sự kiện',
+            "Bạn đã được gán làm người phụ trách sự kiện \"{$event->title}\".",
+            'event_organizer_assigned',
+            'event',
+            $event->id,
+            $performedBy->full_name,
+            "/events/{$event->id}"
+        ));
     }
 
     public function destroy(Event $event): JsonResponse
@@ -447,6 +513,11 @@ class EventController extends BaseApiController
             'department' => $event->department
                 ? ['id' => $event->department->id, 'name' => $event->department->name]
                 : null,
+            'organizer' => $event->organizer ? [
+                'id' => $event->organizer->id,
+                'full_name' => $event->organizer->full_name,
+                'avatar' => $event->organizer->avatar,
+            ] : null,
             'registrations_count' => (int) ($event->registrations_count ?? 0),
             'check_ins_count' => (int) ($event->check_ins_count ?? 0),
             'feedbacks_count' => (int) ($event->feedbacks_count ?? 0),
