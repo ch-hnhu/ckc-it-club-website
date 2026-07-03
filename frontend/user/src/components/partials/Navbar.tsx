@@ -105,6 +105,15 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 			: user.picture
 		: userAvatarFallback;
 
+	// Google avatar URLs (lh3.googleusercontent.com) can return 429/broken images
+	// after repeated logins; fall back to the generated avatar so it never disappears.
+	const handleAvatarError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+		const img = event.currentTarget;
+		if (img.src !== userAvatarFallback) {
+			img.src = userAvatarFallback;
+		}
+	};
+
 	useEffect(() => {
 		if (!isLectureVideoPage || !lectureCourseSlug || !lectureLessonSlug || !lectureVideoSlug) {
 			setBreadcrumbLessonTitle("");
@@ -472,6 +481,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 										<img
 											src={userAvatar}
 											alt={userDisplayName}
+											referrerPolicy='no-referrer'
+											onError={handleAvatarError}
 											className='h-full w-full rounded-full object-cover'
 										/>
 									</button>
@@ -591,6 +602,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 											<img
 												src={userAvatar}
 												alt={userDisplayName}
+												referrerPolicy='no-referrer'
+												onError={handleAvatarError}
 												className='h-11 w-11 rounded-full border-2 border-black bg-white object-cover'
 											/>
 											<span className='min-w-0 flex-1 truncate text-sm font-extrabold text-black'>
@@ -678,6 +691,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 									<img
 										src={userAvatar}
 										alt={userDisplayName}
+										referrerPolicy='no-referrer'
+										onError={handleAvatarError}
 										className='h-11 w-11 rounded-full border-2 border-black bg-white object-cover'
 									/>
 									<span className='min-w-0 flex-1 truncate text-sm font-extrabold text-black'>

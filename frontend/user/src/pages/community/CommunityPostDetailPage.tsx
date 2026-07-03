@@ -35,6 +35,7 @@ import { renderMarkdownContent } from "@/lib/markdown";
 import DeletePostConfirm from "@/components/community/DeletePostConfirm";
 import PrivacyPostModal from "@/components/community/PrivacyPostModal";
 import ReportPostModal from "@/components/community/ReportPostModal";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 // ---------------------------------------------------------------------------
 // Skeleton
@@ -204,7 +205,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 			<div className={`flex gap-3 rounded-xl transition-all duration-700 ${isHighlighted ? "bg-[var(--color-primary)]/15 p-1.5 ring-2 ring-[var(--color-primary)] ring-offset-2" : ""}`}>
 				<div className='shrink-0'>
 					<Link to={profileUrl ?? "#"}>
-						<img
+						<AvatarImage
+							fallbackName={name}
 							src={avatar}
 							alt={name}
 							className='h-9 w-9 rounded-full border-2 border-black object-cover'
@@ -267,7 +269,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
 					{depth === 0 && showReplyForm && (
 						<div className='mt-3 flex gap-2'>
-							<img
+							<AvatarImage
+								fallbackName={currentUserDisplayName}
 								src={currentUserAvatar}
 								alt={currentUserDisplayName}
 								className='h-8 w-8 shrink-0 rounded-full border-2 border-black object-cover'
@@ -706,7 +709,8 @@ const CommunityPostDetailPage: React.FC = () => {
 									<div className='flex items-center gap-3'>
 										<div className='relative shrink-0'>
 											<Link to={authorProfileUrl ?? "#"}>
-												<img
+												<AvatarImage
+													fallbackName={authorName}
 													src={authorAvatar}
 													alt={authorName}
 													className='h-12 w-12 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
@@ -975,7 +979,8 @@ const CommunityPostDetailPage: React.FC = () => {
 
 						{user ? (
 							<div className='mb-6 flex gap-3'>
-								<img
+								<AvatarImage
+									fallbackName={userDisplayName}
 									src={userAvatar}
 									alt={userDisplayName}
 									className='h-10 w-10 shrink-0 rounded-full border-2 border-black object-cover'
@@ -1073,7 +1078,8 @@ const CommunityPostDetailPage: React.FC = () => {
 							{/* Avatar + Name row */}
 							<div className='flex items-center gap-4'>
 								<Link to={authorProfileUrl ?? "#"} className='shrink-0'>
-									<img
+									<AvatarImage
+										fallbackName={authorName}
 										src={authorAvatar}
 										alt={authorName}
 										className='h-14 w-14 rounded-full border-2 border-black object-cover'

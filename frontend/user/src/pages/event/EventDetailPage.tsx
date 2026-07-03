@@ -14,6 +14,7 @@ import type { AuthUser } from "@/services/auth.service";
 import { eventService } from "@/services/event.service";
 import type { EventDetail, EventFeedbackItem } from "@/types/event.types";
 import { EventStatusBadge } from "@/components/event/EventCard";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 import { formatEventDateTime } from "@/lib/eventFormat";
 import { renderMarkdownContent } from "@/lib/markdown";
 
@@ -970,7 +971,8 @@ const EventDetailPage: React.FC = () => {
 											<div className='flex items-center justify-between gap-2'>
 												<div className='flex items-center gap-2.5'>
 													{fb.user?.avatar ? (
-														<img
+														<AvatarImage
+															fallbackName={fb.user?.full_name}
 															src={fb.user.avatar}
 															alt=''
 															className='h-8 w-8 rounded-full border-2 border-black object-cover'
