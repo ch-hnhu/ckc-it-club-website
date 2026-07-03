@@ -23,6 +23,13 @@ export interface CourseCategoryOption {
 	color: string | null;
 }
 
+/** Một user có thể chọn làm mentor cho khóa học. */
+export interface MentorOption {
+	id: number;
+	full_name: string | null;
+	avatar: string | null;
+}
+
 /** Buổi học đầy đủ field (cho form thêm/sửa buổi học) */
 export interface LessonFull {
 	id: number;
@@ -155,6 +162,11 @@ const courseService = {
 	/** Danh mục (tag) khóa học để chọn khi tạo/sửa — dùng endpoint công khai. */
 	async getCategories(): Promise<ApiResponse<CourseCategoryOption[]>> {
 		return api.get("/learning/categories");
+	},
+
+	/** Danh sách user để chọn làm mentor khi tạo/sửa khóa học. */
+	async getMentorOptions(): Promise<ApiResponse<MentorOption[]>> {
+		return api.get("/courses/mentor-options");
 	},
 
 	/** Lấy thời lượng video YouTube (giây + nhãn "X tiếng Y phút") từ URL qua backend. */

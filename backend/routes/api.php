@@ -561,6 +561,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:courses.view')->group(function () {
             Route::get('courses', [AdminCourseController::class, 'index']);
             Route::get('courses/trash', [AdminCourseController::class, 'trash']);
+            Route::get('courses/mentor-options', [AdminCourseController::class, 'mentorOptions']);
             Route::get('certificate-templates', [AdminCertificateTemplateController::class, 'index']);
             Route::get('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'show']);
             Route::get('course-categories', [AdminCourseCategoryController::class, 'index']);
