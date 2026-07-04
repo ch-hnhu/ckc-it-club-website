@@ -6,6 +6,7 @@ use App\Events\NotificationSent;
 use App\Models\Blog;
 use App\Models\Board;
 use App\Models\Comment;
+use App\Models\Event;
 use App\Models\Post;
 use App\Models\Resource;
 use App\Models\User;
@@ -445,6 +446,31 @@ class UserNotificationService
             'target_id'   => $post->id,
             // Bài đã ẩn không xem được ở trang chi tiết → thông báo chỉ mang tính thông tin.
             'link'        => '',
+        ]);
+    }
+
+    /**
+     * Nhắc thành viên CLB đăng ký một sự kiện dành riêng cho thành viên mà họ chưa đăng ký.
+     */
+    public static function dispatchEventRegistrationReminder(
+        User $recipient,
+        User $actor,
+        Event $event,
+    ): void {
+        // Ghép thủ công để tránh escape ký tự có dấu trong chuỗi format của PHP
+        $startAt = $event->start_at
+            ? $event->start_at->format('H:i').' ngày '.$event->start_at->format('d/m/Y')
+            : null;
+
+        self::send($recipient, $actor, [
+            'title' => 'Nhắc nhở đăng ký sự kiện',
+            'message' => "Sự kiện \"{$event->title}\" dành cho thành viên câu lạc bộ"
+                . ($startAt ? " sẽ diễn ra lúc {$startAt}" : '')
+                . '. Bạn chưa đăng ký tham gia, hãy đăng ký ngay!',
+            'type' => 'event_registration_reminder',
+            'target_type' => 'event',
+            'target_id' => $event->id,
+            'link' => "/su-kien/{$event->slug}",
         ]);
     }
 

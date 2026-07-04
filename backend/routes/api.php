@@ -615,6 +615,7 @@ Route::prefix('v1')->group(function () {
             Route::get('events', [AdminEventController::class, 'index']);
             Route::get('events/{event}', [AdminEventController::class, 'show']);
             Route::get('events/{event}/registrations', [AdminEventController::class, 'registrations']);
+            Route::get('events/{event}/unregistered-members', [AdminEventController::class, 'unregisteredMembers']);
             Route::get('events/{event}/feedbacks', [AdminEventController::class, 'feedbacks']);
             Route::get('events/{event}/gallery', [AdminEventController::class, 'gallery']);
         });
@@ -624,6 +625,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('events/{event}', [AdminEventController::class, 'update']);
             Route::patch('events/{event}/status', [AdminEventController::class, 'updateStatus']);
             Route::post('events/{event}/check-in', [AdminEventController::class, 'checkIn']);
+            Route::post('events/{event}/remind-members', [AdminEventController::class, 'remindUnregisteredMembers']);
             Route::delete('events/{event}/feedbacks/{feedback}', [AdminEventController::class, 'destroyFeedback']);
             Route::post('events/{event}/gallery', [AdminEventController::class, 'storeGalleryItem']);
             Route::patch('events/{event}/gallery/reorder', [AdminEventController::class, 'reorderGallery']);
