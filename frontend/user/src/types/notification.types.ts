@@ -8,7 +8,7 @@ export interface UserNotificationActor {
 export interface UserNotificationData {
 	title: string;
 	message: string;
-	type: "reaction" | "comment" | "comment_reply" | "mention" | "follow" | "blog_comment" | "blog_comment_reply" | "blog_approved" | "report_resolved" | "report_dismissed" | "board_member_added" | "comment_moderated";
+	type: "reaction" | "comment" | "comment_reply" | "mention" | "follow" | "blog_comment" | "blog_comment_reply" | "blog_approved" | "report_resolved" | "report_dismissed" | "board_member_added" | "comment_moderated" | "post_moderated";
 	actor: UserNotificationActor;
 	reaction_type?: string;
 	target_type: string;

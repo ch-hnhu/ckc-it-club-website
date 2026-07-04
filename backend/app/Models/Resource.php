@@ -10,7 +10,7 @@ class Resource extends Model
 {
     protected $fillable = [
         'uploader_id', 'title', 'description', 'link_type', 'url',
-        'status', 'click_count', 'reviewed_by', 'reviewed_at',
+        'status', 'click_count', 'reviewed_by', 'reviewed_at', 'rejection_reason',
     ];
 
     protected function casts(): array

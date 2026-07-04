@@ -19,8 +19,8 @@ return new class extends Migration
             $table->unsignedBigInteger('click_count')->default(0);
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();
+            $table->text('rejection_reason')->nullable();
             $table->timestamps();
-
             $table->index(['status', 'created_at']);
             $table->index(['uploader_id', 'status']);
         });

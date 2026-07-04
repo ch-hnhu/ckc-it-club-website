@@ -198,8 +198,9 @@ const LessonTicketModal: React.FC<{
 	qrToken: string;
 	lesson: CourseLesson;
 	courseTitle: string;
+	participantName?: string;
 	onClose: () => void;
-}> = ({ qrToken, lesson, courseTitle, onClose }) => {
+}> = ({ qrToken, lesson, courseTitle, participantName, onClose }) => {
 	const qrRef = useRef<SVGSVGElement | null>(null);
 
 	const handleDownloadQr = async () => {
@@ -236,13 +237,12 @@ const LessonTicketModal: React.FC<{
 				img.src = url;
 			});
 
-			// 2. Bố cục vé (giống modal trên web): card trắng, viền đen, bóng đổ.
+			// 2. Bố cục vé (giống modal trên web): card trắng, không viền/bóng đổ.
 			const HEADING = '"Be Vietnam Pro", sans-serif';
 			const BODY = '"Inter", sans-serif';
 			const W = 600;
-			const shadow = 14;
 			const pad = 48;
-			const cardW = W - shadow;
+			const cardW = W;
 			const contentW = cardW - pad * 2;
 			const cx = cardW / 2;
 
@@ -266,11 +266,16 @@ const LessonTicketModal: React.FC<{
 
 			const lessonFont = `600 22px ${HEADING}`;
 			const courseFont = `500 15px ${BODY}`;
+			const nameFont = `700 16px ${BODY}`;
 			const noteFont = `500 13px ${BODY}`;
 			const note = "Xuất trình mã QR này tại buổi học để được điểm danh.";
 
 			const lessonLines = wrap(lesson.title, lessonFont, contentW);
 			const courseLines = courseTitle ? wrap(courseTitle, courseFont, contentW) : [];
+			const participant = participantName?.trim();
+			const nameLines = participant
+				? wrap(`Người tham gia: ${participant}`, nameFont, contentW)
+				: [];
 			const noteLines = wrap(note, noteFont, contentW);
 			const qrBox = 300;
 
@@ -284,6 +289,8 @@ const LessonTicketModal: React.FC<{
 			y += lessonLines.length * 30 + 4;
 			const courseY = y + 15;
 			y += courseLines.length ? courseLines.length * 22 + 24 : 10;
+			const nameY = y + 16; // baseline dòng tên người tham gia
+			y += nameLines.length ? nameLines.length * 22 + 14 : 0;
 			const qrY = y;
 			y += qrBox + 28;
 			const noteY = y + 13;
@@ -313,22 +320,9 @@ const LessonTicketModal: React.FC<{
 				ctx.closePath();
 			};
 
-			// Nền trong suốt → fill toàn canvas trắng cho ảnh PNG.
+			// Nền trắng khít nội dung (không viền, không bóng đổ).
 			ctx.fillStyle = "#ffffff";
 			ctx.fillRect(0, 0, W, H);
-
-			// Bóng đổ neo-brutalist.
-			ctx.fillStyle = "#111111";
-			roundRect(shadow, shadow, cardW, H - shadow - 2, 26);
-			ctx.fill();
-			// Card trắng + viền đen.
-			ctx.fillStyle = "#ffffff";
-			roundRect(0, 0, cardW, H - shadow - 2, 26);
-			ctx.fill();
-			ctx.lineWidth = 4;
-			ctx.strokeStyle = "#111111";
-			roundRect(0, 0, cardW, H - shadow - 2, 26);
-			ctx.stroke();
 
 			ctx.textAlign = "center";
 
@@ -354,6 +348,13 @@ const LessonTicketModal: React.FC<{
 				courseLines.forEach((line, i) => ctx.fillText(line, cx, courseY + i * 22));
 			}
 
+			// Tên người tham gia.
+			if (nameLines.length) {
+				ctx.fillStyle = "#111111";
+				ctx.font = nameFont;
+				nameLines.forEach((line, i) => ctx.fillText(line, cx, nameY + i * 22));
+			}
+
 			// Khung QR.
 			const boxX = cx - qrBox / 2;
 			ctx.fillStyle = "#ffffff";
@@ -373,7 +374,9 @@ const LessonTicketModal: React.FC<{
 
 			const link = document.createElement("a");
 			link.href = canvas.toDataURL("image/png");
-			link.download = `ve-qr-${toSafeFileName(lesson.title)}.png`;
+			link.download = `ve-qr-${
+				participant ? `${toSafeFileName(participant)}-` : ""
+			}${toSafeFileName(lesson.title)}.png`;
 			link.click();
 			toast.success("Đã tải mã QR điểm danh.");
 		} catch {
@@ -1218,6 +1221,7 @@ const CourseDetailPage: React.FC = () => {
 					qrToken={ticketLesson.qr_ticket.token}
 					lesson={ticketLesson}
 					courseTitle={course?.title ?? ""}
+					participantName={user?.name ?? user?.username ?? undefined}
 					onClose={() => setTicketLesson(null)}
 				/>
 			)}

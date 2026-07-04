@@ -6,6 +6,7 @@ use App\Events\NotificationSent;
 use App\Models\Blog;
 use App\Models\Board;
 use App\Models\Comment;
+use App\Models\Event;
 use App\Models\Post;
 use App\Models\Resource;
 use App\Models\User;
@@ -340,14 +341,20 @@ class UserNotificationService
         User $actor,
         Resource $resource,
         string $status, // 'published' | 'rejected'
+        ?string $reason = null,
     ): void {
         $approved = $status === 'published';
+
+        $rejectMessage = "Tài nguyên \"{$resource->title}\" của bạn đã bị từ chối.";
+        if (! $approved && $reason !== null && $reason !== '') {
+            $rejectMessage .= " Lý do: {$reason}";
+        }
 
         self::send($recipient, $actor, [
             'title' => $approved ? 'Tài nguyên được duyệt' : 'Tài nguyên bị từ chối',
             'message' => $approved
                 ? "Tài nguyên \"{$resource->title}\" của bạn đã được duyệt và xuất bản."
-                : "Tài nguyên \"{$resource->title}\" của bạn đã bị từ chối.",
+                : $rejectMessage,
             'type' => 'resource_reviewed',
             'target_type' => 'resource',
             'target_id' => $resource->id,
@@ -419,6 +426,51 @@ class UserNotificationService
             'target_type' => $targetType,
             'target_id'   => $targetId,
             'link'        => $link,
+        ]);
+    }
+
+    /**
+     * Notify the post author when AI moderation auto-hides their post.
+     * Self-actor: hệ thống ẩn tự động, không có người thực hiện cụ thể.
+     */
+    public static function dispatchPostModerated(
+        User $recipient,
+        Post $post,
+        string $reason,
+    ): void {
+        self::send($recipient, $recipient, [
+            'title'       => 'Bài đăng của bạn đã bị ẩn',
+            'message'     => "Bài đăng \"{$post->title}\" của bạn đã bị ẩn tự động do vi phạm tiêu chuẩn cộng đồng. Lý do: {$reason}",
+            'type'        => 'post_moderated',
+            'target_type' => 'post',
+            'target_id'   => $post->id,
+            // Bài đã ẩn không xem được ở trang chi tiết → thông báo chỉ mang tính thông tin.
+            'link'        => '',
+        ]);
+    }
+
+    /**
+     * Nhắc thành viên CLB đăng ký một sự kiện dành riêng cho thành viên mà họ chưa đăng ký.
+     */
+    public static function dispatchEventRegistrationReminder(
+        User $recipient,
+        User $actor,
+        Event $event,
+    ): void {
+        // Ghép thủ công để tránh escape ký tự có dấu trong chuỗi format của PHP
+        $startAt = $event->start_at
+            ? $event->start_at->format('H:i').' ngày '.$event->start_at->format('d/m/Y')
+            : null;
+
+        self::send($recipient, $actor, [
+            'title' => 'Nhắc nhở đăng ký sự kiện',
+            'message' => "Sự kiện \"{$event->title}\" dành cho thành viên câu lạc bộ"
+                . ($startAt ? " sẽ diễn ra lúc {$startAt}" : '')
+                . '. Bạn chưa đăng ký tham gia, hãy đăng ký ngay!',
+            'type' => 'event_registration_reminder',
+            'target_type' => 'event',
+            'target_id' => $event->id,
+            'link' => "/su-kien/{$event->slug}",
         ]);
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
 	ArrowLeft,
@@ -23,6 +23,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,7 +36,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import certificateTemplateService from "@/services/certificate-template.service";
-import courseService, { type CourseCategoryOption } from "@/services/course.service";
+import courseService, {
+	type CourseCategoryOption,
+	type MentorOption,
+} from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
 import type { CertificateTemplate } from "@/types/certificate-template.type";
 import {
@@ -133,6 +137,11 @@ function CourseFormPage() {
 	const [selectedTags, setSelectedTags] = useState<number[]>([]);
 	const [categoriesLoading, setCategoriesLoading] = useState(true);
 
+	// Mentors (user phụ trách khóa học)
+	const [mentors, setMentors] = useState<MentorOption[]>([]);
+	const [selectedMentors, setSelectedMentors] = useState<number[]>([]);
+	const [mentorsLoading, setMentorsLoading] = useState(true);
+
 	// Mẫu chứng chỉ
 	const [certificateTemplates, setCertificateTemplates] = useState<CertificateTemplate[]>([]);
 	const [templatesLoading, setTemplatesLoading] = useState(true);
@@ -163,6 +172,15 @@ function CourseFormPage() {
 			.then((res) => setCategories(res.data))
 			.catch(() => toast.error("Không thể tải danh mục khóa học."))
 			.finally(() => setCategoriesLoading(false));
+	}, []);
+
+	// ── Load mentor options ──
+	useEffect(() => {
+		courseService
+			.getMentorOptions()
+			.then((res) => setMentors(res.data))
+			.catch(() => toast.error("Không thể tải danh sách mentor."))
+			.finally(() => setMentorsLoading(false));
 	}, []);
 
 	// ── Load mẫu chứng chỉ ──
@@ -224,6 +242,7 @@ function CourseFormPage() {
 				setSlug(c.slug);
 				setHasOffline(c.max_offline_slots != null);
 				setSelectedTags(c.categories.map((cat) => cat.id));
+				setSelectedMentors(c.mentors.map((m) => m.id));
 				setExistingThumbnail(c.thumbnail);
 				setCurrentStatus(c.status);
 			})
@@ -271,6 +290,15 @@ function CourseFormPage() {
 		setSelectedTags((prev) =>
 			prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
 		);
+
+	const mentorOptions = useMemo<ComboboxOption[]>(
+		() =>
+			mentors.map((m) => ({
+				value: String(m.id),
+				label: m.full_name ?? `Người dùng #${m.id}`,
+			})),
+		[mentors],
+	);
 
 	const openImageDialog = () => {
 		if (!imageInputRef.current) return;
@@ -332,6 +360,7 @@ function CourseFormPage() {
 				fd.append("max_absent_allowed", form.max_absent_allowed);
 			}
 			selectedTags.forEach((id) => fd.append("tag_ids[]", String(id)));
+			selectedMentors.forEach((id) => fd.append("mentor_ids[]", String(id)));
 			if (imageFile) fd.append("thumbnail", imageFile);
 			else if (isEdit && removeThumbnail) fd.append("remove_thumbnail", "1");
 
@@ -812,6 +841,35 @@ function CourseFormPage() {
 								{selectedTags.length > 0 && (
 									<p className='mt-3 text-xs text-muted-foreground'>
 										Đã chọn {selectedTags.length} danh mục
+									</p>
+								)}
+							</CardContent>
+						</Card>
+
+						{/* Mentors */}
+						<Card className='shadow-sm'>
+							<CardHeader>
+								<CardTitle>Mentor phụ trách</CardTitle>
+								<CardDescription>
+									Chọn các mentor (thành viên) hướng dẫn khóa học này.
+								</CardDescription>
+							</CardHeader>
+							<CardContent className='flex flex-col gap-2'>
+								<Combobox
+									multiple={true}
+									value={selectedMentors.map(String)}
+									onValueChange={(value) =>
+										setSelectedMentors(value.map(Number))
+									}
+									options={mentorOptions}
+									placeholder='Chọn mentor'
+									searchPlaceholder='Tìm mentor...'
+									emptyText='Không tìm thấy thành viên.'
+									disabled={submitting || mentorsLoading}
+								/>
+								{selectedMentors.length > 0 && (
+									<p className='text-xs text-muted-foreground'>
+										Đã chọn {selectedMentors.length} mentor
 									</p>
 								)}
 							</CardContent>
