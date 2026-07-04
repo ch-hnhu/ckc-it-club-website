@@ -787,6 +787,20 @@ function PostListPage() {
 									/>
 								</div>
 
+								{/* AI moderation reason */}
+								{selectedPost.moderation_reason && (
+									<div className="space-y-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-3">
+										<p className="flex items-center gap-1.5 text-sm font-medium text-amber-700">
+											<ShieldAlert className="h-4 w-4" />
+											AI tự động đánh dấu vi phạm
+										</p>
+										<p className="text-sm text-amber-800/90 dark:text-amber-200/90">{selectedPost.moderation_reason}</p>
+										{selectedPost.moderated_at && (
+											<p className="text-xs text-muted-foreground">Kiểm duyệt lúc {formatDate(selectedPost.moderated_at)}</p>
+										)}
+									</div>
+								)}
+
 								{/* Media */}
 								{selectedPost.media_urls.length > 0 && (
 									<div className="space-y-1.5">
