@@ -63,11 +63,12 @@ function toSafeFileName(value: string) {
 	return normalized || "event-ticket";
 }
 
-const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () => void }> = ({
-	qrToken,
-	event,
-	onClose,
-}) => {
+const TicketModal: React.FC<{
+	qrToken: string;
+	event: EventDetail;
+	participantName?: string;
+	onClose: () => void;
+}> = ({ qrToken, event, participantName, onClose }) => {
 	const qrRef = useRef<SVGSVGElement | null>(null);
 
 	const handleDownloadQr = async () => {
@@ -104,13 +105,12 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 				img.src = url;
 			});
 
-			// 2. Bố cục vé (giống modal trên web): card trắng, viền đen, bóng đổ.
+			// 2. Bố cục vé (giống modal trên web): card trắng, không viền/bóng đổ.
 			const HEADING = '"Be Vietnam Pro", sans-serif';
 			const BODY = '"Inter", sans-serif';
 			const W = 600;
-			const shadow = 14;
 			const pad = 48;
-			const cardW = W - shadow;
+			const cardW = W;
 			const contentW = cardW - pad * 2;
 			const cx = cardW / 2;
 
@@ -134,6 +134,7 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 
 			const titleFont = `600 22px ${HEADING}`;
 			const detailFont = `500 15px ${BODY}`;
+			const nameFont = `700 16px ${BODY}`;
 			const noteFont = `500 13px ${BODY}`;
 			const note = "Xuất trình mã QR này tại bàn check-in để điểm danh tham dự.";
 
@@ -142,6 +143,10 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 			const dateText = formatEventDateTime(event.start_at);
 			if (dateText) detailLines.push(...wrap(dateText, detailFont, contentW));
 			if (event.location) detailLines.push(...wrap(event.location, detailFont, contentW));
+			const participant = participantName?.trim();
+			const nameLines = participant
+				? wrap(`Người tham gia: ${participant}`, nameFont, contentW)
+				: [];
 			const noteLines = wrap(note, noteFont, contentW);
 			const qrBox = 300;
 
@@ -155,6 +160,8 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 			y += titleLines.length * 30 + 4;
 			const detailY = y + 15;
 			y += detailLines.length ? detailLines.length * 22 + 24 : 10;
+			const nameY = y + 16; // baseline dòng tên người tham gia
+			y += nameLines.length ? nameLines.length * 22 + 14 : 0;
 			const qrY = y;
 			y += qrBox + 28;
 			const noteY = y + 13;
@@ -184,22 +191,9 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 				ctx.closePath();
 			};
 
-			// Nền trong suốt → fill toàn canvas trắng cho ảnh PNG.
+			// Nền trắng khít nội dung (không viền, không bóng đổ).
 			ctx.fillStyle = "#ffffff";
 			ctx.fillRect(0, 0, W, H);
-
-			// Bóng đổ neo-brutalist.
-			ctx.fillStyle = "#111111";
-			roundRect(shadow, shadow, cardW, H - shadow - 2, 26);
-			ctx.fill();
-			// Card trắng + viền đen.
-			ctx.fillStyle = "#ffffff";
-			roundRect(0, 0, cardW, H - shadow - 2, 26);
-			ctx.fill();
-			ctx.lineWidth = 4;
-			ctx.strokeStyle = "#111111";
-			roundRect(0, 0, cardW, H - shadow - 2, 26);
-			ctx.stroke();
 
 			ctx.textAlign = "center";
 
@@ -225,6 +219,13 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 				detailLines.forEach((line, i) => ctx.fillText(line, cx, detailY + i * 22));
 			}
 
+			// Tên người tham gia.
+			if (nameLines.length) {
+				ctx.fillStyle = "#111111";
+				ctx.font = nameFont;
+				nameLines.forEach((line, i) => ctx.fillText(line, cx, nameY + i * 22));
+			}
+
 			// Khung QR.
 			const boxX = cx - qrBox / 2;
 			ctx.fillStyle = "#ffffff";
@@ -244,7 +245,9 @@ const TicketModal: React.FC<{ qrToken: string; event: EventDetail; onClose: () =
 
 			const link = document.createElement("a");
 			link.href = canvas.toDataURL("image/png");
-			link.download = `ve-qr-${toSafeFileName(event.title)}.png`;
+			link.download = `ve-qr-${
+				participant ? `${toSafeFileName(participant)}-` : ""
+			}${toSafeFileName(event.title)}.png`;
 			link.click();
 			toast.success("Đã tải mã QR vé sự kiện.");
 		} catch {
@@ -1021,7 +1024,12 @@ const EventDetailPage: React.FC = () => {
 			</main>
 
 			{showTicket && event?.my_qr_token && (
-				<TicketModal qrToken={event.my_qr_token} event={event} onClose={() => setShowTicket(false)} />
+				<TicketModal
+					qrToken={event.my_qr_token}
+					event={event}
+					participantName={user?.name ?? user?.username ?? undefined}
+					onClose={() => setShowTicket(false)}
+				/>
 			)}
 
 			{lightbox && (
