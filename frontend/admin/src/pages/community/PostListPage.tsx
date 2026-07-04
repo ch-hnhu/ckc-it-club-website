@@ -13,6 +13,7 @@ import {
 	Image,
 	MoreHorizontal,
 	RotateCcw,
+	ShieldAlert,
 	SquarePen,
 	Trash2,
 } from "lucide-react";
@@ -92,6 +93,8 @@ export interface PostRecord {
 	channel: PostChannel | null;
 	content: string;
 	status: PostStatus;
+	moderation_reason: string | null;
+	moderated_at?: string | null;
 	visibility: PostVisibility;
 	comments_count: number;
 	reactions_count: number;
@@ -572,7 +575,20 @@ function PostListPage() {
 											</TableCell>
 
 											{/* Status */}
-											<TableCell>{getStatusBadge(post.status)}</TableCell>
+											<TableCell>
+												<div className="flex flex-col items-start gap-1">
+													{getStatusBadge(post.status)}
+													{post.moderation_reason && (
+														<Badge
+															variant="outline"
+															title={post.moderation_reason}
+															className="rounded-full px-2 py-0.5 gap-1 border-amber-500/20 bg-amber-500/10 text-amber-700">
+															<ShieldAlert className="h-3 w-3" />
+															AI đánh dấu
+														</Badge>
+													)}
+												</div>
+											</TableCell>
 
 											{/* Reactions + Comments */}
 											<TableCell>

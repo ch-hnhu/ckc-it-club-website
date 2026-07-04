@@ -205,6 +205,8 @@ class PostController extends BaseApiController
             ] : null,
             'content'         => $post->content,
             'status'          => $post->status,
+            'moderation_reason' => $post->moderation_reason,
+            'moderated_at'    => $post->moderated_at?->toIso8601String(),
             'visibility'      => $post->visibility ?? 'public',
             'comments_count'  => $post->comments_count ?? 0,
             'reactions_count' => (int) ($post->reactions_count ?? 0),

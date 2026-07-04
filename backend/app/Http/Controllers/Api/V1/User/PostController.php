@@ -10,6 +10,7 @@ use App\Models\Comment;
 use App\Models\MediaFile;
 use App\Models\Post;
 use App\Jobs\ModerateCommentJob;
+use App\Jobs\ModeratePostJob;
 use App\Models\Reaction;
 use App\Services\NotificationService;
 use App\Services\UserNotificationService;
@@ -257,6 +258,11 @@ class PostController extends BaseApiController
             }
 
             throw $exception;
+        }
+
+        // Kiểm duyệt AI chạy nền: bài hiển thị ngay, tự ẩn sau nếu vi phạm.
+        if (config('services.gemini.moderation_enabled')) {
+            ModeratePostJob::dispatch($post->id);
         }
 
         $post->load([

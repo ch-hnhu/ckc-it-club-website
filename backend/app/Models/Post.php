@@ -25,6 +25,8 @@ class Post extends Model
         'is_pinned',
         'pinned_at',
         'deleted_by',
+        'moderation_reason',
+        'moderated_at',
     ];
 
     protected function casts(): array
@@ -34,6 +36,7 @@ class Post extends Model
             'is_pinned' => 'boolean',
             'pinned_at' => 'datetime',
             'deleted_at' => 'datetime',
+            'moderated_at' => 'datetime',
         ];
     }
 

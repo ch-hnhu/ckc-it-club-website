@@ -428,6 +428,26 @@ class UserNotificationService
         ]);
     }
 
+    /**
+     * Notify the post author when AI moderation auto-hides their post.
+     * Self-actor: hệ thống ẩn tự động, không có người thực hiện cụ thể.
+     */
+    public static function dispatchPostModerated(
+        User $recipient,
+        Post $post,
+        string $reason,
+    ): void {
+        self::send($recipient, $recipient, [
+            'title'       => 'Bài đăng của bạn đã bị ẩn',
+            'message'     => "Bài đăng \"{$post->title}\" của bạn đã bị ẩn tự động do vi phạm tiêu chuẩn cộng đồng. Lý do: {$reason}",
+            'type'        => 'post_moderated',
+            'target_type' => 'post',
+            'target_id'   => $post->id,
+            // Bài đã ẩn không xem được ở trang chi tiết → thông báo chỉ mang tính thông tin.
+            'link'        => '',
+        ]);
+    }
+
     // ─── Internal ────────────────────────────────────────────────────────────
 
     /**
