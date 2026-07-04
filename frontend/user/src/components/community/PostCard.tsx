@@ -19,6 +19,7 @@ import type { Post, Reactor } from "@/types/post.types";
 import type { AuthUser } from "@/services/auth.service";
 import { postService } from "@/services/post.service";
 import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle, isVideoMediaUrl } from "@/lib/utils";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 import { renderMarkdownContent, renderMarkdownPreview } from "@/lib/markdown";
 import ReportPostModal from "./ReportPostModal";
 import PrivacyPostModal from "./PrivacyPostModal";
@@ -310,7 +311,8 @@ const PostCard: React.FC<PostCardProps> = ({
 						to={authorProfileUrl ?? "#"}
 						className='relative shrink-0'
 						onClick={(e) => !authorProfileUrl && e.preventDefault()}>
-						<img
+						<AvatarImage
+							fallbackName={authorName}
 							src={authorAvatar}
 							alt={authorName}
 							className='h-10 w-10 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover transition hover:opacity-80'

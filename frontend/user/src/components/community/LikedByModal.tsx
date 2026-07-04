@@ -5,6 +5,7 @@ import type { Reactor } from "@/types/post.types";
 import type { AuthUser } from "@/services/auth.service";
 import { userService } from "@/services/user.service";
 import { buildAvatar, buildProfileUrl, getHandle } from "@/lib/utils";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 interface LikedByModalProps {
 	reactors: Reactor[];
@@ -81,7 +82,8 @@ const LikedByModal: React.FC<LikedByModalProps> = ({ reactors, loading, currentU
 									key={reactor.id}
 									className='flex items-center gap-3 rounded-xl border-2 border-black bg-white px-3 py-2.5 mb-2 last:mb-0'>
 									<Link to={profileUrl} onClick={onClose} className='shrink-0'>
-										<img
+										<AvatarImage
+											fallbackName={reactor.full_name}
 											src={avatar}
 											alt={reactor.full_name}
 											className='h-10 w-10 rounded-full border-2 border-black object-cover'

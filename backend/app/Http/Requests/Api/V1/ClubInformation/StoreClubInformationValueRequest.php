@@ -18,7 +18,7 @@ class StoreClubInformationValueRequest extends FormRequest
         $clubInformation = $this->route('clubInformation');
         $valueRules = ['required', 'string'];
 
-        if (! in_array($clubInformation?->type, ['html', 'markdown'], true)) {
+        if (! in_array($clubInformation?->type, ['html', 'markdown', 'longtext'], true)) {
             $valueRules[] = 'max:1000';
         }
 

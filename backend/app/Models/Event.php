@@ -14,7 +14,7 @@ class Event extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'created_by', 'department_id', 'title', 'slug',
+        'created_by', 'department_id', 'organizer_id', 'title', 'slug',
         'description', 'content', 'thumbnail', 'feedback_form_url',
         'start_at', 'end_at', 'location',
         'registration_start_at', 'registration_end_at',
@@ -58,6 +58,11 @@ class Event extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'organizer_id');
     }
 
     public function registrations(): HasMany

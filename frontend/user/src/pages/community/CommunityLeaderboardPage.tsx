@@ -5,6 +5,7 @@ import type { CommunityLayoutContext } from "./CommunityLayout";
 import { blogService } from "@/services/blog.service";
 import { gamificationService } from "@/services/gamification.service";
 import { readingTime } from "@/lib/utils";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 import type { BlogDetail } from "@/types/blog.types";
 import type { LeaderboardEntry } from "@/types/gamification.types";
 
@@ -147,7 +148,8 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry }) => (
 		{rankLabel(entry.rank)}
 
 		{entry.avatar ? (
-			<img
+			<AvatarImage
+				fallbackName={entry.full_name}
 				src={entry.avatar}
 				alt={entry.full_name}
 				className='h-11 w-11 shrink-0 rounded-full border-2 border-black object-cover'

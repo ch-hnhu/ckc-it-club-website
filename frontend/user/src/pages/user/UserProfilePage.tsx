@@ -61,6 +61,7 @@ import type { UserProfile } from "@/types/user.types";
 import type { Post } from "@/types/post.types";
 import BlogCard from "@/components/community/BlogCard";
 import PostCard from "@/components/community/PostCard";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 const sortPinnedFirst = <T extends { is_pinned?: boolean }>(items: T[]): T[] =>
 	[...items].sort((a, b) => Number(Boolean(b.is_pinned)) - Number(Boolean(a.is_pinned)));
@@ -602,7 +603,8 @@ const FollowListModal: React.FC<FollowListModalProps> = ({
 													onClose();
 												}
 											}}>
-											<img
+											<AvatarImage
+												fallbackName={u.full_name}
 												src={avatar}
 												alt={u.full_name}
 												className='h-10 w-10 rounded-full border-2 border-black object-cover'
@@ -768,7 +770,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 							onClick={() =>
 								isOwnProfile && !uploadingAvatar && avatarInputRef.current?.click()
 							}>
-							<img
+							<AvatarImage
+								fallbackName={profile.full_name}
 								src={avatar}
 								alt={profile.full_name}
 								className='h-24 w-24 rounded-full bg-[var(--color-pastel-blue)] object-cover sm:h-32 sm:w-32 md:h-36 md:w-36'
@@ -1267,7 +1270,8 @@ const PostCardCompact: React.FC<PostCardCompactProps> = ({ post, user }) => {
 					to={authorProfileUrl ?? "#"}
 					onClick={(e) => !authorProfileUrl && e.preventDefault()}
 					className='shrink-0'>
-					<img
+					<AvatarImage
+						fallbackName={authorName}
 						src={authorAvatar}
 						alt={authorName}
 						className='h-8 w-8 rounded-full border-2 border-black object-cover'

@@ -13,6 +13,7 @@ import {
 	Filter,
 	MessageSquare,
 	MoreHorizontal,
+	ShieldAlert,
 	Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -78,6 +79,8 @@ export interface CommentRecord {
 	parent_id: number | null;
 	content: string;
 	is_hidden: boolean;
+	moderation_reason: string | null;
+	moderated_at: string | null;
 	reactions_count: number;
 	created_at: string;
 	updated_at: string;
@@ -426,15 +429,26 @@ function CommentListPage() {
 												)}
 											</TableCell>
 											<TableCell>
-												{comment.is_hidden ? (
-													<Badge variant="outline" className="rounded-full px-3 py-1 border-rose-500/20 bg-rose-500/10 text-rose-700">
-														Đã ẩn
-													</Badge>
-												) : (
-													<Badge variant="outline" className="rounded-full px-3 py-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-700">
-														Hiển thị
-													</Badge>
-												)}
+												<div className="flex flex-col items-start gap-1">
+													{comment.is_hidden ? (
+														<Badge variant="outline" className="rounded-full px-3 py-1 border-rose-500/20 bg-rose-500/10 text-rose-700">
+															Đã ẩn
+														</Badge>
+													) : (
+														<Badge variant="outline" className="rounded-full px-3 py-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-700">
+															Hiển thị
+														</Badge>
+													)}
+													{comment.moderation_reason && (
+														<Badge
+															variant="outline"
+															title={comment.moderation_reason}
+															className="rounded-full px-2 py-0.5 gap-1 border-amber-500/20 bg-amber-500/10 text-amber-700">
+															<ShieldAlert className="h-3 w-3" />
+															AI đánh dấu
+														</Badge>
+													)}
+												</div>
 											</TableCell>
 											<TableCell className="text-sm text-muted-foreground">
 												{comment.reactions_count} cảm xúc
@@ -575,6 +589,18 @@ function CommentListPage() {
 										{selectedComment.content}
 									</div>
 								</div>
+								{selectedComment.moderation_reason && (
+									<div className="space-y-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-3">
+										<p className="flex items-center gap-1.5 text-sm font-medium text-amber-700">
+											<ShieldAlert className="h-4 w-4" />
+											AI tự động đánh dấu vi phạm
+										</p>
+										<p className="text-sm text-amber-800/90 dark:text-amber-200/90">{selectedComment.moderation_reason}</p>
+										{selectedComment.moderated_at && (
+											<p className="text-xs text-muted-foreground">Kiểm duyệt lúc {formatDate(selectedComment.moderated_at)}</p>
+										)}
+									</div>
+								)}
 								<div className="grid gap-4 sm:grid-cols-3 text-sm">
 									<div className="space-y-0.5">
 										<p className="font-medium">Trạng thái</p>

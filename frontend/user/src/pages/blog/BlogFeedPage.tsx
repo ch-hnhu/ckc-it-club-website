@@ -5,6 +5,7 @@ import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
 import type { Blog, BlogTag } from "@/types/blog.types";
 import BlogCard from "@/components/community/BlogCard";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
@@ -105,7 +106,8 @@ const FeaturedArticle: React.FC<{ blog: Blog; isHighlight?: boolean }> = ({ blog
 							<>
 								<span className='text-gray-300'>·</span>
 								{authorAvatar ? (
-									<img
+									<AvatarImage
+										fallbackName={authorName}
 										src={authorAvatar}
 										alt={authorName}
 										className='h-5 w-5 rounded-full border-2 border-black object-cover'

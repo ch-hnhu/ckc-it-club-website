@@ -27,6 +27,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Link, useLocation, useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { learningService } from "@/services/learning.service";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 import type { AuthUser } from "@/services/auth.service";
 import type {
 	CourseDetail,
@@ -532,7 +533,8 @@ const Sidebar: React.FC<{
 					<div className='flex items-center gap-3'>
 						<span className='flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-black bg-[var(--color-pastel-green)]'>
 							{user?.picture ? (
-								<img
+								<AvatarImage
+									fallbackName={user.name}
 									src={user.picture}
 									alt=''
 									className='h-full w-full object-cover'

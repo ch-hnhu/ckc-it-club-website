@@ -6,6 +6,7 @@ import type { CommunityLayoutContext } from "./CommunityLayout";
 import { postService } from "@/services/post.service";
 import type { Post } from "@/types/post.types";
 import PostCard from "@/components/community/PostCard";
+import { AvatarImage } from "@/components/ui/AvatarImage";
 
 // ─── Static sidebar data ──────────────────────────────────────────────────────
 
@@ -225,7 +226,8 @@ const CommunityFeedPage: React.FC = () => {
 						<Link
 							to={buildProfileUrl(user.username, user.email ?? "")}
 							className='relative'>
-							<img
+							<AvatarImage
+								fallbackName={userDisplayName}
 								src={userAvatar}
 								alt={userDisplayName}
 								className='h-11 w-11 shrink-0 rounded-full border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
@@ -365,7 +367,8 @@ const CommunityFeedPage: React.FC = () => {
 									<span className='w-5 text-sm font-extrabold text-gray-600'>
 										#{index + 1}
 									</span>
-									<img
+									<AvatarImage
+										fallbackName={member.name}
 										src={member.avatar}
 										alt={member.name}
 										className='h-9 w-9 rounded-full border-2 border-black bg-white'
