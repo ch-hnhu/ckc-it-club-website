@@ -70,6 +70,14 @@ class Course extends Model
         return $this->belongsToMany(Tag::class, 'course_tags');
     }
 
+    /**
+     * Các mentor (user) phụ trách khoá học.
+     */
+    public function mentors(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'course_mentors', 'course_id', 'user_id');
+    }
+
     public function lessons(): HasMany
     {
         return $this->hasMany(Lesson::class)->orderBy('order');

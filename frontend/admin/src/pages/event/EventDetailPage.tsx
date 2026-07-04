@@ -5,6 +5,7 @@ import { isAxiosError } from "axios";
 import {
 	AlignLeft,
 	ArrowLeft,
+	BellRing,
 	Building2,
 	CalendarClock,
 	ChevronLeft,
@@ -36,7 +37,12 @@ import LinkedBoardsCard from "@/components/projecthub/LinkedBoardsCard";
 import { STATUS_MAP } from "@/pages/event/event-status";
 import type { EventRecord, EventStatus } from "@/pages/event/EventListPage";
 import eventService from "@/services/event.service";
-import type { EventFeedbackItem, EventFeedbackResponse, EventGalleryItem } from "@/services/event.service";
+import type {
+	EventFeedbackItem,
+	EventFeedbackResponse,
+	EventGalleryItem,
+	EventMemberRecord,
+} from "@/services/event.service";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -106,6 +112,18 @@ export interface EventRegistrationRecord {
 	} | null;
 }
 
+// Trạng thái hiển thị trong bảng người tham gia: 3 trạng thái đăng ký + "chưa đăng ký"
+// (chỉ xuất hiện với sự kiện dành riêng cho thành viên CLB)
+export type ParticipantStatus = RegistrationStatus | "not_registered";
+
+// Một dòng trong bảng: bản ghi đăng ký, hoặc thành viên CLB chưa đăng ký
+interface ParticipantRow {
+	key: string;
+	status: ParticipantStatus;
+	registration: EventRegistrationRecord | null;
+	user: EventRegistrationRecord["user"];
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const pageSizeOptions = [10, 20, 30, 50];
@@ -139,7 +157,7 @@ function formatDateRange(start: string | null | undefined, end: string | null | 
 	return `${formatDateTimeShort(start)} → ${formatDateTimeShort(end)}`;
 }
 
-const REGISTRATION_STATUS_MAP: Record<RegistrationStatus, { label: string; className: string }> = {
+const REGISTRATION_STATUS_MAP: Record<ParticipantStatus, { label: string; className: string }> = {
 	registered: {
 		label: "Đã đăng ký",
 		className: "border-sky-500/30 bg-sky-500/10 text-sky-700",
@@ -152,14 +170,21 @@ const REGISTRATION_STATUS_MAP: Record<RegistrationStatus, { label: string; class
 		label: "Đã hủy",
 		className: "border-rose-500/30 bg-rose-500/10 text-rose-700",
 	},
+	not_registered: {
+		label: "Chưa đăng ký",
+		className: "border-muted-foreground/30 bg-muted/60 text-muted-foreground",
+	},
 };
 
-const registrationFilterOptions: Array<{ value: RegistrationStatus | "all"; label: string }> = [
+const registrationFilterOptions: Array<{ value: ParticipantStatus | "all"; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
 	{ value: "registered", label: "Đã đăng ký" },
 	{ value: "attended", label: "Đã điểm danh" },
 	{ value: "cancelled", label: "Đã hủy" },
 ];
+
+// Chỉ thêm bộ lọc "Chưa đăng ký" cho sự kiện dành riêng thành viên CLB
+const notRegisteredFilterOption = { value: "not_registered" as const, label: "Chưa đăng ký" };
 
 function InfoRow({
 	icon,
@@ -627,9 +652,12 @@ function EventDetailPage() {
 
 	const [event, setEvent] = useState<(EventRecord & { content: string | null }) | null>(null);
 	const [registrations, setRegistrations] = useState<EventRegistrationRecord[]>([]);
+	const [unregisteredMembers, setUnregisteredMembers] = useState<EventMemberRecord[]>([]);
+	const [remindTargetId, setRemindTargetId] = useState<number | null>(null);
+	const [isRemindingAll, setIsRemindingAll] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
-	const [statusFilter, setStatusFilter] = useState<RegistrationStatus | "all">("all");
+	const [statusFilter, setStatusFilter] = useState<ParticipantStatus | "all">("all");
 	const [page, setPage] = useState(1);
 	const [perPage, setPerPage] = useState(10);
 	const [isCheckInOpen, setIsCheckInOpen] = useState(false);
@@ -673,10 +701,28 @@ function EventDetailPage() {
 		}
 	}, [id]);
 
+	const fetchUnregisteredMembers = useCallback(async () => {
+		if (!id) return;
+		try {
+			const response = await eventService.getUnregisteredMembers(id);
+			setUnregisteredMembers(response.data);
+		} catch (error) {
+			console.error("Không thể tải danh sách thành viên chưa đăng ký:", error);
+			toast.error("Không thể tải danh sách thành viên chưa đăng ký.", { position: "top-right" });
+		}
+	}, [id]);
+
 	useEffect(() => {
 		setLoading(true);
 		void Promise.all([fetchEvent(), fetchRegistrations()]).finally(() => setLoading(false));
 	}, [fetchEvent, fetchRegistrations]);
+
+	// Sự kiện dành riêng thành viên CLB: tải thêm danh sách thành viên chưa đăng ký
+	useEffect(() => {
+		if (event?.is_members_only) {
+			void fetchUnregisteredMembers();
+		}
+	}, [event?.is_members_only, fetchUnregisteredMembers]);
 
 	useEffect(() => {
 		setPage(1);
@@ -687,27 +733,54 @@ function EventDetailPage() {
 		void fetchEvent();
 	}, [fetchEvent, fetchRegistrations]);
 
-	const filteredRegistrations = useMemo(() => {
+	// Gộp danh sách đăng ký + thành viên CLB chưa đăng ký (nếu sự kiện chỉ dành cho thành viên)
+	const participantRows = useMemo<ParticipantRow[]>(() => {
+		const rows: ParticipantRow[] = registrations.map((registration) => ({
+			key: `reg-${registration.id}`,
+			status: registration.status,
+			registration,
+			user: registration.user,
+		}));
+
+		if (event?.is_members_only) {
+			for (const member of unregisteredMembers) {
+				rows.push({
+					key: `member-${member.id}`,
+					status: "not_registered",
+					registration: null,
+					user: member,
+				});
+			}
+		}
+
+		return rows;
+	}, [registrations, unregisteredMembers, event?.is_members_only]);
+
+	const filteredRows = useMemo(() => {
 		const normalizedSearch = search.trim().toLowerCase();
 
-		return registrations.filter((registration) => {
+		return participantRows.filter((row) => {
 			const matchesSearch =
 				!normalizedSearch ||
-				registration.user?.full_name?.toLowerCase().includes(normalizedSearch) ||
-				registration.user?.email.toLowerCase().includes(normalizedSearch);
+				row.user?.full_name?.toLowerCase().includes(normalizedSearch) ||
+				row.user?.email.toLowerCase().includes(normalizedSearch);
 
-			const matchesStatus = statusFilter === "all" || registration.status === statusFilter;
+			const matchesStatus = statusFilter === "all" || row.status === statusFilter;
 
 			return matchesSearch && matchesStatus;
 		});
-	}, [registrations, search, statusFilter]);
+	}, [participantRows, search, statusFilter]);
 
-	const lastPage = Math.max(1, Math.ceil(filteredRegistrations.length / perPage));
+	const lastPage = Math.max(1, Math.ceil(filteredRows.length / perPage));
 	const currentPage = Math.min(page, lastPage);
-	const paginatedRegistrations = filteredRegistrations.slice(
+	const paginatedRows = filteredRows.slice(
 		(currentPage - 1) * perPage,
 		currentPage * perPage,
 	);
+
+	const statusFilterOptions = event?.is_members_only
+		? [...registrationFilterOptions, notRegisteredFilterOption]
+		: registrationFilterOptions;
 
 	const attendedCount = useMemo(
 		() => registrations.filter((registration) => registration.status === "attended").length,
@@ -716,6 +789,55 @@ function EventDetailPage() {
 
 	// Backend chỉ cho điểm danh khi sự kiện không ở trạng thái nháp/đã hủy
 	const canCheckIn = canManageEvent && event != null && !["draft", "cancelled"].includes(event.status);
+
+	// Chỉ nhắc nhở được khi sự kiện đã đăng và còn trong thời gian đăng ký
+	const canRemind =
+		canManageEvent &&
+		event != null &&
+		event.status === "published" &&
+		(!event.registration_end_at || new Date(event.registration_end_at).getTime() >= Date.now());
+
+	const handleRemindMember = async (member: NonNullable<ParticipantRow["user"]>) => {
+		if (!id) return;
+
+		setRemindTargetId(member.id);
+
+		try {
+			await eventService.remindMembers(id, [member.id]);
+			toast.success(`Đã gửi nhắc nhở tới ${member.full_name ?? member.email}.`, {
+				position: "top-right",
+			});
+		} catch (error) {
+			const message =
+				isAxiosError(error) && error.response?.data?.message
+					? String(error.response.data.message)
+					: "Không thể gửi nhắc nhở. Vui lòng thử lại.";
+			toast.error(message, { position: "top-right" });
+		} finally {
+			setRemindTargetId(null);
+		}
+	};
+
+	const handleRemindAll = async () => {
+		if (!id) return;
+
+		setIsRemindingAll(true);
+
+		try {
+			const response = await eventService.remindMembers(id);
+			toast.success(`Đã gửi nhắc nhở tới ${response.data.reminded_count} thành viên chưa đăng ký.`, {
+				position: "top-right",
+			});
+		} catch (error) {
+			const message =
+				isAxiosError(error) && error.response?.data?.message
+					? String(error.response.data.message)
+					: "Không thể gửi nhắc nhở. Vui lòng thử lại.";
+			toast.error(message, { position: "top-right" });
+		} finally {
+			setIsRemindingAll(false);
+		}
+	};
 
 	const handleManualCheckIn = async () => {
 		if (!id || !manualTarget) return;
@@ -926,12 +1048,12 @@ function EventDetailPage() {
 								</div>
 								<Select
 									value={statusFilter}
-									onValueChange={(value) => setStatusFilter(value as RegistrationStatus | "all")}>
+									onValueChange={(value) => setStatusFilter(value as ParticipantStatus | "all")}>
 									<SelectTrigger className='h-8 w-[180px]'>
 										<SelectValue placeholder='Lọc trạng thái' />
 									</SelectTrigger>
 									<SelectContent>
-										{registrationFilterOptions.map((option) => (
+										{statusFilterOptions.map((option) => (
 											<SelectItem key={option.value} value={option.value}>
 												{option.label}
 											</SelectItem>
@@ -939,14 +1061,31 @@ function EventDetailPage() {
 									</SelectContent>
 								</Select>
 							</div>
-							<Button
-								size='sm'
-								onClick={() => setIsCheckInOpen(true)}
-								disabled={!canCheckIn}
-								className='h-8 bg-foreground text-background hover:bg-foreground/90'>
-								<ScanLine className='h-4 w-4' />
-								Điểm danh
-							</Button>
+							<div className='flex items-center gap-2'>
+								{event.is_members_only ? (
+									<Button
+										size='sm'
+										variant='outline'
+										onClick={() => void handleRemindAll()}
+										disabled={!canRemind || isRemindingAll || unregisteredMembers.length === 0}
+										className='h-8'>
+										{isRemindingAll ? (
+											<Loader2 className='h-4 w-4 animate-spin' />
+										) : (
+											<BellRing className='h-4 w-4' />
+										)}
+										Nhắc nhở tất cả ({unregisteredMembers.length})
+									</Button>
+								) : null}
+								<Button
+									size='sm'
+									onClick={() => setIsCheckInOpen(true)}
+									disabled={!canCheckIn}
+									className='h-8 bg-foreground text-background hover:bg-foreground/90'>
+									<ScanLine className='h-4 w-4' />
+									Điểm danh
+								</Button>
+							</div>
 						</div>
 					</div>
 
@@ -964,12 +1103,12 @@ function EventDetailPage() {
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{paginatedRegistrations.map((registration, index) => {
-									const registrationBadge = REGISTRATION_STATUS_MAP[registration.status];
+								{paginatedRows.map((row, index) => {
+									const rowBadge = REGISTRATION_STATUS_MAP[row.status];
 
 									return (
 										<TableRow
-											key={registration.id}
+											key={row.key}
 											className='transition-colors duration-150 hover:bg-muted/40'>
 											<TableCell className='text-muted-foreground'>
 												{(currentPage - 1) * perPage + index + 1}
@@ -977,35 +1116,41 @@ function EventDetailPage() {
 											<TableCell>
 												<div className='flex items-center gap-2.5'>
 													<Avatar className='h-7 w-7'>
-														<AvatarImage src={registration.user?.avatar ?? undefined} />
+														<AvatarImage src={row.user?.avatar ?? undefined} />
 														<AvatarFallback className='text-xs'>
-															{(registration.user?.full_name ?? "?").charAt(0).toUpperCase()}
+															{(row.user?.full_name ?? "?").charAt(0).toUpperCase()}
 														</AvatarFallback>
 													</Avatar>
 													<div className='font-medium'>
-														{registration.user?.full_name ?? "Ẩn danh"}
+														{row.user?.full_name ?? "Ẩn danh"}
 													</div>
 												</div>
 											</TableCell>
 											<TableCell className='text-muted-foreground'>
-												{registration.user?.email ?? "--"}
+												{row.user?.email ?? "--"}
 											</TableCell>
 											<TableCell>
 												<Badge
 													variant='outline'
-													className={cn("rounded-full", registrationBadge.className)}>
-													{registrationBadge.label}
+													className={cn("rounded-full", rowBadge.className)}>
+													{rowBadge.label}
 												</Badge>
 											</TableCell>
-											<TableCell>{formatDate(registration.registered_at)}</TableCell>
 											<TableCell>
-												{registration.check_in ? (
+												{row.registration ? (
+													formatDate(row.registration.registered_at)
+												) : (
+													<span className='text-sm text-muted-foreground'>--</span>
+												)}
+											</TableCell>
+											<TableCell>
+												{row.registration?.check_in ? (
 													<div className='space-y-0.5 text-sm'>
-														<p>{formatDate(registration.check_in.checked_in_at)}</p>
+														<p>{formatDate(row.registration.check_in.checked_in_at)}</p>
 														<p className='text-xs text-muted-foreground'>
-															{registration.check_in.method === "qr" ? "Quét QR" : "Thủ công"}
-															{registration.check_in.checked_in_by
-																? ` · bởi ${registration.check_in.checked_in_by}`
+															{row.registration.check_in.method === "qr" ? "Quét QR" : "Thủ công"}
+															{row.registration.check_in.checked_in_by
+																? ` · bởi ${row.registration.check_in.checked_in_by}`
 																: ""}
 														</p>
 													</div>
@@ -1023,32 +1168,41 @@ function EventDetailPage() {
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align='end' className='w-[200px]'>
 														<DropdownMenuItem
-															onClick={() => navigate(`/users/${registration.user?.id}`)}
-															disabled={!registration.user}>
+															onClick={() => navigate(`/users/${row.user?.id}`)}
+															disabled={!row.user}>
 															<Eye className='h-4 w-4' />
 															Xem hồ sơ
 														</DropdownMenuItem>
-														<DropdownMenuItem
-															disabled={!registration.user}
-															onClick={() =>
-																registration.user && openUserFeedback(registration.user.id)
-															}>
-															<Star className='h-4 w-4' />
-															Xem phản hồi
-														</DropdownMenuItem>
-														<DropdownMenuItem
-															disabled={!canCheckIn || registration.status !== "registered"}
-															onClick={() => setManualTarget(registration)}>
-															<UserCheck className='h-4 w-4' />
-															Điểm danh thủ công
-														</DropdownMenuItem>
+														{row.registration ? (
+															<>
+																<DropdownMenuItem
+																	disabled={!row.user}
+																	onClick={() => row.user && openUserFeedback(row.user.id)}>
+																	<Star className='h-4 w-4' />
+																	Xem phản hồi
+																</DropdownMenuItem>
+																<DropdownMenuItem
+																	disabled={!canCheckIn || row.registration.status !== "registered"}
+																	onClick={() => setManualTarget(row.registration)}>
+																	<UserCheck className='h-4 w-4' />
+																	Điểm danh thủ công
+																</DropdownMenuItem>
+															</>
+														) : (
+															<DropdownMenuItem
+																disabled={!canRemind || !row.user || remindTargetId === row.user.id}
+																onClick={() => row.user && void handleRemindMember(row.user)}>
+																<BellRing className='h-4 w-4' />
+																Nhắc nhở đăng ký
+															</DropdownMenuItem>
+														)}
 													</DropdownMenuContent>
 												</DropdownMenu>
 											</TableCell>
 										</TableRow>
 									);
 								})}
-								{paginatedRegistrations.length === 0 ? (
+								{paginatedRows.length === 0 ? (
 									<TableRow>
 										<TableCell colSpan={7} className='h-40 text-center'>
 											<div className='flex flex-col items-center gap-2'>
@@ -1066,7 +1220,7 @@ function EventDetailPage() {
 									<TableCell colSpan={7}>
 										<div className='flex flex-col gap-3 px-2 py-1 sm:flex-row sm:items-center sm:justify-between'>
 											<div className='flex flex-1 items-center gap-3 text-sm text-muted-foreground'>
-												Đang hiện {paginatedRegistrations.length} trên tổng {filteredRegistrations.length} người tham gia.
+												Đang hiện {paginatedRows.length} trên tổng {filteredRows.length} người tham gia.
 												<span className='text-border'>|</span>
 												<span>
 													Đã điểm danh{" "}

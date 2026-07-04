@@ -64,23 +64,26 @@ class ResourceController extends BaseApiController
         $request->validate([
             'status' => ['required', 'in:published,rejected'],
             'notify' => ['nullable', 'boolean'],
+            'reason' => ['nullable', 'string', 'max:500', 'required_if:status,rejected'],
         ]);
 
         $status = $request->string('status')->value();
         $notify = $request->boolean('notify', true);
+        $reason = $status === 'rejected' ? trim((string) $request->input('reason')) : null;
         $admin = $request->user();
 
         $resource->update([
             'status' => $status,
             'reviewed_by' => $admin->id,
             'reviewed_at' => now(),
+            'rejection_reason' => $reason,
         ]);
 
         if ($notify) {
             $resource->load('uploader');
 
             if ($resource->uploader) {
-                UserNotificationService::dispatchResourceReviewed($resource->uploader, $admin, $resource, $status);
+                UserNotificationService::dispatchResourceReviewed($resource->uploader, $admin, $resource, $status, $reason);
             }
         }
 
@@ -112,6 +115,7 @@ class ResourceController extends BaseApiController
             'url' => $resource->url,
             'status' => $resource->status,
             'click_count' => (int) $resource->click_count,
+            'rejection_reason' => $resource->rejection_reason,
             'reviewed_at' => $resource->reviewed_at?->toIso8601String(),
             'created_at' => $resource->created_at?->toIso8601String(),
             'updated_at' => $resource->updated_at?->toIso8601String(),

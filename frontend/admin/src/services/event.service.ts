@@ -31,6 +31,13 @@ export interface EventFeedbackResponse {
 	stats: EventFeedbackStats;
 }
 
+export interface EventMemberRecord {
+	id: number;
+	full_name: string | null;
+	email: string;
+	avatar: string | null;
+}
+
 export interface EventGalleryItem {
 	id: number;
 	image_url: string;
@@ -89,6 +96,20 @@ const eventService = {
 
 	async getRegistrations(id: number | string): Promise<ApiResponse<EventRegistrationRecord[]>> {
 		return api.get(`/events/${id}/registrations`);
+	},
+
+	async getUnregisteredMembers(id: number | string): Promise<ApiResponse<EventMemberRecord[]>> {
+		return api.get(`/events/${id}/unregistered-members`);
+	},
+
+	async remindMembers(
+		id: number | string,
+		userIds?: number[],
+	): Promise<ApiResponse<{ reminded_count: number }>> {
+		return api.post<ApiResponse<{ reminded_count: number }>>(
+			`/events/${id}/remind-members`,
+			userIds && userIds.length > 0 ? { user_ids: userIds } : {},
+		);
 	},
 
 	async checkIn(

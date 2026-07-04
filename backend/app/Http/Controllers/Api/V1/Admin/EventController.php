@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\ApiMessage;
 use App\Enums\EventStatus;
+use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Event;
 use App\Models\EventCheckIn;
@@ -12,6 +13,7 @@ use App\Models\EventGalleryItem;
 use App\Models\EventRegistration;
 use App\Models\User;
 use App\Notifications\AdminActionNotification;
+use App\Services\UserNotificationService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -231,6 +233,86 @@ class EventController extends BaseApiController
             ->map(fn (EventRegistration $registration) => $this->transformRegistration($registration));
 
         return $this->successResponse(true, $registrations, ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Danh sách thành viên CLB chưa đăng ký sự kiện (chỉ dùng cho sự kiện dành riêng thành viên).
+     */
+    public function unregisteredMembers(Event $event): JsonResponse
+    {
+        if (! $event->is_members_only) {
+            return $this->successResponse(true, [], ApiMessage::RETRIEVED);
+        }
+
+        $members = User::role($this->clubMemberRoles())
+            ->whereNotIn('id', $event->registrations()->select('user_id'))
+            ->orderBy('full_name')
+            ->get(['id', 'full_name', 'email', 'avatar'])
+            ->map(fn (User $user) => [
+                'id' => $user->id,
+                'full_name' => $user->full_name,
+                'email' => $user->email,
+                'avatar' => $user->avatar,
+            ]);
+
+        return $this->successResponse(true, $members, ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Gửi thông báo nhắc đăng ký tới thành viên CLB chưa đăng ký.
+     * Không truyền user_ids sẽ nhắc toàn bộ thành viên chưa đăng ký.
+     */
+    public function remindUnregisteredMembers(Request $request, Event $event): JsonResponse
+    {
+        $data = $request->validate([
+            'user_ids' => 'nullable|array|min:1',
+            'user_ids.*' => 'integer',
+        ]);
+
+        if (! $event->is_members_only) {
+            return $this->errorResponse(false, 'Chỉ nhắc nhở được với sự kiện dành riêng cho thành viên câu lạc bộ.', 422);
+        }
+
+        Event::syncStatuses();
+        $event->refresh();
+
+        if ($event->status->value !== 'published') {
+            return $this->errorResponse(false, 'Chỉ có thể nhắc nhở khi sự kiện đang mở đăng ký.', 422);
+        }
+
+        if ($event->registration_end_at && now()->gt($event->registration_end_at)) {
+            return $this->errorResponse(false, 'Đã hết thời gian đăng ký nên không thể nhắc nhở.', 422);
+        }
+
+        $members = User::role($this->clubMemberRoles())
+            ->whereNotIn('id', $event->registrations()->select('user_id'))
+            ->when(! empty($data['user_ids']), fn ($q) => $q->whereIn('id', $data['user_ids']))
+            ->get();
+
+        if ($members->isEmpty()) {
+            return $this->errorResponse(false, 'Không có thành viên nào cần nhắc nhở.', 422);
+        }
+
+        foreach ($members as $member) {
+            UserNotificationService::dispatchEventRegistrationReminder($member, $request->user(), $event);
+        }
+
+        return $this->successResponse(
+            true,
+            ['reminded_count' => $members->count()],
+            "Đã gửi nhắc nhở tới {$members->count()} thành viên.",
+        );
+    }
+
+    /**
+     * Thành viên CLB = có bất kỳ vai trò nào ngoài "user" thường (đồng bộ với logic đăng ký phía user).
+     */
+    private function clubMemberRoles(): array
+    {
+        return array_values(array_filter(
+            array_map(fn (RolesEnum $case) => $case->value, RolesEnum::cases()),
+            fn (string $role) => $role !== RolesEnum::USER->value,
+        ));
     }
 
     public function checkIn(Request $request, Event $event): JsonResponse

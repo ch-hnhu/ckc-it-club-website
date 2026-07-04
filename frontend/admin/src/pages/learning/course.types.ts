@@ -23,6 +23,12 @@ export interface AdminCourseCertificateTemplate {
 	name: string;
 }
 
+export interface AdminCourseMentor {
+	id: number;
+	full_name: string | null;
+	avatar: string | null;
+}
+
 export interface AdminCourse {
 	id: number;
 	title: string;
@@ -43,6 +49,7 @@ export interface AdminCourse {
 	certificate_template: AdminCourseCertificateTemplate | null;
 	creator: AdminCourseCreator | null;
 	categories: AdminCourseCategory[];
+	mentors: AdminCourseMentor[];
 	lessons_count: number;
 	/** Tổng học viên đã ghi danh (offline + online) */
 	enrollments_count: number;

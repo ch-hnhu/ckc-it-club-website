@@ -45,7 +45,7 @@ class CourseController extends BaseApiController
         $order = $request->query('order') === 'asc' ? 'asc' : 'desc';
 
         $courses = Course::query()
-            ->with(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
+            ->with(['creator:id,full_name,avatar', 'tags:id,name', 'mentors:id,full_name,avatar', 'certificateTemplate:id,name'])
             ->withCount([
                 'lessons as lessons_count',
                 'enrollments as enrollments_count',
@@ -98,6 +98,8 @@ class CourseController extends BaseApiController
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:tags,id',
+            'mentor_ids' => 'nullable|array',
+            'mentor_ids.*' => 'integer|exists:users,id',
         ]);
 
         // Không mở lớp offline → khoá chỉ online; xoá luôn các trường liên quan
@@ -142,10 +144,14 @@ class CourseController extends BaseApiController
                 $course->tags()->sync($data['tag_ids']);
             }
 
+            if (! empty($data['mentor_ids'])) {
+                $course->mentors()->sync($data['mentor_ids']);
+            }
+
             return $course;
         });
 
-        $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
+        $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'mentors:id,full_name,avatar', 'certificateTemplate:id,name'])
             ->loadCount([
                 'lessons as lessons_count',
                 'enrollments as enrollments_count',
@@ -180,6 +186,8 @@ class CourseController extends BaseApiController
             'thumbnail' => 'nullable|image|max:5120',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:tags,id',
+            'mentor_ids' => 'nullable|array',
+            'mentor_ids.*' => 'integer|exists:users,id',
         ]);
 
         // Thumbnail: thay mới / gỡ bỏ / giữ nguyên
@@ -217,16 +225,23 @@ class CourseController extends BaseApiController
         $tagIds = $data['tag_ids'] ?? null;
         unset($data['tag_ids']);
 
-        DB::transaction(function () use ($course, $data, $tagIds, $request) {
+        $mentorIds = $data['mentor_ids'] ?? null;
+        unset($data['mentor_ids']);
+
+        DB::transaction(function () use ($course, $data, $tagIds, $mentorIds, $request) {
             $course->update([...$data, 'updated_by' => $request->user()->id]);
 
             if ($request->has('tag_ids') || $tagIds !== null) {
                 $course->tags()->sync($tagIds ?? []);
             }
+
+            if ($request->has('mentor_ids') || $mentorIds !== null) {
+                $course->mentors()->sync($mentorIds ?? []);
+            }
         });
 
         $course->refresh()
-            ->load(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
+            ->load(['creator:id,full_name,avatar', 'tags:id,name', 'mentors:id,full_name,avatar', 'certificateTemplate:id,name'])
             ->loadCount([
                 'lessons as lessons_count',
                 'enrollments as enrollments_count',
@@ -263,7 +278,7 @@ class CourseController extends BaseApiController
         $order = $request->query('order') === 'asc' ? 'asc' : 'desc';
 
         $courses = Course::onlyTrashed()
-            ->with(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
+            ->with(['creator:id,full_name,avatar', 'tags:id,name', 'mentors:id,full_name,avatar', 'certificateTemplate:id,name'])
             ->withCount($this->courseCounts())
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
             ->orderBy($sort, $order)
@@ -284,7 +299,7 @@ class CourseController extends BaseApiController
         $course->deleted_by = null;
         $course->save();
 
-        $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
+        $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'mentors:id,full_name,avatar', 'certificateTemplate:id,name'])
             ->loadCount($this->courseCounts());
 
         return $this->successResponse(true, $this->transformCourse($course), 'Khôi phục khóa học thành công.');
@@ -312,7 +327,7 @@ class CourseController extends BaseApiController
      */
     public function show(Course $course): JsonResponse
     {
-        $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'certificateTemplate:id,name'])
+        $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'mentors:id,full_name,avatar', 'certificateTemplate:id,name'])
             ->loadCount([
                 'lessons as lessons_count',
                 'enrollments as enrollments_count',
@@ -387,6 +402,22 @@ class CourseController extends BaseApiController
         $certificate = app(CourseCertificateService::class)->reissue($certificate);
 
         return $this->successResponse(true, $this->transformCertificate($certificate), 'Đã cấp lại chứng chỉ.');
+    }
+
+    /**
+     * Danh sách user để chọn làm mentor khoá học (dùng cho multiselect ở form thêm/sửa).
+     */
+    public function mentorOptions(): JsonResponse
+    {
+        $users = User::query()
+            ->orderBy('full_name')
+            ->get(['id', 'full_name', 'avatar']);
+
+        return $this->successResponse(true, $users->map(fn (User $u) => [
+            'id' => $u->id,
+            'full_name' => $u->full_name,
+            'avatar' => $this->resolveUrl($u->avatar),
+        ])->all(), ApiMessage::RETRIEVED);
     }
 
     /**
@@ -637,6 +668,13 @@ class CourseController extends BaseApiController
                 'name' => $t->name,
                 'color' => null,
             ])->all(),
+            'mentors' => $course->relationLoaded('mentors')
+                ? $course->mentors->map(fn (User $m) => [
+                    'id' => $m->id,
+                    'full_name' => $m->full_name,
+                    'avatar' => $this->resolveUrl($m->avatar),
+                ])->all()
+                : [],
             'lessons_count' => (int) ($course->lessons_count ?? 0),
             'enrollments_count' => (int) ($course->enrollments_count ?? 0),
             'offline_enrollments_count' => (int) ($course->offline_enrollments_count ?? 0),
