@@ -80,6 +80,13 @@ class ClubInformationSeeder extends Seeder
                 'type' => 'boolean',
                 'description' => 'Bật hoặc tắt tính năng tự động gửi email cho ứng viên khi trạng thái đơn ứng tuyển được cập nhật.',
             ],
+            [
+                'value' => 'ai_chatbot_system_prompt',
+                'label' => 'Thông tin chung của CLB',
+                'slug' => 'ai-chatbot-system-prompt',
+                'type' => 'longtext',
+                'description' => 'Prompt system dùng cho AI chatbot.',
+            ],
         ];
 
         foreach ($clubInformations as $clubInformation) {

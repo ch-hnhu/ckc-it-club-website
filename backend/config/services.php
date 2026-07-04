@@ -36,15 +36,15 @@ return [
     ],
 
     'google' => [
-        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect'      => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
     'github' => [
-        'client_id'     => env('GITHUB_CLIENT_ID'),
+        'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
-        'redirect'      => env('GITHUB_REDIRECT_URI'),
+        'redirect' => env('GITHUB_REDIRECT_URI'),
     ],
 
     'youtube' => [
@@ -52,8 +52,9 @@ return [
     ],
 
     'gemini' => [
-        'key'     => env('GEMINI_API_KEY'),
-        'model'   => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
         'timeout' => (int) env('GEMINI_TIMEOUT', 10),
         // Bật/tắt kiểm duyệt bình luận tự động bằng AI.
         'moderation_enabled' => filter_var(env('COMMENT_AI_MODERATION', false), FILTER_VALIDATE_BOOL),
