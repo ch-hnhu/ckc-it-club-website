@@ -754,7 +754,9 @@ const CourseDetailPage: React.FC = () => {
 		(isEnrolled ||
 			audience === "public" ||
 			(audience === "club_member" && isClubMember) ||
-			(audience === "cao_thang_student" && isSchoolStudent)),
+			// Thành viên CLB (admin, trưởng ban...) cũng học được khoá dành cho
+			// sinh viên Cao Thắng, đồng bộ với CourseEnrollmentService ở backend.
+			(audience === "cao_thang_student" && (isSchoolStudent || isClubMember))),
 	);
 	const now = new Date();
 	const firstLesson = lessons[0] ?? null;
@@ -859,6 +861,9 @@ const CourseDetailPage: React.FC = () => {
 	// Lesson offline active: lesson chưa điểm danh + session_end chưa qua (hoặc chưa set), đầu tiên theo thứ tự
 	const activeQrLessonId = (() => {
 		const now = new Date();
+		// Khoá đã kết thúc thì không còn buổi nào cho điểm danh, kể cả buổi
+		// không set session_end (nếu không sẽ hiện "Sẽ tham gia" vĩnh viễn).
+		if (course?.course_end && new Date(course.course_end) <= now) return null;
 		return (
 			lessons.find((l) => {
 				if (l.is_attended) return false;
