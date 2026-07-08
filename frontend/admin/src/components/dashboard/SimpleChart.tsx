@@ -13,6 +13,7 @@ interface SimpleChartProps {
 	data: DataPoint[];
 	dataKey: string;
 	height?: number;
+	color?: string;
 }
 
 export const SimpleChart: React.FC<SimpleChartProps> = ({
@@ -20,11 +21,12 @@ export const SimpleChart: React.FC<SimpleChartProps> = ({
 	data,
 	dataKey,
 	height = 300,
+	color = "var(--primary)",
 }) => {
 	const chartConfig = {
 		[dataKey]: {
 			label: dataKey.charAt(0).toUpperCase() + dataKey.slice(1),
-			color: "var(--primary)",
+			color,
 		},
 	} satisfies ChartConfig;
 
@@ -85,10 +87,11 @@ export const SimpleChart: React.FC<SimpleChartProps> = ({
 						cursor={{ fill: "var(--muted)", opacity: 0.4 }}
 						content={<ChartTooltipContent hideLabel />}
 					/>
-					<Bar 
-						dataKey={dataKey} 
-						fill={`var(--color-${dataKey})`} 
-						radius={[4, 4, 0, 0]} 
+					<Bar
+						dataKey={dataKey}
+						fill={`var(--color-${dataKey})`}
+						radius={[6, 6, 0, 0]}
+						maxBarSize={56}
 					/>
 				</BarChart>
 			)}
