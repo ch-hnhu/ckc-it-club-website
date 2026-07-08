@@ -152,7 +152,10 @@ class CourseEnrollmentService
     {
         return match ($course->audience) {
             CourseAudience::PUBLIC => true,
-            CourseAudience::CAO_THANG_STUDENT => $user->isSchoolStudent(),
+            // Thành viên CLB (admin, trưởng ban...) là tập quyền cao hơn sinh viên
+            // nên khoá mở cho sinh viên Cao Thắng thì thành viên CLB cũng học được,
+            // dù email của họ không đúng mẫu số hiệu sinh viên.
+            CourseAudience::CAO_THANG_STUDENT => $user->isSchoolStudent() || $this->isClubMember($user),
             CourseAudience::CLUB_MEMBER => $this->isClubMember($user),
         };
     }

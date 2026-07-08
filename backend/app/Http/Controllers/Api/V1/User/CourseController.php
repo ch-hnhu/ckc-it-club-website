@@ -381,6 +381,13 @@ class CourseController extends BaseApiController
             'Chỉ học viên đã ghi danh lớp offline mới có thể đăng ký tham gia buổi học.'
         );
 
+        // Khoá đã kết thúc thì không cấp vé nữa, kể cả buổi không set session_end.
+        abort_if(
+            $course->course_end && now()->gt($course->course_end),
+            422,
+            'Khoá học đã kết thúc, không thể đăng ký tham gia.'
+        );
+
         // Buổi đã kết thúc thì không cấp vé mới nữa.
         abort_if(
             $lesson->session_end && now()->gt($lesson->session_end),
