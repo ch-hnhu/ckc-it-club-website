@@ -275,6 +275,7 @@ class CourseController extends BaseApiController
             'duration' => $this->formatDurationClock($lesson->video_duration),
             'xp' => 0, // TODO(G2): tích hợp gamification
             'completed' => $completed,
+            'enrollment_track' => $enrollment?->track,
             'course' => ['slug' => $course->slug, 'title' => $course->title],
             'lesson' => ['slug' => $lesson->slug, 'title' => $lesson->title, 'order' => $lesson->order],
             'prev_lesson' => $prev ? [

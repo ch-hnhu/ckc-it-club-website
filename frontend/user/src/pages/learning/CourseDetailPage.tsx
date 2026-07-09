@@ -921,7 +921,7 @@ const CourseDetailPage: React.FC = () => {
 			setCourse((prev) => (prev ? { ...prev, enrollment_track: res.data.track } : prev));
 			setInterested(false);
 			toast.success("Đã đăng ký học offline.", {
-				description: "Bạn có thể lấy QR điểm danh trong buổi học đang mở.",
+				description: "Hãy nhấn tham gia các buổi học sắp diễn ra để nhận mã QR điểm danh.",
 			});
 		} catch (err) {
 			toast.error(
