@@ -65,13 +65,13 @@ export interface AssignmentGradeDTO {
 	email: string | null;
 	avatar: string | null;
 	track: "offline" | "online";
-	/** null = chưa chấm */
-	score: number | null;
+	/** null = chưa chấm, true = đạt, false = không đạt */
+	passed: boolean | null;
 }
 
 export interface GradeInput {
 	user_id: number;
-	score: number | null;
+	passed: boolean | null;
 }
 
 /** Một đáp án của câu hỏi quiz (shape khớp backend QuizController). */

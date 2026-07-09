@@ -17,13 +17,14 @@ enum LessonSectionType: string
         };
     }
 
-    public function completionThreshold(): int
+    /**
+     * Ngưỡng hoàn thành chỉ áp dụng cho VIDEO (% xem).
+     * ASSIGNMENT: do admin chấm thủ công (pass/fail).
+     * QUIZ: dùng Course::quiz_pass_threshold, không dùng hàm này.
+     */
+    public function videoWatchThreshold(): int
     {
-        return match ($this) {
-            self::VIDEO => 80,      // xem >= 80% video
-            self::ASSIGNMENT => 80, // điểm >= 80/100
-            self::QUIZ => 80,       // quiz score >= 80/100
-        };
+        return 80;
     }
 
     public static function values(): array

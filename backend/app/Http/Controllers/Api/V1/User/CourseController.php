@@ -421,7 +421,7 @@ class CourseController extends BaseApiController
             ->first();
 
         $bestPercentage = max((int) $validated['watch_percentage'], (int) ($existing?->watch_percentage ?? 0));
-        $isCompleted = $bestPercentage >= LessonSectionType::VIDEO->completionThreshold();
+        $isCompleted = $bestPercentage >= LessonSectionType::VIDEO->videoWatchThreshold();
         $wasCompleted = (bool) ($existing?->is_completed);
 
         $progress = LessonProgress::updateOrCreate(
