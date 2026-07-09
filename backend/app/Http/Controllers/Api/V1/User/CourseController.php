@@ -631,13 +631,15 @@ class CourseController extends BaseApiController
     /**
      * % tiến độ buổi học = số section đã hoàn thành / số section có mặt.
      * Online track: chỉ tính video (50%) + quiz (50%), bỏ assignment.
-     * Offline track / chưa ghi danh: tính video + assignment + quiz.
+     * Offline track: chỉ tính assignment (chấm tay) + quiz, bỏ video — offline điểm danh
+     * bằng QR/admin, xem video không thay thế điểm danh nên không tính vào tiến độ.
+     * Chưa ghi danh: tính video + assignment + quiz.
      * null nếu buổi học chưa có section nào để tính tiến độ.
      */
     private function lessonProgressPercent(Lesson $lesson, ?int $userId, ?string $track = null): ?int
     {
         $present = [];
-        if ($lesson->playableVideoUrl()) {
+        if ($track !== 'offline' && $lesson->playableVideoUrl()) {
             $present[] = 'video';
         }
         // Assignment chỉ tính cho offline (online không cần nộp bài tập)
