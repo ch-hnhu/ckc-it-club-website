@@ -339,6 +339,8 @@ function LessonDetailPage() {
 		});
 		try {
 			await courseService.toggleAttendance(slug, lesson.id, userId, next, note);
+			// Tải lại để đồng bộ chi tiết điểm danh (ghi chú, kiểu, người ghi nhận) từ server.
+			await loadAll({ silent: true });
 		} catch (err) {
 			setPresent((prev) => {
 				const s = new Set(prev);

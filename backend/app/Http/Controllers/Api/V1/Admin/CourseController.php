@@ -441,29 +441,6 @@ class CourseController extends BaseApiController
     }
 
     /**
-     * Đổi track (offline/online) của một ghi danh — cùng điều kiện cửa sổ thời gian/slot
-     * như ghi danh mới cho track đích.
-     */
-    public function updateEnrollmentTrack(Request $request, Course $course, CourseEnrollment $enrollment): JsonResponse
-    {
-        $this->assertEnrollmentBelongsTo($course, $enrollment);
-
-        $data = $request->validate([
-            'track' => 'required|in:offline,online',
-        ]);
-
-        $enrollment = app(CourseEnrollmentService::class)->changeTrack($enrollment, $data['track']);
-        $enrollment->load('user:id,full_name,email,avatar');
-        [$attendedByUser, $pastOfflineCount] = $this->absentContext($course->lessons()->get());
-
-        return $this->successResponse(
-            true,
-            $this->transformEnrollment($enrollment, $attendedByUser, $pastOfflineCount),
-            'Đã đổi hình thức học.'
-        );
-    }
-
-    /**
      * Xoá ghi danh (admin) — cascade xoá tiến độ/điểm danh liên quan trong khoá này.
      * Chứng chỉ đã cấp được giữ lại.
      */

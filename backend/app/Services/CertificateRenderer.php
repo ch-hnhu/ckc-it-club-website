@@ -13,7 +13,7 @@ use Spatie\Browsershot\Browsershot;
  * Render mẫu chứng chỉ (scene JSON kéo-thả từ editor Konva) thành PDF bằng Browsershot
  * (Chrome headless) — dựng lại đúng canvas của editor với dữ liệu thật (WYSIWYG).
  *
- * Placeholder hỗ trợ trong text element: {{name}} {{course}} {{issued_at}} {{cert_code}}.
+ * Placeholder hỗ trợ trong text element: {{name}} {{course}} {{issued_at}} {{cert_code}} {{track}}.
  * Phần tử type "qr" được thay bằng ảnh QR trỏ tới {{verify_url}}.
  */
 class CertificateRenderer
@@ -21,7 +21,7 @@ class CertificateRenderer
     /**
      * Render mẫu thành PDF (A4 ngang).
      *
-     * @param  array<string,string>  $data  name, course, issued_at, cert_code, verify_url
+     * @param  array<string,string>  $data  name, course, issued_at, cert_code, track, verify_url
      */
     public function renderPdf(CertificateTemplate $template, array $data): string
     {
@@ -125,6 +125,7 @@ class CertificateRenderer
             '{{course}}' => $data['course'] ?? '',
             '{{issued_at}}' => $data['issued_at'] ?? '',
             '{{cert_code}}' => $data['cert_code'] ?? '',
+            '{{track}}' => $data['track'] ?? '',
         ];
 
         $qrDataUri = ! empty($data['verify_url']) ? $this->qrDataUri($data['verify_url']) : null;

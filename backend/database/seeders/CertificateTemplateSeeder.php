@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Mẫu chứng chỉ mặc định để CourseCertificateService có thể sinh PDF khi học viên
- * hoàn thành khoá học. Placeholder hỗ trợ: {{name}}, {{course}}, {{cert_code}}, {{issued_at}}.
+ * hoàn thành khoá học. Placeholder hỗ trợ: {{name}}, {{course}}, {{cert_code}}, {{issued_at}}, {{track}}.
  */
 class CertificateTemplateSeeder extends Seeder
 {

@@ -3,7 +3,6 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
 import {
 	ArrowLeft,
-	ArrowLeftRight,
 	Award,
 	Ban,
 	Eye,
@@ -145,7 +144,8 @@ const SESSION_STATUS_MAP: Record<
 	},
 	ongoing: {
 		label: "Đang diễn ra",
-		className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
+		className:
+			"border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
 	},
 	ended: {
 		label: "Đã kết thúc",
@@ -258,7 +258,6 @@ function CourseDetailPage() {
 	>(null);
 	const [isDeletingLesson, setIsDeletingLesson] = useState(false);
 	const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
-	const [changingTrackId, setChangingTrackId] = useState<number | null>(null);
 	const [removingEnrollment, setRemovingEnrollment] = useState<
 		AdminCourseDetail["enrollments"][number] | null
 	>(null);
@@ -403,26 +402,6 @@ function CourseDetailPage() {
 			toast.error("Không thể xóa buổi học.", { position: "top-right" });
 		} finally {
 			setIsDeletingLesson(false);
-		}
-	};
-
-	const handleChangeTrack = async (
-		enrollment: AdminCourseDetail["enrollments"][number],
-		track: EnrollmentTrack,
-	) => {
-		setChangingTrackId(enrollment.id);
-		try {
-			await courseService.updateEnrollmentTrack(slug, enrollment.id, track);
-			toast.success("Đã đổi hình thức học.", { position: "top-right" });
-			await loadCourse({ silent: true });
-		} catch (err) {
-			const message =
-				isAxiosError(err) && (err.response?.data as ApiErrorResponse | undefined)?.message
-					? String((err.response?.data as ApiErrorResponse).message)
-					: "Không thể đổi hình thức học.";
-			toast.error(message, { position: "top-right" });
-		} finally {
-			setChangingTrackId(null);
 		}
 	};
 
@@ -676,7 +655,7 @@ function CourseDetailPage() {
 						<div className='mb-3 flex items-center justify-end'>
 							<Button size='sm' className='h-8' onClick={openCreateLesson}>
 								<Plus className='h-4 w-4' />
-								Thêm buổi học
+								Thêm
 							</Button>
 						</div>
 						<div className='overflow-hidden rounded-md border'>
@@ -773,9 +752,9 @@ function CourseDetailPage() {
 													)}
 													<TableCell>
 														{lessonStatusBadge(
-														lesson,
-														lesson.id === nearestUpcomingLessonId,
-													)}
+															lesson,
+															lesson.id === nearestUpcomingLessonId,
+														)}
 													</TableCell>
 													<TableCell>
 														<DropdownMenu>
@@ -986,29 +965,13 @@ function CourseDetailPage() {
 														<DropdownMenuTrigger asChild>
 															<Button
 																variant='ghost'
-																className='h-8 w-8 p-0 data-[state=open]:bg-muted'
-																disabled={changingTrackId === e.id}>
+																className='h-8 w-8 p-0 data-[state=open]:bg-muted'>
 																<MoreHorizontal className='h-4 w-4' />
 															</Button>
 														</DropdownMenuTrigger>
 														<DropdownMenuContent
 															align='end'
 															className='w-[180px]'>
-															<DropdownMenuItem
-																onClick={() =>
-																	handleChangeTrack(
-																		e,
-																		e.track === "offline"
-																			? "online"
-																			: "offline",
-																	)
-																}>
-																<ArrowLeftRight className='h-4 w-4' />
-																Chuyển sang{" "}
-																{e.track === "offline"
-																	? "Online"
-																	: "Offline"}
-															</DropdownMenuItem>
 															<DropdownMenuItem
 																className='text-destructive focus:bg-destructive/10 focus:text-destructive'
 																onClick={() =>

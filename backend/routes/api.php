@@ -521,7 +521,6 @@ Route::prefix('v1')->group(function () {
             Route::put('courses/{course}/lessons/{lesson}/grades', [AdminLessonController::class, 'saveGrades']);
             Route::get('courses/{course}/enrollable-users', [AdminCourseController::class, 'searchEnrollableUsers']);
             Route::post('courses/{course}/enrollments', [AdminCourseController::class, 'enrollStudent']);
-            Route::patch('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'updateEnrollmentTrack']);
             Route::delete('courses/{course}/enrollments/{enrollment}', [AdminCourseController::class, 'removeEnrollment']);
             Route::post('courses/{course}/certificates/{certificate}/revoke', [AdminCourseController::class, 'revokeCertificate']);
             Route::post('courses/{course}/certificates/{certificate}/reissue', [AdminCourseController::class, 'reissueCertificate']);

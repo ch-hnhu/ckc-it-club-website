@@ -286,15 +286,6 @@ const courseService = {
 		return api.post(`/courses/${courseSlug}/enrollments`, { user_id: userId, track });
 	},
 
-	/** Đổi track (offline/online) của một ghi danh. */
-	async updateEnrollmentTrack(
-		courseSlug: string,
-		enrollmentId: number,
-		track: EnrollmentTrack,
-	): Promise<ApiResponse<CourseEnrollmentRow>> {
-		return api.patch(`/courses/${courseSlug}/enrollments/${enrollmentId}`, { track });
-	},
-
 	/** Xoá ghi danh (cascade xoá tiến độ/điểm danh liên quan). */
 	async removeEnrollment(courseSlug: string, enrollmentId: number): Promise<ApiResponse<null>> {
 		return api.delete(`/courses/${courseSlug}/enrollments/${enrollmentId}`);

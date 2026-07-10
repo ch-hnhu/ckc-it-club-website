@@ -31,7 +31,7 @@ class CertificateTemplate extends Model
 
     /**
      * Thay các placeholder dạng {{key}} trong html_content bằng giá trị tương ứng.
-     * Placeholder hỗ trợ: {{name}}, {{course}}, {{cert_code}}, {{issued_at}}.
+     * Placeholder hỗ trợ: {{name}}, {{course}}, {{cert_code}}, {{issued_at}}, {{track}}.
      *
      * @param  array<string,string>  $placeholders
      */
