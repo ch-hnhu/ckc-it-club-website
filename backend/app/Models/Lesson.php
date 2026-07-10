@@ -88,7 +88,7 @@ class Lesson extends Model
     {
         $hasQuiz = $this->relationLoaded('quiz')
             ? (bool) $this->quiz
-            : $this->quiz()->exists();
+            : $this->quiz()->where('is_published', true)->exists();
 
         return (int) (bool) $this->playableVideoUrl()
             + (int) (bool) $this->resource_url

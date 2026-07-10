@@ -259,6 +259,7 @@ export interface CourseListParams {
 	per_page?: number;
 	search?: string;
 	category?: string;
+	audience?: CourseAudience;
 	level?: CourseLevel;
 	sort?: "created_at" | "enrolled_count";
 	order?: "asc" | "desc";

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\User;
 
+use App\Enums\CourseAudience;
 use App\Enums\CourseStatus;
 use App\Enums\LessonSectionType;
 use App\Enums\TagModelType;
@@ -33,6 +34,7 @@ class CourseController extends BaseApiController
         $perPage = min((int) $request->query('per_page', 9), 50);
         $search = $request->query('search');
         $category = $request->query('category');
+        $audience = $request->query('audience');
         $level = $request->query('level');
         $sort = in_array($request->query('sort'), ['created_at', 'enrolled_count'], true)
             ? $request->query('sort')
@@ -51,6 +53,10 @@ class CourseController extends BaseApiController
                 'lessons as total_video_seconds' => fn ($q) => $q->where('status', CourseStatus::PUBLISHED->value),
             ], 'video_duration')
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
+            ->when(
+                $audience && in_array($audience, CourseAudience::values(), true),
+                fn ($q) => $q->where('audience', $audience)
+            )
             ->when($level, fn ($q) => $q->where('level', $level))
             ->when($category, fn ($q) => $q->whereHas(
                 'tags',
@@ -107,7 +113,7 @@ class CourseController extends BaseApiController
 
         $lessons = $course->lessons()
             ->where('status', CourseStatus::PUBLISHED->value)
-            ->with('quiz')
+            ->with(['quiz' => fn ($q) => $q->where('is_published', true)])
             ->get();
 
         // Aggregate mà transformCourseCard cần (show() không đi qua withCount/withSum của index()).
@@ -145,7 +151,7 @@ class CourseController extends BaseApiController
 
         /** @var Lesson $lesson */
         $lesson = $lessons[$idx];
-        $lesson->load('quiz.questions');
+        $lesson->load(['quiz' => fn ($q) => $q->where('is_published', true)->with('questions')]);
         app(CourseEnrollmentService::class)->assertCanLearn($course, auth('sanctum')->user());
 
         $userId = auth('sanctum')->id();
@@ -646,7 +652,9 @@ class CourseController extends BaseApiController
         if ($track !== 'online' && $lesson->assignment_url) {
             $present[] = 'assignment';
         }
-        $hasQuiz = $lesson->relationLoaded('quiz') ? (bool) $lesson->quiz : $lesson->quiz()->exists();
+        $hasQuiz = $lesson->relationLoaded('quiz')
+            ? (bool) $lesson->quiz
+            : $lesson->quiz()->where('is_published', true)->exists();
         if ($hasQuiz) {
             $present[] = 'quiz';
         }

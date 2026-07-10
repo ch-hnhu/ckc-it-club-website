@@ -34,7 +34,7 @@ class QuizController extends BaseApiController
         $lesson = $this->resolveLesson($course, $lessonSlug);
         app(CourseEnrollmentService::class)->assertCanLearn($course, auth('sanctum')->user());
         $this->assertLessonContentOpen($lesson);
-        $quiz = $lesson->quiz()->with(['questions.options', 'questions.type'])->first();
+        $quiz = $lesson->quiz()->where('is_published', true)->with(['questions.options', 'questions.type'])->first();
 
         abort_if(! $quiz || $quiz->questions->isEmpty(), 404, 'Buổi học này chưa có quiz.');
 
@@ -88,7 +88,7 @@ class QuizController extends BaseApiController
         $lesson = $this->resolveLesson($course, $lessonSlug);
         app(CourseEnrollmentService::class)->assertCanLearn($course, $request->user());
         $this->assertLessonContentOpen($lesson);
-        $quiz = $lesson->quiz()->with(['questions.options', 'questions.type'])->first();
+        $quiz = $lesson->quiz()->where('is_published', true)->with(['questions.options', 'questions.type'])->first();
         abort_if(! $quiz || $quiz->questions->isEmpty(), 404, 'Buổi học này chưa có quiz.');
 
         $validated = $request->validate([
