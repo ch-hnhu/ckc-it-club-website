@@ -80,7 +80,11 @@ import {
 } from "@/pages/learning/course-meta";
 import courseService from "@/services/course.service";
 import type { ApiErrorResponse } from "@/types/api.types";
-import type { AdminCourseDetail, EnrollmentTrack } from "@/pages/learning/course-detail.types";
+import type {
+	AdminCourseDetail,
+	CourseLessonRow,
+	EnrollmentTrack,
+} from "@/pages/learning/course-detail.types";
 import AssignmentGradeDialog from "@/pages/learning/AssignmentGradeDialog";
 import EnrollStudentDialog from "@/pages/learning/EnrollStudentDialog";
 import LessonAttendanceDialog from "@/pages/learning/LessonAttendanceDialog";
@@ -106,6 +110,62 @@ function formatDateTime(value: string | null) {
 
 function statusBadge(status: CourseStatus) {
 	const { label, className } = COURSE_STATUS_MAP[status];
+	return (
+		<Badge variant='outline' className={cn("rounded-full px-3 py-1", className)}>
+			{label}
+		</Badge>
+	);
+}
+
+type SessionStatus = "upcoming" | "ongoing" | "ended";
+
+/**
+ * Trạng thái một buổi học offline theo thời gian diễn ra của chính buổi đó.
+ * Trả về null nếu buổi chưa xếp lịch (không có session_start).
+ */
+function getSessionStatus(lesson: CourseLessonRow, now = new Date()): SessionStatus | null {
+	if (!lesson.session_start) return null;
+	const start = new Date(lesson.session_start);
+	if (now < start) return "upcoming";
+	if (!lesson.session_end || now <= new Date(lesson.session_end)) return "ongoing";
+	return "ended";
+}
+
+const SESSION_STATUS_MAP: Record<
+	SessionStatus | "scheduled",
+	{ label: string; className: string }
+> = {
+	upcoming: {
+		label: "Sắp diễn ra",
+		className: "border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
+	},
+	scheduled: {
+		label: "Chưa diễn ra",
+		className: "border-slate-400/20 bg-slate-400/10 text-slate-600 hover:bg-slate-400/10",
+	},
+	ongoing: {
+		label: "Đang diễn ra",
+		className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
+	},
+	ended: {
+		label: "Đã kết thúc",
+		className: "border-red-500/20 bg-red-500/10 text-red-700 hover:bg-red-500/10",
+	},
+};
+
+/**
+ * Badge trạng thái cho ô "Trạng thái" của buổi học:
+ * - Buổi nháp → luôn hiện "Bản nháp".
+ * - Buổi đã xuất bản có lịch offline → trạng thái theo thời gian diễn ra; trong các buổi
+ *   sắp tới chỉ buổi gần nhất (`isNearestUpcoming`) hiện "Sắp diễn ra", còn lại "Chưa diễn ra".
+ * - Buổi đã xuất bản không có lịch (online) → giữ "Đã xuất bản".
+ */
+function lessonStatusBadge(lesson: CourseLessonRow, isNearestUpcoming: boolean) {
+	if (lesson.status === "draft") return statusBadge("draft");
+	const sessionStatus = getSessionStatus(lesson);
+	if (!sessionStatus) return statusBadge(lesson.status);
+	const key = sessionStatus === "upcoming" && !isNearestUpcoming ? "scheduled" : sessionStatus;
+	const { label, className } = SESSION_STATUS_MAP[key];
 	return (
 		<Badge variant='outline' className={cn("rounded-full px-3 py-1", className)}>
 			{label}
@@ -264,6 +324,22 @@ function CourseDetailPage() {
 		const now = new Date();
 		return (
 			offlineLessons.find((l) => !l.session_end || new Date(l.session_end) > now)?.id ?? null
+		);
+	}, [offlineLessons]);
+
+	/**
+	 * Buổi sắp diễn ra gần nhất — buổi đã xuất bản, chưa tới giờ, có session_start
+	 * sớm nhất. Chỉ buổi này hiện "Sắp diễn ra"; các buổi tương lai sau đó "Chưa diễn ra".
+	 */
+	const nearestUpcomingLessonId = useMemo(() => {
+		const now = new Date();
+		return (
+			offlineLessons
+				.filter((l) => l.status !== "draft" && new Date(l.session_start!) > now)
+				.sort(
+					(a, b) =>
+						new Date(a.session_start!).getTime() - new Date(b.session_start!).getTime(),
+				)[0]?.id ?? null
 		);
 	}, [offlineLessons]);
 
@@ -696,7 +772,10 @@ function CourseDetailPage() {
 														</TableCell>
 													)}
 													<TableCell>
-														{statusBadge(lesson.status)}
+														{lessonStatusBadge(
+														lesson,
+														lesson.id === nearestUpcomingLessonId,
+													)}
 													</TableCell>
 													<TableCell>
 														<DropdownMenu>
