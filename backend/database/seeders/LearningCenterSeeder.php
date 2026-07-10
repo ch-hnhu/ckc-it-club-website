@@ -112,7 +112,7 @@ class LearningCenterSeeder extends Seeder
             'slug' => $slug,
             'description' => 'Khoá học nhập môn lập trình web dành cho thành viên CLB IT CKC. '
                 .'Từ HTML, CSS đến JavaScript và Responsive Design — 6 buổi học thực hành, 1 buổi tổng kết.',
-            'thumbnail' => null,
+            'thumbnail' => 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1200&q=70',
             'level' => CourseLevel::BEGINNER->value,
             'status' => CourseStatus::PUBLISHED->value,
             'max_offline_slots' => null,
