@@ -4,31 +4,29 @@ import { Link, useLocation } from "react-router-dom";
 
 const FOOTER_NAV_LINKS = {
 	"Khám phá": [
-		{ label: "Tài nguyên", href: "#resources" },
-		{ label: "Blog", href: "#blog" },
-		{ label: "Khóa học", href: "#courses" },
-		{ label: "Sự kiện", href: "#events" },
+		{ label: "Tài nguyên", href: "/tai-nguyen" },
+		{ label: "Blog", href: "/blog" },
+		{ label: "Khóa học", href: "/khoa-hoc" },
+		{ label: "Sự kiện", href: "/su-kien" },
 	],
 	"Cộng đồng": [
-		{ label: "Leaderboard", href: "#leaderboard" },
-		{ label: "Mentor", href: "#mentors" },
-		{ label: "Ban Chủ Nhiệm", href: "#board" },
-		{ label: "Đóng góp", href: "#contribute" },
+		{ label: "Bảng xếp hạng", href: "/cong-dong/bang-xep-hang" },
+		{ label: "Mentor", href: "/#mentors" },
+		{ label: "Ban Chủ Nhiệm", href: "/#board" },
+		{ label: "Đóng góp tài nguyên", href: "/tai-nguyen/gui" },
 	],
 };
 
 const FOOTER_CLB_LINKS = [
-	{ label: "Về chúng tôi", href: "#about", internal: false },
-	{ label: "Tham gia CLB", href: "/ung-tuyen", internal: true },
-	{ label: "Liên hệ", href: "mailto:contact@ckcitclub.edu.vn", internal: false },
-	{ label: "Chính sách", href: "#", internal: false },
+	{ label: "Về chúng tôi", href: "/#about" },
+	{ label: "Tham gia CLB", href: "/ung-tuyen" },
+	{ label: "Liên hệ", href: "/lien-he" },
+	{ label: "Cộng đồng", href: "/cong-dong" },
 ];
 
 const SOCIALS = [
-	{ icon: Facebook, href: "#", label: "Facebook" },
-	{ icon: Github, href: "#", label: "GitHub" },
-	{ icon: Youtube, href: "#", label: "YouTube" },
-	{ icon: Instagram, href: "#", label: "Instagram" },
+	{ icon: Facebook, href: "https://www.facebook.com/itclub.caothang", label: "Facebook" },
+	{ icon: Youtube, href: "https://www.youtube.com/@clbtinhoccaothang7449", label: "YouTube" },
 	{ icon: Mail, href: "mailto:contact@ckcitclub.edu.vn", label: "Email" },
 ];
 
@@ -108,11 +106,11 @@ const Footer: React.FC = () => {
 							<ul className='space-y-3'>
 								{links.map((link) => (
 									<li key={link.label}>
-										<a
-											href={link.href}
+										<Link
+											to={link.href}
 											className='text-gray-400 hover:text-[#A3E635] text-sm transition-colors duration-200'>
 											{link.label}
-										</a>
+										</Link>
 									</li>
 								))}
 							</ul>
@@ -128,19 +126,11 @@ const Footer: React.FC = () => {
 						<ul className='space-y-3'>
 							{FOOTER_CLB_LINKS.map((link) => (
 								<li key={link.label}>
-									{link.internal ? (
-										<Link
-											to={link.href}
-											className='text-gray-400 hover:text-[#A3E635] text-sm transition-colors duration-200'>
-											{link.label}
-										</Link>
-									) : (
-										<a
-											href={link.href}
-											className='text-gray-400 hover:text-[#A3E635] text-sm transition-colors duration-200'>
-											{link.label}
-										</a>
-									)}
+									<Link
+										to={link.href}
+										className='text-gray-400 hover:text-[#A3E635] text-sm transition-colors duration-200'>
+										{link.label}
+									</Link>
 								</li>
 							))}
 						</ul>

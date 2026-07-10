@@ -11,7 +11,7 @@ const MainLayout: React.FC = () => {
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const [loadingUser, setLoadingUser] = useState(true);
 	const [avatarTs, setAvatarTs] = useState(0);
-	const { pathname } = useLocation();
+	const { pathname, hash } = useLocation();
 	const isCommunityPage = pathname.startsWith("/cong-dong") || pathname.startsWith("/community");
 	const isLectureVideoPage = /^\/khoa-hoc\/[^/]+\/[^/]+\/[^/]+\/?$/.test(pathname);
 
@@ -37,8 +37,15 @@ const MainLayout: React.FC = () => {
 	}, []);
 
 	useEffect(() => {
+		if (hash) {
+			// Chờ trang đích render xong rồi mới cuộn tới section (vd: /#about)
+			const timer = setTimeout(() => {
+				document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth" });
+			}, 100);
+			return () => clearTimeout(timer);
+		}
 		window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-	}, [pathname]);
+	}, [pathname, hash]);
 
 	return (
 		<div className='flex min-h-screen min-h-[100dvh] flex-col bg-white text-black'>
