@@ -27,11 +27,11 @@ class DepartmentUserSeeder extends Seeder
             1 => [0, 1],    // Ban Học thuật + Truyền thông
             2 => [1],       // Ban Truyền thông
             3 => [1],       // Ban Truyền thông
-            4 => [2],       // Ban Tình nguyện
-            5 => [2],       // Ban Tình nguyện
-            6 => [0, 2],    // Ban Học thuật + Tình nguyện
+            4 => [2],       // Ban Phong trào
+            5 => [2],       // Ban Phong trào
+            6 => [0, 2],    // Ban Học thuật + Phong trào
             7 => [1],       // Ban Truyền thông
-            8 => [2],       // Ban Tình nguyện
+            8 => [2],       // Ban Phong trào
             9 => [0],       // Ban Học thuật
         ];
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Code2, Crown, Hash, Home, MessageSquare, Monitor, Trophy, X } from "lucide-react";
+import { Hash, Home, MessageSquare, Trophy, X } from "lucide-react";
 import { Link, Outlet, useLocation, useOutletContext, useParams } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
 import { communityService, type CommunityChannel } from "@/services/community.service";
@@ -31,9 +31,6 @@ const PRIMARY_NAV = [
 	{ id: "home", label: "Trang chủ", icon: Home, to: "/cong-dong" },
 	{ id: "chat", label: "Phòng chat", icon: MessageSquare, to: "/cong-dong/chat" },
 	{ id: "leaderboard", label: "Bảng xếp hạng", icon: Trophy, to: "/cong-dong/bang-xep-hang" },
-	{ id: "showcase", label: "Showcase dự án", icon: Monitor, to: "/cong-dong" },
-	{ id: "challenge", label: "Thử thách tháng", icon: Crown, to: "/cong-dong" },
-	{ id: "code", label: "#30DaysOfCode", icon: Code2, to: "/cong-dong" },
 ];
 
 const STATIC_CHANNELS = [

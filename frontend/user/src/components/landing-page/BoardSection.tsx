@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { ExternalLink, Facebook, Github, Linkedin } from "lucide-react";
 import { clubService } from "@/services/club.service";
 import { buildProfileUrl } from "@/lib/utils";
 import type { BoardMember } from "@/types/club.types";
@@ -87,35 +88,40 @@ const BoardSection: React.FC = () => {
 					</p>
 				</div>
 
-				{/* Board grid */}
-				<div className='fade-in-up grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5'>
+				{/* Board cards — style giống thẻ Mentor, căn giữa */}
+				<div className='fade-in-up flex flex-wrap justify-center gap-5'>
 					{loading
 						? // Skeleton khi đang tải
-							Array.from({ length: 6 }).map((_, i) => (
+							Array.from({ length: 5 }).map((_, i) => (
 								<div
 									key={i}
-									className='neo-card neo-card-static flex flex-col items-center text-center p-5 gap-3 animate-pulse'
-									style={{ background: "white" }}>
-									<div className='w-16 h-16 rounded-full border-2 border-black bg-gray-200' />
-									<div className='h-4 w-20 rounded bg-gray-200' />
-									<div className='h-3 w-16 rounded bg-gray-100' />
+									className='neo-card neo-card-static bg-white flex flex-col items-center text-center p-6 gap-3 w-[calc(50%-0.625rem)] sm:w-[224px] animate-pulse'>
+									<div className='w-20 h-20 rounded-full border-2 border-black bg-gray-200' />
+									<div className='h-6 w-28 rounded-full bg-gray-100' />
+									<div className='h-5 w-24 rounded bg-gray-200' />
+									<div className='mt-2 flex gap-2'>
+										<div className='h-8 w-8 rounded-lg border-2 border-black bg-gray-100' />
+										<div className='h-8 w-8 rounded-lg border-2 border-black bg-gray-100' />
+										<div className='h-8 w-8 rounded-lg border-2 border-black bg-gray-100' />
+									</div>
 								</div>
 							))
 						: members.map((member, i) => {
 								const bg = CARD_BG[i % CARD_BG.length];
 								const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
 									member.full_name,
-								)}&background=A3E635&color=111&bold=true&size=64`;
+								)}&background=A3E635&color=111&bold=true&size=80`;
 								return (
-									<Link
+									<div
 										key={`${member.role_name}-${member.username ?? i}`}
-										to={buildProfileUrl(member.username, null)}
-										className='neo-card flex flex-col items-center text-center p-5 gap-3 no-underline'
-										style={{ background: bg }}>
+										className='neo-card neo-card-static bg-white flex flex-col items-center text-center p-6 gap-3 w-[calc(50%-0.625rem)] sm:w-[224px]'>
+										<Link
+											to={buildProfileUrl(member.username, null)}
+											className='flex flex-col items-center gap-3 no-underline'>
 										{/* Avatar */}
 										<div
-											className='w-16 h-16 rounded-full overflow-hidden border-2 border-black'
-											style={{ boxShadow: "2px 2px 0px #111" }}>
+											className='w-20 h-20 rounded-full overflow-hidden border-2 border-black'
+											style={{ boxShadow: "3px 3px 0px #111" }}>
 											<img
 												src={member.avatar || fallbackAvatar}
 												alt={member.full_name}
@@ -127,18 +133,52 @@ const BoardSection: React.FC = () => {
 											/>
 										</div>
 
-										{/* Info */}
-										<div>
-											<h4
-												className='font-bold text-black text-sm leading-tight'
-												style={{ fontFamily: "var(--font-heading)" }}>
-												{member.full_name}
-											</h4>
-											<p className='text-xs text-gray-600 mt-1 font-medium'>
+										{/* Tag vai trò — vùng cao cố định để tên các thẻ thẳng hàng */}
+										<div className='flex min-h-10 items-center justify-center'>
+											<span
+												className='neo-tag text-xs text-balance leading-tight'
+												style={{ background: bg }}>
 												{member.role_label}
-											</p>
+											</span>
 										</div>
-									</Link>
+
+										{/* Tên */}
+										<h3
+											className='text-lg font-bold text-black leading-tight text-balance'
+											style={{ fontFamily: "var(--font-heading)" }}>
+											{member.full_name}
+										</h3>
+										</Link>
+
+										{/* Social */}
+										<div className='mt-auto flex items-center gap-2 pt-1'>
+											<a
+												href='#'
+												aria-label={`GitHub của ${member.full_name}`}
+												className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black transition-colors hover:bg-gray-100'>
+												<Github className='h-4 w-4' />
+											</a>
+											<a
+												href='#'
+												aria-label={`Facebook của ${member.full_name}`}
+												className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black transition-colors hover:bg-gray-100'>
+												<Facebook className='h-4 w-4' />
+											</a>
+											<a
+												href='#'
+												aria-label={`LinkedIn của ${member.full_name}`}
+												className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black transition-colors hover:bg-gray-100'>
+												<Linkedin className='h-4 w-4' />
+											</a>
+										</div>
+
+										{/* CTA Xem hồ sơ */}
+										<Link
+											to={buildProfileUrl(member.username, null)}
+											className='neo-btn neo-btn-primary text-sm px-4 py-2 no-underline'>
+											Xem hồ sơ <ExternalLink className='h-3.5 w-3.5' />
+										</Link>
+									</div>
 								);
 							})}
 				</div>

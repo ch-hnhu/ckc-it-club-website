@@ -1,51 +1,34 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { gamificationService } from "@/services/gamification.service";
+import { buildAvatar, buildProfileUrl, getHandle } from "@/lib/utils";
+import type { LeaderboardEntry } from "@/types/gamification.types";
 
-const TOP_USERS = [
-	{
-		rank: 1,
-		name: "nguyenvanminh",
-		displayName: "Nguyễn Văn Minh",
-		score: 4850,
-		medal: "🥇",
-		bg: "white",
-	},
-	{
-		rank: 2,
-		name: "tranthibich",
-		displayName: "Trần Thị Bích",
-		score: 4320,
-		medal: "🥈",
-		bg: "white",
-	},
-	{
-		rank: 3,
-		name: "phamquocan",
-		displayName: "Phạm Quốc An",
-		score: 3975,
-		medal: "🥉",
-		bg: "white",
-	},
-	{
-		rank: 4,
-		name: "lehoangthu",
-		displayName: "Lê Hoàng Thu",
-		score: 3540,
-		medal: "4",
-		bg: "white",
-	},
-	{
-		rank: 5,
-		name: "vuminhtri",
-		displayName: "Vũ Minh Trí",
-		score: 3210,
-		medal: "5",
-		bg: "white",
-	},
-];
+const MEDALS = ["🥇", "🥈", "🥉"];
 
 const LeaderboardPreview: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
+	const [users, setUsers] = useState<LeaderboardEntry[]>([]);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		let cancelled = false;
+		gamificationService
+			.getWeeklyLeaderboard(1, 5)
+			.then((res) => {
+				if (!cancelled) setUsers(res.data ?? []);
+			})
+			.catch(() => {
+				if (!cancelled) setUsers([]);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		const el = sectionRef.current;
@@ -58,7 +41,7 @@ const LeaderboardPreview: React.FC = () => {
 		);
 		items.forEach((item) => observer.observe(item));
 		return () => observer.disconnect();
-	}, []);
+	}, [loading]);
 
 	return (
 		<section
@@ -86,74 +69,95 @@ const LeaderboardPreview: React.FC = () => {
 					</div>
 
 					{/* Leaderboard table */}
-					<div
-						className='fade-in-up rounded-2xl overflow-hidden border-2 border-black'
-						style={{ boxShadow: "var(--neo-shadow)" }}>
-						{TOP_USERS.map((user) => (
-							<div
-								key={user.name}
-								className='flex items-center gap-4 px-6 py-4 border-b-2 border-black last:border-b-0 transition-all cursor-pointer'
-								style={{
-									background: user.bg,
-								}}>
-								{/* Rank */}
-								<div className='w-10 text-center'>
-									{user.rank <= 3 ? (
-										<span className='text-2xl'>{user.medal}</span>
-									) : (
-										<span
-											className='text-lg font-extrabold text-gray-400'
-											style={{ fontFamily: "var(--font-heading)" }}>
-											#{user.rank}
-										</span>
-									)}
+					{loading ? (
+						<div
+							className='fade-in-up rounded-2xl overflow-hidden border-2 border-black'
+							style={{ boxShadow: "var(--neo-shadow)" }}>
+							{Array.from({ length: 5 }).map((_, i) => (
+								<div
+									key={i}
+									className='flex items-center gap-4 px-6 py-4 border-b-2 border-black last:border-b-0 bg-white'>
+									<div className='w-10 h-6 animate-pulse rounded bg-gray-200' />
+									<div className='w-10 h-10 animate-pulse rounded-full bg-gray-200' />
+									<div className='flex-grow h-4 animate-pulse rounded bg-gray-200' />
+									<div className='w-12 h-4 animate-pulse rounded bg-gray-200' />
 								</div>
+							))}
+						</div>
+					) : users.length === 0 ? (
+						<div
+							className='fade-in-up rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'
+							style={{ boxShadow: "var(--neo-shadow)" }}>
+							<p className='text-sm text-gray-500'>Chưa có dữ liệu xếp hạng tuần này.</p>
+						</div>
+					) : (
+						<div
+							className='fade-in-up rounded-2xl overflow-hidden border-2 border-black'
+							style={{ boxShadow: "var(--neo-shadow)" }}>
+							{users.map((user) => {
+								const handle = getHandle(user.username, user.email ?? "");
+								return (
+									<Link
+										key={user.user_id}
+										to={buildProfileUrl(user.username, user.email)}
+										className='flex items-center gap-4 px-6 py-4 border-b-2 border-black last:border-b-0 bg-white transition-all cursor-pointer hover:bg-gray-50 no-underline'>
+										{/* Rank */}
+										<div className='w-10 text-center'>
+											{user.rank <= 3 ? (
+												<span className='text-2xl'>{MEDALS[user.rank - 1]}</span>
+											) : (
+												<span
+													className='text-lg font-extrabold text-gray-400'
+													style={{ fontFamily: "var(--font-heading)" }}>
+													#{user.rank}
+												</span>
+											)}
+										</div>
 
-								{/* Avatar */}
-								<img
-									src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${user.name}&backgroundColor=ffffff`}
-									alt={user.displayName}
-									className='w-10 h-10 rounded-full border-2 border-black'
-									onError={(e) => {
-										(e.target as HTMLImageElement).src =
-											`https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=A3E635&color=111&bold=true&size=40`;
-									}}
-								/>
+										{/* Avatar */}
+										<img
+											src={buildAvatar(user.full_name, user.avatar)}
+											alt={user.full_name}
+											referrerPolicy='no-referrer'
+											className='w-10 h-10 rounded-full border-2 border-black object-cover'
+											onError={(e) => {
+												(e.target as HTMLImageElement).src = buildAvatar(user.full_name, null);
+											}}
+										/>
 
-								{/* Name */}
-								<div className='flex-grow'>
-									<span
-										className='font-bold text-black text-sm'
-										style={{ fontFamily: "var(--font-heading)" }}>
-										{user.displayName}
-									</span>
-									<span className='text-xs text-gray-400 block'>
-										@{user.name}
-									</span>
-								</div>
+										{/* Name */}
+										<div className='flex-grow min-w-0'>
+											<span
+												className='font-bold text-black text-sm block truncate'
+												style={{ fontFamily: "var(--font-heading)" }}>
+												{user.full_name}
+											</span>
+											<span className='text-xs text-gray-400 block truncate'>{handle}</span>
+										</div>
 
-								{/* Score */}
-								<div className='text-right'>
-									<span
-										className='font-extrabold text-lg'
-										style={{
-											fontFamily: "var(--font-heading)",
-											color:
-												user.rank <= 3 ? "#111" : "var(--color-text-muted)",
-										}}>
-										{user.score.toLocaleString()}
-									</span>
-									<span className='text-xs text-gray-400 block'>XP</span>
-								</div>
-							</div>
-						))}
-					</div>
+										{/* Score */}
+										<div className='text-right'>
+											<span
+												className='font-extrabold text-lg'
+												style={{
+													fontFamily: "var(--font-heading)",
+													color: user.rank <= 3 ? "#111" : "var(--color-text-muted)",
+												}}>
+												{user.points.toLocaleString()}
+											</span>
+											<span className='text-xs text-gray-400 block'>XP</span>
+										</div>
+									</Link>
+								);
+							})}
+						</div>
+					)}
 
 					{/* CTA */}
 					<div className='text-center mt-8 fade-in-up'>
-						<a href='#leaderboard' className='neo-btn neo-btn-primary px-8 py-3'>
+						<Link to='/cong-dong/bang-xep-hang' className='neo-btn neo-btn-primary px-8 py-3'>
 							Xem bảng đầy đủ <ArrowRight className='w-5 h-5' />
-						</a>
+						</Link>
 					</div>
 				</div>
 			</div>

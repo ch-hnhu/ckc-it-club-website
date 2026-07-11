@@ -51,7 +51,7 @@ const router = createBrowserRouter([
 				element: <ContactPage />,
 			},
 			{
-				path: "gioi-thieu",
+				path: "ve-chung-toi",
 				element: <AboutPage />,
 			},
 			{
