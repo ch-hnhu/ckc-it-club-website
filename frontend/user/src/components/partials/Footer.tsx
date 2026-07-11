@@ -1,5 +1,5 @@
 import React from "react";
-import { Facebook, Github, Youtube, Instagram, Mail, MapPin, Code2 } from "lucide-react";
+import { Facebook, Youtube, Mail, MapPin, Code2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const FOOTER_NAV_LINKS = {
