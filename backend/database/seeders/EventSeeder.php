@@ -31,6 +31,7 @@ class EventSeeder extends Seeder
             // ── Sắp diễn ra ──────────────────────────────────────────────
             [
                 'title'         => 'Workshop: Xây dựng REST API với Laravel',
+                'thumbnail'     => 'https://images.unsplash.com/photo-1587620962725-abab7fe55159?auto=format&fit=crop&w=1200&q=70',
                 'description'   => 'Buổi workshop hướng dẫn thực hành xây dựng REST API hoàn chỉnh với Laravel, Sanctum và best practices khi thiết kế endpoint.',
                 'content'       => <<<'MD'
                 ## Giới thiệu
@@ -71,6 +72,7 @@ class EventSeeder extends Seeder
             ],
             [
                 'title'         => 'Cuộc thi Hackathon CKC 2026',
+                'thumbnail'     => 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=70',
                 'description'   => 'Sân chơi lập trình lớn nhất năm dành cho sinh viên đam mê công nghệ với chủ đề "Công nghệ vì cộng đồng".',
                 'content'       => <<<'MD'
                 ## Thể lệ
@@ -109,6 +111,7 @@ class EventSeeder extends Seeder
             ],
             [
                 'title'         => 'Talkshow: Định hướng nghề nghiệp ngành IT',
+                'thumbnail'     => 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=1200&q=70',
                 'description'   => 'Trò chuyện cùng các anh chị cựu sinh viên đang làm việc tại các công ty công nghệ về kinh nghiệm xin việc và phát triển sự nghiệp.',
                 'content'       => <<<'MD'
                 ## Diễn giả
@@ -142,6 +145,7 @@ class EventSeeder extends Seeder
             // ── Đang diễn ra ──────────────────────────────────────────────
             [
                 'title'         => 'Buổi sinh hoạt CLB tháng 6',
+                'thumbnail'     => 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=70',
                 'description'   => 'Tổng kết hoạt động tháng và giao lưu giữa các thành viên CLB IT CKC.',
                 'content'       => <<<'MD'
                 ## Nội dung buổi sinh hoạt
@@ -165,6 +169,7 @@ class EventSeeder extends Seeder
             // ── Đã kết thúc (có điểm danh + đánh giá) ───────────────────────
             [
                 'title'         => 'Workshop: Giới thiệu Git & GitHub cho người mới',
+                'thumbnail'     => 'https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=1200&q=70',
                 'description'   => 'Buổi workshop nhập môn Git và GitHub dành cho tân sinh viên, hướng dẫn quy trình làm việc nhóm cơ bản.',
                 'content'       => <<<'MD'
                 ## Nội dung
@@ -200,6 +205,7 @@ class EventSeeder extends Seeder
             ],
             [
                 'title'         => 'Chiến dịch Tình nguyện mùa hè xanh 2026',
+                'thumbnail'     => 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=1200&q=70',
                 'description'   => 'Hoạt động tình nguyện hỗ trợ cộng đồng, dạy tin học miễn phí cho trẻ em tại trung tâm bảo trợ xã hội.',
                 'content'       => <<<'MD'
                 ## Hoạt động
@@ -235,6 +241,7 @@ class EventSeeder extends Seeder
             // ── Bản nháp & đã hủy ────────────────────────────────────────────
             [
                 'title'         => 'Cuộc thi thiết kế UI/UX CKC Design Challenge',
+                'thumbnail'     => 'https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1200&q=70',
                 'description'   => 'Cuộc thi thiết kế giao diện ứng dụng dành cho sinh viên yêu thích UI/UX. Đang trong giai đoạn lên kế hoạch.',
                 'content'       => <<<'MD'
                 ## Ý tưởng (bản nháp)
@@ -260,6 +267,7 @@ class EventSeeder extends Seeder
             ],
             [
                 'title'         => 'Seminar: Blockchain và ứng dụng thực tế',
+                'thumbnail'     => 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=70',
                 'description'   => 'Buổi seminar về công nghệ Blockchain đã bị hủy do diễn giả có việc đột xuất.',
                 'content'       => <<<'MD'
                 ## Nội dung dự kiến
@@ -293,7 +301,7 @@ class EventSeeder extends Seeder
                 'slug'         => Event::generateUniqueSlug($data['title']),
                 'description'  => $data['description'],
                 'content'      => $data['content'],
-                'thumbnail'    => null,
+                'thumbnail'    => $data['thumbnail'] ?? null,
                 'start_at'     => now()->modify($data['start_offset']),
                 'end_at'       => now()->modify($data['end_offset']),
                 'location'     => $data['location'],
@@ -361,11 +369,22 @@ class EventSeeder extends Seeder
                 null,
             ];
 
+            $galleryImages = [
+                'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=70',
+                'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=70',
+                'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=70',
+                'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=70',
+                'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=70',
+                'https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1200&q=70',
+                'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=70',
+                'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=70',
+            ];
+
             for ($i = 0; $i < $galleryCount; $i++) {
                 EventGalleryItem::create([
                     'event_id'      => $event->id,
                     'uploaded_by'   => $admin->id,
-                    'image_url'     => "https://picsum.photos/seed/event-{$event->id}-{$i}/800/600",
+                    'image_url'     => $galleryImages[$i % count($galleryImages)],
                     'caption'       => $galleryCaptions[$i % count($galleryCaptions)],
                     'display_order' => $i,
                 ]);

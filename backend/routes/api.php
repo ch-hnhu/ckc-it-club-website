@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\V1\User\ResourceController as UserResourceControlle
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
+use App\Http\Controllers\Api\V1\User\ClubBoardController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\CourseController as UserCourseController;
 use App\Http\Controllers\Api\V1\User\QuizController as UserQuizController;
@@ -98,6 +99,9 @@ Route::prefix('v1')->group(function () {
             'data' => ['value' => $activeValue?->value, 'type' => $info->type],
         ]);
     });
+    // Ban Chủ Nhiệm — danh sách lãnh đạo CLB cho landing page (public)
+    Route::get('/club-board', [ClubBoardController::class, 'index']);
+
     Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
     Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
     Route::get('/users/{username}/following', [FollowController::class, 'following']);

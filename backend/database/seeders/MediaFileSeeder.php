@@ -41,7 +41,7 @@ class MediaFileSeeder extends Seeder
         if (isset($posts[1])) {
             $rows[] = [
                 'owner_id'    => $admin->id,
-                'url'         => 'https://picsum.photos/seed/workshop-ml/1200/630',
+                'url'         => 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=70',
                 'file_type'   => 'image',
                 'size_kb'     => 420,
                 'target_type' => 'post',
@@ -55,7 +55,7 @@ class MediaFileSeeder extends Seeder
         if (isset($posts[4])) {
             $rows[] = [
                 'owner_id'    => $students[2] ?? $students[0],
-                'url'         => 'https://picsum.photos/seed/internship/1200/800',
+                'url'         => 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1200&q=70',
                 'file_type'   => 'image',
                 'size_kb'     => 654,
                 'target_type' => 'post',
@@ -69,7 +69,7 @@ class MediaFileSeeder extends Seeder
         if (isset($posts[5])) {
             $rows[] = [
                 'owner_id'    => $students[3] ?? $students[0],
-                'url'         => 'https://picsum.photos/seed/docker-setup/1280/720',
+                'url'         => 'https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=1280&q=70',
                 'file_type'   => 'image',
                 'size_kb'     => 298,
                 'target_type' => 'post',
@@ -98,7 +98,7 @@ class MediaFileSeeder extends Seeder
         if (isset($blogs[0])) {
             $rows[] = [
                 'owner_id'    => $admin->id,
-                'url'         => 'https://picsum.photos/seed/clb-intro/1600/900',
+                'url'         => 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1600&q=70',
                 'file_type'   => 'image',
                 'size_kb'     => 1024,
                 'target_type' => 'blog',
@@ -112,7 +112,7 @@ class MediaFileSeeder extends Seeder
         if (isset($blogs[1])) {
             $rows[] = [
                 'owner_id'    => $students[0] ?? $admin->id,
-                'url'         => 'https://picsum.photos/seed/web-roadmap/1600/900',
+                'url'         => 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1600&q=70',
                 'file_type'   => 'image',
                 'size_kb'     => 876,
                 'target_type' => 'blog',
@@ -126,7 +126,7 @@ class MediaFileSeeder extends Seeder
         if (isset($blogs[2])) {
             $rows[] = [
                 'owner_id'    => $students[1] ?? $admin->id,
-                'url'         => 'https://picsum.photos/seed/machine-learning/1600/900',
+                'url'         => 'https://images.unsplash.com/photo-1507146153580-69a1fe6d8aa1?auto=format&fit=crop&w=1600&q=70',
                 'file_type'   => 'image',
                 'size_kb'     => 732,
                 'target_type' => 'blog',
@@ -140,7 +140,7 @@ class MediaFileSeeder extends Seeder
         if (isset($blogs[3])) {
             $rows[] = [
                 'owner_id'    => $admin->id,
-                'url'         => 'https://picsum.photos/seed/hackathon-2025/1600/900',
+                'url'         => 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1600&q=70',
                 'file_type'   => 'image',
                 'size_kb'     => 1152,
                 'target_type' => 'blog',
@@ -165,7 +165,7 @@ class MediaFileSeeder extends Seeder
         if (isset($blogs[4])) {
             $rows[] = [
                 'owner_id'    => $students[2] ?? $admin->id,
-                'url'         => 'https://picsum.photos/seed/web-security/1600/900',
+                'url'         => 'https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?auto=format&fit=crop&w=1600&q=70',
                 'file_type'   => 'image',
                 'size_kb'     => 945,
                 'target_type' => 'blog',

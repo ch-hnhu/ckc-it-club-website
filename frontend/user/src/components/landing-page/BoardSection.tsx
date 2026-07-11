@@ -1,47 +1,41 @@
-import React, { useEffect, useRef } from "react";
-import { Facebook, Github, Linkedin } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { clubService } from "@/services/club.service";
+import { buildProfileUrl } from "@/lib/utils";
+import type { BoardMember } from "@/types/club.types";
 
-const BOARD_MEMBERS = [
-	{
-		name: "Trần Quốc Bảo",
-		role: "Chủ Nhiệm",
-		bg: "var(--color-pastel-green)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=board1&backgroundColor=#ffffff",
-	},
-	{
-		name: "Nguyễn Thị Mai",
-		role: "Phó Chủ Nhiệm",
-		bg: "var(--color-pastel-blue)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=board2&backgroundColor=#ffffff",
-	},
-	{
-		name: "Lê Văn Hùng",
-		role: "Trưởng Ban Tech",
-		bg: "var(--color-pastel-yellow)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=board3&backgroundColor=#ffffff",
-	},
-	{
-		name: "Phạm Thu Hà",
-		role: "Trưởng Ban Design",
-		bg: "var(--color-pastel-pink)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=board4&backgroundColor=#ffffff",
-	},
-	{
-		name: "Đỗ Minh Tuấn",
-		role: "Trưởng Ban Truyền Thông",
-		bg: "var(--color-pastel-purple)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=board5&backgroundColor=#ffffff",
-	},
-	{
-		name: "Võ Kim Ngân",
-		role: "Trưởng Ban Sự Kiện",
-		bg: "var(--color-pastel-orange)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=board6&backgroundColor=#ffffff",
-	},
+// Nền pastel gán luân phiên cho từng thẻ (DB không lưu màu)
+const CARD_BG = [
+	"var(--color-pastel-green)",
+	"var(--color-pastel-blue)",
+	"var(--color-pastel-yellow)",
+	"var(--color-pastel-pink)",
+	"var(--color-pastel-purple)",
+	"var(--color-pastel-orange)",
 ];
 
 const BoardSection: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
+	const [members, setMembers] = useState<BoardMember[]>([]);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		let cancelled = false;
+		clubService
+			.getBoard()
+			.then((res) => {
+				if (!cancelled) setMembers(res.data ?? []);
+			})
+			.catch(() => {
+				if (!cancelled) setMembers([]);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		const el = sectionRef.current;
@@ -54,7 +48,12 @@ const BoardSection: React.FC = () => {
 		);
 		items.forEach((item) => observer.observe(item));
 		return () => observer.disconnect();
-	}, []);
+	}, [members, loading]);
+
+	// Ẩn hẳn section nếu tải xong mà không có dữ liệu (tránh khối trống)
+	if (!loading && members.length === 0) {
+		return null;
+	}
 
 	return (
 		<section
@@ -90,58 +89,58 @@ const BoardSection: React.FC = () => {
 
 				{/* Board grid */}
 				<div className='fade-in-up grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5'>
-					{BOARD_MEMBERS.map((member) => (
-						<div
-							key={member.name}
-							className='neo-card flex flex-col items-center text-center p-5 gap-3'
-							style={{ background: member.bg }}>
-							{/* Avatar */}
-							<div
-								className='w-16 h-16 rounded-full overflow-hidden border-2 border-black'
-								style={{ boxShadow: "2px 2px 0px #111" }}>
-								<img
-									src={member.avatar}
-									alt={member.name}
-									className='w-full h-full object-cover'
-									onError={(e) => {
-										(e.target as HTMLImageElement).src =
-											`https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=A3E635&color=111&bold=true&size=64`;
-									}}
-								/>
-							</div>
+					{loading
+						? // Skeleton khi đang tải
+							Array.from({ length: 6 }).map((_, i) => (
+								<div
+									key={i}
+									className='neo-card neo-card-static flex flex-col items-center text-center p-5 gap-3 animate-pulse'
+									style={{ background: "white" }}>
+									<div className='w-16 h-16 rounded-full border-2 border-black bg-gray-200' />
+									<div className='h-4 w-20 rounded bg-gray-200' />
+									<div className='h-3 w-16 rounded bg-gray-100' />
+								</div>
+							))
+						: members.map((member, i) => {
+								const bg = CARD_BG[i % CARD_BG.length];
+								const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+									member.full_name,
+								)}&background=A3E635&color=111&bold=true&size=64`;
+								return (
+									<Link
+										key={`${member.role_name}-${member.username ?? i}`}
+										to={buildProfileUrl(member.username, null)}
+										className='neo-card flex flex-col items-center text-center p-5 gap-3 no-underline'
+										style={{ background: bg }}>
+										{/* Avatar */}
+										<div
+											className='w-16 h-16 rounded-full overflow-hidden border-2 border-black'
+											style={{ boxShadow: "2px 2px 0px #111" }}>
+											<img
+												src={member.avatar || fallbackAvatar}
+												alt={member.full_name}
+												referrerPolicy='no-referrer'
+												className='w-full h-full object-cover'
+												onError={(e) => {
+													(e.target as HTMLImageElement).src = fallbackAvatar;
+												}}
+											/>
+										</div>
 
-							{/* Info */}
-							<div>
-								<h4
-									className='font-bold text-black text-sm leading-tight'
-									style={{ fontFamily: "var(--font-heading)" }}>
-									{member.name}
-								</h4>
-								<p className='text-xs text-gray-600 mt-1 font-medium'>
-									{member.role}
-								</p>
-							</div>
-
-							{/* Social icons */}
-							<div className='flex gap-2 mt-auto'>
-								<a
-									href='#'
-									className='p-1.5 rounded-md border border-black/30 hover:border-black hover:bg-white/50 transition-colors'>
-									<Facebook className='w-3 h-3 text-gray-600' />
-								</a>
-								<a
-									href='#'
-									className='p-1.5 rounded-md border border-black/30 hover:border-black hover:bg-white/50 transition-colors'>
-									<Github className='w-3 h-3 text-gray-600' />
-								</a>
-								<a
-									href='#'
-									className='p-1.5 rounded-md border border-black/30 hover:border-black hover:bg-white/50 transition-colors'>
-									<Linkedin className='w-3 h-3 text-gray-600' />
-								</a>
-							</div>
-						</div>
-					))}
+										{/* Info */}
+										<div>
+											<h4
+												className='font-bold text-black text-sm leading-tight'
+												style={{ fontFamily: "var(--font-heading)" }}>
+												{member.full_name}
+											</h4>
+											<p className='text-xs text-gray-600 mt-1 font-medium'>
+												{member.role_label}
+											</p>
+										</div>
+									</Link>
+								);
+							})}
 				</div>
 			</div>
 		</section>
