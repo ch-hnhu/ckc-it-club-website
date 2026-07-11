@@ -42,6 +42,15 @@ class DatabaseSeeder extends Seeder
             LearningCenterSeeder::class,
             CertificateTemplateSeeder::class,
             CourseCertificateTestSeeder::class,
+
+            // ── Dữ liệu demo bổ sung (hồ sơ, gamification, ProjectHub, kiểm duyệt AI) ──
+            UserSkillSeeder::class,
+            UserFollowSeeder::class,
+            BookmarkSeeder::class,
+            CourseMentorSeeder::class,
+            PointTransactionSeeder::class,
+            ProjectHubSeeder::class,
+            ModerationDemoSeeder::class,
         ]);
     }
 }
