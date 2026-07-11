@@ -28,10 +28,10 @@ class UserSeeder extends Seeder
             [
                 'email'     => 'president@gmail.com',
                 'username'  => 'president',
-                'full_name' => 'Nguyễn Thanh Phong',
+                'full_name' => 'Đinh Nguyễn Bá Tài',
                 'role'      => RolesEnum::PRESIDENT,
                 'gender'    => 'male',
-                'avatar'    => 'https://randomuser.me/api/portraits/men/32.jpg',
+                'avatar'    => 'storage/app/public/avatars/president.jpg',
                 'cover_image' => 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=70',
                 'bio'       => 'Chủ nhiệm CLB IT CKC. Đam mê xây dựng cộng đồng lập trình sinh viên Cao Thắng. 🚀',
             ],
