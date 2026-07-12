@@ -582,6 +582,7 @@ Route::prefix('v1')->group(function () {
             Route::get('course-categories', [AdminCourseCategoryController::class, 'index']);
             Route::get('courses/{course}', [AdminCourseController::class, 'show']);
             Route::get('courses/{course}/certificates/export-physical', [AdminCourseController::class, 'exportPhysicalCertificates']);
+            Route::get('courses/{course}/certificates/print-physical', [AdminCourseController::class, 'printPhysicalCertificates']);
             Route::get('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'show']);
         });
         Route::middleware('permission:courses.manage')->group(function () {

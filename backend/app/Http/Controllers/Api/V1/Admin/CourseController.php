@@ -20,7 +20,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use setasign\Fpdi\Fpdi;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response;
 use ZipArchive;
 
 class CourseController extends BaseApiController
@@ -450,6 +452,53 @@ class CourseController extends BaseApiController
         return response()
             ->download($tmpPath, 'chung-chi-ban-in-'.$course->slug.'.zip', ['Content-Type' => 'application/zip'])
             ->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Gộp toàn bộ chứng chỉ bản in (has_physical=true, còn hiệu lực) của khoá học thành
+     * MỘT file PDF nhiều trang, trả về inline để trình duyệt mở hộp thoại in như bình thường
+     * (mỗi chứng chỉ là một trang). Cert đã thu hồi bị loại trừ.
+     */
+    public function printPhysicalCertificates(Course $course): Response|JsonResponse
+    {
+        $certificates = $course->certificates()
+            ->where('has_physical', true)
+            ->whereNull('revoked_at')
+            ->whereNotNull('cert_url')
+            ->orderBy('cert_code')
+            ->get();
+
+        abort_if($certificates->isEmpty(), 422, 'Khoá học chưa có chứng chỉ bản in nào để in.');
+
+        $disk = Storage::disk('public');
+        $pdf = new Fpdi();
+        $added = 0;
+        foreach ($certificates as $cert) {
+            $storagePath = $this->storagePathFromUrl($cert->cert_url);
+            if (! $storagePath || ! $disk->exists($storagePath)) {
+                continue;
+            }
+            try {
+                $pageCount = $pdf->setSourceFile($disk->path($storagePath));
+                for ($n = 1; $n <= $pageCount; $n++) {
+                    $tpl = $pdf->importPage($n);
+                    $size = $pdf->getTemplateSize($tpl);
+                    $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                    $pdf->useTemplate($tpl);
+                    $added++;
+                }
+            } catch (\Throwable $e) {
+                // Bỏ qua file PDF không đọc được (hỏng/định dạng lạ), vẫn gộp các file còn lại.
+                continue;
+            }
+        }
+
+        abort_if($added === 0, 422, 'Không tìm thấy file PDF nào của các chứng chỉ bản in.');
+
+        return response($pdf->Output('S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="chung-chi-ban-in-'.$course->slug.'.pdf"',
+        ]);
     }
 
     /**

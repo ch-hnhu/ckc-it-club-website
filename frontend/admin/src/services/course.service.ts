@@ -329,6 +329,16 @@ const courseService = {
 
 		return response.data;
 	},
+
+	/** Lấy file PDF gộp toàn bộ chứng chỉ bản in (mỗi cert một trang) để in hàng loạt. */
+	async printPhysicalCertificates(courseSlug: string): Promise<Blob> {
+		const response = await apiClient.get<Blob>(
+			`/courses/${courseSlug}/certificates/print-physical`,
+			{ responseType: "blob" },
+		);
+
+		return response.data;
+	},
 };
 
 export default courseService;
