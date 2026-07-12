@@ -203,10 +203,7 @@ function AboutPageEditor() {
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 
-	const breadcrumb = useMemo(
-		() => getBreadcrumbsFromNavigation("/about-page", [{ title: "Trang Về chúng tôi" }]),
-		[],
-	);
+	const breadcrumb = useMemo(() => getBreadcrumbsFromNavigation("/about-page"), []);
 	useBreadcrumb(breadcrumb);
 
 	useEffect(() => {
@@ -257,8 +254,8 @@ function AboutPageEditor() {
 		content;
 
 	return (
-		<div className='mx-auto max-w-4xl space-y-6 pb-24'>
-			<div className='sticky top-0 z-10 -mx-2 flex items-center justify-between border-b bg-background/95 px-2 py-3 backdrop-blur'>
+		<div className='flex flex-col gap-6 p-4 pb-24 md:p-6 lg:p-8'>
+			<div className='sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 py-3 backdrop-blur'>
 				<div>
 					<h1 className='text-xl font-bold'>Trang Về chúng tôi</h1>
 					<p className='text-sm text-muted-foreground'>
