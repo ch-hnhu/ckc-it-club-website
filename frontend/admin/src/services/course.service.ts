@@ -1,3 +1,4 @@
+import apiClient from "@/config/axios.config";
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type { AdminCourse, CourseListParams } from "@/pages/learning/course.types";
@@ -317,6 +318,16 @@ const courseService = {
 		certificateId: number,
 	): Promise<ApiResponse<CourseCertificateRow>> {
 		return api.post(`/courses/${courseSlug}/certificates/${certificateId}/reissue`);
+	},
+
+	/** Tải file ZIP gom toàn bộ chứng chỉ bản in (has_physical, còn hiệu lực) của khoá học. */
+	async exportPhysicalCertificates(courseSlug: string): Promise<Blob> {
+		const response = await apiClient.get<Blob>(
+			`/courses/${courseSlug}/certificates/export-physical`,
+			{ responseType: "blob" },
+		);
+
+		return response.data;
 	},
 };
 

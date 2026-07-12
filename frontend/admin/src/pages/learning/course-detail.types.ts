@@ -41,6 +41,7 @@ export interface CourseCertificateRow {
 	cert_url: string | null;
 	user: { id: number; full_name: string; email: string };
 	track: EnrollmentTrack;
+	has_physical: boolean;
 	issued_at: string;
 	revoked_at: string | null;
 }
