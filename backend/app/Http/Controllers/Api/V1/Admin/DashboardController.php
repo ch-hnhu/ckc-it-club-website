@@ -6,11 +6,16 @@ use App\Enums\ApiMessage;
 use App\Enums\HttpStatus;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Blog;
+use App\Models\Board;
+use App\Models\BoardTask;
 use App\Models\ClubApplication;
 use App\Models\Comment;
 use App\Models\Contact;
 use App\Models\Course;
+use App\Models\CourseCertificate;
+use App\Models\CourseEnrollment;
 use App\Models\Event;
+use App\Models\EventRegistration;
 use App\Models\Post;
 use App\Models\PostReport;
 use App\Models\Resource;
@@ -41,6 +46,30 @@ class DashboardController extends BaseApiController
         }
 
         Event::syncStatuses();
+
+        // Xu hướng theo tháng (6 hoặc 12 tháng gần nhất, tính cả tháng hiện tại)
+        $months = (int) $request->query('months', 6);
+        $months = in_array($months, [6, 12], true) ? $months : 6;
+        $trendStart = now()->startOfMonth()->subMonths($months - 1);
+
+        $newMembersByMonth = $this->countByMonth(User::query(), $trendStart);
+        $postsByMonth = $this->countByMonth(Post::query(), $trendStart);
+        $registrationsByMonth = $this->countByMonth(EventRegistration::query(), $trendStart);
+
+        $trends = [];
+        for ($i = 0; $i < $months; $i++) {
+            $month = $trendStart->copy()->addMonths($i);
+            $key = $month->format('Y-m');
+            $trends[] = [
+                'month' => $key,
+                'new_members' => (int) ($newMembersByMonth[$key] ?? 0),
+                'posts' => (int) ($postsByMonth[$key] ?? 0),
+                'event_registrations' => (int) ($registrationsByMonth[$key] ?? 0),
+            ];
+        }
+
+        $enrollmentsTotal = CourseEnrollment::count();
+        $enrollmentsCompleted = CourseEnrollment::whereNotNull('completed_at')->count();
 
         $eventCounts = DB::table('events')
             ->whereNull('deleted_at')
@@ -90,7 +119,33 @@ class DashboardController extends BaseApiController
                 'applications_pending' => ClubApplication::where('status', 'pending')->count(),
                 'contacts_pending' => Contact::where('status', 'pending')->count(),
             ],
+            'learning' => [
+                'enrollments_total' => $enrollmentsTotal,
+                'enrollments_completed' => $enrollmentsCompleted,
+                'completion_rate' => $enrollmentsTotal > 0
+                    ? (int) round($enrollmentsCompleted / $enrollmentsTotal * 100)
+                    : 0,
+                'certificates_issued' => CourseCertificate::whereNull('revoked_at')->count(),
+            ],
+            'projecthub' => [
+                'boards_active' => Board::where('is_archived', false)->count(),
+                'tasks_open' => BoardTask::whereNull('completed_at')->count(),
+                'tasks_completed' => BoardTask::whereNotNull('completed_at')->count(),
+            ],
+            'trends' => $trends,
         ], ApiMessage::SUCCESS);
+    }
+
+    /**
+     * Đếm số bản ghi theo tháng tạo (key dạng YYYY-MM) kể từ $start.
+     */
+    private function countByMonth(\Illuminate\Database\Eloquent\Builder $query, \Carbon\Carbon $start): \Illuminate\Support\Collection
+    {
+        return $query
+            ->where('created_at', '>=', $start)
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as count")
+            ->groupBy('ym')
+            ->pluck('count', 'ym');
     }
 
     /**

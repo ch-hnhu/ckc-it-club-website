@@ -60,6 +60,8 @@ export interface AboutAward {
 	year: string;
 	desc: string;
 	bg: string;
+	/** URL ảnh banner (tuỳ chọn). Có ảnh thì hiển thị thay cho icon. */
+	image?: string;
 }
 
 export interface AboutFaq {

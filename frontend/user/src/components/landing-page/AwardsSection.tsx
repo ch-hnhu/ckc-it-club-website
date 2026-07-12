@@ -76,12 +76,14 @@ const AwardsSection: React.FC = () => {
 							Array.from({ length: 3 }).map((_, i) => (
 								<div
 									key={i}
-									className='neo-card neo-card-static bg-white p-6 animate-pulse'>
-									<div className='mb-4 h-14 w-14 rounded-xl border-2 border-black bg-gray-200' />
-									<div className='h-6 w-3/4 rounded bg-gray-200' />
-									<div className='mt-3 h-4 w-1/2 rounded bg-gray-100' />
-									<div className='mt-4 h-4 w-full rounded bg-gray-100' />
-									<div className='mt-2 h-4 w-5/6 rounded bg-gray-100' />
+									className='neo-card neo-card-static bg-white flex flex-col overflow-hidden animate-pulse'>
+									<div className='aspect-[16/9] w-full border-b-2 border-black bg-gray-200' />
+									<div className='p-6'>
+										<div className='h-6 w-3/4 rounded bg-gray-200' />
+										<div className='mt-3 h-4 w-1/2 rounded bg-gray-100' />
+										<div className='mt-4 h-4 w-full rounded bg-gray-100' />
+										<div className='mt-2 h-4 w-5/6 rounded bg-gray-100' />
+									</div>
 								</div>
 							))
 						: awards.map((award, i) => {
@@ -89,44 +91,45 @@ const AwardsSection: React.FC = () => {
 								return (
 									<div
 										key={`${award.title}-${i}`}
-										className='neo-card neo-card-static bg-white flex flex-col p-6'>
-										{/* Icon + năm */}
-										<div className='mb-4 flex items-start justify-between gap-3'>
-											<div
-												className='flex h-14 w-14 items-center justify-center rounded-xl border-2 border-black'
-												style={{
-													background: award.bg,
-													boxShadow: "3px 3px 0px #111",
-												}}>
-												<Icon className='h-7 w-7 text-black' />
-											</div>
+										className='neo-card neo-card-static bg-white flex flex-col overflow-hidden'>
+										{/* Banner ảnh (nếu có) hoặc icon, chiếm full width + năm dạng badge */}
+										<div
+											className='relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden border-b-2 border-black'
+											style={{ background: award.bg }}>
+											{award.image ? (
+												<img
+													src={award.image}
+													alt={award.title}
+													className='h-full w-full object-cover'
+												/>
+											) : (
+												<Icon className='h-16 w-16 text-black' />
+											)}
 											{award.year ? (
-												<span className='neo-tag text-xs' style={{ background: "white" }}>
+												<span
+													className='neo-tag text-xs absolute top-3 right-3'
+													style={{ background: "white" }}>
 													{award.year}
 												</span>
 											) : null}
 										</div>
 
-										{/* Tên giải */}
-										<h3
-											className='text-lg font-bold text-black leading-tight text-balance'
-											style={{ fontFamily: "var(--font-heading)" }}>
-											{award.title}
-										</h3>
+										{/* Nội dung */}
+										<div className='flex flex-col p-6'>
+											{/* Tên giải */}
+											<h3
+												className='text-lg font-bold text-black leading-tight text-balance'
+												style={{ fontFamily: "var(--font-heading)" }}>
+												{award.title}
+											</h3>
 
-										{/* Cuộc thi / đơn vị */}
-										{award.event ? (
-											<p className='mt-1 text-sm font-semibold text-gray-500'>
-												{award.event}
-											</p>
-										) : null}
-
-										{/* Mô tả */}
-										{award.desc ? (
-											<p className='mt-3 text-sm text-gray-700 leading-relaxed'>
-												{award.desc}
-											</p>
-										) : null}
+											{/* Cuộc thi / đơn vị */}
+											{award.event ? (
+												<p className='mt-1 text-sm font-semibold text-gray-500'>
+													{award.event}
+												</p>
+											) : null}
+										</div>
 									</div>
 								);
 							})}

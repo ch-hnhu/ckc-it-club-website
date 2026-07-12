@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { ArrowUp, ArrowDown, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, ImagePlus, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -125,6 +125,86 @@ function BgField({ value, onChange }: { value: string; onChange: (v: string) => 
 					))}
 				</SelectContent>
 			</Select>
+		</div>
+	);
+}
+
+/** Chọn/tải ảnh: xem trước + nút tải lên (upload trả URL) + ô nhập URL thủ công. */
+function ImageField({
+	label,
+	value,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	onChange: (v: string) => void;
+}) {
+	const [uploading, setUploading] = useState(false);
+
+	const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		e.target.value = ""; // cho phép chọn lại cùng một file
+		if (!file) return;
+		setUploading(true);
+		try {
+			const url = await aboutPageService.uploadImage(file);
+			onChange(url);
+			toast.success("Đã tải ảnh lên.");
+		} catch (error) {
+			toast.error(getErrorMessage(error, "Không thể tải ảnh lên."));
+		} finally {
+			setUploading(false);
+		}
+	};
+
+	return (
+		<div className='space-y-1.5'>
+			<Label>{label}</Label>
+			<div className='flex items-start gap-3'>
+				<div className='flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted'>
+					{value ? (
+						<img src={value} alt='' className='h-full w-full object-cover' />
+					) : (
+						<span className='text-xs text-muted-foreground'>Chưa có ảnh</span>
+					)}
+				</div>
+				<div className='flex-1 space-y-2'>
+					<div className='flex items-center gap-2'>
+						<Button asChild type='button' variant='outline' size='sm' disabled={uploading}>
+							<label className='cursor-pointer'>
+								{uploading ? (
+									<Loader2 className='mr-2 h-4 w-4 animate-spin' />
+								) : (
+									<ImagePlus className='mr-2 h-4 w-4' />
+								)}
+								{uploading ? "Đang tải..." : "Tải ảnh lên"}
+								<input
+									type='file'
+									accept='image/*'
+									className='hidden'
+									disabled={uploading}
+									onChange={(e) => void handleFile(e)}
+								/>
+							</label>
+						</Button>
+						{value ? (
+							<Button
+								type='button'
+								variant='ghost'
+								size='sm'
+								className='text-destructive'
+								onClick={() => onChange("")}>
+								Xóa ảnh
+							</Button>
+						) : null}
+					</div>
+					<Input
+						value={value}
+						placeholder='Hoặc dán URL ảnh'
+						onChange={(e) => onChange(e.target.value)}
+					/>
+				</div>
+			</div>
 		</div>
 	);
 }
@@ -697,6 +777,11 @@ function AboutPageEditor() {
 										onChange={(v) => patch("awards", replaceAt(awards, i, { bg: v } as Partial<AboutAward>))}
 									/>
 								</div>
+								<ImageField
+									label='Ảnh banner (tuỳ chọn — có ảnh sẽ hiển thị thay cho icon)'
+									value={award.image ?? ""}
+									onChange={(v) => patch("awards", replaceAt(awards, i, { image: v } as Partial<AboutAward>))}
+								/>
 								<AreaField
 									label='Mô tả'
 									value={award.desc}
@@ -711,7 +796,7 @@ function AboutPageEditor() {
 							onClick={() =>
 								patch("awards", [
 									...awards,
-									{ icon: "Trophy", title: "", event: "", year: "", desc: "", bg: ABOUT_BG_OPTIONS[0].value },
+									{ icon: "Trophy", title: "", event: "", year: "", desc: "", bg: ABOUT_BG_OPTIONS[0].value, image: "" },
 								])
 							}>
 							<Plus className='mr-2 h-4 w-4' /> Thêm giải thưởng

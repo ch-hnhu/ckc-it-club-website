@@ -17,6 +17,18 @@ const aboutPageService = {
 		const res = await api.put<ApiResponse<AboutContent>, AboutContent>("/about-page", payload);
 		return res.data;
 	},
+
+	/** Tải một ảnh lên (vd banner giải thưởng) và nhận URL để lưu vào nội dung About. */
+	async uploadImage(file: File): Promise<string> {
+		const formData = new FormData();
+		formData.append("image", file);
+		const res = await api.post<ApiResponse<{ url: string }>, FormData>(
+			"/about-page/upload-image",
+			formData,
+			{ headers: { "Content-Type": "multipart/form-data" } },
+		);
+		return res.data.url;
+	},
 };
 
 export default aboutPageService;

@@ -8,6 +8,7 @@ use App\Models\ClubInformationValue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Nội dung trang "Về chúng tôi" (About) — dạng config.
@@ -117,5 +118,28 @@ class AboutPageController extends BaseApiController
         }
 
         return $this->show();
+    }
+
+    /**
+     * POST /api/v1/about-page/upload-image (admin, permission club_info.manage).
+     *
+     * Tải một ảnh lên disk `public` (thư mục about-assets) và trả về URL tuyệt đối để
+     * lưu vào nội dung trang About (vd ảnh banner của giải thưởng). Nội dung About là
+     * config JSON nên chỉ lưu URL, không lưu file trực tiếp.
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|image|max:5120',
+        ]);
+
+        $path = $request->file('image')->store('about-assets', 'public');
+
+        $url = '/storage/'.$path;
+        if ($appUrl = config('app.url')) {
+            $url = rtrim((string) $appUrl, '/').$url;
+        }
+
+        return $this->successResponse(true, ['url' => $url], 'Tải ảnh lên thành công.');
     }
 }

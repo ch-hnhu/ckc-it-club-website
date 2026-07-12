@@ -391,6 +391,7 @@ Route::prefix('v1')->group(function () {
         // cần route lưu (PUT) yêu cầu quyền quản lý.
         Route::middleware('permission:club_info.manage')->group(function () {
             Route::put('about-page', [AboutPageController::class, 'update']);
+            Route::post('about-page/upload-image', [AboutPageController::class, 'uploadImage']);
         });
 
         // contacts

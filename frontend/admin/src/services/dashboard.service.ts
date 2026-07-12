@@ -9,6 +9,13 @@ export interface DashboardUpcomingEvent {
 	max_attendees: number | null;
 }
 
+export interface DashboardTrendPoint {
+	month: string; // YYYY-MM
+	new_members: number;
+	posts: number;
+	event_registrations: number;
+}
+
 export interface DashboardStats {
 	members: { total: number };
 	courses: { total: number };
@@ -30,11 +37,23 @@ export interface DashboardStats {
 		applications_pending: number;
 		contacts_pending: number;
 	};
+	learning: {
+		enrollments_total: number;
+		enrollments_completed: number;
+		completion_rate: number;
+		certificates_issued: number;
+	};
+	projecthub: {
+		boards_active: number;
+		tasks_open: number;
+		tasks_completed: number;
+	};
+	trends: DashboardTrendPoint[];
 }
 
 const dashboardService = {
-	async getStats(): Promise<DashboardStats> {
-		const response = await api.get<ApiResponse<DashboardStats>>("/");
+	async getStats(months: 6 | 12 = 6): Promise<DashboardStats> {
+		const response = await api.get<ApiResponse<DashboardStats>>("/", { months });
 		return response.data;
 	},
 };
