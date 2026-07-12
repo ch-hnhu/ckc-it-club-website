@@ -52,6 +52,15 @@ export interface AboutDepartment {
 	bg: string;
 }
 
+export interface AboutAward {
+	icon: string;
+	title: string;
+	event: string;
+	year: string;
+	desc: string;
+	bg: string;
+}
+
 export interface AboutFaq {
 	q: string;
 	a: string;
@@ -75,6 +84,7 @@ export interface AboutContent {
 	values: AboutValue[];
 	timeline: AboutTimelineItem[];
 	departments: AboutDepartment[];
+	awards: AboutAward[];
 	faqs: AboutFaq[];
 	cta: AboutCta;
 }
@@ -95,6 +105,9 @@ export const ABOUT_ICON_NAMES = [
 	"CalendarDays",
 	"PenLine",
 	"Star",
+	"Award",
+	"Medal",
+	"Crown",
 ] as const;
 
 /** Màu nền pastel (biến CSS ở FE user) dùng cho các thẻ. */

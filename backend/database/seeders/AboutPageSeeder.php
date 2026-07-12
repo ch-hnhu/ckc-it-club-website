@@ -167,6 +167,16 @@ class AboutPageSeeder extends Seeder
                 ],
             ],
             [
+                'slug' => 'about-awards',
+                'label' => 'About — Giải thưởng & Thành tích',
+                'description' => 'Danh sách giải thưởng, thành tích nổi bật (icon, tên giải, cuộc thi/đơn vị, năm, mô tả, màu nền).',
+                'data' => [
+                    ['icon' => 'Trophy', 'title' => 'Giải Nhất Hackathon Sinh viên', 'event' => 'Đại hội Công nghệ Sinh viên TP.HCM', 'year' => '2023', 'desc' => 'Đội thi của câu lạc bộ xuất sắc giành ngôi vô địch với sản phẩm ứng dụng công nghệ giải quyết vấn đề thực tế.', 'bg' => 'var(--color-pastel-yellow)'],
+                    ['icon' => 'Award', 'title' => 'Câu lạc bộ xuất sắc', 'event' => 'Trường Cao đẳng Kỹ thuật Cao Thắng', 'year' => '2022', 'desc' => 'Được nhà trường vinh danh là câu lạc bộ học thuật hoạt động hiệu quả và có sức lan tỏa nhất trong năm.', 'bg' => 'var(--color-pastel-green)'],
+                    ['icon' => 'Medal', 'title' => 'Top 10 Cuộc thi Lập trình', 'event' => 'ICPC Vòng loại khu vực', 'year' => '2023', 'desc' => 'Các thành viên câu lạc bộ ghi dấu ấn tại đấu trường lập trình danh giá dành cho sinh viên toàn quốc.', 'bg' => 'var(--color-pastel-blue)'],
+                ],
+            ],
+            [
                 'slug' => 'about-faqs',
                 'label' => 'About — Câu hỏi thường gặp',
                 'description' => 'Danh sách FAQ (câu hỏi + câu trả lời).',

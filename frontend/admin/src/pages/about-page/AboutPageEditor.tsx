@@ -24,6 +24,7 @@ import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import aboutPageService from "@/services/about-page.service";
 import { ABOUT_BG_OPTIONS, ABOUT_ICON_NAMES } from "@/types/about";
 import type {
+	AboutAward,
 	AboutContent,
 	AboutDepartment,
 	AboutFaq,
@@ -250,8 +251,19 @@ function AboutPageEditor() {
 	const patch = <K extends keyof AboutContent>(key: K, value: AboutContent[K]) =>
 		setContent((prev) => (prev ? { ...prev, [key]: value } : prev));
 
-	const { hero, story, mission, vision, stats, values, timeline, departments, faqs, cta } =
-		content;
+	const {
+		hero,
+		story,
+		mission,
+		vision,
+		stats,
+		values,
+		timeline,
+		departments,
+		awards,
+		faqs,
+		cta,
+	} = content;
 
 	return (
 		<div className='flex flex-col gap-6 p-4 pb-24 md:p-6 lg:p-8'>
@@ -642,9 +654,74 @@ function AboutPageEditor() {
 					</AccordionContent>
 				</AccordionItem>
 
+				{/* AWARDS */}
+				<AccordionItem value='awards' className='rounded-lg border px-4'>
+					<AccordionTrigger>8. Giải thưởng & Thành tích</AccordionTrigger>
+					<AccordionContent className='space-y-3'>
+						{awards.map((award, i) => (
+							<ListItemCard
+								key={i}
+								index={i}
+								total={awards.length}
+								title={award.title || `Giải thưởng ${i + 1}`}
+								onMoveUp={() => patch("awards", move(awards, i, -1))}
+								onMoveDown={() => patch("awards", move(awards, i, 1))}
+								onRemove={() =>
+									patch(
+										"awards",
+										awards.filter((_, idx) => idx !== i),
+									)
+								}>
+								<div className='grid gap-3 sm:grid-cols-2'>
+									<TextField
+										label='Tên giải thưởng'
+										value={award.title}
+										onChange={(v) => patch("awards", replaceAt(awards, i, { title: v } as Partial<AboutAward>))}
+									/>
+									<TextField
+										label='Cuộc thi / Đơn vị trao'
+										value={award.event}
+										onChange={(v) => patch("awards", replaceAt(awards, i, { event: v } as Partial<AboutAward>))}
+									/>
+									<TextField
+										label='Năm'
+										value={award.year}
+										onChange={(v) => patch("awards", replaceAt(awards, i, { year: v } as Partial<AboutAward>))}
+									/>
+									<IconField
+										value={award.icon}
+										onChange={(v) => patch("awards", replaceAt(awards, i, { icon: v } as Partial<AboutAward>))}
+									/>
+									<BgField
+										value={award.bg}
+										onChange={(v) => patch("awards", replaceAt(awards, i, { bg: v } as Partial<AboutAward>))}
+									/>
+								</div>
+								<AreaField
+									label='Mô tả'
+									value={award.desc}
+									onChange={(v) => patch("awards", replaceAt(awards, i, { desc: v } as Partial<AboutAward>))}
+								/>
+							</ListItemCard>
+						))}
+						<Button
+							type='button'
+							variant='outline'
+							size='sm'
+							onClick={() =>
+								patch("awards", [
+									...awards,
+									{ icon: "Trophy", title: "", event: "", year: "", desc: "", bg: ABOUT_BG_OPTIONS[0].value },
+								])
+							}>
+							<Plus className='mr-2 h-4 w-4' /> Thêm giải thưởng
+						</Button>
+					</AccordionContent>
+				</AccordionItem>
+
 				{/* FAQS */}
 				<AccordionItem value='faqs' className='rounded-lg border px-4'>
-					<AccordionTrigger>8. Câu hỏi thường gặp</AccordionTrigger>
+					<AccordionTrigger>9. Câu hỏi thường gặp</AccordionTrigger>
 					<AccordionContent className='space-y-3'>
 						{faqs.map((faq, i) => (
 							<ListItemCard
@@ -684,7 +761,7 @@ function AboutPageEditor() {
 
 				{/* CTA */}
 				<AccordionItem value='cta' className='rounded-lg border px-4'>
-					<AccordionTrigger>9. CTA cuối trang</AccordionTrigger>
+					<AccordionTrigger>10. CTA cuối trang</AccordionTrigger>
 					<AccordionContent className='space-y-4'>
 						<TextField
 							label='Tiêu đề'

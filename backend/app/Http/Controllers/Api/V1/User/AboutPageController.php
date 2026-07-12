@@ -36,6 +36,7 @@ class AboutPageController extends BaseApiController
         'values' => 'array',
         'timeline' => 'array',
         'departments' => 'array',
+        'awards' => 'array',
         'faqs' => 'array',
         'cta' => 'object',
     ];

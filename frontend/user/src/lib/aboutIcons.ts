@@ -17,6 +17,9 @@ import {
 	CalendarDays,
 	PenLine,
 	Star,
+	Award,
+	Medal,
+	Crown,
 	type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +38,9 @@ export const ABOUT_ICONS: Record<string, LucideIcon> = {
 	CalendarDays,
 	PenLine,
 	Star,
+	Award,
+	Medal,
+	Crown,
 };
 
 /** Danh sách tên icon cho phép chọn (dùng cho picker ở admin nếu cần). */

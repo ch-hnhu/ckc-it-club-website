@@ -53,6 +53,15 @@ export interface AboutDepartment {
 	bg: string;
 }
 
+export interface AboutAward {
+	icon: string;
+	title: string;
+	event: string;
+	year: string;
+	desc: string;
+	bg: string;
+}
+
 export interface AboutFaq {
 	q: string;
 	a: string;
@@ -76,6 +85,7 @@ export interface AboutContent {
 	values: AboutValue[];
 	timeline: AboutTimelineItem[];
 	departments: AboutDepartment[];
+	awards: AboutAward[];
 	faqs: AboutFaq[];
 	cta: AboutCta;
 }
