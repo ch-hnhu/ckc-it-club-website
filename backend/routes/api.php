@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\V1\User\ResourceController as UserResourceControlle
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
+use App\Http\Controllers\Api\V1\User\AboutPageController;
 use App\Http\Controllers\Api\V1\User\ClubBoardController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\CourseController as UserCourseController;
@@ -101,6 +102,9 @@ Route::prefix('v1')->group(function () {
     });
     // Ban Chủ Nhiệm — danh sách lãnh đạo CLB cho landing page (public)
     Route::get('/club-board', [ClubBoardController::class, 'index']);
+
+    // Nội dung trang "Về chúng tôi" (About) — dạng config (public, read-only)
+    Route::get('/about-page', [AboutPageController::class, 'show']);
 
     Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
     Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
@@ -380,6 +384,13 @@ Route::prefix('v1')->group(function () {
             Route::put('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
             Route::patch('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'updateValue']);
             Route::delete('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'destroyValue']);
+        });
+
+        // Trang "Về chúng tôi" (About) — chỉnh sửa nội dung dạng config.
+        // Việc đọc dùng chung route public GET /v1/about-page ở trên; ở đây chỉ
+        // cần route lưu (PUT) yêu cầu quyền quản lý.
+        Route::middleware('permission:club_info.manage')->group(function () {
+            Route::put('about-page', [AboutPageController::class, 'update']);
         });
 
         // contacts

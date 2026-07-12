@@ -59,7 +59,7 @@ class UserSeeder extends Seeder
                 'full_name' => 'Trần Minh Hiếu',
                 'role'      => RolesEnum::COMMUNICATIONS_HEAD,
                 'gender'    => 'male',
-                'avatar'    => 'https://randomuser.me/api/portraits/men/21.jpg',
+                'avatar'    => 'avatars/communicationshead.jpg',
                 'bio'       => 'Trưởng ban Truyền thông — kể chuyện CLB bằng hình ảnh và con chữ. 📸',
             ],
             [

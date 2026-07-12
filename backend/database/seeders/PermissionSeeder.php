@@ -160,12 +160,11 @@ class PermissionSeeder extends Seeder
         ],
 
         // Trưởng ban Học thuật — quản lý Khoá học (danh mục, buổi học, học viên,
-        // chứng nhận, mẫu chứng nhận) và quản lý sự kiện; xem thống kê
+        // chứng nhận, mẫu chứng nhận); xem thống kê
         'academic-head' => [
             'admin_panel.access',
             'dashboard.view',
             'courses.view', 'courses.manage', 'quizzes.manage',
-            'events.view', 'events.manage', 'events.check_in',
         ],
 
         // Trưởng ban Truyền thông — quản lý cộng đồng (báo cáo vi phạm, skills,

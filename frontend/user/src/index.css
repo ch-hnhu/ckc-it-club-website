@@ -337,6 +337,22 @@
 		opacity: 1;
 		transform: translateY(0);
 	}
+
+	/* Nội dung About lấy từ config (HTML): giữ đúng style highlight ban đầu.
+	   <strong> => in đậm màu đen; <mark> => nền primary có viền như thẻ nhấn. */
+	.about-prose strong {
+		color: #000;
+		font-weight: 700;
+	}
+
+	.about-prose mark {
+		background: var(--color-primary);
+		border: 1px solid #111;
+		border-radius: 0.25rem;
+		padding: 0 0.25rem;
+		color: #000;
+		font-weight: 700;
+	}
 }
 
 /* ============================================

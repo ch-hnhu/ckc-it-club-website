@@ -1,0 +1,196 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Seed nội dung trang "Về chúng tôi" (About) vào hệ thống club_informations.
+ *
+ * Mỗi section của trang About là một bản ghi club_informations với slug dạng
+ * `about-<section>` và type `json`. Giá trị thực (JSON) nằm ở bản ghi
+ * club_information_values đang active. Trang admin sẽ chỉnh sửa các JSON này
+ * qua form từng trường; frontend user đọc lại toàn bộ qua GET /api/v1/about-page.
+ */
+class AboutPageSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $adminId = User::where('email', 'hnhu07012004@gmail.com')->value('id')
+            ?? User::query()->value('id');
+
+        foreach ($this->sections() as $section) {
+            $infoId = DB::table('club_informations')->updateOrInsert(
+                ['slug' => $section['slug']],
+                [
+                    'value' => $section['slug'],
+                    'label' => $section['label'],
+                    'type' => 'json',
+                    'description' => $section['description'],
+                    'created_at' => now(),
+                    'created_by' => $adminId,
+                    'updated_at' => now(),
+                    'updated_by' => $adminId,
+                    'deleted_at' => null,
+                    'deleted_by' => null,
+                ]
+            );
+
+            $id = DB::table('club_informations')->where('slug', $section['slug'])->value('id');
+
+            $json = json_encode($section['data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            // Chỉ seed value nếu section chưa có value nào (tránh ghi đè nội dung admin đã sửa).
+            $hasValue = DB::table('club_information_values')
+                ->where('club_information_id', $id)
+                ->exists();
+
+            if (! $hasValue) {
+                DB::table('club_information_values')->insert([
+                    'club_information_id' => $id,
+                    'value' => $json,
+                    'link' => null,
+                    'alt' => null,
+                    'position' => 0,
+                    'is_active' => true,
+                    'created_at' => now(),
+                    'created_by' => $adminId,
+                    'updated_at' => now(),
+                    'updated_by' => $adminId,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Định nghĩa toàn bộ section + dữ liệu mặc định (trích từ giao diện hardcode cũ).
+     *
+     * @return array<int, array{slug:string,label:string,description:string,data:mixed}>
+     */
+    private function sections(): array
+    {
+        return [
+            [
+                'slug' => 'about-hero',
+                'label' => 'About — Hero',
+                'description' => 'Phần đầu trang Về chúng tôi (badge, tiêu đề, mô tả, nút).',
+                'data' => [
+                    'badge' => 'Trường Cao đẳng Kỹ thuật Cao Thắng',
+                    'title_prefix' => 'Không chỉ là câu lạc bộ, đây là',
+                    'highlight' => 'ngôi nhà thứ hai',
+                    'lead_html' => 'CKC IT CLUB là nơi những sinh viên IT năng động cùng nhau <strong>học hỏi</strong>, <strong>chia sẻ</strong> và <strong>phát triển</strong> — biến đam mê công nghệ thành hành trình sự nghiệp thực sự.',
+                    'primary_label' => 'Tham gia CLB',
+                    'primary_link' => '/ung-tuyen',
+                    'secondary_label' => 'Liên hệ với chúng tôi',
+                    'secondary_link' => '/lien-he',
+                ],
+            ],
+            [
+                'slug' => 'about-story',
+                'label' => 'About — Câu chuyện',
+                'description' => 'Phần "Câu chuyện của chúng tôi" (tiêu đề, ảnh, các đoạn văn).',
+                'data' => [
+                    'heading' => 'Câu chuyện của chúng tôi',
+                    'image' => '/assets/img/ckc-event-title.png',
+                    'paragraphs' => [
+                        'Mọi thứ bắt đầu từ năm <strong>2018</strong>, khi một nhóm nhỏ sinh viên đam mê công nghệ tại <strong>Trường Cao đẳng Kỹ thuật Cao Thắng</strong> cùng chung một khát khao: tạo ra một sân chơi nơi ai cũng có thể học, chia sẻ và cùng nhau lớn lên.',
+                        'Từ những buổi họp nhóm nhỏ, CKC IT CLUB đã trở thành cộng đồng hàng nghìn sinh viên IT. Chúng tôi tin rằng <mark>mọi sinh viên đều có tiềm năng to lớn</mark> khi được trao đúng cơ hội và sự hỗ trợ.',
+                        'Hôm nay, chúng tôi tiếp tục kết nối sinh viên với tài nguyên, mentor và cơ hội việc làm thực tế — vun đắp một cộng đồng công nghệ tử tế và bền vững.',
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'about-mission',
+                'label' => 'About — Sứ mệnh',
+                'description' => 'Thẻ Sứ mệnh trong phần Sứ mệnh & Tầm nhìn.',
+                'data' => [
+                    'title' => 'Sứ mệnh',
+                    'body' => 'Trao cho mỗi sinh viên IT cơ hội tiếp cận tri thức, môi trường thực hành và cộng đồng hỗ trợ — để không ai bị bỏ lại phía sau trên hành trình chinh phục công nghệ.',
+                ],
+            ],
+            [
+                'slug' => 'about-vision',
+                'label' => 'About — Tầm nhìn',
+                'description' => 'Thẻ Tầm nhìn trong phần Sứ mệnh & Tầm nhìn.',
+                'data' => [
+                    'title' => 'Tầm nhìn',
+                    'body' => 'Trở thành cộng đồng công nghệ sinh viên hàng đầu — nơi ươm mầm những lập trình viên, nhà thiết kế và người dẫn dắt tương lai, mang giá trị tích cực cho xã hội.',
+                ],
+            ],
+            [
+                'slug' => 'about-stats',
+                'label' => 'About — Con số ấn tượng',
+                'description' => 'Bốn con số nổi bật của câu lạc bộ.',
+                'data' => [
+                    ['value' => '1000+', 'label' => 'Thành viên'],
+                    ['value' => '2018', 'label' => 'Năm thành lập'],
+                    ['value' => '50+', 'label' => 'Workshop & Sự kiện'],
+                    ['value' => '95%', 'label' => 'Có việc sau khi học'],
+                ],
+            ],
+            [
+                'slug' => 'about-values',
+                'label' => 'About — Giá trị cốt lõi',
+                'description' => 'Danh sách giá trị cốt lõi (icon, emoji, tiêu đề, mô tả, màu nền).',
+                'data' => [
+                    ['icon' => 'BookOpen', 'emoji' => '📚', 'title' => 'Học hỏi', 'subtitle' => 'Học không ngừng', 'desc' => 'Tiếp cận tài nguyên, khóa học và kiến thức thực chiến từ mentor đi trước. Chúng tôi tin học tập là hành trình cả đời.', 'bg' => 'var(--color-pastel-green)'],
+                    ['icon' => 'Heart', 'emoji' => '🤝', 'title' => 'Chia sẻ', 'subtitle' => 'Cho đi là còn mãi', 'desc' => 'Văn hóa open-source: chia sẻ code, tài liệu, kinh nghiệm với cả cộng đồng — không giữ riêng cho mình.', 'bg' => 'var(--color-pastel-blue)'],
+                    ['icon' => 'Trophy', 'emoji' => '🏆', 'title' => 'Bứt phá', 'subtitle' => 'Cạnh tranh lành mạnh', 'desc' => 'Tham gia hackathon, leaderboard và những thử thách để vượt qua giới hạn của chính mình mỗi ngày.', 'bg' => 'var(--color-pastel-yellow)'],
+                    ['icon' => 'Sprout', 'emoji' => '🌱', 'title' => 'Trưởng thành', 'subtitle' => 'Phát triển toàn diện', 'desc' => 'Xây dựng portfolio, kỹ năng mềm và mạng lưới chuyên nghiệp ngay từ khi còn ngồi trên ghế nhà trường.', 'bg' => 'var(--color-pastel-purple)'],
+                ],
+            ],
+            [
+                'slug' => 'about-timeline',
+                'label' => 'About — Hành trình phát triển',
+                'description' => 'Các cột mốc timeline (năm, tiêu đề, mô tả, icon, màu).',
+                'data' => [
+                    ['year' => '2018', 'title' => 'Ngày đầu thành lập', 'desc' => 'CKC IT CLUB ra đời từ nhóm nhỏ sinh viên đam mê lập trình, với ước mơ tạo ra một sân chơi công nghệ cho sinh viên Cao Thắng.', 'icon' => 'Flag', 'bg' => 'var(--color-pastel-green)'],
+                    ['year' => '2020', 'title' => 'Mở rộng cộng đồng', 'desc' => 'Chuỗi workshop, seminar và các buổi chia sẻ định kỳ thu hút hàng trăm thành viên. Câu lạc bộ hình thành các ban chuyên môn.', 'icon' => 'Users', 'bg' => 'var(--color-pastel-blue)'],
+                    ['year' => '2022', 'title' => 'Vươn tầm sự kiện', 'desc' => 'Tổ chức hackathon, cuộc thi lập trình và kết nối doanh nghiệp, mở ra cơ hội thực tập và việc làm cho thành viên.', 'icon' => 'Rocket', 'bg' => 'var(--color-pastel-yellow)'],
+                    ['year' => '2024', 'title' => 'Chuyển đổi số', 'desc' => 'Xây dựng nền tảng cộng đồng trực tuyến: tài nguyên, blog, khóa học và hệ thống điểm thưởng gamification cho thành viên.', 'icon' => 'Sparkles', 'bg' => 'var(--color-pastel-purple)'],
+                    ['year' => 'Hôm nay', 'title' => 'Ngôi nhà thứ hai', 'desc' => 'Hơn 1000+ thành viên cùng học, chia sẻ và phát triển. Chúng tôi vẫn đang viết tiếp câu chuyện của mình mỗi ngày.', 'icon' => 'Heart', 'bg' => 'var(--color-pastel-pink)'],
+                ],
+            ],
+            [
+                'slug' => 'about-departments',
+                'label' => 'About — Cơ cấu các ban',
+                'description' => 'Danh sách các ban (icon, tiêu đề, mô tả, màu nền).',
+                'data' => [
+                    ['icon' => 'Code2', 'title' => 'Ban Kỹ thuật', 'desc' => 'Phụ trách chuyên môn, workshop lập trình, mentor kỹ thuật và xây dựng các sản phẩm công nghệ của câu lạc bộ.', 'bg' => 'var(--color-pastel-green)'],
+                    ['icon' => 'Palette', 'title' => 'Ban Thiết kế', 'desc' => 'Sáng tạo bộ nhận diện, ấn phẩm truyền thông và trải nghiệm hình ảnh cho mọi hoạt động, sự kiện.', 'bg' => 'var(--color-pastel-purple2)'],
+                    ['icon' => 'Megaphone', 'title' => 'Ban Truyền thông', 'desc' => 'Lan tỏa hình ảnh câu lạc bộ, quản lý các kênh mạng xã hội và kết nối với cộng đồng sinh viên.', 'bg' => 'var(--color-pastel-blue)'],
+                    ['icon' => 'CalendarDays', 'title' => 'Ban Sự kiện', 'desc' => 'Lên ý tưởng và tổ chức workshop, hackathon, talkshow — nơi những trải nghiệm đáng nhớ được tạo ra.', 'bg' => 'var(--color-pastel-orange)'],
+                    ['icon' => 'PenLine', 'title' => 'Ban Nội dung', 'desc' => 'Biên soạn tài liệu, bài viết blog và các khóa học chất lượng, xây dựng kho tri thức chung.', 'bg' => 'var(--color-pastel-yellow)'],
+                    ['icon' => 'Users', 'title' => 'Ban Nhân sự', 'desc' => 'Chăm lo đời sống thành viên, gắn kết nội bộ và phát triển văn hóa cộng đồng CKC IT CLUB.', 'bg' => 'var(--color-pastel-pink)'],
+                ],
+            ],
+            [
+                'slug' => 'about-faqs',
+                'label' => 'About — Câu hỏi thường gặp',
+                'description' => 'Danh sách FAQ (câu hỏi + câu trả lời).',
+                'data' => [
+                    ['q' => 'Ai có thể tham gia CKC IT CLUB?', 'a' => 'Tất cả sinh viên Trường Cao đẳng Kỹ thuật Cao Thắng yêu thích công nghệ đều có thể tham gia — dù bạn là người mới bắt đầu hay đã có kinh nghiệm. Chúng tôi chào đón mọi đam mê!'],
+                    ['q' => 'Tôi cần biết lập trình trước khi tham gia không?', 'a' => 'Không bắt buộc. Câu lạc bộ có lộ trình, tài nguyên và mentor hỗ trợ người mới. Điều quan trọng nhất là tinh thần ham học hỏi và sẵn sàng chia sẻ.'],
+                    ['q' => 'Tham gia CLB có mất phí không?', 'a' => 'Hoàn toàn miễn phí. CKC IT CLUB là cộng đồng phi lợi nhuận, hoạt động dựa trên tinh thần tự nguyện và văn hóa chia sẻ của các thành viên.'],
+                    ['q' => 'Làm sao để đăng ký tham gia?', 'a' => 'Bạn chỉ cần nhấn nút "Ứng tuyển" trên trang web, điền thông tin và chờ ban chủ nhiệm liên hệ. Chúng tôi sẽ hướng dẫn bạn những bước tiếp theo.'],
+                    ['q' => 'Các hoạt động chính của CLB là gì?', 'a' => 'Workshop chuyên môn, hackathon, cuộc thi lập trình, chia sẻ tài nguyên, khóa học trực tuyến, cộng đồng thảo luận và nhiều sự kiện kết nối doanh nghiệp.'],
+                ],
+            ],
+            [
+                'slug' => 'about-cta',
+                'label' => 'About — CTA cuối trang',
+                'description' => 'Khối kêu gọi hành động ở cuối trang.',
+                'data' => [
+                    'title' => 'Sẵn sàng viết tiếp câu chuyện cùng chúng tôi?',
+                    'body_html' => 'Trở thành một phần của cộng đồng hơn <strong>1000+ sinh viên IT</strong> — nơi bạn được học, được chia sẻ và được là chính mình.',
+                    'primary_label' => 'Tham gia ngay',
+                    'primary_link' => '/ung-tuyen',
+                    'secondary_label' => 'Khám phá cộng đồng',
+                    'secondary_link' => '/cong-dong',
+                ],
+            ],
+        ];
+    }
+}

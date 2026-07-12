@@ -1,30 +1,16 @@
 import React, { useEffect, useRef } from "react";
 import { ExternalLink, Github, Linkedin } from "lucide-react";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
 const MENTORS = [
 	{
-		name: "Nguyễn Văn An",
-		role: "Chuyên gia AI/ML",
-		bio: "Chuyên gia về Machine Learning & Computer Vision, 5+ năm kinh nghiệm nghiên cứu.",
-		tag: "AI & Machine Learning",
-		tagBg: "var(--color-pastel-green)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=mentor1&backgroundColor=D2FAE5",
-	},
-	{
-		name: "Trần Thị Bình",
-		role: "Web Dev Lead",
-		bio: "Full-stack developer, maintainer các dự án open-source và speaker tại các sự kiện tech.",
+		name: "Thầy Lữ Cao Tiến",
+		role: "Giảng viên khoa Công nghệ thông tin",
+		bio: "Người thầy tận tâm, truyền cảm hứng cho sinh viên trong lĩnh vực lập trình và phát triển phần mềm.",
 		tag: "Web Developer",
 		tagBg: "var(--color-pastel-blue)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=mentor2&backgroundColor=BFD9FE",
-	},
-	{
-		name: "Phạm Minh Châu",
-		role: "DevOps Engineer",
-		bio: "Kiến trúc sư cloud tại startup unicorn, chuyên Docker, K8s và CI/CD pipelines.",
-		tag: "DevOps & Cloud",
-		tagBg: "var(--color-pastel-pink)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=mentor3&backgroundColor=FFDEDE",
+		avatar: `${BACKEND_URL}/storage/avatars/mentor.jpg`,
 	},
 ];
 
@@ -61,11 +47,11 @@ const MentorSection: React.FC = () => {
 				</div>
 
 				{/* Mentor cards */}
-				<div className='fade-in-up grid grid-cols-1 md:grid-cols-3 gap-8'>
+				<div className='fade-in-up flex flex-wrap justify-center gap-8'>
 					{MENTORS.map((mentor) => (
 						<div
 							key={mentor.name}
-							className='neo-card bg-white flex flex-col items-center text-center p-8 gap-4'>
+							className='neo-card bg-white flex flex-col items-center text-center p-8 gap-4 w-full max-w-sm'>
 							{/* Avatar */}
 							<div
 								className='w-20 h-20 rounded-full overflow-hidden border-2 border-black'
