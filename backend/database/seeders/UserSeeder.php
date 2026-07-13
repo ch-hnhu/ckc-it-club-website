@@ -240,5 +240,39 @@ class UserSeeder extends Seeder
                 ]
             )->syncRoles([RolesEnum::CLUB_MEMBER->value]);
         }
+
+        // ── Cố vấn / người thành lập CLB: hồ sơ thật hiển thị ở MentorSection landing page ──
+        // Section landing page fetch hồ sơ này qua /users/profile/{username}, nên username phải cố định.
+        User::updateOrCreate(
+            ['email' => 'lucaotien@gmail.com'],
+            [
+                'username'    => 'lucaotien',
+                'full_name'   => 'Lữ Cao Tiến',
+                'password'    => bcrypt('Advisor@123'),
+                'gender'      => 'male',
+                // Ảnh chân dung thật đã có sẵn trong storage (avatars/mentor.jpg).
+                'avatar'      => 'avatars/mentor.jpg',
+                'bio'         => 'Giảng viên khoa Công nghệ thông tin — người thầy tận tâm, truyền cảm hứng cho sinh viên trong lĩnh vực lập trình và phát triển phần mềm. Người thành lập kiêm cố vấn của CLB IT CKC.',
+                'is_active'   => true,
+            ],
+        )->syncRoles([RolesEnum::USER->value]);
+
+        // ── Mentor khách mời: chỉ mang vai trò "Người dùng" (không phải thành viên CLB) ──
+        // Demo trường hợp mentor khoá học là người ngoài CLB, được phân công qua CourseMentorSeeder.
+        User::updateOrCreate(
+            ['email' => 'mentor@gmail.com'],
+            [
+                'username'    => 'mentor',
+                'full_name'   => 'Nguyễn Thành Đạt',
+                'password'    => bcrypt('Mentor@123'),
+                'gender'      => 'male',
+                'avatar'      => 'https://randomuser.me/api/portraits/men/41.jpg',
+                'cover_image' => 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1600&q=70',
+                'bio'         => 'Mentor khách mời — Fullstack Developer. Đồng hành cùng các khoá học của CLB IT CKC. 👨‍🏫',
+                'social_github'   => 'thanhdat-mentor',
+                'social_linkedin' => 'nguyen-thanh-dat',
+                'is_active'   => true,
+            ],
+        )->syncRoles([RolesEnum::USER->value]);
     }
 }
