@@ -21,14 +21,20 @@ RUN apk add --no-cache \
 
 # ── Render chứng chỉ (Browsershot/Chrome headless) ───────────────────────────
 # Chứng chỉ dùng editor canvas (Konva) được render bằng spatie/browsershot, cần
-# Node + Chromium. Dùng Chromium hệ thống (không qua puppeteer) để tránh tải Chromium 2 lần.
-RUN apk add --no-cache nodejs npm chromium nss freetype harfbuzz ttf-freefont font-noto \
-    && npm install -g puppeteer-core
+# Node + Chromium. Dùng Chromium hệ thống (không để puppeteer tải Chromium 2 lần).
+RUN apk add --no-cache nodejs npm chromium nss freetype harfbuzz ttf-freefont font-noto
 ENV BROWSERSHOT_CHROME_PATH=/usr/bin/chromium-browser
-# (Trong CertificateRenderer, gọi ->setChromePath(env('BROWSERSHOT_CHROME_PATH'))
-#  khi biến này được set; dev macOS dùng puppeteer cài trong backend/node_modules.)
+# browser.cjs của Browsershot gọi require('puppeteer'); CertificateRenderer ép
+# NODE_PATH = /var/www/html/node_modules → BẮT BUỘC cài puppeteer LOCAL (không -g).
+# Bỏ tải Chromium riêng của puppeteer vì đã dùng Chromium hệ thống ở trên.
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Cài node_modules trước (chỉ dependencies: puppeteer) để tận dụng cache layer,
+# không phải cài lại mỗi lần sửa code PHP.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
 
 COPY . .
 
