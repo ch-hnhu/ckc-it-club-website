@@ -54,6 +54,39 @@ const GIF_PATTERN =
 const getRoomColor = (i: number) => ROOM_COLORS[i % ROOM_COLORS.length];
 const isGifUrl = (s: string) => GIF_PATTERN.test(s.trim());
 
+// ─── RoomAvatar ───────────────────────────────────────────────────────────────
+// Ảnh kênh; nếu không có ảnh hoặc ảnh lỗi tải thì fallback về icon # (tránh
+// hiển thị biểu tượng "ảnh vỡ" của trình duyệt).
+// variant "sm": dùng ở sidebar & header; "lg": dùng ở màn hình chào mừng.
+const RoomAvatar: React.FC<{
+	image: string | null;
+	name: string;
+	index: number;
+	variant?: "sm" | "lg";
+}> = ({ image, name, index, variant = "sm" }) => {
+	const [errored, setErrored] = useState(false);
+	const box =
+		variant === "lg"
+			? "h-16 w-16 rounded-2xl border-2 border-black shadow-[3px_3px_0_#111]"
+			: "h-8 w-8 rounded-lg border-2 border-black";
+	if (image && !errored) {
+		return (
+			<img
+				src={image}
+				alt={name}
+				onError={() => setErrored(true)}
+				className={`${box} shrink-0 object-cover`}
+			/>
+		);
+	}
+	return (
+		<div
+			className={`flex ${box} shrink-0 items-center justify-center ${getRoomColor(index)}`}>
+			<Hash className={variant === "lg" ? "h-7 w-7 text-black" : "h-3.5 w-3.5 text-black"} />
+		</div>
+	);
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface MessageGroup {
@@ -122,18 +155,7 @@ const RoomItem: React.FC<{
 				? "border-black bg-[var(--color-primary)] shadow-[2px_2px_0_#111] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
 				: "border-transparent text-gray-700 hover:bg-gray-50"
 		}`}>
-		{room.image ? (
-			<img
-				src={room.image}
-				alt={room.name}
-				className='h-8 w-8 shrink-0 rounded-lg border-2 border-black object-cover'
-			/>
-		) : (
-			<div
-				className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(index)}`}>
-				<Hash className='h-3.5 w-3.5 text-black' />
-			</div>
-		)}
+		<RoomAvatar image={room.image} name={room.name} index={index} />
 		<div className='min-w-0 flex-1'>
 			<p
 				className={`truncate text-[13px] font-extrabold ${active ? "text-black" : "text-gray-800"}`}>
@@ -285,11 +307,13 @@ const MessageGroupItem: React.FC<{
 
 // ─── Static states ────────────────────────────────────────────────────────────
 
-const EmptyChat: React.FC<{ roomName: string }> = ({ roomName }) => (
+const EmptyChat: React.FC<{ roomName: string; roomImage: string | null; roomIndex: number }> = ({
+	roomName,
+	roomImage,
+	roomIndex,
+}) => (
 	<div className='flex h-full flex-col items-center justify-center gap-3 px-6 text-center'>
-		<div className='flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-black bg-[var(--color-pastel-green)] shadow-[3px_3px_0_#111]'>
-			<Hash className='h-7 w-7 text-black' />
-		</div>
+		<RoomAvatar image={roomImage} name={roomName} index={roomIndex} variant='lg' />
 		<p className='font-heading text-lg font-extrabold text-black'>Chào mừng đến #{roomName}</p>
 		<p className='max-w-xs text-sm text-gray-500'>
 			Đây là khởi đầu của kênh này. Hãy là người đầu tiên nhắn tin!
@@ -830,18 +854,11 @@ const CommunityChatPage: React.FC = () => {
 
 					{activeRoom ? (
 						<>
-							{activeRoom.image ? (
-								<img
-									src={activeRoom.image}
-									alt={activeRoom.name}
-									className='h-8 w-8 shrink-0 rounded-lg border-2 border-black object-cover'
-								/>
-							) : (
-								<div
-									className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-black ${getRoomColor(activeRoomIdx)}`}>
-									<Hash className='h-3.5 w-3.5 text-black' />
-								</div>
-							)}
+							<RoomAvatar
+								image={activeRoom.image}
+								name={activeRoom.name}
+								index={activeRoomIdx}
+							/>
 							<div className='min-w-0 flex-1'>
 								<p className='truncate font-heading text-sm font-extrabold leading-none text-black'>
 									{activeRoom.name}
@@ -870,7 +887,11 @@ const CommunityChatPage: React.FC = () => {
 						{!user ? (
 							<GuestWall />
 						) : msgGroups.length === 0 && activeRoom && !messagesLoading ? (
-							<EmptyChat roomName={activeRoom.name ?? ""} />
+							<EmptyChat
+								roomName={activeRoom.name ?? ""}
+								roomImage={activeRoom.image}
+								roomIndex={activeRoomIdx}
+							/>
 						) : (
 							<div className='py-2'>
 								{loadingMore && (
