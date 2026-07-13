@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import { Shield, HelpCircle, AlertTriangle, Scale, ArrowRight, MessageSquare } from "lucide-react";
+import { Scale } from "lucide-react";
 import { renderMarkdownContent } from "@/lib/markdown";
 
 // @ts-ignore
