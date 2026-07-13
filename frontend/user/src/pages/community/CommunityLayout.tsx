@@ -214,12 +214,6 @@ const CommunityLayout: React.FC = () => {
 								/>
 								{channel.label}
 							</span>
-							<span
-								className={`transition-colors duration-200 ${isMobile ? "text-sm" : "text-xs"} ${
-									isActive ? "text-[var(--color-text-primary)]" : "text-gray-500"
-								}`}>
-								{channel.count}
-							</span>
 						</Link>
 					);
 				})}

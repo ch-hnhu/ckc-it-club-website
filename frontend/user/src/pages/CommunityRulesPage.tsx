@@ -51,13 +51,13 @@ const CommunityRulesPage: React.FC = () => {
 
 			{/* Main Content Area */}
 			<div className='container mx-auto mt-16 px-4 sm:px-6 lg:px-8'>
-				<div className='mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_350px]'>
-					
-					{/* Left: Markdown Content */}
+				<div className='mx-auto max-w-4xl'>
+
+					{/* Markdown Content */}
 					<div className='reveal-on-scroll opacity-0 transition-all duration-700 delay-100'>
 						<div className='neo-card bg-white p-6 sm:p-10 lg:p-12'>
 							<div
-								className='community-markdown s-prose'
+								className='community-markdown community-rules s-prose'
 								dangerouslySetInnerHTML={{ __html: renderedContent }}
 							/>
 						</div>
