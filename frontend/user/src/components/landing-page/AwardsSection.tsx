@@ -92,7 +92,7 @@ const AwardsSection: React.FC = () => {
 									<div
 										key={`${award.title}-${i}`}
 										className='neo-card neo-card-static bg-white flex flex-col overflow-hidden'>
-										{/* Banner ảnh (nếu có) hoặc icon, chiếm full width + năm dạng badge */}
+										{/* Banner ảnh (nếu có) hoặc icon, chiếm full width */}
 										<div
 											className='relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden border-b-2 border-black'
 											style={{ background: award.bg }}>
@@ -105,13 +105,6 @@ const AwardsSection: React.FC = () => {
 											) : (
 												<Icon className='h-16 w-16 text-black' />
 											)}
-											{award.year ? (
-												<span
-													className='neo-tag text-xs absolute top-3 right-3'
-													style={{ background: "white" }}>
-													{award.year}
-												</span>
-											) : null}
 										</div>
 
 										{/* Nội dung */}
