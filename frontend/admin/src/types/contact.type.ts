@@ -14,6 +14,7 @@ export interface ContactRecord {
 	subject: string | null;
 	message: string;
 	status: ContactStatus;
+	status_note: string | null;
 	created_at: string | null;
 	updated_at: string | null;
 	created_by: number | null;
@@ -22,4 +23,5 @@ export interface ContactRecord {
 
 export interface UpdateContactStatusPayload {
 	status: ContactStatus;
+	status_note?: string;
 }

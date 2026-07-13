@@ -132,7 +132,7 @@ const AboutValues: React.FC = () => {
 							viên đều có tiềm năng to lớn khi được hỗ trợ đúng cách.
 						</p>
 						<p className='text-gray-600 leading-relaxed'>
-							Từ năm 2018, chúng tôi đã kết nối hàng nghìn sinh viên với tài nguyên,
+							Từ năm 2011, chúng tôi đã kết nối hàng nghìn sinh viên với tài nguyên,
 							mentor và cơ hội việc làm thực tế. Đây không chỉ là câu lạc bộ — đây là{" "}
 							<span
 								className='font-bold px-1 rounded text-black'
@@ -149,7 +149,7 @@ const AboutValues: React.FC = () => {
 						{/* Milestones */}
 						<div className='grid grid-cols-3 gap-4'>
 							{[
-								{ value: "2018", label: "Năm thành lập" },
+								{ value: "2011", label: "Năm thành lập" },
 								{ value: "50+", label: "Workshops" },
 								{ value: "95%", label: "Có việc sau học" },
 							].map((m) => (

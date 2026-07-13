@@ -39,7 +39,7 @@ const MentorSection: React.FC = () => {
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
 						style={{ fontFamily: "var(--font-heading)" }}>
-						Mentor của chúng tôi
+						Người thành lập kiêm cố vấn tối cao
 					</h2>
 					<p className='text-gray-500 mt-3 max-w-xl mx-auto'>
 						Được hướng dẫn bởi những chuyên gia có kinh nghiệm thực chiến trong ngành
