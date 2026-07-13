@@ -6,15 +6,19 @@ use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Channel;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ChannelController extends BaseApiController
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $viewer = $request->user('sanctum');
+
         $channels = Channel::query()
-            ->withCount(['posts' => fn ($q) => $q->where('status', 'published')])
+            // Đếm đúng số bài người xem thấy được trên feed: published + đúng quyền xem (public/members/bài của mình)
+            ->withCount(['posts' => fn ($q) => $q->where('status', 'published')->visibleTo($viewer)])
             ->orderBy('name')
             ->get();
 
