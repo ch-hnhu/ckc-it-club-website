@@ -28,6 +28,7 @@ import ApplicationPage from "@/pages/ApplicationPage";
 import UserProfilePage from "@/pages/user/UserProfilePage";
 import AccountPage from "@/pages/user/AccountPage";
 import MyPointsPage from "@/pages/gamification/MyPointsPage";
+import MyCertificatesPage from "@/pages/learning/MyCertificatesPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import RegisterVerifyOtpPage from "@/pages/auth/RegisterVerifyOtpPage";
@@ -126,6 +127,10 @@ const router = createBrowserRouter([
 			{
 				path: "diem-cua-toi",
 				element: <MyPointsPage />,
+			},
+			{
+				path: "chung-chi-cua-toi",
+				element: <MyCertificatesPage />,
 			},
 			{
 				// Dynamic catch-all for /@username profile pages — must be last

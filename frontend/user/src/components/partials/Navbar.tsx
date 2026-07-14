@@ -9,6 +9,7 @@ import {
 	LogOut,
 	Menu,
 	MessageSquare,
+	ScrollText,
 	SlidersHorizontal,
 	Trophy,
 	UserPlus,
@@ -281,6 +282,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 					role='menuitem'>
 					<Trophy className='h-5 w-5 shrink-0 text-gray-600' />
 					<span>Điểm của tôi</span>
+				</Link>
+				<Link
+					to='/chung-chi-cua-toi'
+					onClick={() => closeProfileMenu(isMobile)}
+					className={profileMenuItemClass}
+					role='menuitem'>
+					<ScrollText className='h-5 w-5 shrink-0 text-gray-600' />
+					<span>Chứng chỉ</span>
 				</Link>
 				<Link
 					to='/tai-khoan?tabIndex=0'
@@ -730,6 +739,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 										role='menuitem'>
 										<Trophy className='h-5 w-5 shrink-0 text-gray-600' />
 										<span>Điểm của tôi</span>
+									</Link>
+									<Link
+										to='/chung-chi-cua-toi'
+										onClick={closeMobileMenu}
+										className={profileMenuItemClass}
+										role='menuitem'>
+										<ScrollText className='h-5 w-5 shrink-0 text-gray-600' />
+										<span>Chứng chỉ</span>
 									</Link>
 									<Link
 										to='/tai-khoan?tabIndex=0'

@@ -496,6 +496,35 @@ class CourseController extends BaseApiController
         );
     }
 
+    /**
+     * Danh sách chứng chỉ (còn hiệu lực) của user hiện tại, kèm thông tin khoá học.
+     * Sắp xếp mới cấp trước.
+     */
+    public function certificates(Request $request): JsonResponse
+    {
+        $certificates = CourseCertificate::query()
+            ->where('user_id', $request->user()->id)
+            ->whereNull('revoked_at')
+            ->with(['course:id,slug,title,thumbnail'])
+            ->orderByDesc('issued_at')
+            ->get()
+            ->map(fn (CourseCertificate $cert) => [
+                'cert_code' => $cert->cert_code,
+                'cert_url' => $cert->cert_url,
+                'track' => $cert->track,
+                'has_physical' => (bool) $cert->has_physical,
+                'issued_at' => $cert->issued_at?->toIso8601String(),
+                'course' => $cert->course ? [
+                    'slug' => $cert->course->slug,
+                    'title' => $cert->course->title,
+                    'thumbnail' => $this->resolveUrl($cert->course->thumbnail),
+                ] : null,
+            ])
+            ->all();
+
+        return $this->successResponse(true, $certificates, 'Lấy danh sách chứng chỉ thành công.');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**

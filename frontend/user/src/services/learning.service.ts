@@ -7,6 +7,7 @@ import type {
 	CourseDetail,
 	CourseListParams,
 	LessonDetail,
+	MyCertificate,
 	QuizAnswerInput,
 	QuizPlay,
 	QuizSubmitResult,
@@ -66,6 +67,10 @@ export const learningService = {
 	// Chứng chỉ khoá học của user hiện tại (yêu cầu đăng nhập). 404 nếu chưa có.
 	getCertificate: (slug: string) =>
 		api.get<ApiResponse<CourseCertificateInfo>>(`/learning/courses/${slug}/certificate`),
+
+	// Danh sách tất cả chứng chỉ (còn hiệu lực) của user hiện tại (yêu cầu đăng nhập).
+	getMyCertificates: () =>
+		api.get<ApiResponse<MyCertificate[]>>("/learning/certificates"),
 
 	getQuiz: (courseSlug: string, lessonSlug: string) =>
 		api.get<ApiResponse<QuizPlay>>(
