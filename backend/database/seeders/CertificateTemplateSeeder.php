@@ -34,7 +34,7 @@ class CertificateTemplateSeeder extends Seeder
         $template->fill([
             'name' => 'Mẫu mặc định',
             'design' => $this->defaultDesign(),
-            'thumbnail' => 'certificate-thumbnails/50817e13-18e2-42ef-a288-231898857fce.png',
+            'thumbnail' => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/certificate/81655d25-87f2-4cc9-9db3-8c18719bab2a.png',
             'is_default' => true,
             'created_by' => $template->created_by ?: $adminId,
         ]);
