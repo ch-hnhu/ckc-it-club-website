@@ -166,7 +166,8 @@ class CertificateRenderer
         // Fetch public URL and convert to base64 so it can be reliably embedded in the PDF
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
             try {
-                $response = Http::timeout(30)->get($url);
+                $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+                $response = Http::withOptions(['verify' => $verifySsl])->timeout(30)->get($url);
                 if ($response->successful()) {
                     $mime = $response->header('Content-Type') ?: 'image/png';
                     return 'data:'.$mime.';base64,'.base64_encode($response->body());
@@ -181,7 +182,8 @@ class CertificateRenderer
         if (str_starts_with($url, '/storage/')) {
             $fullUrl = rtrim((string) config('app.url'), '/') . $url;
             try {
-                $response = Http::timeout(30)->get($fullUrl);
+                $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+                $response = Http::withOptions(['verify' => $verifySsl])->timeout(30)->get($fullUrl);
                 if ($response->successful()) {
                     $mime = $response->header('Content-Type') ?: 'image/png';
                     return 'data:'.$mime.';base64,'.base64_encode($response->body());

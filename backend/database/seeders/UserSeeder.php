@@ -251,7 +251,7 @@ class UserSeeder extends Seeder
                 'password'    => bcrypt('Advisor@123'),
                 'gender'      => 'male',
                 // Ảnh chân dung thật đã có sẵn trong storage (avatars/mentor.jpg).
-                'avatar'      => 'avatars/mentor.jpg',
+                'avatar'      => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/avatars/mentor.jpg',
                 'bio'         => 'Giảng viên khoa Công nghệ thông tin — người thầy tận tâm, truyền cảm hứng cho sinh viên trong lĩnh vực lập trình và phát triển phần mềm. Người thành lập kiêm cố vấn của CLB IT CKC.',
                 'is_active'   => true,
             ],

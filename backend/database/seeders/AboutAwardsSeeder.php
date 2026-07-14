@@ -80,12 +80,12 @@ class AboutAwardsSeeder extends Seeder
         return [
             [
                 'icon' => 'Award',
-                'title' => 'Thành tích xuất sắc phong trào Hội nhiệm kỳ 2020 – 2023',
+                'title' => 'Thành tích xuất sắc phong trào Hội nhiệm kỳ 2023 – 2025',
                 'event' => 'Hội Sinh viên Việt Nam TP. Hồ Chí Minh',
                 'year' => '2020 – 2023',
-                'desc' => 'Câu lạc bộ được Hội Sinh viên Việt Nam TP.HCM tặng bằng khen vì có thành tích xuất sắc trong công tác Hội và phong trào sinh viên năm học 2020 – 2023.',
+                'desc' => 'Câu lạc bộ được Hội Sinh viên Việt Nam TP.HCM tặng bằng khen vì có thành tích xuất sắc trong công tác Hội và phong trào sinh viên năm học 2023 – 2025.',
                 'bg' => 'var(--color-pastel-yellow)',
-                'image' => $this->imageUrl('bang-khen-hoi-2025.jpg'),
+                'image' => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/rewards/bang-khen-hoi-2025.jpg',
             ],
             [
                 'icon' => 'Award',
@@ -94,7 +94,7 @@ class AboutAwardsSeeder extends Seeder
                 'year' => '2024',
                 'desc' => 'Tập thể câu lạc bộ được ghi nhận là đơn vị hoàn thành xuất sắc nhiệm vụ trong chiến dịch tình nguyện Mùa hè xanh, lan tỏa tinh thần sinh viên tình nguyện.',
                 'bg' => 'var(--color-pastel-green)',
-                'image' => $this->imageUrl('mua-he-xanh.jpg'),
+                'image' => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/rewards/mua-he-xanh.jpg',
             ],
             [
                 'icon' => 'Award',
@@ -103,7 +103,7 @@ class AboutAwardsSeeder extends Seeder
                 'year' => '2020 – 2023',
                 'desc' => 'Được tuyên dương vì đóng góp tích cực cho công tác Hội và phong trào sinh viên trong suốt giai đoạn 2020 – 2023.',
                 'bg' => 'var(--color-pastel-blue)',
-                'image' => $this->imageUrl('phong-trao-hoi-2020-2023.jpg'),
+                'image' => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/rewards/phong-trao-hoi-2020-2023.jpg',
             ],
         ];
     }
