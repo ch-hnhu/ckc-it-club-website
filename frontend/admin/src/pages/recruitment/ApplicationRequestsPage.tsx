@@ -10,7 +10,6 @@ import {
 	ChevronsRight,
 	Eye,
 	FileText,
-	Filter,
 	LayoutPanelLeft,
 	MessageSquareText,
 	MoreHorizontal,
@@ -258,7 +257,6 @@ function ApplicationRequestsPage() {
 	const averageAnswers = applications.length
 		? (totalAnswers / applications.length).toFixed(1)
 		: "0.0";
-	const activeFilterCount = Number(Boolean(search.trim())) + Number(statusFilter !== "all");
 	const reviewedPercent = applications.length
 		? Math.round((reviewedApplications / applications.length) * 100)
 		: 0;
