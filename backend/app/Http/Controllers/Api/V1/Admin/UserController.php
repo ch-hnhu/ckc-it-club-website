@@ -6,16 +6,18 @@ use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\User\StoreUserRequest;
 use App\Http\Requests\Api\V1\User\UpdateUserRequest;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\Department;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 
 class UserController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
+
     /**
      * Display a listing of the resource.
      */
@@ -52,15 +54,15 @@ class UserController extends BaseApiController
     {
         $validated = $request->validated();
 
-        $avatarPath = null;
+        $avatarUrl = null;
 
         if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+            $avatarUrl = $this->storage->uploadImage($request->file('avatar'), 'avatars');
         }
 
         $user = null;
 
-        DB::transaction(function () use ($validated, $avatarPath, &$user) {
+        DB::transaction(function () use ($validated, $avatarUrl, &$user) {
             $user = User::create([
                 'full_name' => $validated['full_name'],
                 'username' => $validated['username'],
@@ -72,7 +74,7 @@ class UserController extends BaseApiController
                 'faculty_id' => $validated['faculty_id'] ?? null,
                 'major_id' => $validated['major_id'] ?? null,
                 'class_id' => $validated['class_id'] ?? null,
-                'avatar' => $avatarPath,
+                'avatar' => $avatarUrl,
             ]);
 
             $user->syncRoles($validated['roles']);
@@ -116,12 +118,13 @@ class UserController extends BaseApiController
         }
 
         if ($request->hasFile('avatar')) {
-            $rawAvatarPath = $user->getRawOriginal('avatar');
-            if ($rawAvatarPath) {
-                Storage::disk('public')->delete($rawAvatarPath);
+            // Delete old avatar from Supabase (raw value is the full URL after migration)
+            $oldAvatar = $user->getRawOriginal('avatar');
+            if ($oldAvatar) {
+                $this->storage->delete($oldAvatar);
             }
 
-            $payload['avatar'] = $request->file('avatar')->store('avatars', 'public');
+            $payload['avatar'] = $this->storage->uploadImage($request->file('avatar'), 'avatars');
         }
 
         DB::transaction(function () use ($user, $payload, $validated) {
@@ -142,9 +145,9 @@ class UserController extends BaseApiController
     {
         $user = User::findOrFail($id);
 
-        $rawAvatarPath = $user->getRawOriginal('avatar');
-        if ($rawAvatarPath) {
-            Storage::disk('public')->delete($rawAvatarPath);
+        $oldAvatar = $user->getRawOriginal('avatar');
+        if ($oldAvatar) {
+            $this->storage->delete($oldAvatar);
         }
 
         $user->delete();

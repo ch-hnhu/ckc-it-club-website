@@ -13,16 +13,17 @@ use App\Models\EventGalleryItem;
 use App\Models\EventRegistration;
 use App\Models\User;
 use App\Notifications\AdminActionNotification;
+use App\Services\SupabaseStorageService;
 use App\Services\UserNotificationService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class EventController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     public function index(Request $request): JsonResponse
     {
         Event::syncStatuses();
@@ -127,9 +128,9 @@ class EventController extends BaseApiController
 
         if ($request->hasFile('thumbnail')) {
             if ($event->thumbnail) {
-                Storage::disk('public')->delete($event->thumbnail);
+                $this->storage->delete($event->thumbnail);
             }
-            $data['thumbnail'] = $request->file('thumbnail')->store('event-thumbnails', 'public');
+            $data['thumbnail'] = $this->storage->uploadImage($request->file('thumbnail'), 'event');
         }
 
         $isAlreadyPublished = in_array($event->status->value, ['published', 'ongoing', 'ended'], true);
@@ -478,11 +479,11 @@ class EventController extends BaseApiController
         $created = DB::transaction(function () use ($request, $event, &$maxOrder) {
             $items = [];
             foreach ($request->file('images') as $file) {
-                $path = $file->store("event-gallery/{$event->id}", 'public');
+                $path = $this->storage->uploadImage($file, 'event');
                 $items[] = EventGalleryItem::create([
                     'event_id' => $event->id,
                     'uploaded_by' => $request->user()->id,
-                    'image_url' => Storage::disk('public')->url($path),
+                    'image_url' => $path,
                     'caption' => $request->input('caption'),
                     'display_order' => ++$maxOrder,
                 ]);
@@ -503,10 +504,7 @@ class EventController extends BaseApiController
     {
         abort_if($galleryItem->event_id !== $event->id, 404);
 
-        $path = Str::after($galleryItem->image_url, '/storage/');
-        if ($path && $path !== $galleryItem->image_url) {
-            Storage::disk('public')->delete($path);
-        }
+        $this->storage->delete($galleryItem->image_url);
 
         $galleryItem->delete();
 

@@ -9,10 +9,8 @@ import type { UserProfile } from "@/types/user.types";
 const ADVISOR_USERNAME = "lucaotien";
 
 // Chuẩn hoá link social: cho phép lưu ở DB dạng URL đầy đủ hoặc chỉ handle.
-const githubUrl = (v: string) =>
-	v.startsWith("http") ? v : `https://github.com/${v}`;
-const linkedinUrl = (v: string) =>
-	v.startsWith("http") ? v : `https://www.linkedin.com/in/${v}`;
+const githubUrl = (v: string) => (v.startsWith("http") ? v : `https://github.com/${v}`);
+const linkedinUrl = (v: string) => (v.startsWith("http") ? v : `https://www.linkedin.com/in/${v}`);
 
 const MentorSection: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
@@ -66,10 +64,11 @@ const MentorSection: React.FC = () => {
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
 						style={{ fontFamily: "var(--font-heading)" }}>
-						Người thành lập kiêm cố vấn tối cao
+						Người thành lập
 					</h2>
 					<p className='text-gray-500 mt-3 max-w-xl mx-auto'>
-						Được hướng dẫn bởi những chuyên gia có kinh nghiệm thực chiến trong ngành
+						Người đã đặt nền móng cho CLB IT CKC, đồng thời là cố vấn cho các thành viên
+						trong CLB.
 					</p>
 				</div>
 
@@ -116,7 +115,7 @@ const MentorSection: React.FC = () => {
 								<h3
 									className='text-lg font-bold text-black'
 									style={{ fontFamily: "var(--font-heading)" }}>
-									{mentor.full_name}
+									Thầy {mentor.full_name}
 								</h3>
 								<p className='text-sm font-medium text-gray-500 mt-0.5'>
 									Người thành lập kiêm cố vấn CLB IT CKC
@@ -131,7 +130,7 @@ const MentorSection: React.FC = () => {
 							)}
 
 							{/* Social icons + CTA */}
-							<div className='w-full pt-4 border-t-2 border-black/10 flex items-center justify-between mt-auto'>
+							<div className='w-full pt-4 flex items-center justify-center mt-auto'>
 								<div className='flex gap-3'>
 									{mentor.social_github && (
 										<a

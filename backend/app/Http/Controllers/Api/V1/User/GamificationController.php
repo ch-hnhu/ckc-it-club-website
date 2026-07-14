@@ -9,7 +9,6 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class GamificationController extends BaseApiController
@@ -214,27 +213,13 @@ class GamificationController extends BaseApiController
 
     private function badgeUrl(?string $badge): ?string
     {
-        if (! $badge) {
-            return null;
-        }
-
-        if (Str::startsWith($badge, ['http://', 'https://', '/assets/'])) {
-            return $badge;
-        }
-
-        return Storage::disk('public')->url($badge);
+        // DB now stores the full public URL (Supabase https://... or external).
+        return $badge ?: null;
     }
 
     private function avatarUrl(?string $avatar): ?string
     {
-        if (! $avatar) {
-            return null;
-        }
-
-        if (str_starts_with($avatar, 'http')) {
-            return $avatar;
-        }
-
-        return Storage::disk('public')->url($avatar);
+        // DB now stores the full public URL (Supabase https://... or external).
+        return $avatar ?: null;
     }
 }
