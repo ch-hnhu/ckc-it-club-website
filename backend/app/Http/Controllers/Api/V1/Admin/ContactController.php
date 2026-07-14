@@ -101,16 +101,24 @@ class ContactController extends BaseApiController
             ], 'Invalid contact status transition');
         }
 
+        $statusNote = $request->validated('status_note');
+
         $contact->status = $nextStatus;
+        $contact->status_note = $statusNote !== null && $statusNote !== '' ? $statusNote : null;
         $contact->updated_by = $request->user()?->id;
         $contact->updated_at = now();
         $contact->save();
 
         $admin = $request->user();
         $statusLabels = ['pending' => 'chờ xử lý', 'processing' => 'đang xử lý', 'done' => 'đã xong'];
+        $notificationMessage = ($admin?->full_name ?? 'Admin').' đã cập nhật liên hệ #'.$contact->id.' sang "'.($statusLabels[$nextStatus] ?? $nextStatus).'"';
+        if ($contact->status_note) {
+            $notificationMessage .= ' - Lý do: '.$contact->status_note;
+        }
+
         NotificationService::dispatch(
             'Cập nhật trạng thái liên hệ',
-            ($admin?->full_name ?? 'Admin').' đã cập nhật liên hệ #'.$contact->id.' sang "'.($statusLabels[$nextStatus] ?? $nextStatus).'"',
+            $notificationMessage,
             'status_changed',
             'contact',
             $contact->id,
@@ -179,6 +187,7 @@ class ContactController extends BaseApiController
             'subject' => $contact->subject,
             'message' => $contact->message,
             'status' => $contact->status,
+            'status_note' => $contact->status_note,
             'created_at' => $contact->created_at?->toISOString(),
             'updated_at' => $contact->updated_at?->toISOString(),
             'created_by' => $contact->created_by,

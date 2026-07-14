@@ -28,8 +28,8 @@ class DepartmentSeeder extends Seeder
             'head_role'   => 'communications-head',
         ],
         [
-            'name'        => 'Ban Tình nguyện',
-            'slug'        => 'tinh-nguyen',
+            'name'        => 'Ban Phong trào',
+            'slug'        => 'phong-trao',
             'description' => 'Phụ trách hoạt động cộng đồng, điều phối tình nguyện viên và kết nối đối tác xã hội.',
             'head_role'   => 'volunteer-head',
         ],

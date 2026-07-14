@@ -382,7 +382,7 @@ function EventListPage() {
 											variant='ghost'
 											onClick={() => handleSort("id")}
 											className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-											ID {getSortIcon("id")}
+											STT 
 										</Button>
 									</TableHead>
 									<TableHead className='min-w-[260px]'>
@@ -458,7 +458,7 @@ function EventListPage() {
 										</TableRow>
 									))
 								) : events.length > 0 ? (
-									events.map((event) => (
+									events.map((event, index) => (
 										<TableRow key={event.id}>
 											<TableCell>
 												<Checkbox
@@ -469,7 +469,9 @@ function EventListPage() {
 												/>
 											</TableCell>
 											<TableCell className='font-medium text-muted-foreground'>
-												EVT-{event.id}
+												{(meta.current_page - 1) * meta.per_page +
+													index +
+													1}
 											</TableCell>
 											<TableCell>
 												<div className='flex items-center gap-3'>

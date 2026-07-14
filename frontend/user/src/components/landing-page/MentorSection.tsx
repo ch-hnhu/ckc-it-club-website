@@ -1,35 +1,41 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { ExternalLink, Github, Linkedin } from "lucide-react";
+import { userService } from "@/services/user.service";
+import { buildAvatar, buildProfileUrl } from "@/lib/utils";
+import type { UserProfile } from "@/types/user.types";
 
-const MENTORS = [
-	{
-		name: "Nguyễn Văn An",
-		role: "Chuyên gia AI/ML",
-		bio: "Chuyên gia về Machine Learning & Computer Vision, 5+ năm kinh nghiệm nghiên cứu.",
-		tag: "AI & Machine Learning",
-		tagBg: "var(--color-pastel-green)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=mentor1&backgroundColor=D2FAE5",
-	},
-	{
-		name: "Trần Thị Bình",
-		role: "Web Dev Lead",
-		bio: "Full-stack developer, maintainer các dự án open-source và speaker tại các sự kiện tech.",
-		tag: "Web Developer",
-		tagBg: "var(--color-pastel-blue)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=mentor2&backgroundColor=BFD9FE",
-	},
-	{
-		name: "Phạm Minh Châu",
-		role: "DevOps Engineer",
-		bio: "Kiến trúc sư cloud tại startup unicorn, chuyên Docker, K8s và CI/CD pipelines.",
-		tag: "DevOps & Cloud",
-		tagBg: "var(--color-pastel-pink)",
-		avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=mentor3&backgroundColor=FFDEDE",
-	},
-];
+// Username cố định của cố vấn / người thành lập CLB (được seed ở UserSeeder).
+const ADVISOR_USERNAME = "lucaotien";
+
+// Chuẩn hoá link social: cho phép lưu ở DB dạng URL đầy đủ hoặc chỉ handle.
+const githubUrl = (v: string) =>
+	v.startsWith("http") ? v : `https://github.com/${v}`;
+const linkedinUrl = (v: string) =>
+	v.startsWith("http") ? v : `https://www.linkedin.com/in/${v}`;
 
 const MentorSection: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
+	const [mentor, setMentor] = useState<UserProfile | null>(null);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		let cancelled = false;
+		userService
+			.getProfile(ADVISOR_USERNAME)
+			.then((res) => {
+				if (!cancelled) setMentor(res.data ?? null);
+			})
+			.catch(() => {
+				if (!cancelled) setMentor(null);
+			})
+			.finally(() => {
+				if (!cancelled) setLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		const el = sectionRef.current;
@@ -42,7 +48,14 @@ const MentorSection: React.FC = () => {
 		);
 		items.forEach((item) => observer.observe(item));
 		return () => observer.disconnect();
-	}, []);
+	}, [mentor, loading]);
+
+	// Ẩn hẳn section nếu tải xong mà không có cố vấn (tránh khối trống)
+	if (!loading && !mentor) {
+		return null;
+	}
+
+	const profileUrl = mentor ? buildProfileUrl(mentor.username, null) : "#";
 
 	return (
 		<section ref={sectionRef} id='mentors' className='neo-section bg-white'>
@@ -53,37 +66,49 @@ const MentorSection: React.FC = () => {
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
 						style={{ fontFamily: "var(--font-heading)" }}>
-						Mentor của chúng tôi
+						Người thành lập kiêm cố vấn tối cao
 					</h2>
 					<p className='text-gray-500 mt-3 max-w-xl mx-auto'>
 						Được hướng dẫn bởi những chuyên gia có kinh nghiệm thực chiến trong ngành
 					</p>
 				</div>
 
-				{/* Mentor cards */}
-				<div className='fade-in-up grid grid-cols-1 md:grid-cols-3 gap-8'>
-					{MENTORS.map((mentor) => (
-						<div
-							key={mentor.name}
-							className='neo-card bg-white flex flex-col items-center text-center p-8 gap-4'>
+				{/* Mentor card */}
+				<div className='fade-in-up flex flex-wrap justify-center gap-8'>
+					{loading || !mentor ? (
+						// Skeleton khi đang tải
+						<div className='neo-card bg-white flex flex-col items-center text-center p-8 gap-4 w-full max-w-sm animate-pulse'>
+							<div className='w-20 h-20 rounded-full border-2 border-black bg-gray-200' />
+							<div className='h-6 w-28 rounded-full bg-gray-100' />
+							<div className='h-5 w-40 rounded bg-gray-200' />
+							<div className='h-16 w-full rounded bg-gray-100' />
+						</div>
+					) : (
+						<div className='neo-card bg-white flex flex-col items-center text-center p-8 gap-4 w-full max-w-sm'>
 							{/* Avatar */}
-							<div
-								className='w-20 h-20 rounded-full overflow-hidden border-2 border-black'
+							<Link
+								to={profileUrl}
+								className='w-20 h-20 rounded-full overflow-hidden border-2 border-black no-underline'
 								style={{ boxShadow: "3px 3px 0px #111" }}>
 								<img
-									src={mentor.avatar}
-									alt={mentor.name}
+									src={buildAvatar(mentor.full_name, mentor.avatar)}
+									alt={mentor.full_name}
+									referrerPolicy='no-referrer'
 									className='w-full h-full object-cover'
 									onError={(e) => {
-										(e.target as HTMLImageElement).src =
-											`https://ui-avatars.com/api/?name=${encodeURIComponent(mentor.name)}&background=A3E635&color=111&bold=true&size=80`;
+										(e.target as HTMLImageElement).src = buildAvatar(
+											mentor.full_name,
+											null,
+										);
 									}}
 								/>
-							</div>
+							</Link>
 
 							{/* Tag */}
-							<span className='neo-tag text-xs' style={{ background: mentor.tagBg }}>
-								{mentor.tag}
+							<span
+								className='neo-tag text-xs'
+								style={{ background: "var(--color-pastel-blue)" }}>
+								Cố vấn
 							</span>
 
 							{/* Name + role */}
@@ -91,38 +116,52 @@ const MentorSection: React.FC = () => {
 								<h3
 									className='text-lg font-bold text-black'
 									style={{ fontFamily: "var(--font-heading)" }}>
-									{mentor.name}
+									{mentor.full_name}
 								</h3>
 								<p className='text-sm font-medium text-gray-500 mt-0.5'>
-									{mentor.role}
+									Người thành lập kiêm cố vấn CLB IT CKC
 								</p>
 							</div>
 
 							{/* Bio */}
-							<p className='text-sm text-gray-600 leading-relaxed flex-grow'>
-								{mentor.bio}
-							</p>
+							{mentor.bio && (
+								<p className='text-sm text-gray-600 leading-relaxed flex-grow'>
+									{mentor.bio}
+								</p>
+							)}
 
 							{/* Social icons + CTA */}
 							<div className='w-full pt-4 border-t-2 border-black/10 flex items-center justify-between mt-auto'>
 								<div className='flex gap-3'>
-									<a
-										href='#'
-										className='p-2 rounded-lg border-2 border-black hover:bg-gray-100 transition-colors'>
-										<Github className='w-4 h-4' />
-									</a>
-									<a
-										href='#'
-										className='p-2 rounded-lg border-2 border-black hover:bg-gray-100 transition-colors'>
-										<Linkedin className='w-4 h-4' />
-									</a>
+									{mentor.social_github && (
+										<a
+											href={githubUrl(mentor.social_github)}
+											target='_blank'
+											rel='noopener noreferrer'
+											aria-label={`GitHub của ${mentor.full_name}`}
+											className='p-2 rounded-lg border-2 border-black hover:bg-gray-100 transition-colors'>
+											<Github className='w-4 h-4' />
+										</a>
+									)}
+									{mentor.social_linkedin && (
+										<a
+											href={linkedinUrl(mentor.social_linkedin)}
+											target='_blank'
+											rel='noopener noreferrer'
+											aria-label={`LinkedIn của ${mentor.full_name}`}
+											className='p-2 rounded-lg border-2 border-black hover:bg-gray-100 transition-colors'>
+											<Linkedin className='w-4 h-4' />
+										</a>
+									)}
 								</div>
-								<a href='#' className='neo-btn neo-btn-primary text-sm px-4 py-2'>
+								<Link
+									to={profileUrl}
+									className='neo-btn neo-btn-primary text-sm px-4 py-2 no-underline'>
 									Xem hồ sơ <ExternalLink className='w-3.5 h-3.5' />
-								</a>
+								</Link>
 							</div>
 						</div>
-					))}
+					)}
 				</div>
 			</div>
 		</section>

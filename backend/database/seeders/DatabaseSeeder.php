@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             ClubInformationSeeder::class,
             ClubInformationValueSeeder::class,
+            AboutPageSeeder::class,
             DepartmentSeeder::class,
             DepartmentUserSeeder::class,
             FacultySeeder::class,
@@ -42,6 +43,7 @@ class DatabaseSeeder extends Seeder
             LearningCenterSeeder::class,
             CertificateTemplateSeeder::class,
             CourseCertificateTestSeeder::class,
+            PythonOfflineCertificateSeeder::class,
 
             // ── Dữ liệu demo bổ sung (hồ sơ, gamification, ProjectHub, kiểm duyệt AI) ──
             UserSkillSeeder::class,

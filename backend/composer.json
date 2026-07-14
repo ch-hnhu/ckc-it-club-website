@@ -19,6 +19,8 @@
         "laravel/socialite": "^5.26",
         "laravel/tinker": "^2.10.1",
         "resend/resend-laravel": "^1.4",
+        "setasign/fpdf": "^1.9",
+        "setasign/fpdi": "^2.6",
         "spatie/browsershot": "^5.4",
         "spatie/laravel-permission": "^7.0"
     },

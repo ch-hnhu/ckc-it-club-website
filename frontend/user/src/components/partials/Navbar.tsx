@@ -4,14 +4,11 @@ import {
 	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
-	Code2,
-	Crown,
 	Home,
 	LogIn,
 	LogOut,
 	Menu,
 	MessageSquare,
-	Monitor,
 	SlidersHorizontal,
 	Trophy,
 	UserPlus,
@@ -60,9 +57,6 @@ const COMMUNITY_DROPDOWN = [
 	{ id: "home", label: "Trang chủ", to: "/cong-dong", icon: Home },
 	{ id: "chat", label: "Phòng chat", to: "/cong-dong/chat", icon: MessageSquare },
 	{ id: "leaderboard", label: "Bảng xếp hạng", to: "/cong-dong/bang-xep-hang", icon: Trophy },
-	{ id: "showcase", label: "Showcase dự án", to: "/cong-dong", icon: Monitor },
-	{ id: "challenge", label: "Thử thách tháng", to: "/cong-dong", icon: Crown },
-	{ id: "code", label: "#30DaysOfCode", to: "/cong-dong", icon: Code2 },
 ];
 
 const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {

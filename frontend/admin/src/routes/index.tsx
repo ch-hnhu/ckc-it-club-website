@@ -30,6 +30,7 @@ import PermissionList from "@/pages/permission/PermissionList";
 import ClubInformationList from "@/pages/club-information/ClubInformationList";
 import ClubInformationDetailPage from "@/pages/club-information/ClubInformationDetailPage";
 import CreateClubInformationPage from "@/pages/club-information/CreateClubInformationPage";
+import AboutPageEditor from "@/pages/about-page/AboutPageEditor";
 import OrganizationImportListPage from "@/pages/organization/OrganizationImportListPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
 import ChannelListPage from "@/pages/community/ChannelListPage";
@@ -245,6 +246,14 @@ const router = createBrowserRouter([
 				element: (
 					<PermissionRoute permission='club_info.view'>
 						<ClubInformationDetailPage />
+					</PermissionRoute>
+				),
+			},
+			{
+				path: "about-page",
+				element: (
+					<PermissionRoute permission='club_info.view'>
+						<AboutPageEditor />
 					</PermissionRoute>
 				),
 			},

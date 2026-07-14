@@ -74,7 +74,7 @@ const FeaturedArticle: React.FC<{ blog: Blog; isHighlight?: boolean }> = ({ blog
 			className='group block overflow-hidden rounded-2xl border-2 border-black bg-white'>
 			<div className='flex flex-col md:flex-row'>
 				{/* Image — 58% width on desktop */}
-				<div className='relative aspect-[4/3] max-h-[340px] shrink-0 overflow-hidden bg-gray-100 md:h-[380px] md:max-h-[420px] md:w-[58%] md:aspect-auto lg:h-[420px]'>
+				<div className='relative aspect-[4/3] max-h-[340px] shrink-0 overflow-hidden bg-gray-100 md:aspect-auto md:h-auto md:max-h-none md:min-h-[380px] md:w-[58%] md:self-stretch'>
 					{blog.featured_image ? (
 						<img
 							src={blog.featured_image}

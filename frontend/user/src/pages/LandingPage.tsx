@@ -3,6 +3,7 @@ import QuickActions from "@/components/landing-page/QuickActions";
 import AboutValues from "@/components/landing-page/AboutValues";
 import MentorSection from "@/components/landing-page/MentorSection";
 import BoardSection from "@/components/landing-page/BoardSection";
+import AwardsSection from "@/components/landing-page/AwardsSection";
 import FeaturedContent from "@/components/landing-page/FeaturedContent";
 import LeaderboardPreview from "@/components/landing-page/LeaderboardPreview";
 import ContributionSection from "@/components/landing-page/ContributionSection";
@@ -16,6 +17,7 @@ const LandingPage: React.FC = () => {
 			<AboutValues />
 			<MentorSection />
 			<BoardSection />
+			<AwardsSection />
 			<FeaturedContent />
 			<LeaderboardPreview />
 			<ContributionSection />

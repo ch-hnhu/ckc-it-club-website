@@ -18,7 +18,7 @@ const FOOTER_NAV_LINKS = {
 };
 
 const FOOTER_CLB_LINKS = [
-	{ label: "Về chúng tôi", href: "/gioi-thieu" },
+	{ label: "Về chúng tôi", href: "/ve-chung-toi" },
 	{ label: "Tham gia CLB", href: "/ung-tuyen" },
 	{ label: "Liên hệ", href: "/lien-he" },
 	{ label: "Cộng đồng", href: "/cong-dong" },

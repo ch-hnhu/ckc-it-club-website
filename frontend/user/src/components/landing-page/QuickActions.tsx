@@ -8,13 +8,14 @@ import {
 	Lightbulb,
 	ArrowRight,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const ACTIONS = [
 	{
 		icon: BookOpen,
 		title: "Tài nguyên",
 		desc: "Kho tài liệu phong phú: slide, code, video từ cộng đồng & mentor",
-		href: "#resources",
+		to: "/tai-nguyen",
 		bg: "var(--color-pastel-green)",
 		emoji: "📚",
 	},
@@ -22,7 +23,7 @@ const ACTIONS = [
 		icon: FileText,
 		title: "Bài viết",
 		desc: "Bài viết kỹ thuật, kinh nghiệm học tập và chia sẻ từ các thành viên",
-		href: "#blog",
+		to: "/blog",
 		bg: "var(--color-pastel-blue)",
 		emoji: "✍️",
 	},
@@ -30,7 +31,7 @@ const ACTIONS = [
 		icon: Trophy,
 		title: "Bảng xếp hạng",
 		desc: "Xem bảng xếp hạng, tích lũy điểm XP qua các hoạt động của CLB",
-		href: "#leaderboard",
+		to: "/cong-dong/bang-xep-hang",
 		bg: "var(--color-pastel-yellow)",
 		emoji: "🏆",
 	},
@@ -38,7 +39,7 @@ const ACTIONS = [
 		icon: Calendar,
 		title: "Sự kiện",
 		desc: "Sự kiện workshop, hackathon, seminar hấp dẫn sắp diễn ra",
-		href: "#events",
+		to: "/su-kien",
 		bg: "var(--color-pastel-pink)",
 		emoji: "🎉",
 	},
@@ -46,7 +47,7 @@ const ACTIONS = [
 		icon: GraduationCap,
 		title: "Khóa học",
 		desc: "Các khóa học chất lượng về Web, AI, Mobile, DevOps và hơn thế nữa",
-		href: "#courses",
+		to: "/khoa-hoc",
 		bg: "var(--color-pastel-purple)",
 		emoji: "🎓",
 	},
@@ -54,7 +55,7 @@ const ACTIONS = [
 		icon: Lightbulb,
 		title: "Đóng góp",
 		desc: "Chia sẻ tài nguyên, viết blog, hoặc tổ chức workshop với cộng đồng",
-		href: "#contribute",
+		to: "/tai-nguyen/gui",
 		bg: "var(--color-pastel-orange)",
 		emoji: "💡",
 	},
@@ -111,9 +112,9 @@ const QuickActions: React.FC = () => {
 				{/* Cards grid */}
 				<div className='fade-in-up grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
 					{ACTIONS.map((action) => (
-						<a
+						<Link
 							key={action.title}
-							href={action.href}
+							to={action.to}
 							className='neo-card flex flex-col p-6 no-underline group'
 							style={{
 								background: action.bg,
@@ -148,7 +149,7 @@ const QuickActions: React.FC = () => {
 									Xem ngay <ArrowRight className='w-4 h-4' />
 								</span>
 							</div>
-						</a>
+						</Link>
 					))}
 				</div>
 			</div>
