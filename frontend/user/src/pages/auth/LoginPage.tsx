@@ -23,9 +23,7 @@ export default function LoginPage() {
 	const locationState = location.state as { successMessage?: string; from?: string } | null;
 	const successMessage = locationState?.successMessage;
 	const returnTo =
-		locationState?.from ||
-		new URLSearchParams(location.search).get("returnTo") ||
-		"/";
+		locationState?.from || new URLSearchParams(location.search).get("returnTo") || "/";
 
 	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
@@ -94,7 +92,7 @@ export default function LoginPage() {
 								background: "var(--color-primary)",
 							}}>
 							<img
-								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
+								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/club-info/it_club_ckc.jpg'
 								className='h-full w-full rounded-full object-cover'
 								alt='CKC IT CLUB'
 							/>

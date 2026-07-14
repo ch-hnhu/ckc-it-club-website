@@ -40,7 +40,7 @@ export type AdminNavItem = {
 export const adminNavHead: AdminNavHeadItem[] = [
 	{
 		name: "CKC IT CLUB",
-		logo: "https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg",
+		logo: "https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/club-info/it_club_ckc.jpg",
 		role: "Quản trị viên",
 	},
 ];
