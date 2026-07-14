@@ -31,7 +31,7 @@ class UserSeeder extends Seeder
                 'full_name' => 'Đinh Nguyễn Bá Tài',
                 'role'      => RolesEnum::PRESIDENT,
                 'gender'    => 'male',
-                'avatar'    => 'avatars/president.jpg',
+                'avatar'    => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/avatars/president.jpg',
                 'cover_image' => 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=70',
                 'bio'       => 'Chủ nhiệm CLB IT CKC. Đam mê xây dựng cộng đồng lập trình sinh viên Cao Thắng. 🚀',
             ],
@@ -41,7 +41,7 @@ class UserSeeder extends Seeder
                 'full_name' => 'Phạm Quang Khải',
                 'role'      => RolesEnum::VICE_PRESIDENT,
                 'gender'    => 'male',
-                'avatar'    => 'avatars/vicepresident.jpg',
+                'avatar'    => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/avatars/vicepresident.jpg',
                 'bio'       => 'Phó Chủ nhiệm CLB IT CKC — phụ trách đối nội và hoạt động thành viên.',
             ],
             [
@@ -50,7 +50,7 @@ class UserSeeder extends Seeder
                 'full_name' => 'Huỳnh Khắc Huy',
                 'role'      => RolesEnum::ACADEMIC_HEAD,
                 'gender'    => 'male',
-                'avatar'    => 'avatars/academichead.jpg',
+                'avatar'    => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/avatars/academichead.jpg',
                 'bio'       => 'Trưởng ban Học thuật — mentor các khoá lập trình web của CLB. Backend PHP/Laravel.',
             ],
             [
@@ -59,7 +59,7 @@ class UserSeeder extends Seeder
                 'full_name' => 'Trần Minh Hiếu',
                 'role'      => RolesEnum::COMMUNICATIONS_HEAD,
                 'gender'    => 'male',
-                'avatar'    => 'avatars/communicationshead.jpg',
+                'avatar'    => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/avatars/communicationshead.jpg',
                 'bio'       => 'Trưởng ban Truyền thông — kể chuyện CLB bằng hình ảnh và con chữ. 📸',
             ],
             [
@@ -68,7 +68,7 @@ class UserSeeder extends Seeder
                 'full_name' => 'Trần Hữu Minh Hiệp',
                 'role'      => RolesEnum::VOLUNTEER_HEAD,
                 'gender'    => 'male',
-                'avatar'    => 'https://randomuser.me/api/portraits/men/78.jpg',
+                'avatar'    => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/avatars/volunteerhead.jpg',
                 'bio'       => 'Trưởng ban Phong trào — mang công nghệ đến gần hơn với cộng đồng. 💚',
             ],
             [
@@ -251,7 +251,7 @@ class UserSeeder extends Seeder
                 'password'    => bcrypt('Advisor@123'),
                 'gender'      => 'male',
                 // Ảnh chân dung thật đã có sẵn trong storage (avatars/mentor.jpg).
-                'avatar'      => 'avatars/mentor.jpg',
+                'avatar'      => 'https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/avatars/mentor.jpg',
                 'bio'         => 'Giảng viên khoa Công nghệ thông tin — người thầy tận tâm, truyền cảm hứng cho sinh viên trong lĩnh vực lập trình và phát triển phần mềm. Người thành lập kiêm cố vấn của CLB IT CKC.',
                 'is_active'   => true,
             ],
@@ -274,5 +274,5 @@ class UserSeeder extends Seeder
                 'is_active'   => true,
             ],
         )->syncRoles([RolesEnum::USER->value]);
-    }
+    }   
 }

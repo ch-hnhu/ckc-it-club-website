@@ -19,15 +19,10 @@ class CredentialAuthController extends AuthBaseController
     {
         $validated = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:30', 'regex:/^[A-Za-z0-9_.]+$/', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ], [
             'full_name.required' => 'Vui lòng nhập họ và tên.',
-            'username.required' => 'Vui lòng nhập username.',
-            'username.max' => 'Username không được vượt quá 30 ký tự.',
-            'username.regex' => 'Username chỉ được chứa chữ cái, số, dấu chấm và dấu gạch dưới.',
-            'username.unique' => 'Username đã tồn tại.',
             'email.required' => 'Vui lòng nhập email.',
             'email.email' => 'Email không hợp lệ.',
             'email.unique' => 'Email đã tồn tại.',
@@ -36,12 +31,12 @@ class CredentialAuthController extends AuthBaseController
             'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
         ]);
 
-        $email = $validated['email'];
+        $email = strtolower($validated['email']);
         $isSchoolStudent = (bool) preg_match('/^\d{10}@caothang\.edu\.vn$/', $email);
 
         $user = User::create([
             'full_name' => $validated['full_name'],
-            'username' => $validated['username'],
+            'username' => User::generateUniqueUsername($email),
             'email' => $email,
             'student_code' => $isSchoolStudent ? \Illuminate\Support\Str::before($email, '@') : null,
             'password' => Hash::make($validated['password']),
@@ -124,6 +119,12 @@ class CredentialAuthController extends AuthBaseController
                 'success' => false,
                 'message' => 'Bạn không có quyền truy cập vào trang quản trị.',
             ], HttpStatus::FORBIDDEN->value);
+        }
+
+        if (! $user->username) {
+            $user->forceFill([
+                'username' => User::generateUniqueUsername($user->email),
+            ])->save();
         }
 
         $user->tokens()->delete();

@@ -254,6 +254,20 @@ export interface CourseCertificateInfo {
 	issued_at: string | null;
 }
 
+// Một chứng chỉ trong danh sách "Chứng chỉ của tôi" (kèm thông tin khoá học).
+export interface MyCertificate {
+	cert_code: string;
+	cert_url: string;
+	track: "offline" | "online";
+	has_physical: boolean;
+	issued_at: string | null;
+	course: {
+		slug: string;
+		title: string;
+		thumbnail: string | null;
+	} | null;
+}
+
 export interface CourseListParams {
 	page?: number;
 	per_page?: number;
