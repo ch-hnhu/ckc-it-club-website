@@ -7,14 +7,15 @@ use App\Models\ChatMember;
 use App\Models\ChatRoom;
 use App\Models\Message;
 use App\Services\NotificationService;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ChatRoomController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     public function index(Request $request): JsonResponse
     {
         $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
@@ -129,9 +130,9 @@ class ChatRoomController extends BaseApiController
 
         if ($request->hasFile('image')) {
             if ($room->image && ! Str::startsWith($room->image, ['http://', 'https://'])) {
-                Storage::disk('public')->delete($room->image);
+                $this->storage->delete($room->image);
             }
-            $payload['image'] = $request->file('image')->store('chat-rooms', 'public');
+            $payload['image'] = $this->storage->uploadImage($request->file('image'), 'chat-rooms');
         }
 
         $room->update($payload);
@@ -211,8 +212,8 @@ class ChatRoomController extends BaseApiController
         $roomName = $room->name ?? "Phòng #{$room->id}";
 
         // Xóa ảnh vật lý khi xóa vĩnh viễn
-        if ($room->image && ! Str::startsWith($room->image, ['http://', 'https://'])) {
-            Storage::disk('public')->delete($room->image);
+        if ($room->image) {
+            $this->storage->delete($room->image);
         }
 
         $room->forceDelete();
@@ -332,9 +333,8 @@ class ChatRoomController extends BaseApiController
 
     private function resolveImageUrl(?string $image): ?string
     {
-        if (! $image) return null;
-        if (Str::startsWith($image, ['http://', 'https://', '/storage/'])) return $image;
-        return Storage::disk('public')->url($image);
+        // DB now stores the full public URL (Supabase https://... or external).
+        return $image ?: null;
     }
 
     private function transformMessage(Message $message): array

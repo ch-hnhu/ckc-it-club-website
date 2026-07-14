@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\MediaFile;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class MediaFileController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     public function index(Request $request): JsonResponse
     {
         $allowedSorts = ['id', 'url', 'size_kb', 'created_at', 'file_type', 'target_type', 'owner_name'];
@@ -72,13 +73,10 @@ class MediaFileController extends BaseApiController
     private function deleteStorageFile(string $url): void
     {
         try {
-            $storageUrl = Storage::disk('public')->url('');
-            if (str_starts_with($url, $storageUrl)) {
-                $path = ltrim(substr($url, strlen($storageUrl)), '/');
-                Storage::disk('public')->delete($path);
-            }
+            // Delegate to SupabaseStorageService which parses Supabase URLs and calls the delete API.
+            $this->storage->delete($url);
         } catch (\Throwable) {
-            // Không throw — xóa DB dù file không tồn tại
+            // Don't throw — delete DB record even if storage delete fails.
         }
     }
 

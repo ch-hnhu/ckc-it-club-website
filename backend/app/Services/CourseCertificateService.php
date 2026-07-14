@@ -6,7 +6,7 @@ use App\Models\CertificateTemplate;
 use App\Models\CourseCertificate;
 use App\Models\CourseEnrollment;
 use App\Models\User;
-use Illuminate\Support\Facades\Storage;
+use App\Services\SupabaseStorageService;
 use Illuminate\Support\Str;
 
 /**
@@ -15,6 +15,8 @@ use Illuminate\Support\Str;
  */
 class CourseCertificateService
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
+
     /**
      * Cấp chứng chỉ cho enrollment đã hoàn thành. Idempotent theo unique
      * (user_id, course_id, track) trên course_certificates — nếu đã có chứng chỉ còn hiệu lực
@@ -92,12 +94,13 @@ class CourseCertificateService
 
         $pdfBytes = app(CertificateRenderer::class)->renderPdf($template, $renderData);
 
-        Storage::disk('public')->put($path, $pdfBytes);
+        $filename = $certCode.'.pdf';
+        $certUrl = $this->storage->uploadRaw($pdfBytes, 'certificates', $filename, 'application/pdf', 'files');
 
         $data = [
             'template_id' => $template->id,
             'cert_code' => $certCode,
-            'cert_url' => Storage::disk('public')->url($path),
+            'cert_url' => $certUrl,
             'issued_at' => now(),
             'revoked_at' => null,
             'revoked_by' => null,
@@ -105,10 +108,10 @@ class CourseCertificateService
         ];
 
         if ($existing) {
-            $oldPath = $this->storagePathFromUrl($existing->cert_url);
+            $oldUrl = $existing->cert_url;
             $existing->update($data);
-            if ($oldPath) {
-                Storage::disk('public')->delete($oldPath);
+            if ($oldUrl) {
+                $this->storage->delete($oldUrl);
             }
 
             return $existing->refresh();
@@ -131,15 +134,5 @@ class CourseCertificateService
         return $code;
     }
 
-    private function storagePathFromUrl(?string $url): ?string
-    {
-        if (! $url) {
-            return null;
-        }
 
-        $marker = '/storage/';
-        $pos = strpos($url, $marker);
-
-        return $pos !== false ? substr($url, $pos + strlen($marker)) : null;
-    }
 }

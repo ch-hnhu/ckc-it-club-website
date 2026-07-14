@@ -10,15 +10,17 @@ use App\Models\Post;
 use App\Models\Rank;
 use App\Models\Skill;
 use App\Models\User;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
 class ProfileController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
+
     private ?Rank $defaultRank = null;
 
     private bool $defaultRankLoaded = false;
@@ -89,10 +91,10 @@ class ProfileController extends BaseApiController
 
         if ($request->hasFile('avatar')) {
             $raw = $user->getRawOriginal('avatar');
-            if ($raw && ! Str::startsWith($raw, ['http://', 'https://'])) {
-                Storage::disk('public')->delete($raw);
+            if ($raw) {
+                $this->storage->delete($raw);
             }
-            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+            $data['avatar'] = $this->storage->uploadImage($request->file('avatar'), 'avatars');
         } else {
             unset($data['avatar']);
         }
@@ -100,9 +102,9 @@ class ProfileController extends BaseApiController
         if ($request->hasFile('cover_image')) {
             $raw = $user->getRawOriginal('cover_image');
             if ($raw) {
-                Storage::disk('public')->delete($raw);
+                $this->storage->delete($raw);
             }
-            $data['cover_image'] = $request->file('cover_image')->store('covers', 'public');
+            $data['cover_image'] = $this->storage->uploadImage($request->file('cover_image'), 'covers');
         } else {
             unset($data['cover_image']);
         }
@@ -259,15 +261,8 @@ class ProfileController extends BaseApiController
 
     private function badgeUrl(?string $badge): ?string
     {
-        if (! $badge) {
-            return null;
-        }
-
-        if (Str::startsWith($badge, ['http://', 'https://', '/assets/'])) {
-            return $badge;
-        }
-
-        return Storage::disk('public')->url($badge);
+        // DB now stores the full public URL (Supabase https://... or external).
+        return $badge ?: null;
     }
 
     /**
@@ -283,11 +278,11 @@ class ProfileController extends BaseApiController
                 // Revoke all Sanctum tokens
                 $user->tokens()->delete();
 
-                // Delete avatar / cover from storage (local files only)
+                // Delete avatar / cover from Supabase storage
                 foreach (['avatar', 'cover_image'] as $field) {
                     $raw = $user->getRawOriginal($field);
-                    if ($raw && ! Str::startsWith($raw, ['http://', 'https://'])) {
-                        Storage::disk('public')->delete($raw);
+                    if ($raw) {
+                        $this->storage->delete($raw);
                     }
                 }
 

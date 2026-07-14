@@ -55,7 +55,10 @@ const TAG_BG = [
 	"bg-[var(--color-pastel-yellow)]",
 ];
 
-const FeaturedArticle: React.FC<{ blog: Blog; isHighlight?: boolean }> = ({ blog, isHighlight }) => {
+const FeaturedArticle: React.FC<{ blog: Blog; isHighlight?: boolean }> = ({
+	blog,
+	isHighlight,
+}) => {
 	const authorName = blog.user?.full_name ?? "CKC IT CLUB";
 	const authorAvatar = blog.user?.avatar?.trim();
 	const authorInitial = authorName.trim().charAt(0).toUpperCase() || "C";
@@ -162,7 +165,7 @@ const FeaturedArticle: React.FC<{ blog: Blog; isHighlight?: boolean }> = ({ blog
 
 // ─── BlogFeedPage ─────────────────────────────────────────────────────────────
 
-const PREVIEW_PER_PAGE = 7;  // 1 featured + 6 grid
+const PREVIEW_PER_PAGE = 7; // 1 featured + 6 grid
 const EXPANDED_PER_PAGE = 9; // 3 × 3 grid
 
 const BlogFeedPage: React.FC = () => {
@@ -259,12 +262,17 @@ const BlogFeedPage: React.FC = () => {
 				if (!cancelled) setLoading(false);
 			});
 
-		return () => { cancelled = true; };
+		return () => {
+			cancelled = true;
+		};
 	}, [search, activeTag, showAll]);
 
 	// Load tất cả tags một lần khi mount
 	useEffect(() => {
-		blogService.getTags().then((res) => setAllTags(res.data)).catch(() => {});
+		blogService
+			.getTags()
+			.then((res) => setAllTags(res.data))
+			.catch(() => {});
 	}, []);
 
 	useEffect(() => {
@@ -299,14 +307,11 @@ const BlogFeedPage: React.FC = () => {
 	const isExpandedMode = showAll || isFiltered;
 
 	// Bài featured: luôn ghim trên cùng trừ khi đang filter (search/tag)
-	const featuredBlog = !isFiltered && blogs.length > 0
-		? (blogs.find((b) => b.is_highlight) ?? blogs[0])
-		: null;
+	const featuredBlog =
+		!isFiltered && blogs.length > 0 ? (blogs.find((b) => b.is_highlight) ?? blogs[0]) : null;
 
 	// Grid không bao gồm bài featured
-	const gridBlogs = featuredBlog
-		? blogs.filter((b) => b.id !== featuredBlog.id)
-		: blogs;
+	const gridBlogs = featuredBlog ? blogs.filter((b) => b.id !== featuredBlog.id) : blogs;
 
 	const tagButtonClass =
 		"inline-flex h-10 shrink-0 items-center justify-center rounded-full border-2 border-black px-5 text-sm font-bold leading-none shadow-[3px_3px_0_#111] transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none";
@@ -339,7 +344,7 @@ const BlogFeedPage: React.FC = () => {
 					backgroundRepeat: "no-repeat",
 				}}>
 				<img
-					src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/ckc-blog-title.png'
+					src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/club-info/ckc-blog-title.png'
 					alt='CKC IT BLOG'
 					className='relative max-h-28 w-auto object-contain md:max-h-32'
 				/>
@@ -403,7 +408,9 @@ const BlogFeedPage: React.FC = () => {
 							{allTags.map((tag) => (
 								<button
 									key={tag.id}
-									onClick={() => setActiveTag(activeTag === tag.name ? null : tag.name)}
+									onClick={() =>
+										setActiveTag(activeTag === tag.name ? null : tag.name)
+									}
 									className={`${tagButtonClass} ${
 										activeTag === tag.name
 											? "bg-[var(--color-primary)] text-black"
@@ -437,7 +444,9 @@ const BlogFeedPage: React.FC = () => {
 					</div>
 				) : error ? (
 					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
-						<p className='font-heading text-xl font-extrabold text-black'>Có lỗi xảy ra</p>
+						<p className='font-heading text-xl font-extrabold text-black'>
+							Có lỗi xảy ra
+						</p>
 						<p className='mt-2 text-sm text-gray-600'>{error}</p>
 						<button
 							onClick={() => setSearch((s) => s)}
@@ -469,7 +478,10 @@ const BlogFeedPage: React.FC = () => {
 					<div className='space-y-10'>
 						{/* Featured article — chỉ hiện ở chế độ preview */}
 						{featuredBlog && (
-							<FeaturedArticle blog={featuredBlog} isHighlight={featuredBlog.is_highlight} />
+							<FeaturedArticle
+								blog={featuredBlog}
+								isHighlight={featuredBlog.is_highlight}
+							/>
 						)}
 
 						{/* Grid section */}

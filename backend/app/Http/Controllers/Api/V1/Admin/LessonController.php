@@ -17,7 +17,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class LessonController extends BaseApiController
@@ -399,13 +398,8 @@ class LessonController extends BaseApiController
 
     private function resolveAvatar(?string $avatar): ?string
     {
-        if (! $avatar) {
-            return null;
-        }
-
-        return str_starts_with($avatar, 'http') || str_starts_with($avatar, '/')
-            ? $avatar
-            : Storage::disk('public')->url($avatar);
+        // DB now stores the full public URL (Supabase https://... or external).
+        return $avatar ?: null;
     }
 
     /**

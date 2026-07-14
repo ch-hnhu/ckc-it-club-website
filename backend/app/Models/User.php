@@ -9,7 +9,6 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Laravel\Sanctum\HasApiTokens;
 use App\Enums\RolesEnum;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -198,30 +197,6 @@ class User extends Authenticatable
         return $username;
     }
 
-    /**
-     * Convert local avatar path to public URL while keeping external URLs unchanged.
-     */
-    public function getAvatarAttribute(?string $value): ?string
-    {
-        if (! $value) {
-            return null;
-        }
-
-        if (Str::startsWith($value, ['http://', 'https://'])) {
-            return $value;
-        }
-
-        return Storage::disk('public')->url($value);
-    }
-
-    public function getCoverImageAttribute(?string $value): ?string
-    {
-        if (! $value) {
-            return null;
-        }
-
-        return Storage::disk('public')->url($value);
-    }
 
     /**
      * Ensure every newly created user has the default role.

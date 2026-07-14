@@ -80,7 +80,7 @@ export default function RegisterPage() {
 								background: "var(--color-primary)",
 							}}>
 							<img
-								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
+								src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/club-info/it_club_ckc.jpg'
 								className='h-full w-full rounded-full object-cover'
 								alt='CKC IT CLUB'
 							/>
