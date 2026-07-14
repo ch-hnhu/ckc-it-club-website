@@ -316,7 +316,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 									border: "2px solid #111",
 								}}>
 								<img
-									src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/it_club_ckc.jpg'
+									src='https://fdahxiysjakdipmaiprg.supabase.co/storage/v1/object/public/images/club-info/it_club_ckc.jpg'
 									className='h-full w-full rounded-full object-cover'
 								/>
 							</div>
