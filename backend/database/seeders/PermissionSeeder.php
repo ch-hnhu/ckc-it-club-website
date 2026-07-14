@@ -159,14 +159,17 @@ class PermissionSeeder extends Seeder
             'gamification.view', 'gamification.manage',
         ],
 
-        // Trưởng ban Học thuật — quản lý Trung tâm đào tạo (khóa học)
+        // Trưởng ban Học thuật — quản lý Khoá học (danh mục, buổi học, học viên,
+        // chứng nhận, mẫu chứng nhận); xem thống kê
         'academic-head' => [
             'admin_panel.access',
             'dashboard.view',
             'courses.view', 'courses.manage', 'quizzes.manage',
         ],
 
-        // Trưởng ban Truyền thông — toàn bộ chức năng quản lý cộng đồng
+        // Trưởng ban Truyền thông — quản lý cộng đồng (báo cáo vi phạm, skills,
+        // phòng chat, tags, bình luận, blogs, posts, kênh) và quản lý sự kiện
+        // (người tham gia, thư viện ảnh, phản hồi); xem thống kê
         'communications-head' => [
             'admin_panel.access',
             'dashboard.view',
@@ -174,10 +177,8 @@ class PermissionSeeder extends Seeder
             'community.channels.manage',
             'community.posts.view', 'community.posts.manage',
             'community.blogs.view', 'community.blogs.manage',
-            'community.resources.view', 'community.resources.manage',
             'community.comments.view', 'community.comments.manage',
             'community.tags.manage',
-            'community.notifications.send',
             'community.chat.view', 'community.chat.manage',
             'community.media.view',
             'community.skills.manage',
@@ -185,7 +186,8 @@ class PermissionSeeder extends Seeder
             'events.view', 'events.manage', 'events.check_in',
         ],
 
-        // Trưởng ban Tình nguyện — quản lý đơn vị học thuật, ứng tuyển và liên hệ
+        // Trưởng ban Tình nguyện — quản lý đơn vị (khoa, ngành, lớp, import),
+        // ứng tuyển CLB (form, yêu cầu tham gia, mail template) và liên hệ; xem thống kê
         'volunteer-head' => [
             'admin_panel.access',
             'dashboard.view',
@@ -195,7 +197,6 @@ class PermissionSeeder extends Seeder
             'academic_structure.import',
             'academic_data.view',
             'mail_templates.view', 'mail_templates.manage',
-            'events.view', 'events.check_in',
         ],
     ];
 

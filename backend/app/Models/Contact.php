@@ -15,5 +15,6 @@ class Contact extends Model
         'full_name',
         'subject',
         'message',
+        'status_note',
     ];
 }

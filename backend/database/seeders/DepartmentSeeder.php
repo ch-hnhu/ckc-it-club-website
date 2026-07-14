@@ -28,24 +28,11 @@ class DepartmentSeeder extends Seeder
             'head_role'   => 'communications-head',
         ],
         [
-            'name'        => 'Ban Tình nguyện',
-            'slug'        => 'tinh-nguyen',
+            'name'        => 'Ban Phong trào',
+            'slug'        => 'phong-trao',
             'description' => 'Phụ trách hoạt động cộng đồng, điều phối tình nguyện viên và kết nối đối tác xã hội.',
             'head_role'   => 'volunteer-head',
         ],
-        // Mở rộng thêm ban mới ở đây — ví dụ:
-        // [
-        //     'name'      => 'Ban Sự kiện',
-        //     'slug'      => 'su-kien',
-        //     'description' => 'Phụ trách tổ chức và điều phối các sự kiện của câu lạc bộ.',
-        //     'head_role' => 'events-head',   // cần tạo role tương ứng trong RoleSeeder
-        // ],
-        // [
-        //     'name'      => 'Ban Media',
-        //     'slug'      => 'media',
-        //     'description' => 'Phụ trách sản xuất nội dung video và đồ họa.',
-        //     'head_role' => 'media-head',    // cần tạo role tương ứng trong RoleSeeder
-        // ],
     ];
 
     public function run(): void

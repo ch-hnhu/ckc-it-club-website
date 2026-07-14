@@ -43,6 +43,8 @@ use App\Http\Controllers\Api\V1\User\ResourceController as UserResourceControlle
 use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
+use App\Http\Controllers\Api\V1\User\AboutPageController;
+use App\Http\Controllers\Api\V1\User\ClubBoardController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\CourseController as UserCourseController;
 use App\Http\Controllers\Api\V1\User\QuizController as UserQuizController;
@@ -98,6 +100,12 @@ Route::prefix('v1')->group(function () {
             'data' => ['value' => $activeValue?->value, 'type' => $info->type],
         ]);
     });
+    // Ban Chủ Nhiệm — danh sách lãnh đạo CLB cho landing page (public)
+    Route::get('/club-board', [ClubBoardController::class, 'index']);
+
+    // Nội dung trang "Về chúng tôi" (About) — dạng config (public, read-only)
+    Route::get('/about-page', [AboutPageController::class, 'show']);
+
     Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
     Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
     Route::get('/users/{username}/following', [FollowController::class, 'following']);
@@ -378,6 +386,14 @@ Route::prefix('v1')->group(function () {
             Route::delete('club-informations/{clubInformation}/values/{clubInformationValue}', [ClubInformationController::class, 'destroyValue']);
         });
 
+        // Trang "Về chúng tôi" (About) — chỉnh sửa nội dung dạng config.
+        // Việc đọc dùng chung route public GET /v1/about-page ở trên; ở đây chỉ
+        // cần route lưu (PUT) yêu cầu quyền quản lý.
+        Route::middleware('permission:club_info.manage')->group(function () {
+            Route::put('about-page', [AboutPageController::class, 'update']);
+            Route::post('about-page/upload-image', [AboutPageController::class, 'uploadImage']);
+        });
+
         // contacts
         Route::middleware('permission:contacts.view')->group(function () {
             Route::get('contacts/stats', [AdminContactController::class, 'stats']);
@@ -566,6 +582,8 @@ Route::prefix('v1')->group(function () {
             Route::get('certificate-templates/{certificateTemplate}', [AdminCertificateTemplateController::class, 'show']);
             Route::get('course-categories', [AdminCourseCategoryController::class, 'index']);
             Route::get('courses/{course}', [AdminCourseController::class, 'show']);
+            Route::get('courses/{course}/certificates/export-physical', [AdminCourseController::class, 'exportPhysicalCertificates']);
+            Route::get('courses/{course}/certificates/print-physical', [AdminCourseController::class, 'printPhysicalCertificates']);
             Route::get('courses/{course}/lessons/{lesson}', [AdminLessonController::class, 'show']);
         });
         Route::middleware('permission:courses.manage')->group(function () {

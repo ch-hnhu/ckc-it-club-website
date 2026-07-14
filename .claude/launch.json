@@ -30,6 +30,13 @@
       "autoPort": false
     },
     {
+      "name": "admin-frontend-preview-2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend/admin", "--", "--port", "5199", "--strictPort"],
+      "port": 5199,
+      "autoPort": false
+    },
+    {
       "name": "backend",
       "runtimeExecutable": "php",
       "runtimeArgs": ["backend/artisan", "serve", "--host", "127.0.0.1", "--port", "8000"],

@@ -16,6 +16,7 @@ class UpdateContactStatusRequest extends FormRequest
     {
         $this->merge([
             'status' => is_string($this->input('status')) ? trim($this->input('status')) : $this->input('status'),
+            'status_note' => is_string($this->input('status_note')) ? trim($this->input('status_note')) : $this->input('status_note'),
         ]);
     }
 
@@ -23,6 +24,7 @@ class UpdateContactStatusRequest extends FormRequest
     {
         return [
             'status' => ['required', 'string', Rule::in(['pending', 'processing', 'done'])],
+            'status_note' => ['nullable', 'string', 'max:1000'],
         ];
     }
 }

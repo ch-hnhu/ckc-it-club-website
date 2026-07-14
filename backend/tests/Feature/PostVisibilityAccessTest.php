@@ -229,6 +229,35 @@ class PostVisibilityAccessTest extends TestCase
             ->assertJsonPath('data.likes_count', 3);
     }
 
+    public function test_channel_posts_count_follows_visibility(): void
+    {
+        $owner = $this->createUser('owner@example.com', 'owner');
+        $regularUser = $this->createUser('viewer@example.com', 'viewer');
+        $clubMember = $this->createClubMember('member@example.com', 'member');
+        $this->createPost($owner, 'public');
+        $this->createPost($owner, 'members');
+        $this->createPost($owner, 'private');
+
+        $this->getJson('/api/v1/community/channels')
+            ->assertOk()
+            ->assertJsonPath('data.0.posts_count', 1);
+
+        Sanctum::actingAs($regularUser);
+        $this->getJson('/api/v1/community/channels')
+            ->assertOk()
+            ->assertJsonPath('data.0.posts_count', 1);
+
+        Sanctum::actingAs($clubMember);
+        $this->getJson('/api/v1/community/channels')
+            ->assertOk()
+            ->assertJsonPath('data.0.posts_count', 2);
+
+        Sanctum::actingAs($owner);
+        $this->getJson('/api/v1/community/channels')
+            ->assertOk()
+            ->assertJsonPath('data.0.posts_count', 3);
+    }
+
     private function createUser(string $email, string $username): User
     {
         return User::query()->create([

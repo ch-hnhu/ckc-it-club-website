@@ -8,6 +8,7 @@ import { readingTime } from "@/lib/utils";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 import type { BlogDetail } from "@/types/blog.types";
 import type { LeaderboardEntry } from "@/types/gamification.types";
+import CommunityRulesCard from "@/components/community/CommunityRulesCard";
 
 type TabKey = "weekly" | "all-time";
 
@@ -258,6 +259,7 @@ const LeaderboardRightRail: React.FC = () => {
 					<PixelChevronIcon />
 				</Link>
 
+				<CommunityRulesCard />
 				<p className='mt-5 text-center text-sm text-gray-500'>
 					© 2026 CKC IT CLUB · Điều khoản · Bảo mật
 				</p>
