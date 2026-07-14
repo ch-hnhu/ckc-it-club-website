@@ -186,7 +186,7 @@
 - `communications-head`
 - `volunteer-head`
 - User login can create a new `users` record automatically.
-- Credential user signup is available at `POST /api/v1/auth/register` and requires only `full_name`, `username`, `email`, `password`, and `password_confirmation`; new users are active by default and receive the default `user` role.
+- Credential user signup is available at `POST /api/v1/auth/register` and requires only `full_name`, `email`, `password`, and `password_confirmation`; backend generates `username` from the email prefix before `@` and appends a suffix if needed. OAuth and credential login also backfill `username` from email for legacy users where it is still null. New users are active by default and receive the default `user` role.
 - New tokens are Sanctum personal access tokens.
 - Token TTL is manually written to `personal_access_tokens.expires_at`:
 - admin: 8 hours

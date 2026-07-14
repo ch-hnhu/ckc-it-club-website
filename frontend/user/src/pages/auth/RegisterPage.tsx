@@ -22,7 +22,6 @@ export default function RegisterPage() {
 	const navigate = useNavigate();
 
 	const [fullName, setFullName] = useState("");
-	const [username, setUsername] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [passwordConfirmation, setPasswordConfirmation] = useState("");
@@ -43,7 +42,6 @@ export default function RegisterPage() {
 		setLoading(true);
 		const credentials: RegisterCredentials = {
 			full_name: fullName,
-			username,
 			email,
 			password,
 			password_confirmation: passwordConfirmation,
@@ -140,28 +138,6 @@ export default function RegisterPage() {
 									required
 									value={fullName}
 									onChange={(e) => setFullName(e.target.value)}
-									className='w-full rounded-[10px] border-2 border-black bg-white px-4 py-2.5 text-sm font-medium outline-none transition-all placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
-									style={{ fontFamily: "var(--font-body)" }}
-								/>
-							</div>
-
-							<div className='space-y-1.5'>
-								<label
-									htmlFor='username'
-									className='block text-sm font-semibold'
-									style={{ color: "var(--color-text)" }}>
-									Username
-								</label>
-								<input
-									id='username'
-									type='text'
-									autoComplete='username'
-									placeholder='nguyenvana'
-									required
-									maxLength={30}
-									pattern='[A-Za-z0-9_.]+'
-									value={username}
-									onChange={(e) => setUsername(e.target.value)}
 									className='w-full rounded-[10px] border-2 border-black bg-white px-4 py-2.5 text-sm font-medium outline-none transition-all placeholder:text-gray-400 focus:border-black focus:shadow-[0_0_0_3px_#A3E635]'
 									style={{ fontFamily: "var(--font-body)" }}
 								/>
