@@ -574,9 +574,7 @@ class EventController extends BaseApiController
             'slug' => $event->slug,
             'description' => $event->description,
             'feedback_form_url' => $event->feedback_form_url,
-            'thumbnail' => $event->thumbnail
-                ? Storage::disk('public')->url($event->thumbnail)
-                : null,
+            'thumbnail' => $event->thumbnailUrl(),
             'start_at' => $event->start_at?->toIso8601String(),
             'end_at' => $event->end_at?->toIso8601String(),
             'registration_start_at' => $event->registration_start_at?->toIso8601String(),

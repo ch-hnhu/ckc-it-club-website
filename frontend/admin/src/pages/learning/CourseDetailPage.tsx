@@ -17,6 +17,7 @@ import {
 	MoreHorizontal,
 	Pencil,
 	Plus,
+	Printer,
 	RotateCcw,
 	ScanLine,
 	Trash2,
@@ -268,6 +269,8 @@ function CourseDetailPage() {
 	>(null);
 	const [isRevokingCertificate, setIsRevokingCertificate] = useState(false);
 	const [reissuingCertificateId, setReissuingCertificateId] = useState<number | null>(null);
+	const [isExportingPhysical, setIsExportingPhysical] = useState(false);
+	const [isPrintingPhysical, setIsPrintingPhysical] = useState(false);
 	const [editAttendanceLesson, setEditAttendanceLesson] = useState<
 		AdminCourseDetail["lessons"][number] | null
 	>(null);
@@ -374,6 +377,12 @@ function CourseDetailPage() {
 	const lessonsPg = useClientPagination(course?.lessons ?? []);
 	const studentsPg = useClientPagination(filteredEnrollments);
 	const certificatesPg = useClientPagination(course?.certificates ?? []);
+	// Số chứng chỉ bản in còn hiệu lực — dùng để bật/tắt nút xuất ZIP bản in.
+	const physicalCertCount = useMemo(
+		() =>
+			(course?.certificates ?? []).filter((c) => c.has_physical && !c.revoked_at).length,
+		[course?.certificates],
+	);
 
 	const openCreateLesson = () => {
 		navigate(`/courses/${slug}/lessons/create`);
@@ -454,6 +463,84 @@ function CourseDetailPage() {
 			toast.error(message, { position: "top-right" });
 		} finally {
 			setReissuingCertificateId(null);
+		}
+	};
+
+	const handleExportPhysicalCerts = async () => {
+		if (isExportingPhysical) return;
+		setIsExportingPhysical(true);
+		try {
+			const blob = await courseService.exportPhysicalCertificates(slug);
+			const blobUrl = window.URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			link.href = blobUrl;
+			link.download = `chung-chi-ban-in-${slug}.zip`;
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+			toast.success("Đã tải file chứng chỉ bản in.", { position: "top-right" });
+		} catch (err) {
+			// Body lỗi trả về dưới dạng blob (do responseType blob) — đọc lại để lấy message.
+			let message = "Không thể xuất chứng chỉ bản in.";
+			if (isAxiosError(err) && err.response?.data instanceof Blob) {
+				try {
+					const parsed = JSON.parse(await err.response.data.text()) as ApiErrorResponse;
+					if (parsed?.message) message = String(parsed.message);
+				} catch {
+					/* giữ message mặc định */
+				}
+			}
+			toast.error(message, { position: "top-right" });
+		} finally {
+			setIsExportingPhysical(false);
+		}
+	};
+
+	const handlePrintPhysicalCerts = async () => {
+		if (isPrintingPhysical) return;
+		setIsPrintingPhysical(true);
+		try {
+			const blob = await courseService.printPhysicalCertificates(slug);
+			const blobUrl = window.URL.createObjectURL(blob);
+			// Nạp PDF gộp vào iframe ẩn rồi gọi print() → trình duyệt hiện hộp thoại chọn máy in.
+			const iframe = document.createElement("iframe");
+			iframe.style.position = "fixed";
+			iframe.style.right = "0";
+			iframe.style.bottom = "0";
+			iframe.style.width = "0";
+			iframe.style.height = "0";
+			iframe.style.border = "0";
+			iframe.src = blobUrl;
+			iframe.onload = () => {
+				try {
+					iframe.contentWindow?.focus();
+					iframe.contentWindow?.print();
+				} catch {
+					// Trình duyệt chặn in trong iframe → mở PDF ở tab mới để in thủ công.
+					window.open(blobUrl, "_blank");
+				}
+			};
+			document.body.appendChild(iframe);
+			// Dọn iframe + blob URL sau khi hộp thoại in đã mở (không revoke sớm kẻo in lỗi).
+			window.setTimeout(() => {
+				iframe.remove();
+				window.URL.revokeObjectURL(blobUrl);
+			}, 60_000);
+		} catch (err) {
+			// Body lỗi trả về dưới dạng blob (do responseType blob) — đọc lại để lấy message.
+			let message = "Không thể in chứng chỉ bản in.";
+			if (isAxiosError(err) && err.response?.data instanceof Blob) {
+				try {
+					const parsed = JSON.parse(await err.response.data.text()) as ApiErrorResponse;
+					if (parsed?.message) message = String(parsed.message);
+				} catch {
+					/* giữ message mặc định */
+				}
+			}
+			toast.error(message, { position: "top-right" });
+		} finally {
+			setIsPrintingPhysical(false);
 		}
 	};
 
@@ -1017,6 +1104,33 @@ function CourseDetailPage() {
 
 					{/* ─── Chứng chỉ ─── */}
 					<TabsContent value='certificates' className='mt-4'>
+						<div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
+							<p className='text-sm text-muted-foreground'>
+								{physicalCertCount > 0
+									? `${physicalCertCount} chứng chỉ bản in còn hiệu lực`
+									: "Không có chứng chỉ bản in còn hiệu lực"}
+							</p>
+							<div className='flex flex-wrap items-center gap-2'>
+								<Button
+									variant='outline'
+									size='sm'
+									onClick={() => void handlePrintPhysicalCerts()}
+									disabled={physicalCertCount === 0 || isPrintingPhysical}>
+									<Printer className='mr-2 h-4 w-4' />
+									{isPrintingPhysical ? "Đang chuẩn bị..." : "In chứng chỉ bản in"}
+								</Button>
+								<Button
+									variant='outline'
+									size='sm'
+									onClick={() => void handleExportPhysicalCerts()}
+									disabled={physicalCertCount === 0 || isExportingPhysical}>
+									<Download className='mr-2 h-4 w-4' />
+									{isExportingPhysical
+										? "Đang xuất..."
+										: "Xuất chứng chỉ bản in (ZIP)"}
+								</Button>
+							</div>
+						</div>
 						<div className='overflow-hidden rounded-md border'>
 							<Table>
 								<TableHeader className='[&_th]:text-sm'>

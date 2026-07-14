@@ -46,6 +46,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	Table,
 	TableBody,
@@ -151,6 +152,7 @@ function ContactList() {
 	const [selectedContact, setSelectedContact] = useState<ContactRecord | null>(null);
 	const [statusDialogContact, setStatusDialogContact] = useState<ContactRecord | null>(null);
 	const [nextStatus, setNextStatus] = useState<ContactStatus | "">("");
+	const [statusNote, setStatusNote] = useState("");
 	const [loading, setLoading] = useState(true);
 	const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
 	const [search, setSearch] = useState("");
@@ -289,6 +291,7 @@ function ContactList() {
 		setStatusDialogContact(contact);
 		const nextOption = getNextStatusOptions(contact.status)[0];
 		setNextStatus(nextOption?.value ?? "");
+		setStatusNote("");
 	};
 
 	const handleStatusUpdate = async () => {
@@ -298,6 +301,7 @@ function ContactList() {
 		try {
 			const updatedContact = await contactService.updateStatus(statusDialogContact.id, {
 				status: nextStatus,
+				status_note: statusNote.trim() || undefined,
 			});
 
 			setContacts((prev) =>
@@ -307,6 +311,7 @@ function ContactList() {
 			);
 			setSelectedContact((prev) => (prev?.id === updatedContact.id ? updatedContact : prev));
 			setStatusDialogContact(null);
+			setStatusNote("");
 			await loadStats();
 			window.dispatchEvent(new Event("contacts:stats-refresh"));
 			toast.success("Đã cập nhật trạng thái liên hệ.");
@@ -803,6 +808,14 @@ function ContactList() {
 										{selectedContact.message}
 									</div>
 								</div>
+								{selectedContact.status_note ? (
+									<div className='space-y-2'>
+										<p className='text-sm font-medium'>Lý do cập nhật trạng thái</p>
+										<div className='max-h-[160px] overflow-y-auto rounded-md border bg-muted/30 p-4 text-sm leading-6 whitespace-pre-wrap'>
+											{selectedContact.status_note}
+										</div>
+									</div>
+								) : null}
 							</div>
 							<DialogFooter>
 								<Button variant='outline' onClick={() => setSelectedContact(null)}>
@@ -828,7 +841,12 @@ function ContactList() {
 
 			<Dialog
 				open={Boolean(statusDialogContact)}
-				onOpenChange={(open) => !open && setStatusDialogContact(null)}>
+				onOpenChange={(open) => {
+					if (!open) {
+						setStatusDialogContact(null);
+						setStatusNote("");
+					}
+				}}>
 				<DialogContent className='sm:max-w-[520px]'>
 					{statusDialogContact ? (
 						<>
@@ -873,6 +891,18 @@ function ContactList() {
 											Liên hệ này đã ở bước cuối của luồng xử lý.
 										</p>
 									) : null}
+								</div>
+								<div className='space-y-2'>
+									<label className='text-sm font-medium' htmlFor='contact-status-note'>
+										Lý do cập nhật trạng thái
+									</label>
+									<Textarea
+										id='contact-status-note'
+										placeholder='Nhập lý do cập nhật trạng thái (không bắt buộc)...'
+										value={statusNote}
+										onChange={(event) => setStatusNote(event.target.value)}
+										rows={3}
+									/>
 								</div>
 							</div>
 							<DialogFooter>

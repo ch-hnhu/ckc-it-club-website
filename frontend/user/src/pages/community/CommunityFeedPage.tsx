@@ -4,57 +4,30 @@ import { Link, useOutletContext, useParams } from "react-router-dom";
 import { buildProfileUrl } from "@/lib/utils";
 import type { CommunityLayoutContext } from "./CommunityLayout";
 import { postService } from "@/services/post.service";
+import { blogService } from "@/services/blog.service";
+import { gamificationService } from "@/services/gamification.service";
 import type { Post } from "@/types/post.types";
+import type { Blog } from "@/types/blog.types";
+import type { LeaderboardEntry } from "@/types/gamification.types";
 import PostCard from "@/components/community/PostCard";
+import CommunityRulesCard from "@/components/community/CommunityRulesCard";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 
 // ─── Static sidebar data ──────────────────────────────────────────────────────
 
 const COMMUNITY_LOGO = "https://www.codedex.io/images/community/bouncer.gif";
+const NEWS_FALLBACK_IMAGE = "/assets/img/level03.png";
 
 const SORT_OPTIONS = [
 	{ id: "top", label: "Top bài viết", icon: Flame },
 	{ id: "newest", label: "Mới nhất", icon: Sparkles },
 ];
 
-const NEWS_ITEMS = [
-	{
-		title: "Workshop Git & GitHub cho sinh viên mới",
-		meta: "25/05 | Sự kiện",
-		image: "https://api.dicebear.com/9.x/thumbs/svg?seed=workshop",
-	},
-	{
-		title: "CKC Hackathon 2026 mở cổng đăng ký",
-		meta: "22/05 | Tin tức",
-		image: "https://api.dicebear.com/9.x/thumbs/svg?seed=hackathon",
-	},
-	{
-		title: "Tổng hợp tài liệu React và Laravel",
-		meta: "18/05 | Tài nguyên",
-		image: "https://api.dicebear.com/9.x/identicon/svg?seed=resources",
-	},
-];
-
-const TOP_CONTRIBUTORS = [
-	{
-		id: 1,
-		name: "Minh Trí",
-		avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=mt",
-		points: 1420,
-	},
-	{
-		id: 2,
-		name: "Hồng Nhung",
-		avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=hn",
-		points: 1175,
-	},
-	{
-		id: 3,
-		name: "Quốc Bảo",
-		avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=qb",
-		points: 940,
-	},
-];
+// DD/MM cho meta "Tin mới"
+const formatNewsDate = (iso?: string | null): string =>
+	iso
+		? new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })
+		: "";
 
 // ─── ChannelIcon ─────────────────────────────────────────────────────────────
 
@@ -129,9 +102,47 @@ const CommunityFeedPage: React.FC = () => {
 	const [error, setError] = useState<string | null>(null);
 	const [retryCount, setRetryCount] = useState(0);
 
+	// Dữ liệu right rail lấy từ backend
+	const [news, setNews] = useState<Blog[]>([]);
+	const [newsLoading, setNewsLoading] = useState(true);
+	const [contributors, setContributors] = useState<LeaderboardEntry[]>([]);
+	const [contributorsLoading, setContributorsLoading] = useState(true);
+
 	useEffect(() => {
 		setActiveSort("top");
 	}, [channelSlug]);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		blogService
+			.getBlogs({ per_page: 3, sort: "published_at", order: "desc" })
+			.then((res) => {
+				if (!cancelled) setNews(res.data ?? []);
+			})
+			.catch(() => {
+				if (!cancelled) setNews([]);
+			})
+			.finally(() => {
+				if (!cancelled) setNewsLoading(false);
+			});
+
+		gamificationService
+			.getAllTimeLeaderboard(1, 3)
+			.then((res) => {
+				if (!cancelled) setContributors(res.data ?? []);
+			})
+			.catch(() => {
+				if (!cancelled) setContributors([]);
+			})
+			.finally(() => {
+				if (!cancelled) setContributorsLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -322,30 +333,59 @@ const CommunityFeedPage: React.FC = () => {
 							<h2 className='font-heading text-base font-extrabold text-black'>
 								Tin mới
 							</h2>
-							<button className='cursor-pointer text-xs font-bold text-lime-700 hover:text-black'>
+							<Link
+								to='/blog'
+								className='cursor-pointer text-xs font-bold text-lime-700 hover:text-black'>
 								Xem tất cả
-							</button>
+							</Link>
 						</div>
 						<div className='space-y-4'>
-							{NEWS_ITEMS.map((item) => (
-								<button
-									key={item.title}
-									className='flex w-full gap-3 rounded-lg p-2 text-left transition hover:bg-[var(--color-primary-100)]'>
-									<img
-										src={item.image}
-										alt=''
-										className='h-11 w-11 rounded-lg border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
-									/>
-									<span className='min-w-0'>
-										<span className='block text-[13px] font-extrabold leading-snug text-black'>
-											{item.title}
-										</span>
-										<span className='mt-1 block text-xs text-gray-600'>
-											{item.meta}
-										</span>
-									</span>
-								</button>
-							))}
+							{newsLoading ? (
+								Array.from({ length: 3 }).map((_, i) => (
+									<div key={i} className='flex gap-3 p-2'>
+										<div className='h-11 w-11 shrink-0 animate-pulse rounded-lg bg-gray-200' />
+										<div className='min-w-0 flex-1 space-y-2 py-1'>
+											<div className='h-3 w-full animate-pulse rounded bg-gray-200' />
+											<div className='h-3 w-1/2 animate-pulse rounded bg-gray-100' />
+										</div>
+									</div>
+								))
+							) : news.length === 0 ? (
+								<p className='px-2 py-4 text-center text-xs text-gray-500'>
+									Chưa có tin mới.
+								</p>
+							) : (
+								news.map((item) => {
+									const date = formatNewsDate(item.published_at ?? item.created_at);
+									const tag = item.tags[0]?.name;
+									const meta = [date, tag].filter(Boolean).join(" | ");
+									return (
+										<Link
+											key={item.id}
+											to={`/blog/${item.slug}`}
+											className='flex w-full gap-3 rounded-lg p-2 text-left no-underline transition hover:bg-[var(--color-primary-100)]'>
+											<img
+												src={item.featured_image ?? NEWS_FALLBACK_IMAGE}
+												alt=''
+												onError={(e) => {
+													e.currentTarget.src = NEWS_FALLBACK_IMAGE;
+												}}
+												className='h-11 w-11 rounded-lg border-2 border-black bg-[var(--color-pastel-blue)] object-cover'
+											/>
+											<span className='min-w-0'>
+												<span className='line-clamp-2 block text-[13px] font-extrabold leading-snug text-black'>
+													{item.title}
+												</span>
+												{meta && (
+													<span className='mt-1 block text-xs text-gray-600'>
+														{meta}
+													</span>
+												)}
+											</span>
+										</Link>
+									);
+								})
+							)}
 						</div>
 					</section>
 
@@ -354,38 +394,58 @@ const CommunityFeedPage: React.FC = () => {
 							<h2 className='font-heading text-base font-extrabold text-black'>
 								Hoạt động sôi nổi
 							</h2>
-							<button className='cursor-pointer text-xs font-bold text-lime-700 hover:text-black'>
+							<Link
+								to='/cong-dong/bang-xep-hang'
+								className='cursor-pointer text-xs font-bold text-lime-700 hover:text-black'>
 								Xem tất cả
-							</button>
+							</Link>
 						</div>
 						<div className='space-y-3'>
-							{TOP_CONTRIBUTORS.map((member, index) => (
-								<Link
-									key={member.id}
-									to={`/@${member.id}`}
-									className='flex items-center gap-3'>
-									<span className='w-5 text-sm font-extrabold text-gray-600'>
-										#{index + 1}
-									</span>
-									<AvatarImage
-										fallbackName={member.name}
-										src={member.avatar}
-										alt={member.name}
-										className='h-9 w-9 rounded-full border-2 border-black bg-white'
-									/>
-									<div className='min-w-0'>
-										<p className='truncate text-sm font-bold text-black'>
-											{member.name}
-										</p>
-										<p className='text-xs text-gray-700'>
-											{member.points} điểm
-										</p>
+							{contributorsLoading ? (
+								Array.from({ length: 3 }).map((_, i) => (
+									<div key={i} className='flex items-center gap-3'>
+										<span className='w-5' />
+										<div className='h-9 w-9 shrink-0 animate-pulse rounded-full bg-gray-200' />
+										<div className='min-w-0 flex-1 space-y-2'>
+											<div className='h-3 w-24 animate-pulse rounded bg-gray-200' />
+											<div className='h-3 w-16 animate-pulse rounded bg-gray-100' />
+										</div>
 									</div>
-								</Link>
-							))}
+								))
+							) : contributors.length === 0 ? (
+								<p className='px-2 py-4 text-center text-xs text-gray-500'>
+									Chưa có dữ liệu xếp hạng.
+								</p>
+							) : (
+								contributors.map((member) => (
+									<Link
+										key={member.user_id}
+										to={`/@${member.username ?? member.email ?? member.user_id}`}
+										className='flex items-center gap-3'>
+										<span className='w-5 text-sm font-extrabold text-gray-600'>
+											#{member.rank}
+										</span>
+										<AvatarImage
+											fallbackName={member.full_name}
+											src={member.avatar ?? ""}
+											alt={member.full_name}
+											className='h-9 w-9 rounded-full border-2 border-black bg-white'
+										/>
+										<div className='min-w-0'>
+											<p className='truncate text-sm font-bold text-black'>
+												{member.full_name}
+											</p>
+											<p className='text-xs text-gray-700'>
+												{member.points.toLocaleString("vi-VN")} exp
+											</p>
+										</div>
+									</Link>
+								))
+							)}
 						</div>
 					</section>
 
+					<CommunityRulesCard />
 					<p className='mt-5 text-sm text-center text-gray-500'>
 						© 2026 CKC IT CLUB · Điều khoản · Bảo mật
 					</p>

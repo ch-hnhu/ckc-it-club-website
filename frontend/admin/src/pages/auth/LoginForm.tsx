@@ -133,14 +133,9 @@ export function LoginForm() {
 								/>
 							</div>
 							<div className='space-y-2'>
-								<div className='flex items-center justify-between'>
-									<Label htmlFor='password' className='font-medium text-base'>
-										Mật khẩu
-									</Label>
-									<a href='#' className='text-sm font-medium hover:underline'>
-										Quên mật khẩu?
-									</a>
-								</div>
+								<Label htmlFor='password' className='font-medium text-base'>
+									Mật khẩu
+								</Label>
 								<div className='relative'>
 									<Input
 										id='password'

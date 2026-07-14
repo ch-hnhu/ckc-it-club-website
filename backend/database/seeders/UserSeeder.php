@@ -31,45 +31,45 @@ class UserSeeder extends Seeder
                 'full_name' => 'Đinh Nguyễn Bá Tài',
                 'role'      => RolesEnum::PRESIDENT,
                 'gender'    => 'male',
-                'avatar'    => 'storage/app/public/avatars/president.jpg',
+                'avatar'    => 'avatars/president.jpg',
                 'cover_image' => 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=70',
                 'bio'       => 'Chủ nhiệm CLB IT CKC. Đam mê xây dựng cộng đồng lập trình sinh viên Cao Thắng. 🚀',
             ],
             [
                 'email'     => 'vicepresident@gmail.com',
                 'username'  => 'vicepresident',
-                'full_name' => 'Lê Ngọc Hân',
+                'full_name' => 'Phạm Quang Khải',
                 'role'      => RolesEnum::VICE_PRESIDENT,
-                'gender'    => 'female',
-                'avatar'    => 'https://randomuser.me/api/portraits/women/65.jpg',
+                'gender'    => 'male',
+                'avatar'    => 'avatars/vicepresident.jpg',
                 'bio'       => 'Phó Chủ nhiệm CLB IT CKC — phụ trách đối nội và hoạt động thành viên.',
             ],
             [
                 'email'     => 'academichead@gmail.com',
                 'username'  => 'academichead',
-                'full_name' => 'Phạm Đức Long',
+                'full_name' => 'Huỳnh Khắc Huy',
                 'role'      => RolesEnum::ACADEMIC_HEAD,
                 'gender'    => 'male',
-                'avatar'    => 'https://randomuser.me/api/portraits/men/45.jpg',
+                'avatar'    => 'avatars/academichead.jpg',
                 'bio'       => 'Trưởng ban Học thuật — mentor các khoá lập trình web của CLB. Backend PHP/Laravel.',
             ],
             [
                 'email'     => 'communicationshead@gmail.com',
                 'username'  => 'communicationshead',
-                'full_name' => 'Đặng Thuỳ Dương',
+                'full_name' => 'Trần Minh Hiếu',
                 'role'      => RolesEnum::COMMUNICATIONS_HEAD,
-                'gender'    => 'female',
-                'avatar'    => 'https://randomuser.me/api/portraits/women/21.jpg',
+                'gender'    => 'male',
+                'avatar'    => 'avatars/communicationshead.jpg',
                 'bio'       => 'Trưởng ban Truyền thông — kể chuyện CLB bằng hình ảnh và con chữ. 📸',
             ],
             [
                 'email'     => 'volunteerhead@gmail.com',
                 'username'  => 'volunteerhead',
-                'full_name' => 'Võ Minh Trí',
+                'full_name' => 'Trần Hữu Minh Hiệp',
                 'role'      => RolesEnum::VOLUNTEER_HEAD,
                 'gender'    => 'male',
                 'avatar'    => 'https://randomuser.me/api/portraits/men/78.jpg',
-                'bio'       => 'Trưởng ban Tình nguyện — mang công nghệ đến gần hơn với cộng đồng. 💚',
+                'bio'       => 'Trưởng ban Phong trào — mang công nghệ đến gần hơn với cộng đồng. 💚',
             ],
             [
                 'email'     => 'clubmember@gmail.com',
@@ -240,5 +240,39 @@ class UserSeeder extends Seeder
                 ]
             )->syncRoles([RolesEnum::CLUB_MEMBER->value]);
         }
+
+        // ── Cố vấn / người thành lập CLB: hồ sơ thật hiển thị ở MentorSection landing page ──
+        // Section landing page fetch hồ sơ này qua /users/profile/{username}, nên username phải cố định.
+        User::updateOrCreate(
+            ['email' => 'lucaotien@gmail.com'],
+            [
+                'username'    => 'lucaotien',
+                'full_name'   => 'Lữ Cao Tiến',
+                'password'    => bcrypt('Advisor@123'),
+                'gender'      => 'male',
+                // Ảnh chân dung thật đã có sẵn trong storage (avatars/mentor.jpg).
+                'avatar'      => 'avatars/mentor.jpg',
+                'bio'         => 'Giảng viên khoa Công nghệ thông tin — người thầy tận tâm, truyền cảm hứng cho sinh viên trong lĩnh vực lập trình và phát triển phần mềm. Người thành lập kiêm cố vấn của CLB IT CKC.',
+                'is_active'   => true,
+            ],
+        )->syncRoles([RolesEnum::USER->value]);
+
+        // ── Mentor khách mời: chỉ mang vai trò "Người dùng" (không phải thành viên CLB) ──
+        // Demo trường hợp mentor khoá học là người ngoài CLB, được phân công qua CourseMentorSeeder.
+        User::updateOrCreate(
+            ['email' => 'mentor@gmail.com'],
+            [
+                'username'    => 'mentor',
+                'full_name'   => 'Nguyễn Thành Đạt',
+                'password'    => bcrypt('Mentor@123'),
+                'gender'      => 'male',
+                'avatar'      => 'https://randomuser.me/api/portraits/men/41.jpg',
+                'cover_image' => 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1600&q=70',
+                'bio'         => 'Mentor khách mời — Fullstack Developer. Đồng hành cùng các khoá học của CLB IT CKC. 👨‍🏫',
+                'social_github'   => 'thanhdat-mentor',
+                'social_linkedin' => 'nguyen-thanh-dat',
+                'is_active'   => true,
+            ],
+        )->syncRoles([RolesEnum::USER->value]);
     }
 }

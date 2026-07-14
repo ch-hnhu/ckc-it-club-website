@@ -127,6 +127,11 @@ export const adminNavMain: AdminNavItem[] = [
 				url: "/club-informations",
 				permission: "club_info.view",
 			},
+			{
+				title: "Trang Về chúng tôi",
+				url: "/about-page",
+				permission: "club_info.view",
+			},
 		],
 	},
 	{
@@ -319,6 +324,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/club-informations$/, permission: "club_info.view" },
 	{ pattern: /^\/club-informations\/create$/, permission: "club_info.manage" },
 	{ pattern: /^\/club-informations\/[^/]+$/, permission: "club_info.view" },
+	{ pattern: /^\/about-page$/, permission: "club_info.view" },
 	{ pattern: /^\/requests$/, permission: "applications.view" },
 	{ pattern: /^\/requests\/[^/]+$/, permission: "applications.view" },
 	{ pattern: /^\/questions$/, permission: "application_questions.view" },

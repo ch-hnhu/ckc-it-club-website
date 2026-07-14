@@ -22,6 +22,7 @@ import EventsFeedPage from "@/pages/event/EventsFeedPage";
 import EventDetailPage from "@/pages/event/EventDetailPage";
 import LandingPage from "@/pages/LandingPage";
 import AboutPage from "@/pages/AboutPage";
+import CommunityRulesPage from "@/pages/CommunityRulesPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
 import ApplicationPage from "@/pages/ApplicationPage";
 import UserProfilePage from "@/pages/user/UserProfilePage";
@@ -51,8 +52,12 @@ const router = createBrowserRouter([
 				element: <ContactPage />,
 			},
 			{
-				path: "gioi-thieu",
+				path: "ve-chung-toi",
 				element: <AboutPage />,
+			},
+			{
+				path: "quy-tac-cong-dong",
+				element: <CommunityRulesPage />,
 			},
 			{
 				path: "tai-khoan",
