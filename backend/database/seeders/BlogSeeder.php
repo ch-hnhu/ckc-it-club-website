@@ -43,7 +43,6 @@ class BlogSeeder extends Seeder
                 'days_ago' => 60,
                 'view_count' => 245,
                 'is_pinned' => true,
-                'is_highlight' => true,
                 'tags' => ['su-kien'],
             ],
             [
@@ -56,7 +55,6 @@ class BlogSeeder extends Seeder
                 'status' => 'published',
                 'days_ago' => 20,
                 'view_count' => 512,
-                'is_highlight' => true,
                 'tags' => ['web-development', 'lap-trinh'],
             ],
             [
@@ -93,7 +91,6 @@ class BlogSeeder extends Seeder
                 'status' => 'published',
                 'days_ago' => 3,
                 'view_count' => 421,
-                'is_highlight' => true,
                 'tags' => ['cybersecurity', 'web-development'],
             ],
             [
