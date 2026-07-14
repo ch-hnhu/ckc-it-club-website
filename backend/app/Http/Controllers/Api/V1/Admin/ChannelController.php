@@ -7,14 +7,15 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Channel;
 use App\Models\Post;
 use App\Services\NotificationService;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ChannelController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     public function index(Request $request): JsonResponse
     {
         $allowedSorts = ['id', 'name', 'slug', 'description', 'posts_count', 'created_at'];
@@ -48,7 +49,7 @@ class ChannelController extends BaseApiController
 
         $name = trim($request->string('name')->value());
         $imagePath = $request->hasFile('image')
-            ? $request->file('image')->store('channels', 'public')
+            ? $this->storage->uploadImage($request->file('image'), 'channels')
             : null;
 
         $channel = Channel::create([
@@ -84,10 +85,10 @@ class ChannelController extends BaseApiController
 
         if ($request->hasFile('image')) {
             if ($channel->image && ! Str::startsWith($channel->image, ['http://', 'https://'])) {
-                Storage::disk('public')->delete($channel->image);
+                $this->storage->delete($channel->image);
             }
 
-            $payload['image'] = $request->file('image')->store('channels', 'public');
+            $payload['image'] = $this->storage->uploadImage($request->file('image'), 'channels');
         }
 
         $channel->update($payload);
@@ -195,8 +196,8 @@ class ChannelController extends BaseApiController
         $chanName = $channel->name;
 
         // Xóa ảnh vật lý khi xóa vĩnh viễn
-        if ($channel->image && ! Str::startsWith($channel->image, ['http://', 'https://'])) {
-            Storage::disk('public')->delete($channel->image);
+        if ($channel->image) {
+            $this->storage->delete($channel->image);
         }
 
         $channel->forceDelete();
@@ -232,14 +233,7 @@ class ChannelController extends BaseApiController
 
     private function resolveImageUrl(?string $image): ?string
     {
-        if (! $image) {
-            return null;
-        }
-
-        if (Str::startsWith($image, ['http://', 'https://', '/storage/'])) {
-            return $image;
-        }
-
-        return Storage::disk('public')->url($image);
+        // DB now stores the full public URL (Supabase https://... or external).
+        return $image ?: null;
     }
 }

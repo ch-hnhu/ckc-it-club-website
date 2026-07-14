@@ -15,10 +15,11 @@ use App\Models\Tag;
 use App\Models\User;
 use App\Services\CourseCertificateService;
 use App\Services\CourseEnrollmentService;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use setasign\Fpdi\Fpdi;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -27,6 +28,7 @@ use ZipArchive;
 
 class CourseController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     /**
      * Danh sách khoá học cho trang quản trị. Trả về shape `AdminCourse[]`.
      * Mô hình song song: mỗi khoá có cả track offline & online; track gắn với
@@ -197,12 +199,12 @@ class CourseController extends BaseApiController
         // Thumbnail: thay mới / gỡ bỏ / giữ nguyên
         if ($request->hasFile('thumbnail')) {
             if ($course->thumbnail) {
-                Storage::disk('public')->delete($course->thumbnail);
+                $this->storage->delete($course->thumbnail);
             }
-            $data['thumbnail'] = $request->file('thumbnail')->store('course-thumbnails', 'public');
+            $data['thumbnail'] = $this->storage->uploadImage($request->file('thumbnail'), 'course');
         } elseif ($request->boolean('remove_thumbnail')) {
             if ($course->thumbnail) {
-                Storage::disk('public')->delete($course->thumbnail);
+                $this->storage->delete($course->thumbnail);
             }
             $data['thumbnail'] = null;
         } else {
@@ -317,7 +319,7 @@ class CourseController extends BaseApiController
         $course = Course::onlyTrashed()->findOrFail($id);
 
         if ($course->thumbnail) {
-            Storage::disk('public')->delete($course->thumbnail);
+            $this->storage->delete($course->thumbnail);
         }
 
         $course->forceDelete();
@@ -426,7 +428,6 @@ class CourseController extends BaseApiController
         abort_if($certificates->isEmpty(), 422, 'Khoá học chưa có chứng chỉ bản in nào để xuất.');
         abort_if(! class_exists(ZipArchive::class), 500, 'Máy chủ chưa bật ZipArchive để nén file.');
 
-        $disk = Storage::disk('public');
         $tmpPath = tempnam(sys_get_temp_dir(), 'certs_');
 
         $zip = new ZipArchive();
@@ -435,11 +436,14 @@ class CourseController extends BaseApiController
         $usedNames = [];
         $added = 0;
         foreach ($certificates as $cert) {
-            $storagePath = $this->storagePathFromUrl($cert->cert_url);
-            if (! $storagePath || ! $disk->exists($storagePath)) {
+            if (! $cert->cert_url) {
                 continue;
             }
-            $zip->addFromString($this->certificateFileName($cert, $usedNames), $disk->get($storagePath));
+            $response = Http::timeout(30)->get($cert->cert_url);
+            if (! $response->successful()) {
+                continue;
+            }
+            $zip->addFromString($this->certificateFileName($cert, $usedNames), $response->body());
             $added++;
         }
         $zip->close();
@@ -470,16 +474,21 @@ class CourseController extends BaseApiController
 
         abort_if($certificates->isEmpty(), 422, 'Khoá học chưa có chứng chỉ bản in nào để in.');
 
-        $disk = Storage::disk('public');
         $pdf = new Fpdi();
         $added = 0;
         foreach ($certificates as $cert) {
-            $storagePath = $this->storagePathFromUrl($cert->cert_url);
-            if (! $storagePath || ! $disk->exists($storagePath)) {
+            if (! $cert->cert_url) {
                 continue;
             }
+            $pdfResponse = Http::timeout(30)->get($cert->cert_url);
+            if (! $pdfResponse->successful()) {
+                continue;
+            }
+            // Write PDF bytes to a temp file so FPDI can read it.
+            $tmpPdf = tempnam(sys_get_temp_dir(), 'cert_pdf_');
+            file_put_contents($tmpPdf, $pdfResponse->body());
             try {
-                $pageCount = $pdf->setSourceFile($disk->path($storagePath));
+                $pageCount = $pdf->setSourceFile($tmpPdf);
                 for ($n = 1; $n <= $pageCount; $n++) {
                     $tpl = $pdf->importPage($n);
                     $size = $pdf->getTemplateSize($tpl);
@@ -489,7 +498,8 @@ class CourseController extends BaseApiController
                 }
             } catch (\Throwable $e) {
                 // Bỏ qua file PDF không đọc được (hỏng/định dạng lạ), vẫn gộp các file còn lại.
-                continue;
+            } finally {
+                @unlink($tmpPdf);
             }
         }
 
@@ -594,7 +604,10 @@ class CourseController extends BaseApiController
     }
 
     /**
-     * Suy ra đường dẫn file trên disk `public` từ cert_url (…/storage/<path>).
+     * Suy ra đường dẫn file từ cert_url.
+     * Đối với URL Supabase, trả về chính URL đó (download trực tiếp bằng Http::get).
+     * Giữ lại hàm để tương thích với các cert cũ được tạo trước khi migration.
+     * @deprecated Nư cần, dùng cert_url trực tiếp.
      */
     private function storagePathFromUrl(?string $url): ?string
     {
@@ -866,17 +879,11 @@ class CourseController extends BaseApiController
 
     /**
      * Chuẩn hoá đường dẫn ảnh/avatar.
+     * Sau khi migration, DB lưu full URL (Supabase hoặc external).
      */
     private function resolveUrl(?string $path): ?string
     {
-        if (! $path) {
-            return null;
-        }
-
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
-            return $path;
-        }
-
-        return Storage::disk('public')->url($path);
+        // Return as-is; DB now stores full public URLs.
+        return $path ?: null;
     }
 }

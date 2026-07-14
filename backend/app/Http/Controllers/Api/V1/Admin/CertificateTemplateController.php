@@ -7,14 +7,16 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\CertificateTemplate;
 use App\Models\User;
 use App\Services\CertificateRenderer;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class CertificateTemplateController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     /**
      * Danh sách mẫu chứng chỉ cho trang quản trị "Trung tâm đào tạo".
      * Hỗ trợ phân trang, tìm kiếm theo tên và sắp xếp theo từng cột.
@@ -147,9 +149,9 @@ class CertificateTemplateController extends BaseApiController
             'image' => 'required|image|max:5120',
         ]);
 
-        $path = $request->file('image')->store('certificate-assets', 'public');
+        $url = $this->storage->uploadImage($request->file('image'), 'certificate');
 
-        return $this->successResponse(true, ['url' => $this->resolveUrl($path)], 'Tải ảnh lên thành công.');
+        return $this->successResponse(true, ['url' => $url], 'Tải ảnh lên thành công.');
     }
 
     /**
@@ -201,11 +203,11 @@ class CertificateTemplateController extends BaseApiController
 
         try {
             $png = app(CertificateRenderer::class)->renderThumbnail($template, $this->sampleData());
-            $path = 'certificate-thumbnails/'.Str::uuid()->toString().'.png';
-            Storage::disk('public')->put($path, $png);
+            $filename = Str::uuid()->toString().'.png';
+            $url = $this->storage->uploadRaw($png, 'certificate', $filename, 'image/png', 'images');
 
             $this->deleteFile($template->thumbnail);
-            $template->update(['thumbnail' => $path]);
+            $template->update(['thumbnail' => $url]);
         } catch (\Throwable $e) {
             report($e); // thumbnail là phụ — không chặn lưu mẫu
         }
@@ -232,21 +234,34 @@ class CertificateTemplateController extends BaseApiController
 
     private function deleteFile(?string $path): void
     {
-        if ($path && ! Str::startsWith($path, ['http://', 'https://', '/'])) {
-            Storage::disk('public')->delete($path);
+        // Only attempt deletion for Supabase-hosted URLs.
+        // Non-Supabase or null values are safely ignored by the service.
+        if ($path) {
+            $this->storage->delete($path);
         }
     }
 
-    private function copyFile(?string $path): ?string
+    private function copyFile(?string $url): ?string
     {
-        if (! $path || ! Storage::disk('public')->exists($path)) {
+        if (! $url) {
             return null;
         }
 
-        $copy = 'certificate-thumbnails/'.Str::uuid()->toString().'.'.pathinfo($path, PATHINFO_EXTENSION);
-        Storage::disk('public')->copy($path, $copy);
+        // Download from Supabase (or any URL) and re-upload as a new file.
+        $response = Http::timeout(30)->get($url);
+        if (! $response->successful()) {
+            return null;
+        }
 
-        return $copy;
+        $ext = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'png';
+        $filename = Str::uuid()->toString().'.'.$ext;
+        $mimeType = $response->header('Content-Type') ?: 'image/png';
+
+        try {
+            return $this->storage->uploadRaw($response->body(), 'certificate', $filename, $mimeType, 'images');
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -285,6 +300,8 @@ class CertificateTemplateController extends BaseApiController
      */
     private function resolveUrl(?string $path): ?string
     {
+        // DB now stores the full public URL after migration.
+        // Legacy /storage/ paths are resolved to backend absolute URLs for client compatibility.
         if (! $path) {
             return null;
         }
@@ -293,11 +310,8 @@ class CertificateTemplateController extends BaseApiController
             return rtrim((string) config('app.url'), '/').$path;
         }
 
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
-            return $path;
-        }
-
-        return Storage::disk('public')->url($path);
+        // Already a full URL (Supabase https://... or external)
+        return $path;
     }
 
     /**

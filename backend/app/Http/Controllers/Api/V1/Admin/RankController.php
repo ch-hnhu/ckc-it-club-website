@@ -10,7 +10,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
+use App\Services\SupabaseStorageService;
 use Illuminate\Support\Str;
 
 /**
@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
  */
 class RankController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     public function index(Request $request): JsonResponse
     {
         $ranks = Rank::query()
@@ -48,7 +49,7 @@ class RankController extends BaseApiController
         $data = $this->validateData($request);
 
         if ($request->hasFile('badge')) {
-            $data['badge'] = $request->file('badge')->store('rank-badges', 'public');
+            $data['badge'] = $this->storage->uploadImage($request->file('badge'), 'rank');
         }
 
         $rank = Rank::create($data);
@@ -63,7 +64,7 @@ class RankController extends BaseApiController
 
         if ($request->hasFile('badge')) {
             $this->deleteStoredBadge($rank->badge);
-            $data['badge'] = $request->file('badge')->store('rank-badges', 'public');
+            $data['badge'] = $this->storage->uploadImage($request->file('badge'), 'rank');
         } else {
             unset($data['badge']);
         }
@@ -150,19 +151,19 @@ class RankController extends BaseApiController
             return null;
         }
 
-        if (Str::startsWith($badge, ['http://', 'https://', '/assets/'])) {
-            return $badge;
-        }
-
-        return Storage::disk('public')->url($badge);
+        // After migration, badge is stored as a full public URL (Supabase or legacy http).
+        // Passthrough: /assets/ paths are frontend-bundled badges.
+        return $badge;
     }
 
     private function deleteStoredBadge(?string $badge): void
     {
-        if (! $badge || Str::startsWith($badge, ['http://', 'https://', '/assets/', '/storage/'])) {
+        // Only attempt deletion for Supabase-hosted URLs.
+        // Legacy /storage/ or /assets/ paths are skipped by the service automatically.
+        if (! $badge) {
             return;
         }
 
-        Storage::disk('public')->delete($badge);
+        $this->storage->delete($badge);
     }
 }

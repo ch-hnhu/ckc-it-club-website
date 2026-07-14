@@ -13,16 +13,17 @@ use App\Models\Reaction;
 use App\Jobs\ModerateCommentJob;
 use App\Models\Tag;
 use App\Services\NotificationService;
+use App\Services\SupabaseStorageService;
 use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class BlogController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     public function tags(): JsonResponse
     {
         $tags = Tag::query()
@@ -181,7 +182,7 @@ class BlogController extends BaseApiController
 
         $coverImagePath = null;
         if ($request->hasFile('featured_image')) {
-            $coverImagePath = $request->file('featured_image')->store('blog-covers', 'public');
+            $coverImagePath = $this->storage->uploadImage($request->file('featured_image'), 'blog');
         }
 
         $baseSlug = Str::slug($request->input('slug') ?: $request->input('title')) ?: 'blog';
@@ -225,7 +226,7 @@ class BlogController extends BaseApiController
         if ($coverImagePath) {
             MediaFile::create([
                 'owner_id'    => $request->user()->id,
-                'url'         => Storage::disk('public')->url($coverImagePath),
+                'url'         => $coverImagePath,
                 'file_type'   => 'image',
                 'size_kb'     => (int) ceil($request->file('featured_image')->getSize() / 1024),
                 'target_type' => 'blog',
@@ -310,9 +311,9 @@ class BlogController extends BaseApiController
         if ($request->hasFile('featured_image')) {
             // Xóa ảnh cũ nếu có
             if ($blog->cover_image) {
-                Storage::disk('public')->delete($blog->cover_image);
+                $this->storage->delete($blog->cover_image);
             }
-            $blog->cover_image = $request->file('featured_image')->store('blog-covers', 'public');
+            $blog->cover_image = $this->storage->uploadImage($request->file('featured_image'), 'blog');
         }
 
         $blog->save();
@@ -768,15 +769,8 @@ class BlogController extends BaseApiController
 
     private function coverImageUrl(?string $coverImage): ?string
     {
-        if (! $coverImage) {
-            return null;
-        }
-
-        if (Str::startsWith($coverImage, ['http://', 'https://', '/assets/', '/storage/'])) {
-            return $coverImage;
-        }
-
-        return Storage::disk('public')->url($coverImage);
+        // DB now stores the full public URL (Supabase https://... or external).
+        return $coverImage ?: null;
     }
 
     private function transformComment(Comment $comment, array $myReactions = []): array

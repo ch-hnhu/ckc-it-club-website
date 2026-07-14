@@ -7,7 +7,6 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Channel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ChannelController extends BaseApiController
@@ -36,14 +35,7 @@ class ChannelController extends BaseApiController
 
     private function resolveImageUrl(?string $image): ?string
     {
-        if (! $image) {
-            return null;
-        }
-
-        if (Str::startsWith($image, ['http://', 'https://', '/storage/'])) {
-            return $image;
-        }
-
-        return Storage::disk('public')->url($image);
+        // DB now stores the full public URL (Supabase https://... or external).
+        return $image ?: null;
     }
 }

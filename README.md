@@ -196,3 +196,25 @@ http://localhost:5173
 ```
 
 → **Frontend đã chạy thành công!** ✅
+
+---
+
+## ☁️ Kiến Trúc Storage (Supabase)
+
+Hệ thống sử dụng **Supabase Storage** làm kho lưu trữ file chính (thay vì local storage). Các file upload (avatar, image, pdf, import) được tải trực tiếp lên Supabase, và database chỉ lưu đường dẫn public (URL tuyệt đối).
+
+### Cấu Hình Bắt Buộc
+
+Cập nhật thông tin Supabase trong `.env`:
+
+```env
+SUPABASE_URL="https://<id>.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+SUPABASE_IMAGE_BUCKET="images"
+SUPABASE_FILE_BUCKET="files"
+```
+
+### Cấu Trúc Bucket
+
+- **Bucket `images` (Public):** Lưu trữ hình ảnh với các thư mục: `avatars`, `blog`, `certificate`, `channels`, `chat-rooms`, `club-info`, `community`, `course`, `covers`, `event`, `rank`.
+- **Bucket `files` (Private/Public):** Lưu trữ tài liệu, file import/export: `imports`, `certificates`.

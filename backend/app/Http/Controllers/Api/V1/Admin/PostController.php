@@ -7,13 +7,14 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Post;
 use App\Models\PostReport;
 use App\Services\NotificationService;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PostController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     public function index(Request $request): JsonResponse
     {
         $allowedSorts = ['id', 'status', 'created_at', 'reactions_count', 'user_name', 'channel_name'];
@@ -151,8 +152,8 @@ class PostController extends BaseApiController
         $mediaUrls = $post->media_urls ?? [];
         if (is_array($mediaUrls)) {
             foreach ($mediaUrls as $url) {
-                if ($url && ! Str::startsWith($url, ['http://', 'https://'])) {
-                    Storage::disk('public')->delete($url);
+                if ($url) {
+                    $this->storage->delete($url);
                 }
             }
         }

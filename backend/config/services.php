@@ -61,4 +61,11 @@ return [
         // Xác minh SSL. Production để true; local Windows thiếu cacert.pem có thể để false.
         'verify' => filter_var(env('GEMINI_HTTP_VERIFY', true), FILTER_VALIDATE_BOOL),
     ],
+
+    'supabase' => [
+        'url'              => env('SUPABASE_URL'),
+        'service_role_key' => env('SUPABASE_SERVICE_ROLE_KEY'),
+        'image_bucket'     => env('SUPABASE_IMAGE_BUCKET', 'images'),
+        'file_bucket'      => env('SUPABASE_FILE_BUCKET', 'files'),
+    ],
 ];
