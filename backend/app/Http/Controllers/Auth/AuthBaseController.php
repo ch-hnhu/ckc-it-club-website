@@ -199,7 +199,7 @@ abstract class AuthBaseController extends Controller
         }
 
         // Update OAuth info on every login
-        $user->update([
+        $updates = [
             'full_name' => $oauthUser->getName() ?: $oauthUser->getNickname() ?: $user->full_name,
             'avatar' => $oauthUser->getAvatar() ?: $user->avatar,
             'provider' => $provider,
@@ -207,7 +207,13 @@ abstract class AuthBaseController extends Controller
             'student_code' => $isSchoolStudent
                 ? $emailPrefix
                 : $user->student_code,
-        ]);
+        ];
+
+        if (! $user->username) {
+            $updates['username'] = User::generateUniqueUsername($email);
+        }
+
+        $user->update($updates);
 
         return $user;
     }
@@ -302,12 +308,18 @@ abstract class AuthBaseController extends Controller
             }
 
             // Update existing user's OAuth info
-            $user->update([
+            $updates = [
                 'full_name' => $oauthUser->getName(),
                 'avatar' => $oauthUser->getAvatar(),
                 'provider' => $provider,
                 'provider_id' => $oauthUser->getId(),
-            ]);
+            ];
+
+            if (! $user->username && $oauthUser->getEmail()) {
+                $updates['username'] = User::generateUniqueUsername($oauthUser->getEmail());
+            }
+
+            $user->update($updates);
 
             $user->tokens()->delete();
 

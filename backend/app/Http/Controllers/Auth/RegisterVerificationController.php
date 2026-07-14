@@ -21,15 +21,10 @@ class RegisterVerificationController extends AuthBaseController
     {
         $validated = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
-            'username'  => ['required', 'string', 'max:30', 'regex:/^[A-Za-z0-9_.]+$/', 'unique:users,username'],
             'email'     => ['required', 'email', 'max:255', 'unique:users,email'],
             'password'  => ['required', 'string', 'min:8', 'confirmed'],
         ], [
             'full_name.required' => 'Vui lòng nhập họ và tên.',
-            'username.required'  => 'Vui lòng nhập username.',
-            'username.max'       => 'Username không được vượt quá 30 ký tự.',
-            'username.regex'     => 'Username chỉ được chứa chữ cái, số, dấu chấm và dấu gạch dưới.',
-            'username.unique'    => 'Username đã tồn tại.',
             'email.required'     => 'Vui lòng nhập email.',
             'email.email'        => 'Email không hợp lệ.',
             'email.unique'       => 'Email đã tồn tại.',
@@ -40,6 +35,7 @@ class RegisterVerificationController extends AuthBaseController
 
         $email = strtolower($validated['email']);
         $isSchoolStudent = (bool) preg_match('/^\d{10}@caothang\.edu\.vn$/', $email);
+        $username = User::generateUniqueUsername($email);
 
         // Invalidate any existing pending OTP for this email
         RegistrationOtp::where('email', $email)->whereNull('used_at')->delete();
@@ -51,7 +47,7 @@ class RegisterVerificationController extends AuthBaseController
             'otp'               => Hash::make($plainOtp),
             'registration_data' => [
                 'full_name'         => $validated['full_name'],
-                'username'          => $validated['username'],
+                'username'          => $username,
                 'password'          => Hash::make($validated['password']),
                 'student_code'      => $isSchoolStudent ? Str::before($email, '@') : null,
             ],
@@ -104,16 +100,13 @@ class RegisterVerificationController extends AuthBaseController
             ], HttpStatus::UNPROCESSABLE_ENTITY->value);
         }
 
-        if (User::where('username', $data['username'])->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Username đã được sử dụng. Vui lòng đăng ký lại với username khác.',
-            ], HttpStatus::UNPROCESSABLE_ENTITY->value);
-        }
+        $username = User::where('username', $data['username'])->exists()
+            ? User::generateUniqueUsername($email)
+            : $data['username'];
 
         $user = User::create([
             'full_name'         => $data['full_name'],
-            'username'          => $data['username'],
+            'username'          => $username,
             'email'             => $email,
             'student_code'      => $data['student_code'],
             'password'          => $data['password'], // already hashed
