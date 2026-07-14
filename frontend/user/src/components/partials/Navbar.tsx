@@ -49,8 +49,8 @@ const BASE_NAV_ITEMS: NavItem[] = [
 	{ label: "Cộng đồng", href: "/cong-dong", dropdown: true },
 	{ label: "Tài nguyên", href: "/tai-nguyen" },
 	{ label: "Sự kiện", href: "/su-kien" },
-	{ label: "Blog", href: "/blog" },
 	{ label: "Khóa học", href: "/khoa-hoc" },
+	{ label: "Blog", href: "/blog" },
 	{ label: "Liên hệ", href: "/lien-he" },
 ];
 
@@ -84,8 +84,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 		: BASE_NAV_ITEMS;
 	const isLectureVideoPage = /^\/khoa-hoc\/[^/]+\/[^/]+\/[^/]+\/?$/.test(location.pathname);
 	const isCommunityPage =
-		location.pathname.startsWith("/cong-dong") ||
-		location.pathname.startsWith("/community");
+		location.pathname.startsWith("/cong-dong") || location.pathname.startsWith("/community");
 	const isFullWidthPage = isLectureVideoPage || isCommunityPage;
 	const navbarContainerClass = isFullWidthPage ? "mx-0 max-w-none" : "";
 	const navbarPaddingX = isFullWidthPage ? "px-4 md:px-6 lg:px-8" : "px-6";
@@ -340,7 +339,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 									{lectureLessonSlug && (
 										<BreadcrumbItem className='min-w-0'>
 											<BreadcrumbLink asChild className='max-w-80 truncate'>
-												<Link to={`/khoa-hoc/${lectureCourseSlug}/${lectureLessonSlug}`}>
+												<Link
+													to={`/khoa-hoc/${lectureCourseSlug}/${lectureLessonSlug}`}>
 													{breadcrumbLessonTitle || "Buổi học"}
 												</Link>
 											</BreadcrumbLink>
@@ -379,7 +379,9 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 													/>
 													<span
 														className={getNavIndicatorClass(isActive)}
-														style={{ background: "var(--color-primary)" }}
+														style={{
+															background: "var(--color-primary)",
+														}}
 													/>
 												</button>
 
@@ -396,7 +398,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 																		"/cong-dong/bang-xep-hang",
 																	)) ||
 																(sub.id === "home" &&
-																	location.pathname === "/cong-dong");
+																	location.pathname ===
+																		"/cong-dong");
 															const SubIcon = sub.icon;
 															return (
 																<Link
@@ -411,7 +414,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onAuthSuccess, avatarTs }) => {
 																			: "border-2 border-transparent text-gray-700 hover:bg-gray-100"
 																	}`}
 																	style={{
-																		fontFamily: "var(--font-body)",
+																		fontFamily:
+																			"var(--font-body)",
 																	}}>
 																	<SubIcon className='h-4 w-4 shrink-0' />
 																	{sub.label}
