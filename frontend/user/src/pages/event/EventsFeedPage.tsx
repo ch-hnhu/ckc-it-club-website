@@ -78,14 +78,17 @@ const FeaturedEvent: React.FC<{ event: EventItem }> = ({ event }) => (
 				</h2>
 
 				{event.description && (
-					<p className='mt-4 line-clamp-3 text-base leading-7 text-gray-600'>{event.description}</p>
+					<p className='mt-4 line-clamp-3 text-base leading-7 text-gray-600'>
+						{event.description}
+					</p>
 				)}
 
 				<div className='mt-5 space-y-2 text-sm text-gray-700'>
 					<div className='flex items-center gap-2'>
 						<CalendarDays className='h-4 w-4 shrink-0 text-gray-400' />
 						<span className='font-medium'>
-							{formatEventDate(event.start_at)} · {formatEventTime(event.start_at)} - {formatEventTime(event.end_at)}
+							{formatEventDate(event.start_at)} · {formatEventTime(event.start_at)} -{" "}
+							{formatEventTime(event.end_at)}
 						</span>
 					</div>
 					{event.location && (
@@ -116,7 +119,7 @@ const FeaturedEvent: React.FC<{ event: EventItem }> = ({ event }) => (
 
 // ─── EventsFeedPage ─────────────────────────────────────────────────────────────
 
-const PREVIEW_PER_PAGE = 7;  // 1 featured + 6 grid
+const PREVIEW_PER_PAGE = 7; // 1 featured + 6 grid
 const EXPANDED_PER_PAGE = 9; // 3 × 3 grid
 
 const STATUS_FILTERS: { value: EventStatus | "all"; label: string }[] = [
@@ -125,8 +128,6 @@ const STATUS_FILTERS: { value: EventStatus | "all"; label: string }[] = [
 	{ value: "ongoing", label: "Đang diễn ra" },
 	{ value: "ended", label: "Đã kết thúc" },
 ];
-
-const HERO_BACKGROUND_IMAGE = "/assets/gif/custom-phaser.gif";
 
 const EventsFeedPage: React.FC = () => {
 	const [events, setEvents] = useState<EventItem[]>([]);
@@ -218,9 +219,7 @@ const EventsFeedPage: React.FC = () => {
 		.filter((e) => e.status === "published" && e.start_at)
 		.sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())[0];
 
-	const featuredEvent = !isFiltered && events.length > 0
-		? (nearestUpcoming ?? events[0])
-		: null;
+	const featuredEvent = !isFiltered && events.length > 0 ? (nearestUpcoming ?? events[0]) : null;
 
 	const gridEvents = featuredEvent ? events.filter((e) => e.id !== featuredEvent.id) : events;
 
@@ -233,17 +232,20 @@ const EventsFeedPage: React.FC = () => {
 			<div
 				className='relative flex min-h-[260px] flex-col items-center justify-center overflow-hidden border-b-2 border-black px-6 py-14 md:min-h-[300px] md:py-20'
 				style={{
-					backgroundImage: `url('${HERO_BACKGROUND_IMAGE}')`,
+					backgroundImage:
+						"linear-gradient(rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.46)), url('/assets/gif/event-banner.gif')",
 					backgroundSize: "cover",
 					backgroundPosition: "center",
 					backgroundRepeat: "no-repeat",
 				}}>
-				<div className='absolute inset-0 bg-black/35' />
-				<h1 className='relative font-heading text-3xl font-extrabold uppercase text-white drop-shadow-[3px_3px_0_#111] md:text-5xl'>
-					✦ Sự kiện CKC IT Club
+				<h1
+					className='font-pixel text-4xl text-white md:text-5xl'
+					style={{ textShadow: "5px 5px 0 #111, 0 2px 10px rgba(0, 0, 0, 0.45)" }}>
+					Sự kiện
 				</h1>
-				<p className='relative mt-3 max-w-2xl text-center text-sm font-medium text-white/90 drop-shadow-[2px_2px_0_#111] md:text-base'>
-					Khám phá và đăng ký tham gia các sự kiện, workshop, hoạt động sắp tới của câu lạc bộ.
+				<p className='mt-10 max-w-xl text-center text-md font-bold text-white'>
+					Khám phá và đăng ký tham gia các sự kiện, workshop, hoạt động sắp tới của câu
+					lạc bộ.
 				</p>
 			</div>
 
@@ -306,7 +308,9 @@ const EventsFeedPage: React.FC = () => {
 					</div>
 				) : error ? (
 					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
-						<p className='font-heading text-xl font-extrabold text-black'>Có lỗi xảy ra</p>
+						<p className='font-heading text-xl font-extrabold text-black'>
+							Có lỗi xảy ra
+						</p>
 						<p className='mt-2 text-sm text-gray-600'>{error}</p>
 					</div>
 				) : events.length === 0 ? (
@@ -316,7 +320,9 @@ const EventsFeedPage: React.FC = () => {
 							Không tìm thấy sự kiện nào
 						</p>
 						<p className='mt-2 text-sm text-gray-600'>
-							{isFiltered ? "Thử từ khóa hoặc bộ lọc khác." : "Hiện chưa có sự kiện nào được công bố."}
+							{isFiltered
+								? "Thử từ khóa hoặc bộ lọc khác."
+								: "Hiện chưa có sự kiện nào được công bố."}
 						</p>
 					</div>
 				) : (
@@ -338,7 +344,9 @@ const EventsFeedPage: React.FC = () => {
 										<EventCard key={event.id} event={event} />
 									))}
 									{loadingMore &&
-										Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={`more-${i}`} />)}
+										Array.from({ length: 3 }).map((_, i) => (
+											<CardSkeleton key={`more-${i}`} />
+										))}
 								</div>
 
 								{/* ── Nút Xem tất cả (chế độ preview) ── */}
