@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\AcademicStructure\ImportAcademicStructureRequest;
 use App\Models\AcademicStructureImport;
 use App\Services\AcademicStructureImportService;
+use App\Services\SupabaseStorageService;
 use App\Support\Spreadsheet\SpreadsheetReader;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,13 +14,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use RuntimeException;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 class AcademicStructureController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     private const ALLOWED_SORTS = [
         'id',
         'original_file_name',
@@ -110,14 +110,18 @@ class AcademicStructureController extends BaseApiController
     ): JsonResponse {
         $file = $request->file('file');
 
-        Storage::disk('local')->makeDirectory('academic-structure-imports');
-        $storedFilePath = $file?->store('academic-structure-imports', 'local');
-
-        if ($file && $storedFilePath === false) {
-            Log::warning('Academic structure import: failed to store file to local disk', [
-                'original_name' => $file->getClientOriginalName(),
-                'size' => $file->getSize(),
-            ]);
+        // Upload file to Supabase 'files' bucket under 'imports/' folder.
+        // storeImportHistory() receives the returned public URL as stored_file_path.
+        $storedFilePath = null;
+        if ($file) {
+            try {
+                $storedFilePath = $this->storage->uploadFile($file, 'imports');
+            } catch (\Throwable $e) {
+                Log::warning('Academic structure import: failed to upload file to Supabase', [
+                    'original_name' => $file->getClientOriginalName(),
+                    'error'         => $e->getMessage(),
+                ]);
+            }
         }
 
         try {
@@ -170,19 +174,16 @@ class AcademicStructureController extends BaseApiController
         }
     }
 
-    public function download(AcademicStructureImport $academicStructureImport): BinaryFileResponse|JsonResponse
+    public function download(AcademicStructureImport $academicStructureImport): JsonResponse
     {
-        if (
-            ! $academicStructureImport->stored_file_path ||
-            ! Storage::disk($academicStructureImport->storage_disk)->exists($academicStructureImport->stored_file_path)
-        ) {
+        if (! $academicStructureImport->stored_file_path) {
             return $this->notFoundResponse('Không tìm thấy file gốc.');
         }
 
-        $fullPath = Storage::disk($academicStructureImport->storage_disk)
-            ->path($academicStructureImport->stored_file_path);
-
-        return response()->download($fullPath, $academicStructureImport->original_file_name);
+        // stored_file_path is now a full Supabase public URL — redirect the client directly.
+        return $this->successResponse(true, [
+            'download_url' => $academicStructureImport->stored_file_path,
+        ], 'URL tải file được tạo thành công.');
     }
 
     /**
@@ -202,8 +203,8 @@ class AcademicStructureController extends BaseApiController
 
         AcademicStructureImport::query()->create([
             'original_file_name' => $file->getClientOriginalName(),
-            'stored_file_path' => $storedFilePath ?: null,
-            'storage_disk' => 'local',
+            'stored_file_path'   => $storedFilePath ?: null,
+            'storage_disk'       => 'supabase',
             'file_type' => $this->resolveFileType($file),
             'file_size_bytes' => $file->getSize() ?: 0,
             'uploaded_by' => $user?->getAuthIdentifier(),

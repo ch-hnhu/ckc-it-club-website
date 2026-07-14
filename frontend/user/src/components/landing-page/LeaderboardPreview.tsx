@@ -52,20 +52,15 @@ const LeaderboardPreview: React.FC = () => {
 			<div className='neo-container'>
 				<div className='max-w-2xl mx-auto'>
 					{/* Header */}
-					<div className='flex items-center justify-between mb-10 fade-in-up'>
+					<div className='flex items-center justify-center mb-10 fade-in-up'>
 						<div>
-							<div className='section-divider' style={{ margin: "0 0 0.75rem" }} />
+							<div className='section-divider' />
 							<h2
 								className='text-3xl sm:text-4xl font-extrabold text-black'
 								style={{ fontFamily: "var(--font-heading)" }}>
-								🏆 Bảng Xếp Hạng
+								Bảng Xếp Hạng
 							</h2>
 						</div>
-						<span
-							className='neo-tag self-start mt-1'
-							style={{ background: "var(--color-pastel-yellow)" }}>
-							Tuần này
-						</span>
 					</div>
 
 					{/* Leaderboard table */}
@@ -88,7 +83,9 @@ const LeaderboardPreview: React.FC = () => {
 						<div
 							className='fade-in-up rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'
 							style={{ boxShadow: "var(--neo-shadow)" }}>
-							<p className='text-sm text-gray-500'>Chưa có dữ liệu xếp hạng tuần này.</p>
+							<p className='text-sm text-gray-500'>
+								Chưa có dữ liệu xếp hạng tuần này.
+							</p>
 						</div>
 					) : (
 						<div
@@ -104,7 +101,9 @@ const LeaderboardPreview: React.FC = () => {
 										{/* Rank */}
 										<div className='w-10 text-center'>
 											{user.rank <= 3 ? (
-												<span className='text-2xl'>{MEDALS[user.rank - 1]}</span>
+												<span className='text-2xl'>
+													{MEDALS[user.rank - 1]}
+												</span>
 											) : (
 												<span
 													className='text-lg font-extrabold text-gray-400'
@@ -121,7 +120,10 @@ const LeaderboardPreview: React.FC = () => {
 											referrerPolicy='no-referrer'
 											className='w-10 h-10 rounded-full border-2 border-black object-cover'
 											onError={(e) => {
-												(e.target as HTMLImageElement).src = buildAvatar(user.full_name, null);
+												(e.target as HTMLImageElement).src = buildAvatar(
+													user.full_name,
+													null,
+												);
 											}}
 										/>
 
@@ -132,7 +134,9 @@ const LeaderboardPreview: React.FC = () => {
 												style={{ fontFamily: "var(--font-heading)" }}>
 												{user.full_name}
 											</span>
-											<span className='text-xs text-gray-400 block truncate'>{handle}</span>
+											<span className='text-xs text-gray-400 block truncate'>
+												{handle}
+											</span>
 										</div>
 
 										{/* Score */}
@@ -141,7 +145,10 @@ const LeaderboardPreview: React.FC = () => {
 												className='font-extrabold text-lg'
 												style={{
 													fontFamily: "var(--font-heading)",
-													color: user.rank <= 3 ? "#111" : "var(--color-text-muted)",
+													color:
+														user.rank <= 3
+															? "#111"
+															: "var(--color-text-muted)",
 												}}>
 												{user.points.toLocaleString()}
 											</span>
@@ -155,7 +162,9 @@ const LeaderboardPreview: React.FC = () => {
 
 					{/* CTA */}
 					<div className='text-center mt-8 fade-in-up'>
-						<Link to='/cong-dong/bang-xep-hang' className='neo-btn neo-btn-primary px-8 py-3'>
+						<Link
+							to='/cong-dong/bang-xep-hang'
+							className='neo-btn neo-btn-primary px-8 py-3'>
 							Xem bảng đầy đủ <ArrowRight className='w-5 h-5' />
 						</Link>
 					</div>

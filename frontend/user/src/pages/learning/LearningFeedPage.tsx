@@ -220,17 +220,22 @@ const LearningFeedPage: React.FC = () => {
 
 			{/* ── Hero banner ── */}
 			<div
-				className='relative flex min-h-[260px] flex-col items-center justify-center overflow-hidden border-b-2 border-black px-6 py-14 text-center md:min-h-[300px] md:py-20'
+				className='relative flex min-h-[260px] flex-col items-center justify-center overflow-hidden border-b-2 border-black px-6 py-14 md:min-h-[300px] md:py-20'
 				style={{
 					backgroundImage:
-						"url('https://www.codedex.io/images/blog/blog-background.png')",
+						"linear-gradient(rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.46)), url('/assets/gif/uiux.gif')",
 					backgroundSize: "cover",
 					backgroundPosition: "center",
 					backgroundRepeat: "no-repeat",
 				}}>
-				<h1 className='relative font-heading text-4xl font-extrabold leading-tight text-white drop-shadow-[3px_3px_0_#111] md:text-6xl'>
-					LEARNING CENTER
+				<h1
+					className='font-pixel text-4xl text-white md:text-5xl'
+					style={{ textShadow: "5px 5px 0 #111, 0 2px 10px rgba(0, 0, 0, 0.45)" }}>
+					Khoá học
 				</h1>
+				<p className='mt-10 max-w-xl text-center text-md font-bold text-white'>
+					Khoá học do thành viên CLB tổ chức, chia sẻ kiến thức và kỹ năng.
+				</p>
 			</div>
 
 			{/* ── Filter row ── */}

@@ -13,16 +13,17 @@ use App\Jobs\ModerateCommentJob;
 use App\Jobs\ModeratePostJob;
 use App\Models\Reaction;
 use App\Services\NotificationService;
+use App\Services\SupabaseStorageService;
 use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class PostController extends BaseApiController
 {
+    public function __construct(private readonly SupabaseStorageService $storage) {}
     public function index(Request $request): JsonResponse
     {
         $allowedSorts = ['created_at', 'reactions_count'];
@@ -234,13 +235,12 @@ class PostController extends BaseApiController
 
                 if ($request->hasFile('media')) {
                     $file = $request->file('media');
-                    $storedPath = $file->store("community/posts/{$post->id}", 'public');
-                    $mediaUrl = Storage::disk('public')->url($storedPath);
-                    $mediaUrls[] = $mediaUrl;
+                    $storedPath = $this->storage->uploadImage($file, 'community');
+                    $mediaUrls[] = $storedPath;
 
                     MediaFile::create([
                         'owner_id' => $request->user()->id,
-                        'url' => $mediaUrl,
+                        'url' => $storedPath,
                         'file_type' => $this->detectMediaType($file->getMimeType()),
                         'size_kb' => (int) ceil($file->getSize() / 1024),
                         'target_type' => 'post',
@@ -254,7 +254,7 @@ class PostController extends BaseApiController
             });
         } catch (\Throwable $exception) {
             if ($storedPath) {
-                Storage::disk('public')->delete($storedPath);
+                $this->storage->delete($storedPath);
             }
 
             throw $exception;
@@ -370,8 +370,7 @@ class PostController extends BaseApiController
 
         if ($request->hasFile('media')) {
             $file = $request->file('media');
-            $storedPath = $file->store("community/posts/{$post->id}", 'public');
-            $mediaUrl = Storage::disk('public')->url($storedPath);
+            $mediaUrl = $this->storage->uploadImage($file, 'community');
 
             MediaFile::create([
                 'owner_id' => $request->user()->id,

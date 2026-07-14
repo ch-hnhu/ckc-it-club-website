@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Event extends Model
@@ -36,20 +35,11 @@ class Event extends Model
 
     /**
      * URL đầy đủ của ảnh thumbnail.
-     * Nếu giá trị đã là URL tuyệt đối (http/https) thì giữ nguyên,
-     * ngược lại phân giải qua storage disk 'public'.
+     * Sau migration, DB lưu URL tuyệt đối (Supabase hoặc external).
      */
     public function thumbnailUrl(): ?string
     {
-        if (! $this->thumbnail) {
-            return null;
-        }
-
-        if (Str::startsWith($this->thumbnail, ['http://', 'https://'])) {
-            return $this->thumbnail;
-        }
-
-        return Storage::disk('public')->url($this->thumbnail);
+        return $this->thumbnail ?: null;
     }
 
     /**

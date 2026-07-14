@@ -6,7 +6,7 @@ use App\Models\CertificateTemplate;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Spatie\Browsershot\Browsershot;
 
 /**
@@ -163,20 +163,35 @@ class CertificateRenderer
             return $url;
         }
 
-        $marker = '/storage/';
-        $pos = strpos($url, $marker);
-        if ($pos === false) {
-            return $url;
+        // Fetch public URL and convert to base64 so it can be reliably embedded in the PDF
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            try {
+                $response = Http::timeout(30)->get($url);
+                if ($response->successful()) {
+                    $mime = $response->header('Content-Type') ?: 'image/png';
+                    return 'data:'.$mime.';base64,'.base64_encode($response->body());
+                }
+            } catch (\Throwable) {
+                // Fallback to the original URL if fetch fails
+            }
         }
 
-        $relative = substr($url, $pos + strlen($marker));
-        if (! Storage::disk('public')->exists($relative)) {
-            return $url;
+        // For local /storage/ URLs, convert to backend absolute URL so Http::get can fetch them
+        // or just let the browser handle it if it's reachable. In local dev, we try to fetch it via app_url.
+        if (str_starts_with($url, '/storage/')) {
+            $fullUrl = rtrim((string) config('app.url'), '/') . $url;
+            try {
+                $response = Http::timeout(30)->get($fullUrl);
+                if ($response->successful()) {
+                    $mime = $response->header('Content-Type') ?: 'image/png';
+                    return 'data:'.$mime.';base64,'.base64_encode($response->body());
+                }
+            } catch (\Throwable) {
+                // Fallback
+            }
         }
 
-        $mime = Storage::disk('public')->mimeType($relative) ?: 'image/png';
-
-        return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($relative));
+        return $url;
     }
 
     /**

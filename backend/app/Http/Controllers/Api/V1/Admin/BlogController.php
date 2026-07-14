@@ -11,7 +11,6 @@ use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class BlogController extends BaseApiController
@@ -241,14 +240,7 @@ class BlogController extends BaseApiController
 
     private function coverImageUrl(?string $coverImage): ?string
     {
-        if (! $coverImage) {
-            return null;
-        }
-
-        if (Str::startsWith($coverImage, ['http://', 'https://', '/assets/', '/storage/'])) {
-            return $coverImage;
-        }
-
-        return Storage::disk('public')->url($coverImage);
+        // DB now stores the full public URL (Supabase https://... or external).
+        return $coverImage ?: null;
     }
 }
