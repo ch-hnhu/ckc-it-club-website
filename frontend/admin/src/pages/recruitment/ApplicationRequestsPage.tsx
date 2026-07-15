@@ -10,7 +10,6 @@ import {
 	ChevronsRight,
 	Eye,
 	FileText,
-	Filter,
 	LayoutPanelLeft,
 	MessageSquareText,
 	MoreHorizontal,
@@ -258,7 +257,6 @@ function ApplicationRequestsPage() {
 	const averageAnswers = applications.length
 		? (totalAnswers / applications.length).toFixed(1)
 		: "0.0";
-	const activeFilterCount = Number(Boolean(search.trim())) + Number(statusFilter !== "all");
 	const reviewedPercent = applications.length
 		? Math.round((reviewedApplications / applications.length) * 100)
 		: 0;
@@ -469,7 +467,7 @@ function ApplicationRequestsPage() {
 					</div>
 				</section>
 
-				<section className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
+				<section className='grid gap-3 md:grid-cols-1 xl:grid-cols-3'>
 					<MetricCard
 						label='Ứng viên hiển thị'
 						value={String(filteredApplications.length)}
@@ -490,17 +488,6 @@ function ApplicationRequestsPage() {
 						description='Số câu trả lời trung bình trên mỗi hồ sơ.'
 						icon={<MessageSquareText className='size-5' />}
 						footer={`${answerDepthPercent}% độ phủ so với tập câu hỏi`}
-					/>
-					<MetricCard
-						label='Bộ lọc đang áp dụng'
-						value={String(activeFilterCount).padStart(2, "0")}
-						description='Tự động tăng khi bạn lọc theo trạng thái hoặc từ khóa.'
-						icon={<Filter className='size-5' />}
-						footer={
-							activeFilterCount > 0
-								? "Đang thu hẹp danh sách để soát nhanh hơn"
-								: "Đang xem toàn bộ dữ liệu hiện có"
-						}
 					/>
 				</section>
 

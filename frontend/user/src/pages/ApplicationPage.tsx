@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
-import { ArrowRight, CheckCircle, ClipboardList, Loader2, AlertCircle, ShieldAlert } from "lucide-react";
+import { ArrowRight, CheckCircle, ClipboardList, Loader2, AlertCircle, ShieldAlert, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import type { AuthUser } from "@/services/auth.service";
 import { applicationService } from "@/services/application.service";
@@ -149,14 +149,6 @@ const ApplicationPage: React.FC = () => {
 	}, []);
 
 	useEffect(() => {
-		if (loadingUser) return;
-		if (!user) {
-			navigate("/", { replace: true });
-			return;
-		}
-	}, [user, loadingUser, navigate]);
-
-	useEffect(() => {
 		if (loadingUser || !user) return;
 		// Don't load questions/existing-app while config is still loading or if form is closed
 		if (recruitmentEnabled === null || recruitmentEnabled === false) {
@@ -234,6 +226,44 @@ const ApplicationPage: React.FC = () => {
 					</div>
 				)}
 
+				{/* Not logged in — hiển thị tiêu đề form + yêu cầu đăng nhập */}
+				{!isLoading && !user && (
+					<div className="max-w-2xl mx-auto">
+						<div
+							className="rounded-2xl border-2 border-black overflow-hidden"
+							style={{ boxShadow: "var(--neo-shadow)" }}>
+							{/* Form header */}
+							<div
+								className="px-8 py-6 border-b-2 border-black"
+								style={{ background: "var(--color-primary)" }}>
+								<h2
+									className="text-2xl font-extrabold text-black"
+									style={{ fontFamily: "var(--font-heading)" }}>
+									Form ứng tuyển thành viên
+								</h2>
+							</div>
+
+							<div className="px-8 py-14 text-center">
+								<LogIn className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+								<p className="font-bold text-gray-700 text-lg">
+									Vui lòng đăng nhập để ứng tuyển
+								</p>
+								<p className="text-sm text-gray-500 mt-1 mb-6">
+									Bạn cần đăng nhập bằng tài khoản sinh viên Cao Thắng để nộp đơn
+									ứng tuyển thành viên CLB.
+								</p>
+								<Link
+									to="/login"
+									state={{ from: "/ung-tuyen" }}
+									className="neo-btn neo-btn-primary text-sm px-6 py-3">
+									<LogIn className="w-4 h-4" />
+									Đăng nhập
+								</Link>
+							</div>
+						</div>
+					</div>
+				)}
+
 				{/* Submitted success */}
 				{!isLoading && submitted && (
 					<div
@@ -308,7 +338,7 @@ const ApplicationPage: React.FC = () => {
 				)}
 
 			{/* Recruitment closed */}
-				{!isLoading && !submitted && !isClubMember && recruitmentEnabled === false && (
+				{!isLoading && !submitted && user && !isClubMember && recruitmentEnabled === false && (
 					<div className="max-w-lg mx-auto">
 						<div
 							className="rounded-2xl border-2 border-black p-8 text-center"

@@ -106,17 +106,13 @@ const AwardsSection: React.FC = () => {
 												<Icon className='h-16 w-16 text-black' />
 											)}
 										</div>
-
-										{/* Nội dung */}
-										<div className='flex flex-col p-6'>
-											{/* Tên giải */}
+										{/* Nội dung: tên giải và đơn vị trên 2 hàng riêng, cùng canh đều trái */}
+										<div className='p-6 leading-snug'>
 											<h3
-												className='text-lg font-bold text-black leading-tight text-balance'
+												className='text-lg font-bold text-black'
 												style={{ fontFamily: "var(--font-heading)" }}>
 												{award.title}
 											</h3>
-
-											{/* Cuộc thi / đơn vị */}
 											{award.event ? (
 												<p className='mt-1 text-sm font-semibold text-gray-500'>
 													{award.event}

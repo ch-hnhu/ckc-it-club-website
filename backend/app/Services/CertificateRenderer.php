@@ -166,7 +166,8 @@ class CertificateRenderer
         // Fetch public URL and convert to base64 so it can be reliably embedded in the PDF
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
             try {
-                $response = Http::timeout(30)->get($url);
+                $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+                $response = Http::withOptions(['verify' => $verifySsl])->timeout(30)->get($url);
                 if ($response->successful()) {
                     $mime = $response->header('Content-Type') ?: 'image/png';
                     return 'data:'.$mime.';base64,'.base64_encode($response->body());
@@ -176,12 +177,22 @@ class CertificateRenderer
             }
         }
 
-        // For local /storage/ URLs, convert to backend absolute URL so Http::get can fetch them
-        // or just let the browser handle it if it's reachable. In local dev, we try to fetch it via app_url.
+        // Ảnh trên public disk (/storage/...): ĐỌC TRỰC TIẾP TỪ ĐĨA thay vì Http::get qua APP_URL.
+        // Fetch HTTP tự gọi ngược localhost dễ hỏng khi web server không chạy (lúc seed bằng CLI)
+        // hoặc `artisan serve` đơn luồng đang bận chính request này → ảnh (logo) bị bỏ trắng.
         if (str_starts_with($url, '/storage/')) {
+            $relative = ltrim(substr($url, strlen('/storage/')), '/');
+            $absolute = storage_path('app/public/'.$relative);
+            if (is_file($absolute)) {
+                $mime = $this->guessMime($absolute);
+                return 'data:'.$mime.';base64,'.base64_encode((string) File::get($absolute));
+            }
+
+            // Dự phòng: đọc từ đĩa thất bại thì thử fetch qua APP_URL (giữ hành vi cũ).
             $fullUrl = rtrim((string) config('app.url'), '/') . $url;
             try {
-                $response = Http::timeout(30)->get($fullUrl);
+                $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+                $response = Http::withOptions(['verify' => $verifySsl])->timeout(30)->get($fullUrl);
                 if ($response->successful()) {
                     $mime = $response->header('Content-Type') ?: 'image/png';
                     return 'data:'.$mime.';base64,'.base64_encode($response->body());
@@ -192,6 +203,20 @@ class CertificateRenderer
         }
 
         return $url;
+    }
+
+    /**
+     * Đoán MIME từ đuôi file (đủ cho ảnh chứng chỉ: png/jpg/webp/gif/svg). Mặc định image/png.
+     */
+    private function guessMime(string $path): string
+    {
+        return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            default => 'image/png',
+        };
     }
 
     /**
@@ -246,11 +271,18 @@ class CertificateRenderer
 <head>
 <meta charset="utf-8">
 <style>{$fontCss}</style>
-<style>html,body{margin:0;padding:0}#stage{width:{$w}px;height:{$h}px}</style>
+<style>html,body{margin:0;padding:0}
+#cert{position:relative;width:{$w}px;height:{$h}px;overflow:hidden}
+#cert .layer{position:absolute;left:0;top:0;width:{$w}px;height:{$h}px}
+#cert #imglayer img{position:absolute;transform-origin:0 0}</style>
 <script>{$konva}</script>
 </head>
 <body>
-<div id="stage"></div>
+<div id="cert">
+  <div id="bg" class="layer"></div>
+  <div id="imglayer" class="layer"></div>
+  <div id="stage" class="layer"></div>
+</div>
 <script>
 const scene = {$sceneJson};
 // Font được nhúng base64 trong cert-fonts.css → chỉ có Be Vietnam Pro và Roboto hỗ trợ đầy đủ
@@ -283,15 +315,37 @@ function buildNode(el){
   }
   return null; // image/qr xử lý async bên dưới
 }
-function loadImage(src){
-  return new Promise((resolve) => {
-    const im = new Image();
-    const done = (v) => resolve(v);
-    setTimeout(() => done(null), 6000); // không để ảnh treo vô hạn
-    im.onload = () => done(im);
-    im.onerror = () => done(null);
-    im.src = src;
-  });
+// Nền + ảnh + QR được vẽ bằng thẻ <img>/CSS DOM, KHÔNG qua canvas Konva. Konva vẽ ảnh lên canvas
+// lúc Browsershot xuất PDF không ổn định (ảnh bị rớt theo thứ tự thêm vào layer — logo hay mất,
+// QR nhỏ thường kịp), trong khi Chrome luôn rasterit hoá <img> DOM đúng. Ảnh đều đã là data URI
+// (nhúng base64) nên không phát sinh gọi mạng.
+function cssRotate(deg){ return deg ? 'transform:rotate('+deg+'deg);' : ''; }
+function renderDomImages(){
+  const b = scene.canvas.background || {};
+  const bg = document.getElementById('bg');
+  bg.style.background = b.color || '#ffffff';
+  if (b.image) {
+    bg.style.backgroundImage = 'url("'+b.image+'")';
+    bg.style.backgroundSize = 'cover';         // phủ kín khung, giữ tỉ lệ, cắt phần thừa (giống editor)
+    bg.style.backgroundPosition = 'center';
+    bg.style.backgroundRepeat = 'no-repeat';
+  }
+  const layer = document.getElementById('imglayer');
+  for (const el of (scene.elements || [])) {
+    if ((el.type !== 'image' && el.type !== 'qr') || !el.src) continue;
+    const img = document.createElement('img');
+    img.src = el.src;
+    img.style.cssText = 'left:'+el.x+'px;top:'+el.y+'px;width:'+el.width+'px;height:'+el.height+'px;'+cssRotate(el.rotation||0);
+    layer.appendChild(img);
+  }
+}
+// Chờ mọi <img> tải + decode xong (có timeout) để Browsershot chụp khi ảnh đã hiển thị.
+function waitImages(timeoutMs){
+  const imgs = Array.from(document.images);
+  const one = (im) => im.complete
+    ? (im.decode ? im.decode().catch(()=>{}) : Promise.resolve())
+    : new Promise(r => { im.onload = () => (im.decode ? im.decode().then(r, r) : r()); im.onerror = () => r(); });
+  return Promise.race([Promise.all(imgs.map(one)), new Promise(r => setTimeout(r, timeoutMs))]);
 }
 function fontLoadTextFor(family) {
   const sceneText = (scene.elements || [])
@@ -331,28 +385,14 @@ async function waitUntilFontsUsable(families, descriptors, timeoutMs) {
     await waitUntilFontsUsable(families, descriptors, 3000);
   } catch(e) {}
   try {
+    // Nền + ảnh + QR: DOM (ổn định khi xuất PDF). Chờ ảnh hiển thị xong.
+    renderDomImages();
+    await waitImages(15000);
+    // Konva chỉ vẽ text/shape lên stage TRONG SUỐT nằm trên cùng, để lộ lớp ảnh/nền phía dưới.
+    // Giữ nguyên thứ tự cũ: nền < ảnh/QR < text/shape.
     const stage = new Konva.Stage({ container: 'stage', width: scene.canvas.width, height: scene.canvas.height });
     const layer = new Konva.Layer();
     stage.add(layer);
-    // nền
-    layer.add(new Konva.Rect({ x:0, y:0, width: scene.canvas.width, height: scene.canvas.height, fill: (scene.canvas.background && scene.canvas.background.color) || '#ffffff' }));
-    if (scene.canvas.background && scene.canvas.background.image) {
-      const bg = await loadImage(scene.canvas.background.image);
-      if (bg) {
-        // "cover": phủ kín khung, giữ tỉ lệ ảnh, căn giữa, cắt phần thừa.
-        const iw = bg.naturalWidth || bg.width, ih = bg.naturalHeight || bg.height;
-        const frameAR = scene.canvas.width / scene.canvas.height, imgAR = iw / ih;
-        let cw = iw, ch = ih, cx = 0, cy = 0;
-        if (imgAR > frameAR) { cw = ih * frameAR; cx = (iw - cw) / 2; }
-        else { ch = iw / frameAR; cy = (ih - ch) / 2; }
-        layer.add(new Konva.Image({ image: bg, x:0, y:0, width: scene.canvas.width, height: scene.canvas.height, crop: { x: cx, y: cy, width: cw, height: ch } }));
-      }
-    }
-    // ảnh (image/qr) tải SONG SONG để không cộng dồn thời gian chờ
-    const imgEls = scene.elements.filter(e => (e.type === 'image' || e.type === 'qr') && e.src);
-    const imgs = await Promise.all(imgEls.map(e => loadImage(e.src)));
-    imgEls.forEach((el, i) => { if (imgs[i]) layer.add(new Konva.Image({ image: imgs[i], x: el.x, y: el.y, width: el.width, height: el.height, rotation: el.rotation||0 })); });
-    // các phần tử còn lại (text/shape)
     for (const el of scene.elements) {
       if (el.type === 'image' || el.type === 'qr') continue;
       const node = buildNode(el);

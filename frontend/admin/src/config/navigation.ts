@@ -128,7 +128,7 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "club_info.view",
 			},
 			{
-				title: "Trang Về chúng tôi",
+				title: "Quản lý trang tĩnh",
 				url: "/about-page",
 				permission: "club_info.view",
 			},

@@ -188,11 +188,15 @@ class BlogController extends BaseApiController
         DB::transaction(function () use ($blog) {
             // Nếu bài này chưa là highlight thì bật lên (và tắt tất cả bài còn lại)
             // Nếu bài này đang là highlight thì tắt đi
-            if (! $blog->is_highlight) {
+            // Lock all blogs so concurrent requests cannot leave more than one highlighted.
+            Blog::query()->lockForUpdate()->get();
+            $lockedBlog = Blog::query()->lockForUpdate()->findOrFail($blog->id);
+
+            if (! $lockedBlog->is_highlight) {
                 Blog::query()->update(['is_highlight' => false]);
-                $blog->update(['is_highlight' => true]);
+                $lockedBlog->update(['is_highlight' => true]);
             } else {
-                $blog->update(['is_highlight' => false]);
+                $lockedBlog->update(['is_highlight' => false]);
             }
         });
 

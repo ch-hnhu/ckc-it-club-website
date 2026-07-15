@@ -66,11 +66,13 @@ import PointRulesPage from "@/pages/gamification/PointRulesPage";
 import RanksPage from "@/pages/gamification/RanksPage";
 import LeaderboardPage from "@/pages/gamification/LeaderboardPage";
 import QuizCreatePage from "@/pages/learning/QuizCreatePage";
+import RouteTitleManager from "@/components/RouteTitleManager";
 
-const router = createBrowserRouter([
+const appRoutes = [
 	{
 		path: "/login",
 		element: <LoginForm />,
+		handle: { title: "Đăng nhập" },
 	},
 	{
 		path: "/",
@@ -88,6 +90,7 @@ const router = createBrowserRouter([
 						<Dashboard />
 					</PermissionRoute>
 				),
+				handle: { title: "Bảng điều khiển" },
 			},
 			{
 				path: "users",
@@ -96,6 +99,7 @@ const router = createBrowserRouter([
 						<UserList />
 					</PermissionRoute>
 				),
+				handle: { title: "Người dùng" },
 			},
 			{
 				path: "users/create",
@@ -104,6 +108,7 @@ const router = createBrowserRouter([
 						<CreateUser />
 					</PermissionRoute>
 				),
+				handle: { title: "Thêm người dùng" },
 			},
 			{
 				path: "users/:id",
@@ -112,6 +117,7 @@ const router = createBrowserRouter([
 						<UpdateUser />
 					</PermissionRoute>
 				),
+				handle: { title: "Cập nhật người dùng" },
 			},
 			{
 				path: "roles",
@@ -120,6 +126,7 @@ const router = createBrowserRouter([
 						<RoleList />
 					</PermissionRoute>
 				),
+				handle: { title: "Vai trò" },
 			},
 			{
 				path: "roles/:id",
@@ -128,6 +135,7 @@ const router = createBrowserRouter([
 						<RoleDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết vai trò" },
 			},
 			{
 				path: "permissions",
@@ -136,6 +144,7 @@ const router = createBrowserRouter([
 						<PermissionList />
 					</PermissionRoute>
 				),
+				handle: { title: "Quyền hạn" },
 			},
 			{
 				path: "organization/upload",
@@ -144,6 +153,7 @@ const router = createBrowserRouter([
 						<OrganizationImportListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Tải lên danh sách đơn vị" },
 			},
 			{
 				path: "departments",
@@ -152,6 +162,7 @@ const router = createBrowserRouter([
 						<FacultyList />
 					</PermissionRoute>
 				),
+				handle: { title: "Khoa" },
 			},
 			{
 				path: "departments/trash",
@@ -160,6 +171,7 @@ const router = createBrowserRouter([
 						<FacultyTrashPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Thùng rác khoa" },
 			},
 			{
 				path: "majors",
@@ -168,6 +180,7 @@ const router = createBrowserRouter([
 						<MajorList />
 					</PermissionRoute>
 				),
+				handle: { title: "Ngành" },
 			},
 			{
 				path: "majors/trash",
@@ -176,6 +189,7 @@ const router = createBrowserRouter([
 						<MajorTrashPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Thùng rác ngành" },
 			},
 			{
 				path: "classes",
@@ -184,6 +198,7 @@ const router = createBrowserRouter([
 						<SchoolClassList />
 					</PermissionRoute>
 				),
+				handle: { title: "Lớp" },
 			},
 			{
 				path: "classes/trash",
@@ -192,6 +207,7 @@ const router = createBrowserRouter([
 						<SchoolClassTrashPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Thùng rác lớp" },
 			},
 			{
 				path: "contacts",
@@ -200,6 +216,7 @@ const router = createBrowserRouter([
 						<ContactList />
 					</PermissionRoute>
 				),
+				handle: { title: "Quản lý liên hệ" },
 			},
 			{
 				path: "divisions",
@@ -208,6 +225,7 @@ const router = createBrowserRouter([
 						<DivisionManagementPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Các ban" },
 			},
 			{
 				path: "divisions/trash",
@@ -216,6 +234,7 @@ const router = createBrowserRouter([
 						<DepartmentTrashPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Thùng rác ban" },
 			},
 			{
 				path: "divisions/:id",
@@ -224,6 +243,7 @@ const router = createBrowserRouter([
 						<DepartmentDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết ban" },
 			},
 			{
 				path: "club-informations",
@@ -232,6 +252,7 @@ const router = createBrowserRouter([
 						<ClubInformationList />
 					</PermissionRoute>
 				),
+				handle: { title: "Thông tin CLB" },
 			},
 			{
 				path: "club-informations/create",
@@ -240,6 +261,7 @@ const router = createBrowserRouter([
 						<CreateClubInformationPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Thêm thông tin CLB" },
 			},
 			{
 				path: "club-informations/:id",
@@ -248,6 +270,7 @@ const router = createBrowserRouter([
 						<ClubInformationDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết thông tin CLB" },
 			},
 			{
 				path: "about-page",
@@ -256,6 +279,7 @@ const router = createBrowserRouter([
 						<AboutPageEditor />
 					</PermissionRoute>
 				),
+				handle: { title: "Quản lý trang tĩnh" },
 			},
 			{
 				path: "requests",
@@ -264,6 +288,7 @@ const router = createBrowserRouter([
 						<ApplicationRequestsPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Yêu cầu tham gia" },
 			},
 			{
 				path: "requests/:applicationId",
@@ -272,6 +297,7 @@ const router = createBrowserRouter([
 						<ApplicationDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết đơn ứng tuyển" },
 			},
 			{
 				path: "questions",
@@ -280,6 +306,7 @@ const router = createBrowserRouter([
 						<ApplicationQuestionsPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Form ứng tuyển" },
 			},
 			{
 				path: "questions/:questionId",
@@ -288,6 +315,7 @@ const router = createBrowserRouter([
 						<ApplicationQuestionDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết câu hỏi" },
 			},
 			{
 				path: "mail-templates",
@@ -296,6 +324,7 @@ const router = createBrowserRouter([
 						<MailTemplateListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Mail template" },
 			},
 			{
 				path: "mail-templates/:id",
@@ -304,10 +333,12 @@ const router = createBrowserRouter([
 						<MailTemplateDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết mail template" },
 			},
 			{
 				path: "notifications",
 				element: <NotificationsPage />,
+				handle: { title: "Thông báo" },
 			},
 			{
 				path: "learning/courses/:courseId/lessons/:lessonId/quiz/create",
@@ -316,6 +347,7 @@ const router = createBrowserRouter([
 						<QuizCreatePage />
 					</PermissionRoute>
 				),
+				handle: { title: "Tạo bài kiểm tra" },
 			},
 			{
 				path: "events",
@@ -324,6 +356,7 @@ const router = createBrowserRouter([
 						<EventListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Quản lý sự kiện" },
 			},
 			{
 				path: "events/create",
@@ -332,6 +365,7 @@ const router = createBrowserRouter([
 						<EventCreatePage />
 					</PermissionRoute>
 				),
+				handle: { title: "Tạo sự kiện" },
 			},
 			{
 				path: "events/:id",
@@ -340,6 +374,7 @@ const router = createBrowserRouter([
 						<EventDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết sự kiện" },
 			},
 			{
 				path: "events/:id/edit",
@@ -348,6 +383,7 @@ const router = createBrowserRouter([
 						<EventEditPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chỉnh sửa sự kiện" },
 			},
 			{
 				path: "community/channels",
@@ -356,6 +392,7 @@ const router = createBrowserRouter([
 						<ChannelListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Kênh cộng đồng" },
 			},
 			{
 				path: "community/posts",
@@ -364,6 +401,7 @@ const router = createBrowserRouter([
 						<PostListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Post" },
 			},
 			{
 				path: "community/blogs",
@@ -372,6 +410,7 @@ const router = createBrowserRouter([
 						<BlogListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Blog" },
 			},
 			{
 				path: "community/blogs/create",
@@ -380,6 +419,7 @@ const router = createBrowserRouter([
 						<BlogCreatePage />
 					</PermissionRoute>
 				),
+				handle: { title: "Tạo blog" },
 			},
 			{
 				path: "community/blogs/:id",
@@ -388,6 +428,7 @@ const router = createBrowserRouter([
 						<BlogDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết blog" },
 			},
 			{
 				path: "community/comments",
@@ -396,6 +437,7 @@ const router = createBrowserRouter([
 						<CommentListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Bình luận" },
 			},
 			{
 				path: "community/tags",
@@ -404,6 +446,7 @@ const router = createBrowserRouter([
 						<TagListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Tags" },
 			},
 			{
 				path: "community/chat",
@@ -412,6 +455,7 @@ const router = createBrowserRouter([
 						<ChatRoomListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Phòng chat" },
 			},
 			{
 				// Redirect alias — xử lý link cũ trong thông báo
@@ -425,6 +469,7 @@ const router = createBrowserRouter([
 						<MediaListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Media" },
 			},
 			{
 				path: "community/skills",
@@ -433,6 +478,7 @@ const router = createBrowserRouter([
 						<SkillListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Skills" },
 			},
 			{
 				path: "community/reports",
@@ -441,6 +487,7 @@ const router = createBrowserRouter([
 						<ReportListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Báo cáo vi phạm" },
 			},
 			{
 				path: "community/blog-reports",
@@ -449,6 +496,7 @@ const router = createBrowserRouter([
 						<BlogReportListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Báo cáo blog" },
 			},
 			{
 				path: "community/resources",
@@ -457,6 +505,7 @@ const router = createBrowserRouter([
 						<ResourceListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Danh sách tài nguyên" },
 			},
 			{
 				path: "community/resource-reports",
@@ -465,6 +514,7 @@ const router = createBrowserRouter([
 						<ResourceReportListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Báo cáo tài nguyên" },
 			},
 			{
 				path: "courses",
@@ -473,6 +523,7 @@ const router = createBrowserRouter([
 						<CourseListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Khóa học" },
 			},
 			{
 				path: "courses/trash",
@@ -481,6 +532,7 @@ const router = createBrowserRouter([
 						<CourseTrashPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Thùng rác khóa học" },
 			},
 			{
 				path: "course-categories",
@@ -489,6 +541,7 @@ const router = createBrowserRouter([
 						<CourseCategoryListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Danh mục khóa học" },
 			},
 			{
 				path: "courses/create",
@@ -497,6 +550,7 @@ const router = createBrowserRouter([
 						<CourseFormPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Tạo khóa học" },
 			},
 			{
 				path: "courses/:slug",
@@ -505,6 +559,7 @@ const router = createBrowserRouter([
 						<CourseDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết khóa học" },
 			},
 			{
 				path: "courses/:slug/edit",
@@ -513,6 +568,7 @@ const router = createBrowserRouter([
 						<CourseFormPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chỉnh sửa khóa học" },
 			},
 			{
 				path: "courses/:slug/lessons/:lessonId",
@@ -521,6 +577,7 @@ const router = createBrowserRouter([
 						<LessonDetailPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chi tiết bài học" },
 			},
 			{
 				path: "courses/:slug/lessons/create",
@@ -529,6 +586,7 @@ const router = createBrowserRouter([
 						<LessonFormPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Tạo bài học" },
 			},
 			{
 				path: "courses/:slug/lessons/:lessonId/edit",
@@ -537,6 +595,7 @@ const router = createBrowserRouter([
 						<LessonFormPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chỉnh sửa bài học" },
 			},
 			{
 				path: "certificate-templates",
@@ -545,6 +604,7 @@ const router = createBrowserRouter([
 						<CertificateTemplateListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Giấy chứng nhận" },
 			},
 			{
 				path: "certificate-templates/create",
@@ -553,6 +613,7 @@ const router = createBrowserRouter([
 						<CertificateTemplateEditorPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Tạo giấy chứng nhận" },
 			},
 			{
 				path: "certificate-templates/:id/edit",
@@ -561,6 +622,7 @@ const router = createBrowserRouter([
 						<CertificateTemplateEditorPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Chỉnh sửa giấy chứng nhận" },
 			},
 			{
 				path: "gamification/point-rules",
@@ -569,6 +631,7 @@ const router = createBrowserRouter([
 						<PointRulesPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Activity Point Rules" },
 			},
 			{
 				path: "gamification/ranks",
@@ -577,6 +640,7 @@ const router = createBrowserRouter([
 						<RanksPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Rank Rules" },
 			},
 			{
 				path: "gamification/leaderboard",
@@ -585,6 +649,7 @@ const router = createBrowserRouter([
 						<LeaderboardPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Leaderboard" },
 			},
 			{
 				path: "to-do-list",
@@ -593,6 +658,7 @@ const router = createBrowserRouter([
 						<ProjectHubListPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Việc cần làm" },
 			},
 			{
 				path: "to-do-list/:slug",
@@ -601,8 +667,16 @@ const router = createBrowserRouter([
 						<ProjectBoardPage />
 					</PermissionRoute>
 				),
+				handle: { title: "Bảng công việc" },
 			},
 		],
+	},
+];
+
+const router = createBrowserRouter([
+	{
+		element: <RouteTitleManager />,
+		children: appRoutes,
 	},
 ]);
 

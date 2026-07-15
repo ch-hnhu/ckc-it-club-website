@@ -439,7 +439,8 @@ class CourseController extends BaseApiController
             if (! $cert->cert_url) {
                 continue;
             }
-            $response = Http::timeout(30)->get($cert->cert_url);
+            $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+            $response = Http::withOptions(['verify' => $verifySsl])->timeout(30)->get($cert->cert_url);
             if (! $response->successful()) {
                 continue;
             }
@@ -480,7 +481,8 @@ class CourseController extends BaseApiController
             if (! $cert->cert_url) {
                 continue;
             }
-            $pdfResponse = Http::timeout(30)->get($cert->cert_url);
+            $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+            $pdfResponse = Http::withOptions(['verify' => $verifySsl])->timeout(30)->get($cert->cert_url);
             if (! $pdfResponse->successful()) {
                 continue;
             }
