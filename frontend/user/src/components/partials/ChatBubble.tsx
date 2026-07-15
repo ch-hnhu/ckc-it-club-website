@@ -28,6 +28,90 @@ const ChatBubble: React.FC = () => {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 
+	// Kéo thả chatbox
+	const [position, setPosition] = useState({ x: 0, y: 0 });
+	const [isDragging, setIsDragging] = useState(false);
+	const dragRef = useRef({ startX: 0, startY: 0, currentX: 0, currentY: 0 });
+
+	useEffect(() => {
+		const handleMouseMove = (e: MouseEvent) => {
+			if (!isDragging) return;
+			const newX = e.clientX - dragRef.current.startX;
+			const newY = e.clientY - dragRef.current.startY;
+			
+			setPosition({ x: newX, y: newY });
+			dragRef.current.currentX = newX;
+			dragRef.current.currentY = newY;
+		};
+
+		const handleMouseUp = () => {
+			setIsDragging(false);
+		};
+
+		if (isDragging) {
+			document.addEventListener("mousemove", handleMouseMove);
+			document.addEventListener("mouseup", handleMouseUp);
+		}
+
+		return () => {
+			document.removeEventListener("mousemove", handleMouseMove);
+			document.removeEventListener("mouseup", handleMouseUp);
+		};
+	}, [isDragging]);
+
+	const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+		if ((e.target as HTMLElement).closest("button")) return;
+		setIsDragging(true);
+		dragRef.current.startX = e.clientX - dragRef.current.currentX;
+		dragRef.current.startY = e.clientY - dragRef.current.currentY;
+	};
+
+	// Kéo thả bong bóng
+	const [bubblePosition, setBubblePosition] = useState({ x: 0, y: 0 });
+	const [isDraggingBubble, setIsDraggingBubble] = useState(false);
+	const dragBubbleRef = useRef({ startX: 0, startY: 0, currentX: 0, currentY: 0 });
+	const isClickRef = useRef(true);
+
+	useEffect(() => {
+		const handleBubbleMouseMove = (e: MouseEvent) => {
+			if (!isDraggingBubble) return;
+			isClickRef.current = false;
+			const newX = e.clientX - dragBubbleRef.current.startX;
+			const newY = e.clientY - dragBubbleRef.current.startY;
+			
+			setBubblePosition({ x: newX, y: newY });
+			dragBubbleRef.current.currentX = newX;
+			dragBubbleRef.current.currentY = newY;
+		};
+
+		const handleBubbleMouseUp = () => {
+			setIsDraggingBubble(false);
+		};
+
+		if (isDraggingBubble) {
+			document.addEventListener("mousemove", handleBubbleMouseMove);
+			document.addEventListener("mouseup", handleBubbleMouseUp);
+		}
+
+		return () => {
+			document.removeEventListener("mousemove", handleBubbleMouseMove);
+			document.removeEventListener("mouseup", handleBubbleMouseUp);
+		};
+	}, [isDraggingBubble]);
+
+	const handleBubbleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
+		isClickRef.current = true;
+		setIsDraggingBubble(true);
+		dragBubbleRef.current.startX = e.clientX - dragBubbleRef.current.currentX;
+		dragBubbleRef.current.startY = e.clientY - dragBubbleRef.current.currentY;
+	};
+
+	const handleBubbleClick = () => {
+		if (isClickRef.current) {
+			setIsOpen((v) => !v);
+		}
+	};
+
 	// Tự cuộn xuống cuối khi có tin nhắn mới hoặc mở khung.
 	useEffect(() => {
 		scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -91,9 +175,13 @@ const ChatBubble: React.FC = () => {
 		<>
 			{/* Khung chat */}
 			{isOpen && (
-				<div className='fixed bottom-24 right-6 z-50 flex h-[70vh] max-h-[560px] w-[calc(100vw-3rem)] max-w-[380px] flex-col overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[6px_6px_0px_#111]'>
+				<div 
+					className='fixed bottom-24 right-6 z-50 flex h-[70vh] max-h-[560px] w-[calc(100vw-3rem)] max-w-[380px] flex-col overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[6px_6px_0px_#111]'
+					style={{ transform: `translate(${position.x}px, ${position.y}px)` }}>
 					{/* Header */}
-					<div className='flex items-center justify-between border-b-4 border-black bg-yellow-300 px-4 py-3'>
+					<div 
+						onMouseDown={handleMouseDown}
+						className={`flex items-center justify-between border-b-4 border-black bg-yellow-300 px-4 py-3 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}>
 						<div className='flex items-center gap-2'>
 							<span className='flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-white'>
 								<Bot className='h-5 w-5 text-black stroke-[2.5px]' />
@@ -183,17 +271,23 @@ const ChatBubble: React.FC = () => {
 			)}
 
 			{/* Bong bóng bật/tắt */}
-			<button
-				type='button'
-				onClick={() => setIsOpen((v) => !v)}
-				className='fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-yellow-300 shadow-[4px_4px_0px_#111] transition-all duration-200 hover:scale-110 active:scale-90'
-				aria-label={isOpen ? "Đóng chatbot" : "Mở chatbot"}>
-				{isOpen ? (
-					<X className='h-6 w-6 text-black stroke-[3px]' />
-				) : (
-					<MessageCircle className='h-6 w-6 text-black stroke-[2.5px]' />
-				)}
-			</button>
+			<div 
+				className='fixed bottom-6 right-6 z-50'
+				style={{ transform: `translate(${bubblePosition.x}px, ${bubblePosition.y}px)` }}
+			>
+				<button
+					type='button'
+					onMouseDown={handleBubbleMouseDown}
+					onClick={handleBubbleClick}
+					className={`flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-yellow-300 shadow-[4px_4px_0px_#111] ${isDraggingBubble ? "!transition-none cursor-grabbing" : "transition-all duration-200 hover:scale-110 active:scale-90 cursor-grab"}`}
+					aria-label={isOpen ? "Đóng chatbot" : "Mở chatbot"}>
+					{isOpen ? (
+						<X className='h-6 w-6 text-black stroke-[3px]' />
+					) : (
+						<MessageCircle className='h-6 w-6 text-black stroke-[2.5px]' />
+					)}
+				</button>
+			</div>
 		</>
 	);
 };

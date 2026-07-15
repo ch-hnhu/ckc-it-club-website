@@ -29,6 +29,11 @@ class MailTemplateSeeder extends Seeder
             'label' => 'Thông báo không trúng tuyển',
             'description' => 'Gửi khi đơn ứng tuyển không đáp ứng yêu cầu.',
         ],
+        [
+            'slug' => 'reset_password',
+            'label' => 'Thông báo đặt lại mật khẩu',
+            'description' => 'Gửi cho người dùng khi mật khẩu của họ được quản trị viên đặt lại.',
+        ],
     ];
 
     private array $defaultTemplates = [
@@ -65,6 +70,15 @@ class MailTemplateSeeder extends Seeder
 <p>Cảm ơn bạn đã quan tâm và gửi đơn ứng tuyển tham gia <strong>{{club_name}}</strong>.</p>
 <p>Sau quá trình xét duyệt, rất tiếc chúng tôi chưa thể tiếp nhận bạn trong đợt tuyển thành viên này. Đây không phải là kết quả cuối cùng — chúng tôi hy vọng sẽ gặp lại bạn trong những đợt tuyển tiếp theo.</p>
 <p>Chúc bạn nhiều may mắn và thành công!</p>
+<p>Trân trọng,<br><strong>{{club_name}}</strong></p>',
+        ],
+        'reset_password' => [
+            'name' => 'Template mặc định',
+            'subject' => '[CKC IT CLUB] Mật khẩu của bạn đã được đặt lại',
+            'body' => '<p>Xin chào <strong>{{user_name}}</strong>,</p>
+<p>Mật khẩu tài khoản của bạn trên hệ thống <strong>{{club_name}}</strong> đã được quản trị viên thay đổi.</p>
+<p>Mật khẩu mới của bạn là: <strong>{{new_password}}</strong></p>
+<p>Vui lòng đăng nhập và đổi mật khẩu mới để đảm bảo an toàn.</p>
 <p>Trân trọng,<br><strong>{{club_name}}</strong></p>',
         ],
     ];
