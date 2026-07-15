@@ -133,6 +133,31 @@ class UserController extends BaseApiController
             $this->syncDepartmentHeadAssignments($user, $validated['roles']);
         });
 
+        if (! empty($validated['password'])) {
+            $type = \App\Models\MailTemplateType::where('slug', 'reset_password')
+                ->with(['mailTemplates' => fn ($q) => $q->where('is_default', true)->whereNull('deleted_at')])
+                ->first();
+
+            if ($type && $template = $type->mailTemplates->first()) {
+                $info = \App\Models\ClubInformation::where('slug', 'club-name')->first();
+                $clubName = $info ? ($info->clubInformationValues()->where('is_active', true)->value('value') ?? 'CKC IT CLUB') : 'CKC IT CLUB';
+
+                $variables = [
+                    '{{user_name}}' => $user->full_name,
+                    '{{club_name}}' => $clubName,
+                    '{{new_password}}' => $validated['password'],
+                ];
+                $subject = str_replace(array_keys($variables), array_values($variables), $template->subject);
+                $body    = str_replace(array_keys($variables), array_values($variables), $template->body);
+
+                try {
+                    \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\ApplicationStatusMail($subject, $body));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to send reset password email: " . $e->getMessage());
+                }
+            }
+        }
+
         $user->load('roles:id,name');
 
         return $this->successResponse(true, $user, ApiMessage::USER_UPDATED);

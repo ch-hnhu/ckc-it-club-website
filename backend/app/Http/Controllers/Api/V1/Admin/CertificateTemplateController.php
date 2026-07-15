@@ -248,7 +248,8 @@ class CertificateTemplateController extends BaseApiController
         }
 
         // Download from Supabase (or any URL) and re-upload as a new file.
-        $response = Http::timeout(30)->get($url);
+        $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+        $response = Http::withOptions(['verify' => $verifySsl])->timeout(30)->get($url);
         if (! $response->successful()) {
             return null;
         }

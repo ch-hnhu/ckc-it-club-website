@@ -186,8 +186,9 @@ class User extends Authenticatable
     public static function generateUniqueUsername(string $email): string
     {
         $base = strtolower(Str::before($email, '@'));
-        $base = preg_replace('/[^a-z0-9_]/', '_', $base);
+        $base = preg_replace('/[^a-z0-9_.]/', '_', $base);
         $base = trim(substr($base, 0, 25), '_');
+        $base = $base !== '' ? $base : 'user';
 
         $username = $base;
         while (static::where('username', $username)->exists()) {

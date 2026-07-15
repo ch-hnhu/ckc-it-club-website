@@ -7,6 +7,17 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
 	Card,
 	CardContent,
 	CardDescription,
@@ -716,20 +727,36 @@ function UpdateUser() {
 											) : null}
 										</div>
 
-										<div className='space-y-2'>
-											<Label htmlFor='password'>Mật khẩu mới</Label>
-											<Input
-												id='password'
-												type='text'
-												placeholder='Để trống nếu không đổi mật khẩu'
-												value={form.password}
-												onChange={updateField("password")}
-											/>
-											{fieldErrors.password ? (
-												<p className='text-sm text-destructive'>
-													{fieldErrors.password}
-												</p>
-											) : null}
+										<div className='space-y-2 flex flex-col items-start'>
+											<Label>Mật khẩu</Label>
+											{form.password === "Default@123" ? (
+												<div className="flex items-center gap-3 mt-1">
+													<p className="text-sm text-green-600 font-medium">Sẽ reset thành Default@123 khi lưu.</p>
+													<Button variant="ghost" size="sm" type="button" onClick={() => setForm((prev) => ({ ...prev, password: "" }))}>
+														Hủy
+													</Button>
+												</div>
+											) : (
+												<AlertDialog>
+													<AlertDialogTrigger asChild>
+														<Button variant="outline" type="button" className="mt-1">Reset mật khẩu</Button>
+													</AlertDialogTrigger>
+													<AlertDialogContent>
+														<AlertDialogHeader>
+															<AlertDialogTitle>Xác nhận reset mật khẩu</AlertDialogTitle>
+															<AlertDialogDescription>
+																Bạn có chắc chắn muốn reset mật khẩu của người dùng này về mặc định (Default@123) không?
+															</AlertDialogDescription>
+														</AlertDialogHeader>
+														<AlertDialogFooter>
+															<AlertDialogCancel>Hủy</AlertDialogCancel>
+															<AlertDialogAction onClick={() => setForm((prev) => ({ ...prev, password: "Default@123" }))}>
+																Xác nhận
+															</AlertDialogAction>
+														</AlertDialogFooter>
+													</AlertDialogContent>
+												</AlertDialog>
+											)}
 										</div>
 
 										<div className='space-y-2'>

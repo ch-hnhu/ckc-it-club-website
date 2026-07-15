@@ -23,6 +23,9 @@ return new class extends Migration
             $table->boolean('is_pinned')->default(false);
             $table->timestamp('pinned_at')->nullable();
             $table->boolean('is_highlight')->default(false);
+            $table->unsignedTinyInteger('highlight_slot')
+                ->virtualAs('CASE WHEN is_highlight THEN 1 ELSE NULL END')
+                ->unique();
             $table->timestamps();
 
             $table->index(['author_id', 'status', 'published_at']);

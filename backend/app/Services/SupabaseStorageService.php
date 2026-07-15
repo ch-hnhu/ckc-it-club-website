@@ -103,7 +103,9 @@ class SupabaseStorageService
         $folder = trim($folder, '/');
         $path   = $folder ? "{$folder}/{$filename}" : $filename;
 
-        $response = Http::withHeaders($this->authHeaders())
+        $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+        $response = Http::withOptions(['verify' => $verifySsl])
+            ->withHeaders($this->authHeaders())
             ->withBody($content, $mimeType)
             ->post("{$this->baseUrl}/storage/v1/object/{$bucket}/{$path}");
 
@@ -153,7 +155,9 @@ class SupabaseStorageService
             return;
         }
 
-        $response = Http::withHeaders($this->authHeaders())
+        $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+        $response = Http::withOptions(['verify' => $verifySsl])
+            ->withHeaders($this->authHeaders())
             ->delete("{$this->baseUrl}/storage/v1/object/{$bucket}", [
                 'prefixes' => [$path],
             ]);
@@ -191,7 +195,9 @@ class SupabaseStorageService
             throw new RuntimeException("Could not read uploaded file: {$file->getClientOriginalName()}");
         }
 
-        $response = Http::withHeaders($this->authHeaders())
+        $verifySsl = filter_var(env('HTTP_VERIFY_SSL', ! app()->environment('local')), FILTER_VALIDATE_BOOL);
+        $response = Http::withOptions(['verify' => $verifySsl])
+            ->withHeaders($this->authHeaders())
             ->withBody($content, $mimeType)
             ->post("{$this->baseUrl}/storage/v1/object/{$bucket}/{$path}");
 
