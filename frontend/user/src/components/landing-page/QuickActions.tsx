@@ -8,9 +8,21 @@ import {
 	Lightbulb,
 	ArrowRight,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
+import { Link, useOutletContext } from "react-router-dom";
+import type { AuthUser } from "@/services/auth.service";
 
-const ACTIONS = [
+type QuickAction = {
+	icon: LucideIcon;
+	title: string;
+	desc: string;
+	to: string;
+	bg: string;
+	emoji: string;
+	requireAuth?: boolean;
+};
+
+const ACTIONS: QuickAction[] = [
 	{
 		icon: BookOpen,
 		title: "Tài nguyên",
@@ -58,11 +70,17 @@ const ACTIONS = [
 		to: "/tai-nguyen/gui",
 		bg: "var(--color-pastel-orange)",
 		emoji: "💡",
+		requireAuth: true,
 	},
 ];
 
+type MainLayoutOutletContext = {
+	user: AuthUser | null;
+};
+
 const QuickActions: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
+	const { user } = useOutletContext<MainLayoutOutletContext>();
 
 	useEffect(() => {
 		const el = sectionRef.current;
@@ -114,7 +132,7 @@ const QuickActions: React.FC = () => {
 					{ACTIONS.map((action) => (
 						<Link
 							key={action.title}
-							to={action.to}
+							to={action.requireAuth && !user ? "/login" : action.to}
 							className='neo-card flex flex-col p-6 no-underline group'
 							style={{
 								background: action.bg,
