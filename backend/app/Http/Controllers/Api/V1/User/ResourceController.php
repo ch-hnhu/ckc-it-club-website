@@ -6,14 +6,23 @@ use App\Enums\ApiMessage;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Resource;
 use App\Services\NotificationService;
+use App\Services\ResourceAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class ResourceController extends BaseApiController
 {
+    public function __construct(private readonly ResourceAccessService $access)
+    {
+        parent::__construct();
+    }
+
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $this->access->assertCanBrowse($user);
+
         $perPage = min((int) $request->query('per_page', 12), 50);
         $search = $request->query('search');
         $linkType = $request->query('link_type');
@@ -26,24 +35,32 @@ class ResourceController extends BaseApiController
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
-        $resources->getCollection()->transform(fn (Resource $resource) => $this->transform($resource));
+        $unlockedIds = $this->access->unlockedIds($user);
+
+        $resources->getCollection()->transform(
+            fn (Resource $resource) => $this->transform($resource, $this->isUnlocked($resource, $user->id, $unlockedIds))
+        );
 
         return $this->paginatedResponse($resources, ApiMessage::RETRIEVED);
     }
 
-    public function show(Resource $resource): JsonResponse
+    public function show(Request $request, Resource $resource): JsonResponse
     {
         if ($resource->status !== 'published') {
             abort(404);
         }
 
+        $this->access->assertCanOpen($request->user(), $resource);
+
         $resource->load('uploader:id,full_name,email,avatar,username');
 
-        return $this->successResponse(true, $this->transform($resource), ApiMessage::RETRIEVED);
+        return $this->successResponse(true, $this->transform($resource, true), ApiMessage::RETRIEVED);
     }
 
     public function store(Request $request): JsonResponse
     {
+        $this->access->assertCanBrowse($request->user());
+
         $request->validate([
             'title' => ['required', 'string', 'max:500'],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -73,7 +90,7 @@ class ResourceController extends BaseApiController
             link: '/tai-nguyen/quan-ly',
         );
 
-        return $this->createdResponse($this->transform($resource), 'Tài nguyên đã được gửi và đang chờ duyệt.');
+        return $this->createdResponse($this->transform($resource, true), 'Tài nguyên đã được gửi và đang chờ duyệt.');
     }
 
     public function myResources(Request $request): JsonResponse
@@ -85,22 +102,25 @@ class ResourceController extends BaseApiController
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
-        $resources->getCollection()->transform(fn (Resource $resource) => $this->transform($resource));
+        // Tài nguyên của chính mình luôn mở khoá, kể cả bản chưa duyệt.
+        $resources->getCollection()->transform(fn (Resource $resource) => $this->transform($resource, true));
 
         return $this->paginatedResponse($resources, ApiMessage::RETRIEVED);
     }
 
-    public function recordClick(Resource $resource): JsonResponse
+    public function recordClick(Request $request, Resource $resource): JsonResponse
     {
-        if ($resource->status === 'published') {
-            $resource->increment('click_count');
-        }
+        $this->access->assertCanOpen($request->user(), $resource);
+
+        $resource->increment('click_count');
 
         return $this->successResponse(true, ['click_count' => $resource->click_count], 'Đã ghi nhận lượt mở.');
     }
 
     public function report(Request $request, int $id): JsonResponse
     {
+        $this->access->assertCanBrowse($request->user());
+
         $resource = Resource::query()->where('status', 'published')->findOrFail($id);
 
         if ($resource->uploader_id === $request->user()->id) {
@@ -137,7 +157,17 @@ class ResourceController extends BaseApiController
         return $this->successResponse(true, [], 'Báo cáo đã được ghi nhận.');
     }
 
-    private function transform(Resource $resource): array
+    /**
+     * @param  list<int>|null  $unlockedIds  null = user xem được tất cả
+     */
+    private function isUnlocked(Resource $resource, int|string $userId, ?array $unlockedIds): bool
+    {
+        return $unlockedIds === null
+            || (int) $resource->uploader_id === (int) $userId
+            || in_array((int) $resource->id, $unlockedIds, true);
+    }
+
+    private function transform(Resource $resource, bool $unlocked): array
     {
         $uploader = $resource->uploader;
 
@@ -152,7 +182,10 @@ class ResourceController extends BaseApiController
             'title' => $resource->title,
             'description' => $resource->description,
             'link_type' => $resource->link_type,
-            'url' => $resource->url,
+            // Không trả url cho tài nguyên bị khoá — nếu chỉ ẩn ở giao diện thì
+            // vẫn lấy được link qua DevTools.
+            'url' => $unlocked ? $resource->url : null,
+            'is_locked' => ! $unlocked,
             'status' => $resource->status,
             'click_count' => (int) $resource->click_count,
             'created_at' => $resource->created_at?->toIso8601String(),
