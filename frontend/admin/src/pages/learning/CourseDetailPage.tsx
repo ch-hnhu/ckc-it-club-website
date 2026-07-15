@@ -379,8 +379,7 @@ function CourseDetailPage() {
 	const certificatesPg = useClientPagination(course?.certificates ?? []);
 	// Số chứng chỉ bản in còn hiệu lực — dùng để bật/tắt nút xuất ZIP bản in.
 	const physicalCertCount = useMemo(
-		() =>
-			(course?.certificates ?? []).filter((c) => c.has_physical && !c.revoked_at).length,
+		() => (course?.certificates ?? []).filter((c) => c.has_physical && !c.revoked_at).length,
 		[course?.certificates],
 	);
 
@@ -1117,7 +1116,9 @@ function CourseDetailPage() {
 									onClick={() => void handlePrintPhysicalCerts()}
 									disabled={physicalCertCount === 0 || isPrintingPhysical}>
 									<Printer className='mr-2 h-4 w-4' />
-									{isPrintingPhysical ? "Đang chuẩn bị..." : "In chứng chỉ bản in"}
+									{isPrintingPhysical
+										? "Đang chuẩn bị..."
+										: "In chứng chỉ offline"}
 								</Button>
 								<Button
 									variant='outline'
@@ -1127,7 +1128,7 @@ function CourseDetailPage() {
 									<Download className='mr-2 h-4 w-4' />
 									{isExportingPhysical
 										? "Đang xuất..."
-										: "Xuất chứng chỉ bản in (ZIP)"}
+										: "Xuất chứng chỉ offline (ZIP)"}
 								</Button>
 							</div>
 						</div>
