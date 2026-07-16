@@ -110,7 +110,7 @@ const LessonRow: React.FC<{
 	return (
 		<div
 			onClick={() => !locked && navigate(`/khoa-hoc/${courseSlug}/${lesson.slug}`)}
-			className={`group flex items-center gap-4 px-5 py-4 transition ${
+			className={`group flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4 transition ${
 				locked
 					? "cursor-not-allowed opacity-60"
 					: "cursor-pointer hover:bg-[var(--color-primary-100)]"
@@ -137,9 +137,11 @@ const LessonRow: React.FC<{
 
 			{/* QR / điểm danh — chỉ hiện với track offline, lesson active, dừng sự kiện click row */}
 			{isOffline && !locked && isActiveQrLesson && (
-				<div className='shrink-0' onClick={(e) => e.stopPropagation()}>
+				<div
+					className='order-last w-full shrink-0 pl-14 sm:order-none sm:w-auto sm:pl-0'
+					onClick={(e) => e.stopPropagation()}>
 					{lesson.is_attended ? (
-						<span className='flex items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-pastel-green)] px-3 py-1.5 font-heading text-xs font-extrabold text-black'>
+						<span className='inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-pastel-green)] px-3 py-1.5 font-heading text-xs font-extrabold text-black'>
 							<Check className='h-3.5 w-3.5' strokeWidth={3} />
 							Đã điểm danh
 						</span>
@@ -150,7 +152,7 @@ const LessonRow: React.FC<{
 								e.stopPropagation();
 								onShowTicket(lesson);
 							}}
-							className='flex items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-primary)] px-3 py-1.5 font-heading text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none'>
+							className='inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-primary)] px-3 py-1.5 font-heading text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none'>
 							<QrCode className='h-3.5 w-3.5' strokeWidth={2.5} />
 							QR điểm danh
 						</button>
@@ -162,7 +164,7 @@ const LessonRow: React.FC<{
 								e.stopPropagation();
 								onCreateTicket(lesson);
 							}}
-							className='flex items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 py-1.5 font-heading text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none disabled:opacity-60 disabled:cursor-not-allowed'>
+							className='inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3 py-1.5 font-heading text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[0.5px] hover:translate-y-[0.5px] hover:shadow-none disabled:opacity-60 disabled:cursor-not-allowed'>
 							<CalendarCheck className='h-3.5 w-3.5' strokeWidth={2.5} />
 							{creatingTicket ? "Đang đăng ký..." : "Sẽ tham gia"}
 						</button>
@@ -749,10 +751,11 @@ const CourseDetailPage: React.FC = () => {
 	const isSchoolStudent = user?.is_school_student === true || isCaoThangStudentEmail(user?.email);
 	const audience = course?.audience ?? "cao_thang_student";
 	const audienceMeta = AUDIENCE_META[audience];
+	// Ghi danh cũ không được bỏ qua audience hiện tại của khoá vì admin có thể đổi
+	// phạm vi học sau khi khoá đã có học viên — giống CourseEnrollmentService ở backend.
 	const viewerCanLearn = Boolean(
 		user &&
-		(isEnrolled ||
-			audience === "public" ||
+		(audience === "public" ||
 			(audience === "club_member" && isClubMember) ||
 			// Thành viên CLB (admin, trưởng ban...) cũng học được khoá dành cho
 			// sinh viên Cao Thắng, đồng bộ với CourseEnrollmentService ở backend.
@@ -1134,8 +1137,8 @@ const CourseDetailPage: React.FC = () => {
 
 						{/* ── Bố cục 2 cột ── */}
 						<div
-							className={`grid items-start gap-8 ${
-								showSidebar ? "lg:grid-cols-[1fr_320px]" : "grid-cols-1"
+							className={`grid grid-cols-1 items-start gap-8 ${
+								showSidebar ? "lg:grid-cols-[minmax(0,1fr)_320px]" : ""
 							}`}>
 							{/* Danh sách buổi học */}
 							<div>

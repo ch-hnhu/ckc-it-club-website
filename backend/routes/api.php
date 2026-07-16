@@ -128,8 +128,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/blogs/{id}/comments', [UserBlogController::class, 'comments']);
         Route::get('/blogs/{id}/reactions/users', [UserBlogController::class, 'reactors']);
 
-        // Public resource routes
-        Route::get('/resources', [UserResourceController::class, 'index']);
+        // Tài nguyên chỉ dành cho sinh viên Cao Thắng + thành viên CLB (xem ResourceAccessService)
+        Route::get('/resources', [UserResourceController::class, 'index'])->middleware('auth:sanctum');
 
         // Public event routes (avoid collision with admin /v1/events resource routes)
         Route::get('/events', [UserEventController::class, 'index']);
@@ -188,7 +188,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{id}', [UserPostController::class, 'show']);
         Route::get('/blogs/{slug}', [UserBlogController::class, 'show']);
         Route::post('/blogs/{slug}/view', [UserBlogController::class, 'recordView']);
-        Route::get('/resources/{resource}', [UserResourceController::class, 'show']);
+        Route::get('/resources/{resource}', [UserResourceController::class, 'show'])->middleware('auth:sanctum');
     });
 
     // Learning center (public read; auth optional để trả tiến độ/ghi danh của user hiện tại)

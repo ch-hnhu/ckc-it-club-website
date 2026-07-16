@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\CourseAudience;
 use App\Enums\CourseStatus;
-use App\Enums\RolesEnum;
 use App\Models\Course;
 use App\Models\CourseEnrollment;
 use App\Models\LessonAttendance;
@@ -155,23 +154,9 @@ class CourseEnrollmentService
             // Thành viên CLB (admin, trưởng ban...) là tập quyền cao hơn sinh viên
             // nên khoá mở cho sinh viên Cao Thắng thì thành viên CLB cũng học được,
             // dù email của họ không đúng mẫu số hiệu sinh viên.
-            CourseAudience::CAO_THANG_STUDENT => $user->isSchoolStudent() || $this->isClubMember($user),
-            CourseAudience::CLUB_MEMBER => $this->isClubMember($user),
+            CourseAudience::CAO_THANG_STUDENT => $user->isSchoolStudent() || $user->isClubMember(),
+            CourseAudience::CLUB_MEMBER => $user->isClubMember(),
         };
-    }
-
-    /**
-     * Thành viên CLB được hiểu là tài khoản có bất kỳ vai trò hệ thống nào
-     * ngoài vai trò "user" thường.
-     */
-    private function isClubMember(User $user): bool
-    {
-        $memberRoles = array_values(array_filter(
-            array_map(fn (RolesEnum $case) => $case->value, RolesEnum::cases()),
-            fn (string $role) => $role !== RolesEnum::USER->value,
-        ));
-
-        return $user->hasAnyRole($memberRoles);
     }
 
     private function audienceErrorMessage(CourseAudience $audience): string
