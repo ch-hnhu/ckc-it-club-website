@@ -37,6 +37,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
 	SelectContent,
@@ -191,6 +192,9 @@ function PostListPage() {
 	const [statusFilter, setStatusFilter] = useState<PostStatus | "all">("all");
 	const [selectedPost, setSelectedPost] = useState<PostRecord | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<PostRecord | null>(null);
+	const [hideTarget, setHideTarget] = useState<PostRecord | null>(null);
+	const [hideReason, setHideReason] = useState("");
+	const [isHiding, setIsHiding] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 	const [showTrash, setShowTrash] = useState(false);
@@ -276,13 +280,45 @@ function PostListPage() {
 	// ── Actions ──
 
 	const handleToggleStatus = async (post: PostRecord) => {
-		const next: PostStatus = post.status === "published" ? "hidden" : "published";
+		// Ẩn bài cần lý do → mở dialog nhập lý do thay vì ẩn ngay
+		if (post.status === "published") {
+			setHideReason("");
+			setHideTarget(post);
+			return;
+		}
 		try {
-			await postService.updateStatus(post.id, next);
-			setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, status: next } : p)));
-			toast.success(next === "hidden" ? "Đã ẩn bài đăng." : "Đã hiện bài đăng.");
+			await postService.updateStatus(post.id, "published");
+			setPosts((prev) => prev.map((p) =>
+				p.id === post.id ? { ...p, status: "published" as PostStatus, moderation_reason: null, moderated_at: null } : p,
+			));
+			toast.success("Đã hiện bài đăng.");
 		} catch {
 			toast.error("Không thể cập nhật trạng thái bài đăng.");
+		}
+	};
+
+	const handleConfirmHide = async () => {
+		if (!hideTarget) return;
+		const reason = hideReason.trim();
+		if (!reason) {
+			toast.error("Vui lòng nhập lý do ẩn bài đăng.");
+			return;
+		}
+		setIsHiding(true);
+		try {
+			await postService.updateStatus(hideTarget.id, "hidden", reason);
+			setPosts((prev) => prev.map((p) =>
+				p.id === hideTarget.id
+					? { ...p, status: "hidden" as PostStatus, moderation_reason: reason, moderated_at: new Date().toISOString() }
+					: p,
+			));
+			setHideTarget(null);
+			setHideReason("");
+			toast.success("Đã ẩn bài đăng và thông báo cho người đăng.");
+		} catch {
+			toast.error("Không thể ẩn bài đăng. Vui lòng thử lại.");
+		} finally {
+			setIsHiding(false);
 		}
 	};
 
@@ -584,7 +620,7 @@ function PostListPage() {
 															title={post.moderation_reason}
 															className="rounded-full px-2 py-0.5 gap-1 border-amber-500/20 bg-amber-500/10 text-amber-700">
 															<ShieldAlert className="h-3 w-3" />
-															AI đánh dấu
+															Có lý do ẩn
 														</Badge>
 													)}
 												</div>
@@ -787,12 +823,12 @@ function PostListPage() {
 									/>
 								</div>
 
-								{/* AI moderation reason */}
+								{/* Moderation / hide reason (AI hoặc admin) */}
 								{selectedPost.moderation_reason && (
 									<div className="space-y-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-3">
 										<p className="flex items-center gap-1.5 text-sm font-medium text-amber-700">
 											<ShieldAlert className="h-4 w-4" />
-											AI tự động đánh dấu vi phạm
+											Lý do ẩn bài đăng
 										</p>
 										<p className="text-sm text-amber-800/90 dark:text-amber-200/90">{selectedPost.moderation_reason}</p>
 										{selectedPost.moderated_at && (
@@ -929,6 +965,54 @@ function PostListPage() {
 								</Button>
 								<Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
 									{isDeleting ? "Đang xóa..." : "Xóa bài đăng"}
+								</Button>
+							</DialogFooter>
+						</>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			{/* ── Hide reason Dialog ── */}
+			<Dialog open={Boolean(hideTarget)} onOpenChange={(open) => { if (!open) { setHideTarget(null); setHideReason(""); } }}>
+				<DialogContent className="sm:max-w-[480px]">
+					{hideTarget && (
+						<>
+							<DialogHeader>
+								<DialogTitle>Ẩn bài đăng POST-{hideTarget.id}</DialogTitle>
+							</DialogHeader>
+							<div className="space-y-3">
+								<p className="text-sm text-muted-foreground">
+									Bài đăng của{" "}
+									<span className="font-semibold text-foreground">
+										{hideTarget.user.full_name ?? hideTarget.user.email}
+									</span>{" "}
+									sẽ bị ẩn khỏi cộng đồng và người đăng sẽ nhận được thông báo kèm lý do bên dưới.
+								</p>
+								<div className="space-y-1.5">
+									<label htmlFor="hide-reason" className="text-sm font-medium">
+										Lý do ẩn <span className="text-destructive">*</span>
+									</label>
+									<Textarea
+										id="hide-reason"
+										value={hideReason}
+										onChange={(e) => setHideReason(e.target.value)}
+										placeholder="Ví dụ: Nội dung chứa ngôn từ không phù hợp với tiêu chuẩn cộng đồng..."
+										rows={4}
+										maxLength={500}
+									/>
+									<p className="text-right text-xs text-muted-foreground">{hideReason.length}/500</p>
+								</div>
+							</div>
+							<DialogFooter>
+								<Button variant="outline" onClick={() => { setHideTarget(null); setHideReason(""); }} disabled={isHiding}>
+									Hủy
+								</Button>
+								<Button
+									variant="destructive"
+									onClick={() => void handleConfirmHide()}
+									disabled={isHiding || !hideReason.trim()}>
+									<EyeOff className="h-4 w-4" />
+									{isHiding ? "Đang ẩn..." : "Ẩn bài đăng"}
 								</Button>
 							</DialogFooter>
 						</>

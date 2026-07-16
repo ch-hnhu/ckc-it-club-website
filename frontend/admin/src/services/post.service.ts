@@ -38,10 +38,11 @@ const postService = {
 	async updateStatus(
 		id: number | string,
 		status: PostStatus,
+		reason?: string,
 	): Promise<ApiResponse<{ status: PostStatus }>> {
-		return api.patch<ApiResponse<{ status: PostStatus }>, { status: PostStatus }>(
+		return api.patch<ApiResponse<{ status: PostStatus }>, { status: PostStatus; reason?: string }>(
 			`/posts/${id}/status`,
-			{ status },
+			{ status, ...(reason ? { reason } : {}) },
 		);
 	},
 
