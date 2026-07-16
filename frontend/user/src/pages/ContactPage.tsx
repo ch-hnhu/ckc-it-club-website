@@ -34,7 +34,7 @@ const CONTACT_METHODS = [
 	},
 	{
 		title: "Địa chỉ",
-		value: "Phòng IT-01, Tòa A",
+		value: "Tầng 7, Tòa nhà F",
 		desc: "Trường CĐ Kỹ thuật Cao Thắng",
 		bg: "var(--color-pastel-yellow)",
 		emoji: "📍",

@@ -5,12 +5,15 @@ import {
 	FolderOpen,
 	Github,
 	Globe,
+	Lock,
+	LogIn,
 	PlusSquare,
 	Search,
 	Youtube,
 	Link2,
 } from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
+import { isAxiosError } from "axios";
 import type { AuthUser } from "@/services/auth.service";
 import { resourceService } from "@/services/resource.service";
 import type { Resource, ResourceLinkType } from "@/types/resource.types";
@@ -31,6 +34,26 @@ const LINK_TYPE_ICONS: Record<ResourceLinkType, React.ElementType> = {
 	document: Globe,
 	other: Link2,
 };
+
+const AccessGate: React.FC<{
+	icon: React.ElementType;
+	title: string;
+	message: string;
+	action: { to: string; label: string };
+}> = ({ icon: Icon, title, message, action }) => (
+	<div className='neo-container px-6 pt-8'>
+		<div className='mx-auto max-w-xl rounded-2xl border-2 border-black bg-white px-6 py-16 text-center shadow-[4px_4px_0_#111]'>
+			<Icon className='mx-auto h-10 w-10 text-gray-300' />
+			<p className='mt-4 font-heading text-xl font-extrabold text-black'>{title}</p>
+			<p className='mt-2 text-sm text-gray-600'>{message}</p>
+			<Link
+				to={action.to}
+				className='mt-6 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+				{action.label}
+			</Link>
+		</div>
+	</div>
+);
 
 const CardSkeleton: React.FC = () => (
 	<div className='animate-pulse rounded-2xl border-2 border-black bg-white p-5 shadow-[4px_4px_0_#111]'>
@@ -58,8 +81,15 @@ const ResourceCard: React.FC<{
 
 	return (
 		<div className='flex h-full flex-col rounded-2xl border-2 border-black bg-white p-5 shadow-[4px_4px_0_#111]'>
-			<div className='mb-3 flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black bg-[var(--color-pastel-green)]'>
-				<Icon className='h-5 w-5 text-black' />
+			<div
+				className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg border-2 border-black ${
+					resource.is_locked ? "bg-gray-200" : "bg-[var(--color-pastel-green)]"
+				}`}>
+				{resource.is_locked ? (
+					<Lock className='h-5 w-5 text-gray-500' />
+				) : (
+					<Icon className='h-5 w-5 text-black' />
+				)}
 			</div>
 			<p className='font-heading text-base font-extrabold leading-snug text-black'>
 				{resource.title}
@@ -75,15 +105,24 @@ const ResourceCard: React.FC<{
 				<span>{resource.uploader?.full_name ?? "Ẩn danh"}</span>
 			</div>
 			<div className='mt-auto flex items-center justify-between gap-2 pt-4'>
-				<a
-					href={resource.url}
-					target='_blank'
-					rel='noopener noreferrer'
-					onClick={handleOpen}
-					className='inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-primary)] px-3.5 py-2 text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-					Mở liên kết
-					<ExternalLink className='h-3.5 w-3.5' />
-				</a>
+				{resource.is_locked ? (
+					<Link
+						to='/ung-tuyen'
+						className='inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-white px-3.5 py-2 text-xs font-extrabold text-gray-600 transition hover:bg-gray-50'>
+						<Lock className='h-3.5 w-3.5' />
+						Tham gia CLB để mở
+					</Link>
+				) : (
+					<a
+						href={resource.url ?? undefined}
+						target='_blank'
+						rel='noopener noreferrer'
+						onClick={handleOpen}
+						className='inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-[var(--color-primary)] px-3.5 py-2 text-xs font-extrabold text-black shadow-[2px_2px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+						Mở liên kết
+						<ExternalLink className='h-3.5 w-3.5' />
+					</a>
+				)}
 				{!isOwner && (
 					<button
 						onClick={() => onReport(resource.id)}
@@ -106,6 +145,10 @@ const ResourceListPage: React.FC = () => {
 	const [search, setSearch] = useState("");
 	const [linkType, setLinkType] = useState<ResourceLinkType | "all">("all");
 	const [reportTargetId, setReportTargetId] = useState<number | null>(null);
+	const [forbidden, setForbidden] = useState(false);
+
+	const canBrowse = user != null;
+	const hasLockedResources = resources.some((r) => r.is_locked);
 
 	useEffect(() => {
 		const t = setTimeout(() => setSearch(searchInput.trim()), 400);
@@ -113,21 +156,35 @@ const ResourceListPage: React.FC = () => {
 	}, [searchInput]);
 
 	useEffect(() => {
+		// Chưa đăng nhập thì không gọi API — 401 sẽ bị interceptor đá thẳng sang /login.
+		if (!canBrowse) {
+			setLoading(false);
+			return;
+		}
+
 		let cancelled = false;
 		setLoading(true);
 		resourceService
 			.getResources({ per_page: 24, search: search || undefined, link_type: linkType })
 			.then((res) => {
-				if (!cancelled) setResources(res.data);
+				if (cancelled) return;
+				setResources(res.data);
+				setForbidden(false);
 			})
-			.catch(() => {})
+			.catch((err) => {
+				if (cancelled) return;
+				if (isAxiosError(err) && err.response?.status === 403) {
+					setForbidden(true);
+					setResources([]);
+				}
+			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
 			});
 		return () => {
 			cancelled = true;
 		};
-	}, [search, linkType]);
+	}, [search, linkType, canBrowse]);
 
 	return (
 		<div className='w-full min-h-screen pb-12 pt-16'>
@@ -150,27 +207,30 @@ const ResourceListPage: React.FC = () => {
 				</p>
 			</div>
 
+			{canBrowse && !forbidden && (
 			<div className='border-b-2 border-black bg-white py-4'>
-				<div className='neo-container flex flex-col gap-3 px-6 md:flex-row md:items-center'>
-					<Link
-						to={user ? "/tai-nguyen/gui" : "/login"}
-						className='inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-						<PlusSquare className='h-4 w-4' strokeWidth={3} />
-						Đóng góp
-					</Link>
+				<div className='neo-container flex flex-col gap-3 px-6 xl:flex-row xl:items-center'>
+					<div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
+						<Link
+							to='/tai-nguyen/gui'
+							className='inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							<PlusSquare className='h-4 w-4' strokeWidth={3} />
+							Đóng góp
+						</Link>
 
-					<div className='group/search relative shrink-0 md:w-72'>
-						<Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400' />
-						<input
-							type='text'
-							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
-							placeholder='Tìm tài nguyên...'
-							className='w-full rounded-xl border-2 border-black bg-white py-2 pl-10 pr-3 text-sm font-medium text-black outline-none focus:shadow-[0_0_0_3px_#A3E635]'
-						/>
+						<div className='group/search relative shrink-0 sm:w-72'>
+							<Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400' />
+							<input
+								type='text'
+								value={searchInput}
+								onChange={(e) => setSearchInput(e.target.value)}
+								placeholder='Tìm tài nguyên...'
+								className='w-full rounded-xl border-2 border-black bg-white py-2 pl-10 pr-3 text-sm font-medium text-black outline-none focus:shadow-[0_0_0_3px_#A3E635]'
+							/>
+						</div>
 					</div>
 
-					<div className='flex flex-1 flex-wrap gap-2'>
+					<div className='flex flex-wrap gap-2'>
 						{(
 							[
 								"all",
@@ -195,8 +255,40 @@ const ResourceListPage: React.FC = () => {
 					</div>
 				</div>
 			</div>
+			)}
 
+			{!loading && !canBrowse ? (
+				<AccessGate
+					icon={LogIn}
+					title='Đăng nhập để xem tài nguyên'
+					message='Kho tài nguyên dành cho sinh viên trường Cao Thắng và thành viên câu lạc bộ.'
+					action={{ to: "/login", label: "Đăng nhập" }}
+				/>
+			) : !loading && forbidden ? (
+				<AccessGate
+					icon={Lock}
+					title='Bạn chưa có quyền xem tài nguyên'
+					message='Kho tài nguyên chỉ dành cho sinh viên trường Cao Thắng và thành viên câu lạc bộ. Hãy ứng tuyển để trở thành thành viên.'
+					action={{ to: "/ung-tuyen", label: "Tham gia CLB" }}
+				/>
+			) : (
 			<div className='neo-container px-6 pt-8'>
+				{!loading && hasLockedResources && (
+					<div className='mb-5 flex flex-col gap-3 rounded-2xl border-2 border-black bg-[var(--color-pastel-yellow,#FEF3C7)] px-5 py-4 shadow-[4px_4px_0_#111] sm:flex-row sm:items-center sm:justify-between'>
+						<div className='flex items-start gap-3'>
+							<Lock className='mt-0.5 h-5 w-5 shrink-0 text-black' />
+							<p className='text-sm font-bold text-black'>
+								Sinh viên Cao Thắng xem được 3 tài nguyên mới nhất. Trở thành thành
+								viên câu lạc bộ để mở khoá toàn bộ kho tài nguyên.
+							</p>
+						</div>
+						<Link
+							to='/ung-tuyen'
+							className='inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-2 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							Tham gia CLB
+						</Link>
+					</div>
+				)}
 				{loading ? (
 					<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
 						{Array.from({ length: 6 }).map((_, i) => (
@@ -226,6 +318,7 @@ const ResourceListPage: React.FC = () => {
 					</div>
 				)}
 			</div>
+			)}
 
 			{reportTargetId != null && (
 				<ReportResourceModal

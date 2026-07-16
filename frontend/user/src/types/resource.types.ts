@@ -15,7 +15,9 @@ export interface Resource {
 	title: string;
 	description: string | null;
 	link_type: ResourceLinkType;
-	url: string;
+	/** null khi tài nguyên bị khoá — backend không trả link cho người chưa đủ quyền. */
+	url: string | null;
+	is_locked: boolean;
 	status: ResourceStatus;
 	click_count: number;
 	created_at: string;

@@ -415,16 +415,27 @@ class CourseController extends BaseApiController
     {
         abort_if($course->status !== CourseStatus::PUBLISHED, 404);
 
-        $lesson = $course->lessons()
-            ->where('status', CourseStatus::PUBLISHED->value)
-            ->where('slug', $lessonSlug)
-            ->first();
+        $lessons = $course->lessons()->where('status', CourseStatus::PUBLISHED->value)->get();
+        $lesson = $lessons->firstWhere('slug', $lessonSlug);
         abort_if(! $lesson, 404, 'Không tìm thấy buổi học.');
         abort_if(! $lesson->playableVideoUrl(), 422, 'Buổi học này chưa có video bài giảng.');
         app(CourseEnrollmentService::class)->assertCanLearn($course, $request->user());
         $this->assertLessonContentOpen($lesson);
 
         $userId = $request->user()->id;
+
+        // Chặn ghi tiến độ cho buổi học đang bị khoá. Chỉ chặn ở lesson()/video() là
+        // không đủ: gọi thẳng route này vẫn đánh dấu xong được mọi buổi, qua đó mở
+        // khoá cả khoá và lấy chứng chỉ mà không xem buổi nào.
+        // Tính khoá trước khi ensureEnrolledOnline để request bị từ chối không tạo
+        // ghi danh, và để cùng cách xác định track như lesson().
+        $lockedIds = $this->lockedLessonIds($course, $lessons, $userId, $course->enrollmentFor($userId)?->track);
+        abort_if(
+            in_array($lesson->id, $lockedIds, true),
+            403,
+            'Buổi học này đang bị khoá. Hãy hoàn thành buổi học trước để mở khoá.'
+        );
+
         // Vào học là tự ghi danh (track online) — không cần bước ghi danh thủ công.
         $enrollment = app(CourseEnrollmentService::class)->ensureEnrolledOnline($course, $request->user());
 

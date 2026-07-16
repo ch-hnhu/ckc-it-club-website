@@ -180,6 +180,20 @@ class User extends Authenticatable
     }
 
     /**
+     * Thành viên CLB được hiểu là tài khoản có bất kỳ vai trò hệ thống nào
+     * ngoài vai trò "user" thường.
+     */
+    public function isClubMember(): bool
+    {
+        $memberRoles = array_values(array_filter(
+            array_map(fn (RolesEnum $case) => $case->value, RolesEnum::cases()),
+            fn (string $role) => $role !== RolesEnum::USER->value,
+        ));
+
+        return $this->hasAnyRole($memberRoles);
+    }
+
+    /**
      * Generate a unique username from an email address.
      * Extracts the prefix, sanitizes it, and appends a suffix if already taken.
      */
