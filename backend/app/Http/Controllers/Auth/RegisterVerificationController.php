@@ -11,9 +11,31 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
 
 class RegisterVerificationController extends AuthBaseController
 {
+    #[OA\Post(
+        path: '/v1/auth/register',
+        summary: 'Bước 1 — Xác thực dữ liệu đăng ký, lưu tạm và gửi OTP tới email (giới hạn 5 lần/phút/IP)',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['full_name', 'email', 'password', 'password_confirmation'],
+                properties: [
+                    new OA\Property(property: 'full_name', type: 'string', maxLength: 255),
+                    new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 255),
+                    new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 8),
+                    new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đã gửi OTP tới email', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate (email đã tồn tại...)', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Step 1 — Validate registration data, store it, and send OTP to email.
      */
@@ -62,6 +84,31 @@ class RegisterVerificationController extends AuthBaseController
         ], HttpStatus::OK->value);
     }
 
+    #[OA\Post(
+        path: '/v1/auth/register/verify-otp',
+        summary: 'Bước 2 — Xác nhận OTP, tạo tài khoản và trả về token (giới hạn 5 lần/phút/IP)',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['email', 'otp'], properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'otp', type: 'string', minLength: 6, maxLength: 6),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Đăng ký thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'message', type: 'string'),
+                    new OA\Property(property: 'token', type: 'string'),
+                    new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                ])
+            ),
+            new OA\Response(response: 422, description: 'OTP không hợp lệ/hết hạn hoặc email đã được sử dụng', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Step 2 — Verify OTP, create the user account, and return a token.
      */

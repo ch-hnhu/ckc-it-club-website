@@ -23,10 +23,39 @@ use App\Services\PointService;
 use App\Traits\HasSequentialLessonLock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class CourseController extends BaseApiController
 {
     use HasSequentialLessonLock;
+
+    #[OA\Get(
+        path: '/v1/learning/courses',
+        summary: 'Danh sách khoá học đã xuất bản (public, có thể lọc/sắp xếp/phân trang)',
+        description: 'Nếu đăng nhập, mỗi khoá học sẽ kèm is_interested (đã quan tâm hay chưa) và progress (nếu đã ghi danh).',
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer', default: 9, maximum: 50)),
+            new OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'category', in: 'query', description: 'Tên tag danh mục', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'audience', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'level', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sort', in: 'query', schema: new OA\Schema(type: 'string', enum: ['created_at', 'enrolled_count'])),
+            new OA\Parameter(name: 'order', in: 'query', schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'])),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công (phân trang)',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                    new OA\Property(property: 'meta', ref: '#/components/schemas/PaginationMeta'),
+                    new OA\Property(property: 'links', ref: '#/components/schemas/PaginationLinks'),
+                ])
+            ),
+        ]
+    )]
     /**
      * Danh sách khoá học đã xuất bản (catalog). Trả về shape `Course[]`.
      */
@@ -85,6 +114,14 @@ class CourseController extends BaseApiController
     /**
      * Danh mục (category) khoá học = các tag thuộc model_type = course.
      */
+    #[OA\Get(
+        path: '/v1/learning/categories',
+        summary: 'Danh mục (category) khoá học — là các tag thuộc model_type=course',
+        tags: ['Learning - Courses (User)'],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+        ]
+    )]
     public function categories(): JsonResponse
     {
         $categories = Tag::query()
@@ -104,6 +141,19 @@ class CourseController extends BaseApiController
     /**
      * Trang tổng quan khoá học. Trả về shape `CourseDetail`.
      */
+    #[OA\Get(
+        path: '/v1/learning/courses/{course}',
+        summary: 'Trang tổng quan khoá học (public) — chi tiết, danh sách buổi học và thống kê tiến độ',
+        description: 'Path param {course} là slug của khoá học. Trả về 404 nếu khoá học không ở trạng thái published.',
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy hoặc chưa xuất bản', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function show(Request $request, Course $course): JsonResponse
     {
         abort_if($course->status !== CourseStatus::PUBLISHED, 404);
@@ -144,6 +194,21 @@ class CourseController extends BaseApiController
     /**
      * Chi tiết một buổi học. Trả về shape `LessonDetail`.
      */
+    #[OA\Get(
+        path: '/v1/learning/courses/{course}/lessons/{lessonSlug}',
+        summary: 'Chi tiết một buổi học (public read, nhưng nội dung yêu cầu đủ điều kiện học — có thể trả 403)',
+        description: 'Yêu cầu đủ điều kiện học (CourseEnrollmentService::assertCanLearn). Trả 403 nếu buổi học bị khoá do học tuần tự chưa hoàn thành buổi trước.',
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'lessonSlug', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không đủ điều kiện học hoặc buổi học đang bị khoá', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy buổi học', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function lesson(Request $request, Course $course, string $lessonSlug): JsonResponse
     {
         abort_if($course->status !== CourseStatus::PUBLISHED, 404);
@@ -242,6 +307,22 @@ class CourseController extends BaseApiController
      * Trang xem video bài giảng. Trả về shape `VideoDetail`.
      * Mỗi buổi học hiện chỉ có 1 video (schema), nên playlist chỉ gồm 1 mục.
      */
+    #[OA\Get(
+        path: '/v1/learning/courses/{course}/lessons/{lessonSlug}/videos/{videoSlug}',
+        summary: 'Trang xem video bài giảng của một buổi học',
+        description: 'Yêu cầu đủ điều kiện học và buổi học đã mở (session_start <= now).',
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'lessonSlug', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'videoSlug', in: 'path', required: true, description: 'Luôn là "video" (mỗi buổi học chỉ có 1 video)', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Buổi học chưa bắt đầu / không đủ điều kiện học / bị khoá', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy buổi học hoặc chưa có video', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function video(Request $request, Course $course, string $lessonSlug, string $videoSlug): JsonResponse
     {
         abort_if($course->status !== CourseStatus::PUBLISHED, 404);
@@ -313,6 +394,35 @@ class CourseController extends BaseApiController
      *
      * Điều kiện tư cách giống Sự kiện: email sinh viên Cao Thắng hoặc thành viên CLB.
      */
+    #[OA\Post(
+        path: '/v1/learning/courses/{course}/enroll',
+        summary: 'Ghi danh khoá học theo hình thức offline hoặc online',
+        description: 'offline: chỉ trong cửa sổ ghi danh, giới hạn max_offline_slots. online: mở tới khi khoá kết thúc. Yêu cầu email sinh viên Cao Thắng hoặc thành viên CLB.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['track'], properties: [
+                new OA\Property(property: 'track', type: 'string', enum: ['offline', 'online']),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Ghi danh thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'track', type: 'string'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 422, description: 'Không đủ điều kiện ghi danh (đã hết chỗ, ngoài cửa sổ ghi danh, không đủ tư cách...)', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function enroll(Request $request, Course $course): JsonResponse
     {
         $validated = $request->validate([
@@ -328,6 +438,29 @@ class CourseController extends BaseApiController
     /**
      * Bật/tắt trạng thái "quan tâm" khoá học của user hiện tại.
      */
+    #[OA\Post(
+        path: '/v1/learning/courses/{course}/follow',
+        summary: 'Bật/tắt trạng thái "quan tâm" khoá học của user hiện tại',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'is_interested', type: 'boolean'),
+                        new OA\Property(property: 'followers_count', type: 'integer'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Khoá học không tồn tại/chưa xuất bản', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function toggleFollow(Request $request, Course $course): JsonResponse
     {
         abort_if($course->status !== CourseStatus::PUBLISHED, 404);
@@ -358,6 +491,32 @@ class CourseController extends BaseApiController
      * Đăng ký "sẽ tham gia" một buổi học offline → cấp vé QR điểm danh.
      * Idempotent: nếu đã có vé thì trả lại vé cũ (token + used_at).
      */
+    #[OA\Post(
+        path: '/v1/learning/courses/{course}/lessons/{lessonSlug}/qr-ticket',
+        summary: 'Đăng ký "sẽ tham gia" một buổi học offline → cấp vé QR điểm danh (idempotent)',
+        description: 'Chỉ học viên đã ghi danh lớp offline mới đăng ký được. Trả lại vé cũ nếu đã có (idempotent).',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'lessonSlug', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'token', type: 'string'),
+                        new OA\Property(property: 'used_at', type: 'string', format: 'date-time', nullable: true),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Không tìm thấy khoá học/buổi học', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Chưa ghi danh offline, hoặc khoá học/buổi học đã kết thúc', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function createQrTicket(Request $request, Course $course, string $lessonSlug): JsonResponse
     {
         abort_if($course->status !== CourseStatus::PUBLISHED, 404);
@@ -411,6 +570,39 @@ class CourseController extends BaseApiController
      * Chỉ học viên đã ghi danh khoá học mới được ghi tiến độ. Giữ % cao nhất đã đạt được
      * (không tụt lùi nếu xem lại từ đầu); is_completed khi đạt ngưỡng (LessonSectionType::VIDEO, 80%).
      */
+    #[OA\Post(
+        path: '/v1/learning/courses/{course}/lessons/{lessonSlug}/progress',
+        summary: 'Ghi nhận % xem video bài giảng (tự động qua YouTube IFrame API + đánh dấu tay)',
+        description: 'Giữ % cao nhất đã đạt (không tụt lùi khi xem lại từ đầu). Tự động ghi danh track online nếu chưa ghi danh.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'lessonSlug', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['watch_percentage'], properties: [
+                new OA\Property(property: 'watch_percentage', type: 'integer', minimum: 0, maximum: 100),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Đã ghi nhận tiến độ',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'watch_percentage', type: 'integer'),
+                        new OA\Property(property: 'is_completed', type: 'boolean'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 403, description: 'Buổi học chưa mở / không đủ điều kiện học', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy buổi học', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Buổi học chưa có video', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function markVideoProgress(Request $request, Course $course, string $lessonSlug): JsonResponse
     {
         abort_if($course->status !== CourseStatus::PUBLISHED, 404);
@@ -482,6 +674,30 @@ class CourseController extends BaseApiController
      * Chứng chỉ khoá học của user hiện tại. 404 nếu chưa hoàn thành/chưa được cấp,
      * hoặc đã bị thu hồi.
      */
+    #[OA\Get(
+        path: '/v1/learning/courses/{course}/certificate',
+        summary: 'Lấy chứng chỉ khoá học của user hiện tại',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'cert_code', type: 'string'),
+                        new OA\Property(property: 'cert_url', type: 'string'),
+                        new OA\Property(property: 'issued_at', type: 'string', format: 'date-time'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Chưa ghi danh hoặc chưa có chứng chỉ / đã bị thu hồi', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function certificate(Request $request, Course $course): JsonResponse
     {
         $enrollment = $course->enrollmentFor($request->user()->id);
