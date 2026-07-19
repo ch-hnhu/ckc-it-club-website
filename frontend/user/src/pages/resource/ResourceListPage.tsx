@@ -18,6 +18,8 @@ import type { AuthUser } from "@/services/auth.service";
 import { resourceService } from "@/services/resource.service";
 import type { Resource, ResourceLinkType } from "@/types/resource.types";
 import ReportResourceModal from "@/components/resource/ReportResourceModal";
+import AccessGate from "@/components/resource/AccessGate";
+import { canBrowseResources } from "@/lib/resourceAccess";
 
 const LINK_TYPE_LABELS: Record<ResourceLinkType, string> = {
 	google_drive: "Google Drive",
@@ -34,26 +36,6 @@ const LINK_TYPE_ICONS: Record<ResourceLinkType, React.ElementType> = {
 	document: Globe,
 	other: Link2,
 };
-
-const AccessGate: React.FC<{
-	icon: React.ElementType;
-	title: string;
-	message: string;
-	action: { to: string; label: string };
-}> = ({ icon: Icon, title, message, action }) => (
-	<div className='neo-container px-6 pt-8'>
-		<div className='mx-auto max-w-xl rounded-2xl border-2 border-black bg-white px-6 py-16 text-center shadow-[4px_4px_0_#111]'>
-			<Icon className='mx-auto h-10 w-10 text-gray-300' />
-			<p className='mt-4 font-heading text-xl font-extrabold text-black'>{title}</p>
-			<p className='mt-2 text-sm text-gray-600'>{message}</p>
-			<Link
-				to={action.to}
-				className='mt-6 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-5 py-2.5 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-				{action.label}
-			</Link>
-		</div>
-	</div>
-);
 
 const CardSkeleton: React.FC = () => (
 	<div className='animate-pulse rounded-2xl border-2 border-black bg-white p-5 shadow-[4px_4px_0_#111]'>
@@ -102,7 +84,7 @@ const ResourceCard: React.FC<{
 					{LINK_TYPE_LABELS[resource.link_type]}
 				</span>
 				<span>·</span>
-				<span>{resource.uploader?.full_name ?? "Ẩn danh"}</span>
+				<span>{isOwner ? "Bạn" : (resource.uploader?.full_name ?? "Ẩn danh")}</span>
 			</div>
 			<div className='mt-auto flex items-center justify-between gap-2 pt-4'>
 				{resource.is_locked ? (
@@ -147,7 +129,8 @@ const ResourceListPage: React.FC = () => {
 	const [reportTargetId, setReportTargetId] = useState<number | null>(null);
 	const [forbidden, setForbidden] = useState(false);
 
-	const canBrowse = user != null;
+	const isLoggedIn = user != null;
+	const canBrowse = canBrowseResources(user);
 	const hasLockedResources = resources.some((r) => r.is_locked);
 
 	useEffect(() => {
@@ -156,9 +139,10 @@ const ResourceListPage: React.FC = () => {
 	}, [searchInput]);
 
 	useEffect(() => {
-		// Chưa đăng nhập thì không gọi API — 401 sẽ bị interceptor đá thẳng sang /login.
+		// Không đủ điều kiện thì không gọi API: chưa đăng nhập sẽ bị interceptor đá
+		// sang /login, còn tài khoản ngoài trường thì chắc chắn ăn 403.
+		// Không cần tắt loading: các nhánh này luôn render AccessGate, không đọc `loading`.
 		if (!canBrowse) {
-			setLoading(false);
 			return;
 		}
 
@@ -257,14 +241,14 @@ const ResourceListPage: React.FC = () => {
 			</div>
 			)}
 
-			{!loading && !canBrowse ? (
+			{!isLoggedIn ? (
 				<AccessGate
 					icon={LogIn}
 					title='Đăng nhập để xem tài nguyên'
 					message='Kho tài nguyên dành cho sinh viên trường Cao Thắng và thành viên câu lạc bộ.'
 					action={{ to: "/login", label: "Đăng nhập" }}
 				/>
-			) : !loading && forbidden ? (
+			) : !canBrowse || forbidden ? (
 				<AccessGate
 					icon={Lock}
 					title='Bạn chưa có quyền xem tài nguyên'
@@ -278,8 +262,9 @@ const ResourceListPage: React.FC = () => {
 						<div className='flex items-start gap-3'>
 							<Lock className='mt-0.5 h-5 w-5 shrink-0 text-black' />
 							<p className='text-sm font-bold text-black'>
-								Sinh viên Cao Thắng xem được 3 tài nguyên mới nhất. Trở thành thành
-								viên câu lạc bộ để mở khoá toàn bộ kho tài nguyên.
+								Sinh viên Cao Thắng được mở cố định 3 tài nguyên, cộng với tài
+								nguyên do chính mình đóng góp. Trở thành thành viên câu lạc bộ để
+								mở khoá toàn bộ kho tài nguyên.
 							</p>
 						</div>
 						<Link

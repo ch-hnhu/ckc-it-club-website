@@ -39,7 +39,14 @@ class Event extends Model
      */
     public function thumbnailUrl(): ?string
     {
-        return $this->thumbnail ?: null;
+        if (! $this->thumbnail) {
+            return null;
+        }
+
+        // Bản ghi cũ còn lưu đường dẫn tương đối trên disk public (vd. event-thumbnails/x.jpg)
+        return Str::startsWith($this->thumbnail, ['http://', 'https://'])
+            ? $this->thumbnail
+            : asset('storage/' . $this->thumbnail);
     }
 
     /**

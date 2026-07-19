@@ -13,8 +13,16 @@ const aboutPageService = {
 		return res.data;
 	},
 
-	async updateAboutContent(payload: AboutContent): Promise<AboutContent> {
-		const res = await api.put<ApiResponse<AboutContent>, AboutContent>("/about-page", payload);
+	/**
+	 * Lưu nội dung. Backend chỉ cập nhật những section có trong payload, nên có
+	 * thể gửi một phần (vd trình sửa trang chủ chỉ gửi `awards`, trình sửa trang
+	 * giới thiệu gửi các section còn lại) mà không đụng tới phần kia.
+	 */
+	async updateAboutContent(payload: Partial<AboutContent>): Promise<AboutContent> {
+		const res = await api.put<ApiResponse<AboutContent>, Partial<AboutContent>>(
+			"/about-page",
+			payload,
+		);
 		return res.data;
 	},
 

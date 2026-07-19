@@ -111,6 +111,10 @@ function AcademicStructureImportDialog({
 		try {
 			const response = await academicStructureService.importStructure(file);
 
+			if (response.data.duplicate_warning) {
+				toast.warning(response.data.duplicate_warning);
+			}
+
 			if (response.data.errors.length > 0) {
 				toast.warning(
 					`Đã import ${response.data.processed_rows} dòng nhưng có ${response.data.errors.length} dòng lỗi.`,
