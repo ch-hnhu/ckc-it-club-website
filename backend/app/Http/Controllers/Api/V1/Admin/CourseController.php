@@ -124,7 +124,7 @@ class CourseController extends BaseApiController
 
         $thumbnailPath = null;
         if ($request->hasFile('thumbnail')) {
-            $thumbnailPath = $request->file('thumbnail')->store('course-thumbnails', 'public');
+            $thumbnailPath = $this->storage->uploadImage($request->file('thumbnail'), 'course');
         }
 
         $course = DB::transaction(function () use ($data, $thumbnailPath, $request) {
@@ -885,7 +885,11 @@ class CourseController extends BaseApiController
      */
     private function resolveUrl(?string $path): ?string
     {
-        // Return as-is; DB now stores full public URLs.
-        return $path ?: null;
+        if (! $path) {
+            return null;
+        }
+
+        // Bản ghi cũ còn lưu đường dẫn tương đối trên disk public (vd. course-thumbnails/x.jpg)
+        return Str::startsWith($path, ['http://', 'https://']) ? $path : asset('storage/' . $path);
     }
 }

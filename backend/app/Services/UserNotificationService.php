@@ -12,6 +12,7 @@ use App\Models\Resource;
 use App\Models\User;
 use App\Notifications\UserCommunityNotification;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class UserNotificationService
@@ -442,6 +443,29 @@ class UserNotificationService
             'title'       => 'Bài đăng của bạn đã bị ẩn',
             'message'     => "Bài đăng \"{$post->title}\" của bạn đã bị ẩn tự động do vi phạm tiêu chuẩn cộng đồng. Lý do: {$reason}",
             'type'        => 'post_moderated',
+            'target_type' => 'post',
+            'target_id'   => $post->id,
+            // Bài đã ẩn không xem được ở trang chi tiết → thông báo chỉ mang tính thông tin.
+            'link'        => '',
+        ]);
+    }
+
+    /**
+     * Notify the post owner when an admin hides their post with a reason.
+     */
+    public static function dispatchPostHidden(
+        User $recipient,
+        User $actor,
+        Post $post,
+        string $reason,
+    ): void {
+        // Bài đăng cộng đồng có thể không có tiêu đề → dùng trích đoạn nội dung
+        $label = $post->title ?: Str::limit(strip_tags((string) $post->content), 50);
+
+        self::send($recipient, $actor, [
+            'title'       => 'Bài đăng của bạn đã bị ẩn',
+            'message'     => "Bài đăng \"{$label}\" của bạn đã bị quản trị viên ẩn do vi phạm tiêu chuẩn cộng đồng. Lý do: {$reason}",
+            'type'        => 'post_hidden',
             'target_type' => 'post',
             'target_id'   => $post->id,
             // Bài đã ẩn không xem được ở trang chi tiết → thông báo chỉ mang tính thông tin.

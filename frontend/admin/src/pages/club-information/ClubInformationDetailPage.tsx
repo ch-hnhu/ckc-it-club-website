@@ -1046,14 +1046,7 @@ function ClubInformationDetailPage() {
 												}
 											/>
 										</TableHead>
-										<TableHead className='w-[60px]'>
-											<Button
-												variant='ghost'
-												onClick={() => handleValSort("id")}
-												className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-												ID{getValSortIcon("id")}
-											</Button>
-										</TableHead>
+										<TableHead className='w-[60px]'>STT</TableHead>
 										<TableHead>
 											<Button
 												variant='ghost'
@@ -1122,7 +1115,7 @@ function ClubInformationDetailPage() {
 								</TableHeader>
 								<TableBody>
 									{paginatedValues.length > 0 ? (
-										paginatedValues.map((val) => {
+										paginatedValues.map((val, index) => {
 											const deleteDisabledReason =
 												getValueDeleteDisabledReason(val);
 
@@ -1139,7 +1132,11 @@ function ClubInformationDetailPage() {
 													</TableCell>
 													<TableCell className='font-medium'>
 														<div className='flex flex-col gap-1'>
-															<span>{val.id}</span>
+															<span>
+																{(valCurrentPage - 1) * valPerPage +
+																	index +
+																	1}
+															</span>
 														</div>
 													</TableCell>
 

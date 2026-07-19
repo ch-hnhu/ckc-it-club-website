@@ -55,6 +55,7 @@ class DashboardController extends BaseApiController
         $newMembersByMonth = $this->countByMonth(User::query(), $trendStart);
         $postsByMonth = $this->countByMonth(Post::query(), $trendStart);
         $registrationsByMonth = $this->countByMonth(EventRegistration::query(), $trendStart);
+        $enrollmentsByMonth = $this->countByMonth(CourseEnrollment::query(), $trendStart);
 
         $trends = [];
         for ($i = 0; $i < $months; $i++) {
@@ -65,11 +66,44 @@ class DashboardController extends BaseApiController
                 'new_members' => (int) ($newMembersByMonth[$key] ?? 0),
                 'posts' => (int) ($postsByMonth[$key] ?? 0),
                 'event_registrations' => (int) ($registrationsByMonth[$key] ?? 0),
+                'enrollments' => (int) ($enrollmentsByMonth[$key] ?? 0),
             ];
         }
 
         $enrollmentsTotal = CourseEnrollment::count();
         $enrollmentsCompleted = CourseEnrollment::whereNotNull('completed_at')->count();
+
+        // Top khoá học theo lượt ghi danh (kèm số đã hoàn thành để vẽ biểu đồ)
+        $topCourses = Course::query()
+            ->withCount([
+                'enrollments',
+                'enrollments as enrollments_completed_count' => fn ($query) => $query->whereNotNull('completed_at'),
+            ])
+            ->orderByDesc('enrollments_count')
+            ->limit(5)
+            ->get()
+            ->filter(fn (Course $course) => $course->enrollments_count > 0)
+            ->values()
+            ->map(fn (Course $course) => [
+                'id' => $course->id,
+                'title' => $course->title,
+                'enrollments_count' => (int) $course->enrollments_count,
+                'completed_count' => (int) $course->enrollments_completed_count,
+            ]);
+
+        // Phân bố thành viên theo vai trò (Spatie roles)
+        $membersByRole = DB::table('model_has_roles')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_type', User::class)
+            ->selectRaw('roles.name as role, roles.label as label, COUNT(*) as count')
+            ->groupBy('roles.name', 'roles.label')
+            ->orderByDesc('count')
+            ->get()
+            ->map(fn ($row) => [
+                'role' => $row->role,
+                'label' => $row->label ?: $row->role,
+                'count' => (int) $row->count,
+            ]);
 
         $eventCounts = DB::table('events')
             ->whereNull('deleted_at')
@@ -97,6 +131,7 @@ class DashboardController extends BaseApiController
         return $this->successResponse(true, [
             'members' => [
                 'total' => User::count(),
+                'by_role' => $membersByRole,
             ],
             'courses' => [
                 'total' => Course::count(),
@@ -105,6 +140,13 @@ class DashboardController extends BaseApiController
                 'total' => $eventCounts->sum(),
                 'published' => (int) ($eventCounts['published'] ?? 0),
                 'ongoing' => (int) ($eventCounts['ongoing'] ?? 0),
+                'by_status' => [
+                    'draft' => (int) ($eventCounts['draft'] ?? 0),
+                    'published' => (int) ($eventCounts['published'] ?? 0),
+                    'ongoing' => (int) ($eventCounts['ongoing'] ?? 0),
+                    'ended' => (int) ($eventCounts['ended'] ?? 0),
+                    'cancelled' => (int) ($eventCounts['cancelled'] ?? 0),
+                ],
                 'upcoming' => $upcomingEvents,
             ],
             'community' => [
@@ -126,6 +168,7 @@ class DashboardController extends BaseApiController
                     ? (int) round($enrollmentsCompleted / $enrollmentsTotal * 100)
                     : 0,
                 'certificates_issued' => CourseCertificate::whereNull('revoked_at')->count(),
+                'top_courses' => $topCourses,
             ],
             'projecthub' => [
                 'boards_active' => Board::where('is_archived', false)->count(),

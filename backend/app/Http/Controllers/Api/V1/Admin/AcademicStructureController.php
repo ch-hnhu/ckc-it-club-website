@@ -110,6 +110,30 @@ class AcademicStructureController extends BaseApiController
     ): JsonResponse {
         $file = $request->file('file');
 
+        // Soft duplicate warning: hash file content and look up the latest
+        // prior import with the same hash. Import still proceeds normally.
+        $fileHash = null;
+        $duplicateWarning = null;
+        if ($file) {
+            $realPath = $file->getRealPath();
+            $fileHash = $realPath ? (hash_file('sha256', $realPath) ?: null) : null;
+
+            if ($fileHash) {
+                $previousImport = AcademicStructureImport::query()
+                    ->where('file_hash', $fileHash)
+                    ->latest('created_at')
+                    ->first();
+
+                if ($previousImport) {
+                    $duplicateWarning = sprintf(
+                        'File này đã được import lúc %s (file "%s").',
+                        $previousImport->created_at?->timezone(config('app.timezone'))->format('H:i d/m/Y') ?? 'không rõ',
+                        $previousImport->original_file_name,
+                    );
+                }
+            }
+        }
+
         // Upload file to Supabase 'files' bucket under 'imports/' folder.
         // storeImportHistory() receives the returned public URL as stored_file_path.
         $storedFilePath = null;
@@ -135,7 +159,9 @@ class AcademicStructureController extends BaseApiController
             $summary = $academicStructureImportService->import($rows);
 
             $status = count($summary['errors'] ?? []) > 0 ? 'failed' : 'completed';
-            $this->storeImportHistory($file, $storedFilePath, $request->user(), $status, $summary);
+            $this->storeImportHistory($file, $storedFilePath, $fileHash, $request->user(), $status, $summary);
+
+            $summary['duplicate_warning'] = $duplicateWarning;
 
             return $this->successResponse(
                 true,
@@ -146,6 +172,7 @@ class AcademicStructureController extends BaseApiController
             $this->storeImportHistory(
                 $file,
                 $storedFilePath,
+                $fileHash,
                 $request->user(),
                 'failed',
                 null,
@@ -159,6 +186,7 @@ class AcademicStructureController extends BaseApiController
             $this->storeImportHistory(
                 $file,
                 $storedFilePath,
+                $fileHash,
                 $request->user(),
                 'failed',
                 null,
@@ -192,6 +220,7 @@ class AcademicStructureController extends BaseApiController
     private function storeImportHistory(
         ?UploadedFile $file,
         string|false|null $storedFilePath,
+        ?string $fileHash,
         ?Authenticatable $user,
         string $status,
         ?array $summary = null,
@@ -207,6 +236,7 @@ class AcademicStructureController extends BaseApiController
             'storage_disk'       => 'supabase',
             'file_type' => $this->resolveFileType($file),
             'file_size_bytes' => $file->getSize() ?: 0,
+            'file_hash' => $fileHash,
             'uploaded_by' => $user?->getAuthIdentifier(),
             'status' => $status,
             'processed_rows' => (int) ($summary['processed_rows'] ?? 0),

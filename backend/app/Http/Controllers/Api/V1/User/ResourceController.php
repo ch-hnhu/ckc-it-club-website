@@ -87,7 +87,7 @@ class ResourceController extends BaseApiController
             entityType: 'resource',
             entityId: $resource->id,
             performedBy: $uploader->full_name,
-            link: '/tai-nguyen/quan-ly',
+            link: '/community/resources',
         );
 
         return $this->createdResponse($this->transform($resource, true), 'Tài nguyên đã được gửi và đang chờ duyệt.');
@@ -150,7 +150,7 @@ class ResourceController extends BaseApiController
                 entityType: 'resource_report',
                 entityId: $resource->id,
                 performedBy: $reporter->full_name,
-                link: '/tai-nguyen/bao-cao',
+                link: '/community/resource-reports',
             );
         }
 

@@ -23,6 +23,7 @@ use App\Services\PointService;
 use App\Traits\HasSequentialLessonLock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class CourseController extends BaseApiController
 {
@@ -752,7 +753,11 @@ class CourseController extends BaseApiController
      */
     private function resolveUrl(?string $path): ?string
     {
-        // DB now stores the full public URL (Supabase https://... or external).
-        return $path ?: null;
+        if (! $path) {
+            return null;
+        }
+
+        // Bản ghi cũ còn lưu đường dẫn tương đối trên disk public (vd. course-thumbnails/x.jpg)
+        return Str::startsWith($path, ['http://', 'https://']) ? $path : asset('storage/' . $path);
     }
 }

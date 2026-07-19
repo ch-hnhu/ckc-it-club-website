@@ -16,6 +16,7 @@ export interface AcademicStructureImportSummary {
 		school_classes: number;
 	};
 	errors: AcademicStructureImportError[];
+	duplicate_warning?: string | null;
 }
 
 export type AcademicStructureImportStatus = "completed" | "failed";
