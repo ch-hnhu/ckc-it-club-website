@@ -7,6 +7,7 @@ import {
 	Check,
 	Clock,
 	Eye,
+	FileEdit,
 	Flag,
 	Heart,
 	Loader2,
@@ -610,6 +611,8 @@ const BlogDetailPage: React.FC = () => {
 
 	useEffect(() => {
 		if (!slug || !blog?.slug || viewRecordedRef.current) return;
+		// Chỉ ghi lượt xem cho bài đã xuất bản — bài nháp/chờ duyệt/lưu trữ không có endpoint public
+		if (blog.status !== "published") return;
 		viewRecordedRef.current = true;
 		blogService.recordView(slug).then((res) => {
 			setBlog((prev) => prev ? { ...prev, view_count: res.data.view_count } : prev);
@@ -618,13 +621,19 @@ const BlogDetailPage: React.FC = () => {
 
 	useEffect(() => {
 		if (!blog?.id) return;
+		// Bài chưa xuất bản không có bình luận qua endpoint public → tránh gọi API 404
+		if (blog.status !== "published") {
+			setComments([]);
+			setCommentsLoading(false);
+			return;
+		}
 		setCommentsLoading(true);
 		blogService
 			.getBlogComments(blog.id)
 			.then((res) => setComments(res.data))
 			.catch(() => setComments([]))
 			.finally(() => setCommentsLoading(false));
-	}, [blog?.id]);
+	}, [blog?.id, blog?.status]);
 
 	// Scroll + highlight a specific comment when navigating from a notification link (#comment-{id})
 	useEffect(() => {
@@ -738,6 +747,27 @@ const BlogDetailPage: React.FC = () => {
 
 	const isOwnProfile = Boolean(user?.id && blog?.user?.id && Number(user.id) === blog.user.id);
 	const isArchived = blog?.status === "archived";
+	const isPublished = blog?.status === "published";
+	const statusNotice: { label: string; desc: string; className: string } | null =
+		!blog || isPublished
+			? null
+			: blog.status === "pending_review"
+				? {
+						label: "Đang chờ duyệt",
+						desc: "Bài viết sẽ hiển thị công khai sau khi được ban quản trị duyệt.",
+						className: "border-amber-400 bg-amber-50 text-amber-800",
+					}
+				: blog.status === "archived"
+					? {
+							label: "Đã lưu trữ",
+							desc: "Bài viết đang được lưu trữ và không hiển thị công khai.",
+							className: "border-gray-400 bg-gray-100 text-gray-700",
+						}
+					: {
+							label: "Bản nháp",
+							desc: "Chỉ mình bạn nhìn thấy bài này. Hãy gửi duyệt để xuất bản.",
+							className: "border-black bg-[var(--color-pastel-yellow)] text-black",
+						};
 	const currentVisibility = (blog?.visibility ?? "public") as "public" | "members" | "private";
 
 	const handlePrivacySaved = (visibility: "public" | "members" | "private") => {
@@ -981,6 +1011,22 @@ const BlogDetailPage: React.FC = () => {
 						) : blog ? (
 							<>
 								<div>
+									{/* Banner trạng thái — chỉ hiện khi bài chưa xuất bản */}
+									{statusNotice && (
+										<div
+											className={`mb-5 flex items-start gap-3 rounded-[10px] border-2 px-4 py-3 shadow-[3px_3px_0_#111] ${statusNotice.className}`}>
+											<FileEdit className='mt-0.5 h-4 w-4 shrink-0' />
+											<div>
+												<p className='font-heading text-sm font-extrabold'>
+													{statusNotice.label}
+												</p>
+												<p className='mt-0.5 text-xs font-medium opacity-90'>
+													{statusNotice.desc}
+												</p>
+											</div>
+										</div>
+									)}
+
 									{/* Title */}
 									<h1 className='font-heading text-3xl font-extrabold leading-tight text-black md:text-4xl lg:text-5xl'>
 										{blog.title}
@@ -1009,10 +1055,12 @@ const BlogDetailPage: React.FC = () => {
 														<Clock className='h-3.5 w-3.5' />
 														{readingTime(blog.content)} phút đọc
 													</span>
-													<span className='flex items-center gap-1'>
-														<Eye className='h-3.5 w-3.5' />
-														{blog.view_count} lượt xem
-													</span>
+													{isPublished && (
+														<span className='flex items-center gap-1'>
+															<Eye className='h-3.5 w-3.5' />
+															{blog.view_count} lượt xem
+														</span>
+													)}
 												</div>
 											</div>
 										</div>
@@ -1118,7 +1166,8 @@ const BlogDetailPage: React.FC = () => {
 										</div>
 									)}
 
-									{/* Reactions + actions */}
+									{/* Reactions + actions — chỉ với bài đã xuất bản */}
+									{isPublished && (
 									<div className='mt-7 flex flex-wrap items-center gap-2 border-t-2 border-black pt-5'>
 										<div
 											className='relative'
@@ -1234,6 +1283,7 @@ const BlogDetailPage: React.FC = () => {
 											)}
 										</button>
 									</div>
+									)}
 								</div>
 							</>
 						) : null}
@@ -1253,8 +1303,8 @@ const BlogDetailPage: React.FC = () => {
 					</div>
 				)}
 
-				{/* Comments section */}
-				{!blogError && (
+				{/* Comments section — chỉ với bài đã xuất bản */}
+				{!blogError && isPublished && (
 					<section id='comments' className='mt-6'>
 						<div className='mb-6 flex items-center gap-3'>
 							<MessageCircle className='h-5 w-5 text-black' />

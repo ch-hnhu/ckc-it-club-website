@@ -31,6 +31,7 @@ import ClubInformationList from "@/pages/club-information/ClubInformationList";
 import ClubInformationDetailPage from "@/pages/club-information/ClubInformationDetailPage";
 import CreateClubInformationPage from "@/pages/club-information/CreateClubInformationPage";
 import AboutPageEditor from "@/pages/about-page/AboutPageEditor";
+import LandingPageEditor from "@/pages/landing-page/LandingPageEditor";
 import OrganizationImportListPage from "@/pages/organization/OrganizationImportListPage";
 import NotificationsPage from "@/pages/notification/NotificationsPage";
 import ChannelListPage from "@/pages/community/ChannelListPage";
@@ -273,13 +274,22 @@ const appRoutes = [
 				handle: { title: "Chi tiết thông tin CLB" },
 			},
 			{
+				path: "landing-page",
+				element: (
+					<PermissionRoute permission='club_info.view'>
+						<LandingPageEditor />
+					</PermissionRoute>
+				),
+				handle: { title: "Quản lý trang chủ" },
+			},
+			{
 				path: "about-page",
 				element: (
 					<PermissionRoute permission='club_info.view'>
 						<AboutPageEditor />
 					</PermissionRoute>
 				),
-				handle: { title: "Quản lý trang tĩnh" },
+				handle: { title: "Quản lý trang giới thiệu" },
 			},
 			{
 				path: "requests",

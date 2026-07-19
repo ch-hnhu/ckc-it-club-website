@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate, useOutletContext } from "react-router-d
 import StacksEditorWrapper, { type StacksEditorHandle } from "@/components/ui/StacksEditorWrapper";
 import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
+import { buildProfileUrl } from "@/lib/utils";
 import type { ApiErrorResponse } from "@/types/api.types";
 import type { BlogTag } from "@/types/blog.types";
 
@@ -126,13 +127,14 @@ const BlogCreatePage: React.FC = () => {
 				toast.success("Đã lưu nháp!", {
 					description: "Bạn có thể xem lại ở mục Nháp trong trang cá nhân.",
 				});
+				navigate(`${buildProfileUrl(user.username, user.email)}?tab=drafts`);
 			} else {
 				// Backend không lưu nháp (ví dụ tài khoản được tự động đăng) — phản ánh đúng kết quả.
 				toast.success("Blog đã được đăng.", {
 					description: "Bài viết của bạn đã được xuất bản.",
 				});
+				navigate(response.data.slug ? `/blog/${response.data.slug}` : "/blog");
 			}
-			navigate("/blog");
 		} catch (error) {
 			setFormError(getErrorMessage(error));
 		} finally {
@@ -312,32 +314,12 @@ const BlogCreatePage: React.FC = () => {
 										<X className='h-4 w-4' />
 									</button>
 
-									{/* Preview 1: Trang chi tiết */}
-									<div className='border-b-2 border-black'>
-										<p className='bg-gray-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500'>
-											Trang chi tiết
-										</p>
-										<div className='bg-gray-100'>
-											<img
-												src={coverPreviewUrl}
-												alt={coverImage?.name ?? "Ảnh bìa blog"}
-												className='max-h-[340px] w-full object-contain'
-											/>
-										</div>
-									</div>
-
-									{/* Preview 2: Card danh sách */}
-									<div className='border-b-2 border-black'>
-										<p className='bg-gray-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500'>
-											Card danh sách
-										</p>
-										<div className='bg-gray-100'>
-											<img
-												src={coverPreviewUrl}
-												alt={coverImage?.name ?? "Ảnh bìa blog"}
-												className='aspect-[21/9] w-full object-contain'
-											/>
-										</div>
+									<div className='border-b-2 border-black bg-gray-100'>
+										<img
+											src={coverPreviewUrl}
+											alt={coverImage?.name ?? "Ảnh bìa blog"}
+											className='max-h-[340px] w-full object-contain'
+										/>
 									</div>
 
 									<figcaption className='truncate bg-gray-50 px-3 py-2 text-xs font-bold text-gray-700'>

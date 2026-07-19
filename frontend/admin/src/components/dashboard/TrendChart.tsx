@@ -16,9 +16,10 @@ interface TrendChartProps {
 }
 
 const chartConfig = {
-	new_members: { label: "Thành viên mới", color: "#22c55e" },
+	new_members: { label: "Thành viên mới", color: "#16a34a" },
 	posts: { label: "Bài đăng", color: "#3b82f6" },
-	event_registrations: { label: "Đăng ký sự kiện", color: "#f59e0b" },
+	event_registrations: { label: "Đăng ký sự kiện", color: "#d97706" },
+	enrollments: { label: "Ghi danh khoá học", color: "#8b5cf6" },
 } satisfies ChartConfig;
 
 function monthLabel(ym: string): string {

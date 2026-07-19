@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, Send } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { ChevronLeft, Lock, LogIn, Send } from "lucide-react";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import NeoSelect from "@/components/ui/NeoSelect";
+import AccessGate from "@/components/resource/AccessGate";
+import { canBrowseResources } from "@/lib/resourceAccess";
+import type { AuthUser } from "@/services/auth.service";
 import { resourceService } from "@/services/resource.service";
 import type { ApiErrorResponse } from "@/types/api.types";
 import type { ResourceLinkType } from "@/types/resource.types";
@@ -23,6 +26,7 @@ const getErrorMessage = (error: unknown) => {
 
 const ResourceCreatePage: React.FC = () => {
 	const navigate = useNavigate();
+	const { user } = useOutletContext<{ user: AuthUser | null }>();
 
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
@@ -62,6 +66,33 @@ const ResourceCreatePage: React.FC = () => {
 			setIsSubmitting(false);
 		}
 	};
+
+	// Chặn ngay từ đầu thay vì để người dùng điền xong form mới ăn 403 lúc gửi.
+	if (!user) {
+		return (
+			<div className='w-full min-h-screen pb-16 pt-20'>
+				<AccessGate
+					icon={LogIn}
+					title='Đăng nhập để đóng góp tài nguyên'
+					message='Kho tài nguyên dành cho sinh viên trường Cao Thắng và thành viên câu lạc bộ.'
+					action={{ to: "/login", label: "Đăng nhập" }}
+				/>
+			</div>
+		);
+	}
+
+	if (!canBrowseResources(user)) {
+		return (
+			<div className='w-full min-h-screen pb-16 pt-20'>
+				<AccessGate
+					icon={Lock}
+					title='Bạn chưa có quyền đóng góp tài nguyên'
+					message='Chỉ sinh viên trường Cao Thắng và thành viên câu lạc bộ mới gửi được tài nguyên. Hãy ứng tuyển để trở thành thành viên.'
+					action={{ to: "/ung-tuyen", label: "Tham gia CLB" }}
+				/>
+			</div>
+		);
+	}
 
 	return (
 		<div className='w-full min-h-screen pb-16 pt-20'>

@@ -14,15 +14,38 @@ export interface DashboardTrendPoint {
 	new_members: number;
 	posts: number;
 	event_registrations: number;
+	enrollments: number;
+}
+
+export interface DashboardTopCourse {
+	id: number;
+	title: string;
+	enrollments_count: number;
+	completed_count: number;
+}
+
+export interface DashboardRoleCount {
+	role: string;
+	label: string;
+	count: number;
+}
+
+export interface DashboardEventStatusCounts {
+	draft: number;
+	published: number;
+	ongoing: number;
+	ended: number;
+	cancelled: number;
 }
 
 export interface DashboardStats {
-	members: { total: number };
+	members: { total: number; by_role: DashboardRoleCount[] };
 	courses: { total: number };
 	events: {
 		total: number;
 		published: number;
 		ongoing: number;
+		by_status: DashboardEventStatusCounts;
 		upcoming: DashboardUpcomingEvent[];
 	};
 	community: {
@@ -42,6 +65,7 @@ export interface DashboardStats {
 		enrollments_completed: number;
 		completion_rate: number;
 		certificates_issued: number;
+		top_courses: DashboardTopCourse[];
 	};
 	projecthub: {
 		boards_active: number;
