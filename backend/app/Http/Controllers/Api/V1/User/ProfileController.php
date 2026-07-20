@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
 use Throwable;
 
 class ProfileController extends BaseApiController
@@ -79,11 +80,59 @@ class ProfileController extends BaseApiController
         ];
     }
 
+    #[OA\Get(
+        path: '/v1/users/profile',
+        summary: 'Lấy hồ sơ đầy đủ của user đang đăng nhập',
+        security: [['sanctum' => []]],
+        tags: ['User Profile'],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 401, description: 'Chưa đăng nhập', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function show(Request $request): JsonResponse
     {
         return $this->successResponse(true, $this->formatProfile($request->user(), $request->user()), 'Lấy thông tin hồ sơ thành công.');
     }
 
+    #[OA\Post(
+        path: '/v1/users/profile',
+        summary: 'Cập nhật hồ sơ user (multipart/form-data — hỗ trợ upload avatar/cover_image)',
+        description: 'Các trường học vụ (student_code, faculty_id, major_id, class_id) chỉ áp dụng cho sinh viên trường (email @caothang.edu.vn).',
+        security: [['sanctum' => []]],
+        tags: ['User Profile'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(properties: [
+                    new OA\Property(property: 'full_name', type: 'string', maxLength: 255, nullable: true),
+                    new OA\Property(property: 'username', type: 'string', maxLength: 30, nullable: true, description: 'Chỉ chữ thường, số, gạch dưới'),
+                    new OA\Property(property: 'bio', type: 'string', maxLength: 500, nullable: true),
+                    new OA\Property(property: 'student_code', type: 'string', maxLength: 15, nullable: true),
+                    new OA\Property(property: 'faculty_id', type: 'integer', nullable: true),
+                    new OA\Property(property: 'major_id', type: 'integer', nullable: true),
+                    new OA\Property(property: 'class_id', type: 'integer', nullable: true),
+                    new OA\Property(property: 'gender', type: 'string', enum: ['Nam', 'Nữ', 'Khác'], nullable: true),
+                    new OA\Property(property: 'date_of_birth', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'avatar', type: 'string', format: 'binary', nullable: true, description: 'Ảnh, tối đa 5MB'),
+                    new OA\Property(property: 'cover_image', type: 'string', format: 'binary', nullable: true, description: 'Ảnh, tối đa 5MB'),
+                    new OA\Property(property: 'skills_sync', type: 'string', nullable: true, description: 'Truyền "1" để đồng bộ mảng skills'),
+                    new OA\Property(property: 'skills', type: 'array', items: new OA\Items(type: 'string'), nullable: true),
+                    new OA\Property(property: 'social_github', type: 'string', maxLength: 100, nullable: true),
+                    new OA\Property(property: 'social_linkedin', type: 'string', maxLength: 100, nullable: true),
+                    new OA\Property(property: 'social_instagram', type: 'string', maxLength: 100, nullable: true),
+                    new OA\Property(property: 'social_youtube', type: 'string', maxLength: 100, nullable: true),
+                    new OA\Property(property: 'social_tiktok', type: 'string', maxLength: 100, nullable: true),
+                    new OA\Property(property: 'social_twitch', type: 'string', maxLength: 100, nullable: true),
+                ])
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function update(UpdateProfileRequest $request): JsonResponse
     {
         $user = $request->user();
@@ -139,6 +188,25 @@ class ProfileController extends BaseApiController
      * Trả về trạng thái sinh viên của user hiện tại.
      * Dùng để kiểm tra quyền truy cập tính năng và phân quyền.
      */
+    #[OA\Get(
+        path: '/v1/users/check-school-student',
+        summary: 'Kiểm tra user hiện tại có phải sinh viên trường (email @caothang.edu.vn) không',
+        security: [['sanctum' => []]],
+        tags: ['User Profile'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'is_school_student', type: 'boolean'),
+                        new OA\Property(property: 'email_domain', type: 'string', example: 'caothang.edu.vn'),
+                    ], type: 'object'),
+                ])
+            ),
+        ]
+    )]
     public function checkSchoolStudent(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -149,6 +217,24 @@ class ProfileController extends BaseApiController
         ], 'Kiểm tra thành công.');
     }
 
+    #[OA\Get(
+        path: '/v1/users/check-username',
+        summary: 'Kiểm tra username đã được sử dụng chưa (loại trừ chính user hiện tại)',
+        security: [['sanctum' => []]],
+        tags: ['User Profile'],
+        parameters: [
+            new OA\Parameter(name: 'username', in: 'query', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'available', type: 'boolean'),
+                ])
+            ),
+        ]
+    )]
     public function checkUsername(Request $request): JsonResponse
     {
         $username = $request->query('username', '');
@@ -165,6 +251,18 @@ class ProfileController extends BaseApiController
      * Public profile — no auth required.
      * Returns 404 with a clear message if username is not found (active).
      */
+    #[OA\Get(
+        path: '/v1/users/profile/{username}',
+        summary: 'Xem hồ sơ công khai của một user theo username (public, không cần đăng nhập)',
+        tags: ['User Profile'],
+        parameters: [
+            new OA\Parameter(name: 'username', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy người dùng', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function showPublic(Request $request, string $username): JsonResponse
     {
         // Tìm theo username trước; nếu không có thì fallback theo email prefix
@@ -187,6 +285,15 @@ class ProfileController extends BaseApiController
         return $this->successResponse(true, $this->formatProfile($user, $request->user('sanctum')), 'Lấy thông tin hồ sơ thành công.');
     }
 
+    #[OA\Get(
+        path: '/v1/users/skills',
+        summary: 'Lấy danh sách kỹ năng (skills) đang active để chọn khi cập nhật hồ sơ',
+        security: [['sanctum' => []]],
+        tags: ['User Profile'],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+        ]
+    )]
     public function skills(): JsonResponse
     {
         $skills = Skill::where('is_active', true)
@@ -269,6 +376,17 @@ class ProfileController extends BaseApiController
      * Permanently delete the authenticated user's own account.
      * Revokes all tokens first, then deletes the user record.
      */
+    #[OA\Delete(
+        path: '/v1/users/account',
+        summary: 'Xoá vĩnh viễn tài khoản của chính user đang đăng nhập',
+        description: 'Thu hồi toàn bộ token, xoá avatar/cover trên storage rồi xoá bản ghi user. Không thể hoàn tác.',
+        security: [['sanctum' => []]],
+        tags: ['User Profile'],
+        responses: [
+            new OA\Response(response: 200, description: 'Xoá thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 500, description: 'Lỗi khi xoá tài khoản', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function deleteAccount(Request $request): JsonResponse
     {
         $user = $request->user();

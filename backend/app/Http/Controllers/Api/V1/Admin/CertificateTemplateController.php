@@ -13,10 +13,28 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
 
 class CertificateTemplateController extends BaseApiController
 {
     public function __construct(private readonly SupabaseStorageService $storage) {}
+
+    #[OA\Get(
+        path: '/v1/certificate-templates',
+        summary: '[Admin] Danh sách mẫu chứng chỉ',
+        description: 'Yêu cầu quyền courses.view.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer', default: 10, maximum: 50)),
+            new OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sort', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'order', in: 'query', schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'])),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công (phân trang)', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+        ]
+    )]
     /**
      * Danh sách mẫu chứng chỉ cho trang quản trị "Trung tâm đào tạo".
      * Hỗ trợ phân trang, tìm kiếm theo tên và sắp xếp theo từng cột.
@@ -51,6 +69,20 @@ class CertificateTemplateController extends BaseApiController
     /**
      * Chi tiết một mẫu — trả full `design` để editor nạp lại canvas.
      */
+    #[OA\Get(
+        path: '/v1/certificate-templates/{certificateTemplate}',
+        summary: '[Admin] Chi tiết một mẫu chứng chỉ (kèm design đầy đủ để nạp lại canvas)',
+        description: 'Yêu cầu quyền courses.view.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'certificateTemplate', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function show(CertificateTemplate $certificateTemplate): JsonResponse
     {
         $certificateTemplate->load('creator:id,full_name,avatar');
@@ -61,6 +93,30 @@ class CertificateTemplateController extends BaseApiController
     /**
      * Tạo mẫu mới từ thiết kế canvas của editor.
      */
+    #[OA\Post(
+        path: '/v1/certificate-templates',
+        summary: '[Admin] Tạo mẫu chứng chỉ mới từ thiết kế canvas của editor',
+        description: 'Yêu cầu quyền courses.manage. Tự động render thumbnail server-side sau khi tạo.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['name', 'design'], properties: [
+                new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                new OA\Property(property: 'design', properties: [
+                    new OA\Property(property: 'canvas', properties: [
+                        new OA\Property(property: 'width', type: 'number'),
+                        new OA\Property(property: 'height', type: 'number'),
+                    ], type: 'object'),
+                    new OA\Property(property: 'elements', type: 'array', items: new OA\Items(type: 'object')),
+                ], type: 'object'),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Tạo thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function store(Request $request): JsonResponse
     {
         $data = $this->validatePayload($request);
@@ -81,6 +137,33 @@ class CertificateTemplateController extends BaseApiController
     /**
      * Cập nhật thiết kế / tên / thumbnail của một mẫu.
      */
+    #[OA\Put(
+        path: '/v1/certificate-templates/{certificateTemplate}',
+        summary: '[Admin] Cập nhật thiết kế / tên của một mẫu chứng chỉ',
+        description: 'Yêu cầu quyền courses.manage. Render lại thumbnail theo thiết kế mới.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'certificateTemplate', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['name', 'design'], properties: [
+                new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                new OA\Property(property: 'design', properties: [
+                    new OA\Property(property: 'canvas', properties: [
+                        new OA\Property(property: 'width', type: 'number'),
+                        new OA\Property(property: 'height', type: 'number'),
+                    ], type: 'object'),
+                    new OA\Property(property: 'elements', type: 'array', items: new OA\Items(type: 'object')),
+                ], type: 'object'),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function update(Request $request, CertificateTemplate $certificateTemplate): JsonResponse
     {
         $data = $this->validatePayload($request);
@@ -99,6 +182,20 @@ class CertificateTemplateController extends BaseApiController
     /**
      * Xoá mẫu. course_certificates.template_id đã nullOnDelete nên cert đã cấp vẫn giữ.
      */
+    #[OA\Delete(
+        path: '/v1/certificate-templates/{certificateTemplate}',
+        summary: '[Admin] Xoá mẫu chứng chỉ',
+        description: 'Yêu cầu quyền courses.manage. Không thể xoá mẫu đang đặt mặc định. Chứng chỉ đã cấp vẫn được giữ (template_id → null).',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'certificateTemplate', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xoá', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Đang là mẫu mặc định, không thể xoá', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function destroy(CertificateTemplate $certificateTemplate): JsonResponse
     {
         abort_if($certificateTemplate->is_default, 422, 'Không thể xoá mẫu đang đặt mặc định. Hãy đặt mẫu khác làm mặc định trước.');
@@ -112,6 +209,19 @@ class CertificateTemplateController extends BaseApiController
     /**
      * Đặt mẫu này làm mặc định (gỡ mặc định các mẫu khác).
      */
+    #[OA\Post(
+        path: '/v1/certificate-templates/{certificateTemplate}/default',
+        summary: '[Admin] Đặt mẫu này làm mặc định (gỡ mặc định các mẫu khác)',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'certificateTemplate', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã đặt làm mặc định', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+        ]
+    )]
     public function setDefault(CertificateTemplate $certificateTemplate): JsonResponse
     {
         DB::transaction(function () use ($certificateTemplate) {
@@ -127,6 +237,19 @@ class CertificateTemplateController extends BaseApiController
     /**
      * Nhân bản mẫu (design + thumbnail), không kế thừa trạng thái mặc định.
      */
+    #[OA\Post(
+        path: '/v1/certificate-templates/{certificateTemplate}/duplicate',
+        summary: '[Admin] Nhân bản mẫu chứng chỉ (design + thumbnail), không kế thừa trạng thái mặc định',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'certificateTemplate', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 201, description: 'Đã nhân bản', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+        ]
+    )]
     public function duplicate(Request $request, CertificateTemplate $certificateTemplate): JsonResponse
     {
         $clone = CertificateTemplate::create([
@@ -143,6 +266,35 @@ class CertificateTemplateController extends BaseApiController
     /**
      * Upload ảnh nền / logo cho editor — trả về URL công khai để gắn vào `design`.
      */
+    #[OA\Post(
+        path: '/v1/certificate-templates/assets',
+        summary: '[Admin] Upload ảnh nền / logo cho editor mẫu chứng chỉ',
+        description: 'Yêu cầu quyền courses.manage. Trả về URL công khai để gắn vào design.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(required: ['image'], properties: [
+                    new OA\Property(property: 'image', type: 'string', format: 'binary', description: 'Ảnh, tối đa 5MB'),
+                ])
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Tải ảnh lên thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'url', type: 'string'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function uploadAsset(Request $request): JsonResponse
     {
         $request->validate([
@@ -157,6 +309,35 @@ class CertificateTemplateController extends BaseApiController
     /**
      * Render thử PDF với dữ liệu mẫu từ thiết kế đang soạn (chưa cần lưu) — cho nút "Xem trước".
      */
+    #[OA\Post(
+        path: '/v1/certificate-templates/preview',
+        summary: '[Admin] Render thử PDF với dữ liệu mẫu từ thiết kế đang soạn (chưa cần lưu)',
+        description: 'Yêu cầu quyền courses.manage. Dùng cho nút "Xem trước" trong editor.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['design'], properties: [
+                new OA\Property(property: 'design', properties: [
+                    new OA\Property(property: 'canvas', type: 'object'),
+                    new OA\Property(property: 'elements', type: 'array', items: new OA\Items(type: 'object')),
+                ], type: 'object'),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'pdf', type: 'string', description: 'Data URI base64 của PDF (data:application/pdf;base64,...)'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function preview(Request $request, CertificateRenderer $renderer): JsonResponse
     {
         $request->validate([

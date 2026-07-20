@@ -7,9 +7,34 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
+use OpenApi\Attributes as OA;
 
 class AuthController extends AuthBaseController
 {
+	#[OA\Get(
+		path: '/v1/auth/verify-token',
+		summary: 'Xác thực token nhận được từ OAuth callback (redirect popup)',
+		tags: ['Auth'],
+		parameters: [
+			new OA\Parameter(name: 'token', in: 'query', required: true, schema: new OA\Schema(type: 'string')),
+		],
+		responses: [
+			new OA\Response(
+				response: 200,
+				description: 'Token hợp lệ, trả về thông tin user',
+				content: new OA\JsonContent(
+					properties: [
+						new OA\Property(property: 'success', type: 'boolean', example: true),
+						new OA\Property(property: 'data', ref: '#/components/schemas/User'),
+						new OA\Property(property: 'token', type: 'string'),
+					]
+				)
+			),
+			new OA\Response(response: 400, description: 'Thiếu token', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+			new OA\Response(response: 401, description: 'Token không hợp lệ', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+			new OA\Response(response: 404, description: 'Không tìm thấy user', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+		]
+	)]
 	/**
 	 * Verify token from OAuth callback (public endpoint)
 	 */
@@ -60,6 +85,37 @@ class AuthController extends AuthBaseController
 		], 200);
 	}
 
+	#[OA\Get(
+		path: '/v1/auth/me',
+		summary: 'Lấy thông tin user đang đăng nhập (kèm roles, permissions)',
+		security: [['sanctum' => []]],
+		tags: ['Auth'],
+		responses: [
+			new OA\Response(
+				response: 200,
+				description: 'Thành công',
+				content: new OA\JsonContent(
+					properties: [
+						new OA\Property(property: 'success', type: 'boolean', example: true),
+						new OA\Property(property: 'data', properties: [
+							new OA\Property(property: 'id', type: 'integer'),
+							new OA\Property(property: 'full_name', type: 'string'),
+							new OA\Property(property: 'email', type: 'string'),
+							new OA\Property(property: 'username', type: 'string'),
+							new OA\Property(property: 'avatar', type: 'string', nullable: true),
+							new OA\Property(property: 'roles', type: 'array', items: new OA\Items(properties: [
+								new OA\Property(property: 'name', type: 'string'),
+								new OA\Property(property: 'label', type: 'string'),
+							])),
+							new OA\Property(property: 'permissions', type: 'array', items: new OA\Items(type: 'string')),
+							new OA\Property(property: 'is_school_student', type: 'boolean'),
+						], type: 'object'),
+					]
+				)
+			),
+			new OA\Response(response: 401, description: 'Chưa đăng nhập', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+		]
+	)]
 	/**
 	 * Get authenticated user info
 	 */
@@ -68,6 +124,16 @@ class AuthController extends AuthBaseController
 		return parent::me($request);
 	}
 
+	#[OA\Post(
+		path: '/v1/auth/logout',
+		summary: 'Đăng xuất — thu hồi access token hiện tại',
+		security: [['sanctum' => []]],
+		tags: ['Auth'],
+		responses: [
+			new OA\Response(response: 200, description: 'Đăng xuất thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+			new OA\Response(response: 401, description: 'Chưa đăng nhập', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+		]
+	)]
 	/**
 	 * Logout user and revoke token
 	 */
@@ -76,6 +142,16 @@ class AuthController extends AuthBaseController
 		return parent::logout($request);
 	}
 
+	#[OA\Post(
+		path: '/v1/auth/logout-all',
+		summary: 'Đăng xuất khỏi tất cả thiết bị — thu hồi toàn bộ token',
+		security: [['sanctum' => []]],
+		tags: ['Auth'],
+		responses: [
+			new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+			new OA\Response(response: 401, description: 'Chưa đăng nhập', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+		]
+	)]
 	/**
 	 * Logout user from all devices
 	 */
@@ -84,6 +160,27 @@ class AuthController extends AuthBaseController
 		return parent::logoutAll($request);
 	}
 
+	#[OA\Post(
+		path: '/v1/auth/change-password',
+		summary: 'Đổi mật khẩu (chỉ áp dụng cho tài khoản có mật khẩu, không áp dụng cho tài khoản OAuth)',
+		security: [['sanctum' => []]],
+		tags: ['Auth'],
+		requestBody: new OA\RequestBody(
+			required: true,
+			content: new OA\JsonContent(
+				required: ['current_password', 'new_password', 'new_password_confirmation'],
+				properties: [
+					new OA\Property(property: 'current_password', type: 'string', format: 'password'),
+					new OA\Property(property: 'new_password', type: 'string', format: 'password', minLength: 8),
+					new OA\Property(property: 'new_password_confirmation', type: 'string', format: 'password'),
+				]
+			)
+		),
+		responses: [
+			new OA\Response(response: 200, description: 'Đổi mật khẩu thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+			new OA\Response(response: 422, description: 'Mật khẩu hiện tại sai / tài khoản OAuth / lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+		]
+	)]
 	/**
 	 * Change password for the authenticated user.
 	 * OAuth-only accounts (no password set) are rejected.

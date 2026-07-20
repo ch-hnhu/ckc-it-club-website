@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use OpenApi\Attributes as OA;
 
 /**
  * Quản lý danh mục khoá học (Trung tâm đào tạo).
@@ -19,6 +20,22 @@ class CourseCategoryController extends BaseApiController
 {
     private const MODEL_TYPE = TagModelType::COURSE->value;
 
+    #[OA\Get(
+        path: '/v1/course-categories',
+        summary: '[Admin] Danh sách danh mục khoá học (tag thuộc model_type=course)',
+        description: 'Yêu cầu quyền courses.view.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer', default: 10)),
+            new OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sort', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'order', in: 'query', schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'])),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công (phân trang)', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+        ]
+    )]
     public function index(Request $request): JsonResponse
     {
         $allowedSorts = ['id', 'name', 'slug', 'courses_count', 'created_at'];
@@ -42,6 +59,25 @@ class CourseCategoryController extends BaseApiController
         return $this->paginatedResponse($categories, ApiMessage::RETRIEVED);
     }
 
+    #[OA\Post(
+        path: '/v1/course-categories',
+        summary: '[Admin] Tạo danh mục khoá học mới',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['name'], properties: [
+                new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                new OA\Property(property: 'slug', type: 'string', maxLength: 255, nullable: true),
+                new OA\Property(property: 'description', type: 'string', nullable: true),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Tạo thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Tên/slug đã tồn tại', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function store(Request $request): JsonResponse
     {
         $request->validate([
@@ -68,6 +104,29 @@ class CourseCategoryController extends BaseApiController
         return $this->createdResponse($this->transform($tag), 'Tạo danh mục thành công.');
     }
 
+    #[OA\Put(
+        path: '/v1/course-categories/{tag}',
+        summary: '[Admin] Cập nhật danh mục khoá học',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'tag', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['name'], properties: [
+                new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                new OA\Property(property: 'slug', type: 'string', maxLength: 255, nullable: true),
+                new OA\Property(property: 'description', type: 'string', nullable: true),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Không phải danh mục khoá học', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Tên/slug đã tồn tại', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function update(Request $request, Tag $tag): JsonResponse
     {
         abort_unless($tag->model_type === self::MODEL_TYPE, 404);
@@ -94,6 +153,20 @@ class CourseCategoryController extends BaseApiController
         return $this->successResponse(true, $this->transform($tag), 'Cập nhật danh mục thành công.');
     }
 
+    #[OA\Delete(
+        path: '/v1/course-categories/{tag}',
+        summary: '[Admin] Xoá danh mục khoá học',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'tag', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Xóa thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Không phải danh mục khoá học', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function destroy(Tag $tag): JsonResponse
     {
         abort_unless($tag->model_type === self::MODEL_TYPE, 404);

@@ -18,6 +18,7 @@ use App\Traits\HasSequentialLessonLock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use OpenApi\Attributes as OA;
 
 class QuizController extends BaseApiController
 {
@@ -28,6 +29,20 @@ class QuizController extends BaseApiController
         parent::__construct();
     }
 
+    #[OA\Get(
+        path: '/v1/learning/courses/{course}/lessons/{lessonSlug}/quiz',
+        summary: 'Lấy quiz của buổi học để làm bài (kèm đáp án đúng, chấm chính thức vẫn ở server khi nộp)',
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'lessonSlug', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không đủ điều kiện học / buổi học bị khoá hoặc chưa mở', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy buổi học hoặc chưa có quiz', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Lấy quiz để học viên làm bài. Trả về câu hỏi + options (kèm đáp án đúng
      * để client cho phản hồi tức thì kiểu Duolingo). Điểm vẫn do server chấm khi nộp.
@@ -91,6 +106,55 @@ class QuizController extends BaseApiController
         return $this->successResponse(true, $data, 'Lấy quiz thành công.');
     }
 
+    #[OA\Post(
+        path: '/v1/learning/courses/{course}/lessons/{lessonSlug}/quiz/submit',
+        summary: 'Nộp bài quiz — server chấm lại toàn bộ, ghi nhận lượt làm và cập nhật tiến độ',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (User)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'Slug khoá học', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'lessonSlug', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['answers'],
+                properties: [
+                    new OA\Property(
+                        property: 'answers',
+                        type: 'array',
+                        items: new OA\Items(properties: [
+                            new OA\Property(property: 'question_id', type: 'integer'),
+                            new OA\Property(property: 'answer_data', type: 'array', items: new OA\Items()),
+                        ])
+                    ),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Đã chấm bài (dù đạt hay không đều trả 200)',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'score', type: 'number', format: 'float'),
+                        new OA\Property(property: 'is_passed', type: 'boolean'),
+                        new OA\Property(property: 'pass_threshold', type: 'integer'),
+                        new OA\Property(property: 'correct_count', type: 'integer'),
+                        new OA\Property(property: 'total', type: 'integer'),
+                        new OA\Property(property: 'results', type: 'array', items: new OA\Items(properties: [
+                            new OA\Property(property: 'question_id', type: 'integer'),
+                            new OA\Property(property: 'is_correct', type: 'boolean'),
+                        ])),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 403, description: 'Không đủ điều kiện học / buổi học bị khoá hoặc chưa mở', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy buổi học hoặc chưa có quiz', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Nộp bài quiz: server chấm lại toàn bộ, ghi nhận lượt làm + đáp án,
      * cập nhật tiến độ phần quiz của buổi học, trả về kết quả.

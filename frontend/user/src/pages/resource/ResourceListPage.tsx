@@ -192,53 +192,53 @@ const ResourceListPage: React.FC = () => {
 			</div>
 
 			{canBrowse && !forbidden && (
-			<div className='border-b-2 border-black bg-white py-4'>
-				<div className='neo-container flex flex-col gap-3 px-6 xl:flex-row xl:items-center'>
-					<div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
-						<Link
-							to='/tai-nguyen/gui'
-							className='inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-							<PlusSquare className='h-4 w-4' strokeWidth={3} />
-							Đóng góp
-						</Link>
+				<div className='border-b-2 border-black bg-white py-4'>
+					<div className='neo-container flex flex-col gap-3 px-6 xl:flex-row xl:items-center'>
+						<div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
+							<Link
+								to='/tai-nguyen/gui'
+								className='inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+								<PlusSquare className='h-4 w-4' strokeWidth={3} />
+								Đóng góp
+							</Link>
 
-						<div className='group/search relative shrink-0 sm:w-72'>
-							<Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400' />
-							<input
-								type='text'
-								value={searchInput}
-								onChange={(e) => setSearchInput(e.target.value)}
-								placeholder='Tìm tài nguyên...'
-								className='w-full rounded-xl border-2 border-black bg-white py-2 pl-10 pr-3 text-sm font-medium text-black outline-none focus:shadow-[0_0_0_3px_#A3E635]'
-							/>
+							<div className='group/search relative shrink-0 sm:w-72'>
+								<Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400' />
+								<input
+									type='text'
+									value={searchInput}
+									onChange={(e) => setSearchInput(e.target.value)}
+									placeholder='Tìm tài nguyên...'
+									className='w-full rounded-xl border-2 border-black bg-white py-2 pl-10 pr-3 text-sm font-medium text-black outline-none focus:shadow-[0_0_0_3px_#A3E635]'
+								/>
+							</div>
+						</div>
+
+						<div className='flex flex-wrap gap-2'>
+							{(
+								[
+									"all",
+									"google_drive",
+									"youtube",
+									"github",
+									"document",
+									"other",
+								] as const
+							).map((type) => (
+								<button
+									key={type}
+									onClick={() => setLinkType(type)}
+									className={`inline-flex h-9 shrink-0 items-center justify-center rounded-full border-2 border-black px-4 text-sm font-bold transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] ${
+										linkType === type
+											? "bg-[var(--color-primary)] text-black"
+											: "bg-white text-gray-700 hover:bg-gray-50"
+									}`}>
+									{type === "all" ? "Tất cả" : LINK_TYPE_LABELS[type]}
+								</button>
+							))}
 						</div>
 					</div>
-
-					<div className='flex flex-wrap gap-2'>
-						{(
-							[
-								"all",
-								"google_drive",
-								"youtube",
-								"github",
-								"document",
-								"other",
-							] as const
-						).map((type) => (
-							<button
-								key={type}
-								onClick={() => setLinkType(type)}
-								className={`inline-flex h-9 shrink-0 items-center justify-center rounded-full border-2 border-black px-4 text-sm font-bold transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] ${
-									linkType === type
-										? "bg-[var(--color-primary)] text-black"
-										: "bg-white text-gray-700 hover:bg-gray-50"
-								}`}>
-								{type === "all" ? "Tất cả" : LINK_TYPE_LABELS[type]}
-							</button>
-						))}
-					</div>
 				</div>
-			</div>
 			)}
 
 			{!isLoggedIn ? (

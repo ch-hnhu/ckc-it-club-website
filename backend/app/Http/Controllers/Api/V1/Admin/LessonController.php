@@ -18,9 +18,25 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
 
 class LessonController extends BaseApiController
 {
+    #[OA\Get(
+        path: '/v1/courses/{course}/lessons/{lesson}',
+        summary: '[Admin] Chi tiết một buổi học (đầy đủ field, để prefill form sửa)',
+        description: 'Yêu cầu quyền courses.view.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Chi tiết một buổi học (đầy đủ field) để prefill form sửa.
      */
@@ -34,6 +50,38 @@ class LessonController extends BaseApiController
     /**
      * Tạo buổi học mới trong khoá. order = max(order)+1.
      */
+    #[OA\Post(
+        path: '/v1/courses/{course}/lessons',
+        summary: '[Admin] Tạo buổi học mới trong khoá (order tự động = max(order)+1)',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['title'], properties: [
+                new OA\Property(property: 'title', type: 'string', maxLength: 255),
+                new OA\Property(property: 'description', type: 'string', maxLength: 5000, nullable: true),
+                new OA\Property(property: 'status', type: 'string', enum: ['draft', 'published'], nullable: true),
+                new OA\Property(property: 'session_start', type: 'string', format: 'date-time', nullable: true),
+                new OA\Property(property: 'session_end', type: 'string', format: 'date-time', nullable: true),
+                new OA\Property(property: 'resource_url', type: 'string', format: 'uri', nullable: true),
+                new OA\Property(property: 'video_url', type: 'string', format: 'uri', nullable: true),
+                new OA\Property(property: 'video_duration', type: 'integer', nullable: true, description: 'Giây'),
+                new OA\Property(property: 'live_url', type: 'string', format: 'uri', nullable: true),
+                new OA\Property(property: 'live_duration', type: 'integer', nullable: true, description: 'Giây'),
+                new OA\Property(property: 'document', type: 'string', nullable: true, description: 'Nội dung markdown'),
+                new OA\Property(property: 'assignment_url', type: 'string', format: 'uri', nullable: true),
+                new OA\Property(property: 'assignment_deadline', type: 'string', format: 'date-time', nullable: true),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Tạo thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function store(Request $request, Course $course): JsonResponse
     {
         $this->nullifyEmpty($request);
@@ -54,6 +102,39 @@ class LessonController extends BaseApiController
     /**
      * Cập nhật buổi học.
      */
+    #[OA\Put(
+        path: '/v1/courses/{course}/lessons/{lesson}',
+        summary: '[Admin] Cập nhật buổi học',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'title', type: 'string', maxLength: 255, nullable: true),
+                new OA\Property(property: 'description', type: 'string', maxLength: 5000, nullable: true),
+                new OA\Property(property: 'status', type: 'string', enum: ['draft', 'published'], nullable: true),
+                new OA\Property(property: 'session_start', type: 'string', format: 'date-time', nullable: true),
+                new OA\Property(property: 'session_end', type: 'string', format: 'date-time', nullable: true),
+                new OA\Property(property: 'resource_url', type: 'string', format: 'uri', nullable: true),
+                new OA\Property(property: 'video_url', type: 'string', format: 'uri', nullable: true),
+                new OA\Property(property: 'video_duration', type: 'integer', nullable: true),
+                new OA\Property(property: 'live_url', type: 'string', format: 'uri', nullable: true),
+                new OA\Property(property: 'live_duration', type: 'integer', nullable: true),
+                new OA\Property(property: 'document', type: 'string', nullable: true),
+                new OA\Property(property: 'assignment_url', type: 'string', format: 'uri', nullable: true),
+                new OA\Property(property: 'assignment_deadline', type: 'string', format: 'date-time', nullable: true),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function update(Request $request, Course $course, Lesson $lesson): JsonResponse
     {
         $this->assertBelongsTo($course, $lesson);
@@ -68,6 +149,21 @@ class LessonController extends BaseApiController
     /**
      * Xoá mềm buổi học.
      */
+    #[OA\Delete(
+        path: '/v1/courses/{course}/lessons/{lesson}',
+        summary: '[Admin] Xoá mềm buổi học',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xóa', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function destroy(Request $request, Course $course, Lesson $lesson): JsonResponse
     {
         $this->assertBelongsTo($course, $lesson);
@@ -83,6 +179,38 @@ class LessonController extends BaseApiController
      * Điểm danh buổi học bằng mã QR (token trên vé của học viên).
      * Tái dùng cho cả pattern Events: quét QR → tạo lesson_attendances.
      */
+    #[OA\Post(
+        path: '/v1/courses/{course}/lessons/{lesson}/check-in',
+        summary: '[Admin] Điểm danh buổi học bằng mã QR (token trên vé của học viên)',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['qr_token'], properties: [
+                new OA\Property(property: 'qr_token', type: 'string'),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Điểm danh thành công (hoặc đã điểm danh trước đó)',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'already', type: 'boolean'),
+                        new OA\Property(property: 'student', ref: '#/components/schemas/User'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Mã QR không hợp lệ cho buổi học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function checkIn(Request $request, Course $course, Lesson $lesson): JsonResponse
     {
         $this->assertBelongsTo($course, $lesson);
@@ -134,6 +262,30 @@ class LessonController extends BaseApiController
      * trạng thái có mặt/vắng trực tiếp từ ma trận điểm danh. present=true → tạo bản ghi
      * điểm danh thủ công; present=false → gỡ bỏ. Tính lại tiến độ hoàn thành khoá sau đó.
      */
+    #[OA\Post(
+        path: '/v1/courses/{course}/lessons/{lesson}/attendance',
+        summary: '[Admin] Điểm danh thủ công một học viên (toggle có mặt/vắng)',
+        description: 'Yêu cầu quyền courses.manage. Dùng khi máy quét QR lỗi. Chỉ áp dụng cho học viên track offline.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['user_id', 'present'], properties: [
+                new OA\Property(property: 'user_id', type: 'integer'),
+                new OA\Property(property: 'present', type: 'boolean'),
+                new OA\Property(property: 'note', type: 'string', maxLength: 500, nullable: true),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Không phải buổi offline đã xếp lịch, hoặc học viên không thuộc lớp offline', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function toggleAttendance(Request $request, Course $course, Lesson $lesson): JsonResponse
     {
         $this->assertBelongsTo($course, $lesson);
@@ -171,6 +323,21 @@ class LessonController extends BaseApiController
      * Danh sách học viên track offline đã ghi danh + trạng thái chấm bài tập (đạt/chưa chấm).
      * Chấm bài chỉ áp dụng cho track offline (online tính tiến độ theo % xem video).
      */
+    #[OA\Get(
+        path: '/v1/courses/{course}/lessons/{lesson}/grades',
+        summary: '[Admin] Danh sách học viên offline + trạng thái chấm bài tập của buổi học',
+        description: 'Yêu cầu quyền courses.manage. Chấm bài chỉ áp dụng cho track offline.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function grades(Course $course, Lesson $lesson): JsonResponse
     {
         $this->assertBelongsTo($course, $lesson);
@@ -205,6 +372,35 @@ class LessonController extends BaseApiController
      * Lưu kết quả chấm bài tập (đạt/không đạt) cho nhiều học viên track offline.
      * passed = null → xoá bản ghi (chưa chấm); passed = true/false → ghi is_completed trực tiếp.
      */
+    #[OA\Put(
+        path: '/v1/courses/{course}/lessons/{lesson}/grades',
+        summary: '[Admin] Lưu kết quả chấm bài tập (đạt/không đạt/chưa chấm) cho nhiều học viên offline',
+        description: 'Yêu cầu quyền courses.manage. passed=null xoá bản ghi (chưa chấm).',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['grades'], properties: [
+                new OA\Property(
+                    property: 'grades',
+                    type: 'array',
+                    items: new OA\Items(properties: [
+                        new OA\Property(property: 'user_id', type: 'integer'),
+                        new OA\Property(property: 'passed', type: 'boolean', nullable: true),
+                    ])
+                ),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công (trả về danh sách grades mới nhất, giống GET grades)', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate / học viên không thuộc track offline', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function saveGrades(Request $request, Course $course, Lesson $lesson): JsonResponse
     {
         $this->assertBelongsTo($course, $lesson);
@@ -288,6 +484,30 @@ class LessonController extends BaseApiController
      * Lấy thời lượng video YouTube từ URL qua YouTube Data API v3 (contentDetails.duration).
      * Trả về số giây + nhãn "X tiếng Y phút" để admin form tự điền (không nhập tay).
      */
+    #[OA\Get(
+        path: '/v1/lessons/youtube-duration',
+        summary: '[Admin] Lấy thời lượng video YouTube từ URL (qua YouTube Data API v3)',
+        description: 'Yêu cầu quyền courses.manage. Dùng để form admin tự điền thời lượng, không cần nhập tay.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'url', in: 'query', required: true, schema: new OA\Schema(type: 'string', maxLength: 2048)),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'seconds', type: 'integer'),
+                        new OA\Property(property: 'label', type: 'string', example: '1 tiếng 20 phút'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 422, description: 'Link không hợp lệ / chưa cấu hình API key / lỗi gọi YouTube API', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function youtubeDuration(Request $request): JsonResponse
     {
         $data = $request->validate([

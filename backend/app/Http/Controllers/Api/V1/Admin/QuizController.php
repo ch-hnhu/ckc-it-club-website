@@ -14,9 +14,25 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use OpenApi\Attributes as OA;
 
 class QuizController extends BaseApiController
 {
+    #[OA\Get(
+        path: '/v1/courses/{course}/lessons/{lesson}/quiz',
+        summary: '[Admin] Chi tiết quiz của một buổi học (để prefill trình tạo quiz)',
+        description: 'Yêu cầu quyền quizzes.manage. Trả về data=null nếu buổi học chưa có quiz.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Chi tiết quiz của một buổi học (để prefill trình tạo quiz).
      * Trả về null trong `data` khi buổi học chưa có quiz.
@@ -39,6 +55,54 @@ class QuizController extends BaseApiController
      * Trình tạo quiz gửi nguyên trạng danh sách câu hỏi nên ta thay thế trọn vẹn
      * (xoá câu hỏi cũ, options tự cascade) trong một transaction.
      */
+    #[OA\Put(
+        path: '/v1/courses/{course}/lessons/{lesson}/quiz',
+        summary: '[Admin] Tạo mới hoặc thay thế toàn bộ nội dung quiz của buổi học',
+        description: 'Yêu cầu quyền quizzes.manage. Thay thế trọn vẹn: xoá toàn bộ câu hỏi cũ (options cascade) rồi tạo lại từ payload gửi lên.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['questions'],
+                properties: [
+                    new OA\Property(property: 'is_published', type: 'boolean'),
+                    new OA\Property(
+                        property: 'questions',
+                        type: 'array',
+                        minItems: 1,
+                        items: new OA\Items(properties: [
+                            new OA\Property(property: 'type', type: 'string', description: 'Khoá loại câu hỏi (xem QuestionTypeKey)'),
+                            new OA\Property(property: 'ui_type', type: 'string', maxLength: 50, nullable: true),
+                            new OA\Property(property: 'content', type: 'string', maxLength: 5000, nullable: true),
+                            new OA\Property(property: 'explanation', type: 'string', maxLength: 5000, nullable: true),
+                            new OA\Property(property: 'image', type: 'string', maxLength: 2048, nullable: true),
+                            new OA\Property(property: 'metadata', type: 'object', nullable: true),
+                            new OA\Property(
+                                property: 'options',
+                                type: 'array',
+                                items: new OA\Items(properties: [
+                                    new OA\Property(property: 'content', type: 'string', maxLength: 2000, nullable: true),
+                                    new OA\Property(property: 'image', type: 'string', maxLength: 2048, nullable: true),
+                                    new OA\Property(property: 'is_correct', type: 'boolean'),
+                                    new OA\Property(property: 'metadata', type: 'object', nullable: true),
+                                ])
+                            ),
+                        ])
+                    ),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đã lưu quiz cho buổi học', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function upsert(Request $request, Course $course, Lesson $lesson): JsonResponse
     {
         $this->assertBelongsTo($course, $lesson);
@@ -89,6 +153,21 @@ class QuizController extends BaseApiController
     /**
      * Xoá toàn bộ quiz của buổi học (câu hỏi và options tự cascade).
      */
+    #[OA\Delete(
+        path: '/v1/courses/{course}/lessons/{lesson}/quiz',
+        summary: '[Admin] Xoá toàn bộ quiz của buổi học',
+        description: 'Yêu cầu quyền quizzes.manage. Câu hỏi và options tự cascade xoá.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lesson', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xoá quiz', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Buổi học không thuộc khoá học này, hoặc chưa có quiz', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function destroy(Course $course, Lesson $lesson): JsonResponse
     {
         $this->assertBelongsTo($course, $lesson);
