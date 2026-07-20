@@ -32,7 +32,7 @@ import { Link, useOutletContext } from "react-router-dom";
 import type { CommunityLayoutContext } from "./CommunityLayout";
 import { chatService } from "@/services/chat.service";
 import type { ChatMessage, ChatRoom } from "@/types/chat.types";
-import { buildAvatar, formatRelativeTime, getHandle } from "@/lib/utils";
+import { buildAvatar, buildProfileUrl, formatRelativeTime, getHandle } from "@/lib/utils";
 import echo from "@/config/echo";
 import { AvatarImage } from "@/components/ui/AvatarImage";
 
@@ -55,9 +55,14 @@ const getRoomColor = (i: number) => ROOM_COLORS[i % ROOM_COLORS.length];
 const isGifUrl = (s: string) => GIF_PATTERN.test(s.trim());
 
 // ─── RoomAvatar ───────────────────────────────────────────────────────────────
-// Ảnh kênh; nếu không có ảnh hoặc ảnh lỗi tải thì fallback về icon # (tránh
-// hiển thị biểu tượng "ảnh vỡ" của trình duyệt).
+// Ảnh kênh; nếu không có ảnh hoặc ảnh lỗi tải thì fallback về chữ cái đầu của
+// tên phòng trên nền màu (tránh hiển thị biểu tượng "ảnh vỡ" của trình duyệt).
 // variant "sm": dùng ở sidebar & header; "lg": dùng ở màn hình chào mừng.
+const getRoomInitial = (name: string) => {
+	const ch = name.trim().charAt(0);
+	return ch ? ch.toUpperCase() : "#";
+};
+
 const RoomAvatar: React.FC<{
 	image: string | null;
 	name: string;
@@ -82,7 +87,10 @@ const RoomAvatar: React.FC<{
 	return (
 		<div
 			className={`flex ${box} shrink-0 items-center justify-center ${getRoomColor(index)}`}>
-			<Hash className={variant === "lg" ? "h-7 w-7 text-black" : "h-3.5 w-3.5 text-black"} />
+			<span
+				className={`font-heading font-extrabold leading-none text-black ${variant === "lg" ? "text-2xl" : "text-sm"}`}>
+				{getRoomInitial(name)}
+			</span>
 		</div>
 	);
 };
@@ -94,6 +102,7 @@ interface MessageGroup {
 	senderName: string;
 	senderAvatar: string;
 	senderHandle: string;
+	senderProfileUrl: string | null;
 	firstTime: string;
 	lastTime: string;
 	messages: ChatMessage[];
@@ -115,6 +124,7 @@ const groupMessages = (messages: ChatMessage[]): MessageGroup[] => {
 				senderName: sender?.full_name ?? "Thành viên",
 				senderAvatar: buildAvatar(sender?.full_name, sender?.avatar),
 				senderHandle: sender ? getHandle(sender.username, sender.email) : "",
+				senderProfileUrl: sender ? buildProfileUrl(sender.username, sender.email) : null,
 				firstTime: msg.created_at,
 				lastTime: msg.created_at,
 				messages: [msg],
@@ -265,13 +275,27 @@ const MessageGroupItem: React.FC<{
 }> = ({ group, isOwn, onReply }) => (
 	<div
 		className={`flex items-end gap-2 px-4 py-1.5 hover:bg-black/[0.015] ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
-		{/* Avatar — cố định ở bottom của nhóm */}
-		<AvatarImage
-			fallbackName={group.senderName}
-			src={group.senderAvatar}
-			alt={group.senderName}
-			className='h-8 w-8 shrink-0 self-end rounded-full border-2 border-black object-cover'
-		/>
+		{/* Avatar — cố định ở bottom của nhóm; bấm để xem hồ sơ người dùng */}
+		{group.senderProfileUrl ? (
+			<Link
+				to={group.senderProfileUrl}
+				title={`Xem trang cá nhân của ${group.senderName}`}
+				className='shrink-0 self-end rounded-full transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]'>
+				<AvatarImage
+					fallbackName={group.senderName}
+					src={group.senderAvatar}
+					alt={group.senderName}
+					className='h-8 w-8 rounded-full border-2 border-black object-cover'
+				/>
+			</Link>
+		) : (
+			<AvatarImage
+				fallbackName={group.senderName}
+				src={group.senderAvatar}
+				alt={group.senderName}
+				className='h-8 w-8 shrink-0 self-end rounded-full border-2 border-black object-cover'
+			/>
+		)}
 
 		{/* Bubbles column — chiếm hết phần còn lại, tối đa 72% */}
 		<div

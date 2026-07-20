@@ -481,25 +481,29 @@ const ContactPage: React.FC = () => {
 							{FAQS.map((faq, idx) => (
 								<div
 									key={faq.q}
-									className='neo-card neo-card-static overflow-hidden'
-									style={{ background: "var(--color-surface)" }}>
+									className='overflow-hidden rounded-3xl border-2 border-black bg-white shadow-[4px_4px_0_rgba(0,0,0,0.9)]'>
 									<button
 										onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-										className='flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-black/5'>
-										<span className='pr-4 font-bold text-black'>{faq.q}</span>
-										<span
-											className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border-2 border-black bg-white text-black transition-transform duration-300 ${
-												openFaq === idx ? "rotate-180" : ""
-											}`}>
-											<ChevronDown className='h-5 w-5' strokeWidth={3} />
+										className='flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-black/[0.03] md:px-8 md:py-6'>
+										<span className='text-lg font-bold text-black md:text-xl'>
+											{faq.q}
 										</span>
+										<ChevronDown
+											className={`h-6 w-6 shrink-0 text-black transition-transform duration-300 ${
+												openFaq === idx ? "rotate-180" : ""
+											}`}
+											strokeWidth={2.5}
+										/>
 									</button>
 									<div
-										className={`overflow-hidden transition-all duration-300 ${
-											openFaq === idx ? "max-h-48" : "max-h-0"
+										className={`grid transition-all duration-300 ${
+											openFaq === idx
+												? "grid-rows-[1fr] opacity-100"
+												: "grid-rows-[0fr] opacity-0"
 										}`}>
-										<div className='border-t-2 border-black/10 px-5 pt-4 pb-5'>
-											<p className='text-sm leading-relaxed text-gray-600'>
+										<div className='overflow-hidden'>
+											<div className='mx-6 border-t border-gray-200 md:mx-8' />
+											<p className='px-6 pb-6 pt-4 text-base leading-relaxed text-gray-600 md:px-8'>
 												{faq.a}
 											</p>
 										</div>
