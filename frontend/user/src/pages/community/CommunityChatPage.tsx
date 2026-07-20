@@ -191,13 +191,13 @@ const MessageBubble: React.FC<{
 	onReply: (msg: ChatMessage) => void;
 }> = ({ msg, isOwn, isFirst, isLast, onReply }) => (
 	<div
-		className={`group/bbl relative my-[2px] flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
+		className={`group/bbl relative my-[2px] flex w-full items-center gap-1.5 ${isOwn ? "justify-end" : "justify-start"}`}>
 		{/* Reply quick-action */}
 		<button
 			onClick={() => onReply(msg)}
-			className={`absolute top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover/bbl:opacity-100 transition-opacity
+			className={`z-10 shrink-0 opacity-0 group-hover/bbl:opacity-100 transition-opacity
 				flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm hover:border-black
-				${isOwn ? "-left-7" : "-right-7"}`}
+				${isOwn ? "" : "order-last"}`}
 			title='Trả lời'>
 			<Reply className='h-3 w-3 text-gray-500' />
 		</button>

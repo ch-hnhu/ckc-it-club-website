@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\V1\User\ChannelController as UserChannelController;
 use App\Http\Controllers\Api\V1\User\ChatController as UserChatController;
 use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplicationController;
 use App\Http\Controllers\Api\V1\User\AboutPageController;
+use App\Http\Controllers\Api\V1\User\HomePageController;
 use App\Http\Controllers\Api\V1\User\ClubBoardController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\CourseController as UserCourseController;
@@ -105,6 +106,9 @@ Route::prefix('v1')->group(function () {
 
     // Nội dung trang "Về chúng tôi" (About) — dạng config (public, read-only)
     Route::get('/about-page', [AboutPageController::class, 'show']);
+
+    // Nội dung tĩnh của trang chủ (Landing) — dạng config (public, read-only)
+    Route::get('/home-page', [HomePageController::class, 'show']);
 
     Route::get('/users/profile/{username}', [ProfileController::class, 'showPublic']);
     Route::get('/users/{username}/followers', [FollowController::class, 'followers']);
@@ -393,6 +397,9 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:club_info.manage')->group(function () {
             Route::put('about-page', [AboutPageController::class, 'update']);
             Route::post('about-page/upload-image', [AboutPageController::class, 'uploadImage']);
+
+            // Trang chủ (Landing) — chỉnh sửa nội dung tĩnh dạng config.
+            Route::put('home-page', [HomePageController::class, 'update']);
         });
 
         // contacts
@@ -645,6 +652,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('events/{event}/status', [AdminEventController::class, 'updateStatus']);
             Route::post('events/{event}/check-in', [AdminEventController::class, 'checkIn']);
             Route::post('events/{event}/remind-members', [AdminEventController::class, 'remindUnregisteredMembers']);
+            Route::patch('events/{event}/feedbacks/{feedback}/visibility', [AdminEventController::class, 'updateFeedbackVisibility']);
             Route::delete('events/{event}/feedbacks/{feedback}', [AdminEventController::class, 'destroyFeedback']);
             Route::post('events/{event}/gallery', [AdminEventController::class, 'storeGalleryItem']);
             Route::patch('events/{event}/gallery/reorder', [AdminEventController::class, 'reorderGallery']);

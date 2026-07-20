@@ -15,6 +15,7 @@ import {
 	ClipboardCheck,
 	Edit,
 	Eye,
+	EyeOff,
 	GripVertical,
 	ImageIcon,
 	Loader2,
@@ -255,6 +256,7 @@ function FeedbackPanel({ eventId, canManage }: { eventId: number; canManage: boo
 	const [ratingFilter, setRatingFilter] = useState("all");
 	const [deleteTarget, setDeleteTarget] = useState<EventFeedbackItem | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [togglingId, setTogglingId] = useState<number | null>(null);
 
 	const fetchFeedbacks = useCallback(() => {
 		setLoading(true);
@@ -283,6 +285,21 @@ function FeedbackPanel({ eventId, canManage }: { eventId: number; canManage: boo
 		});
 	}, [data, search, ratingFilter]);
 
+	const handleToggleVisibility = async (item: EventFeedbackItem) => {
+		setTogglingId(item.id);
+		try {
+			await eventService.setFeedbackVisibility(eventId, item.id, !item.is_hidden);
+			toast.success(item.is_hidden ? "Đã hiển thị lại đánh giá." : "Đã ẩn đánh giá.", {
+				position: "top-right",
+			});
+			fetchFeedbacks();
+		} catch {
+			toast.error("Không thể cập nhật trạng thái đánh giá.", { position: "top-right" });
+		} finally {
+			setTogglingId(null);
+		}
+	};
+
 	const handleDelete = async () => {
 		if (!deleteTarget) return;
 		setIsDeleting(true);
@@ -307,7 +324,9 @@ function FeedbackPanel({ eventId, canManage }: { eventId: number; canManage: boo
 		);
 	}
 
-	if (!data || data.stats.total === 0) {
+	// Dùng số bản ghi thực (kể cả đã ẩn) để không giấu mất đánh giá bị kiểm duyệt,
+	// vì stats.total chỉ đếm đánh giá đang hiển thị.
+	if (!data || data.items.length === 0) {
 		return (
 			<div className='flex h-40 flex-col items-center justify-center gap-2 rounded-md border text-center'>
 				<Star className='h-8 w-8 text-muted-foreground/40' />
@@ -382,7 +401,12 @@ function FeedbackPanel({ eventId, canManage }: { eventId: number; canManage: boo
 			{/* List */}
 			<div className='flex flex-col gap-3'>
 				{filteredItems.map((item) => (
-					<div key={item.id} className='flex gap-3 rounded-lg border p-4'>
+					<div
+						key={item.id}
+						className={cn(
+							"flex gap-3 rounded-lg border p-4",
+							item.is_hidden && "border-rose-500/30 bg-rose-500/5",
+						)}>
 						<Avatar className='h-9 w-9'>
 							<AvatarImage src={item.user?.avatar ?? undefined} />
 							<AvatarFallback className='text-xs'>
@@ -394,17 +418,40 @@ function FeedbackPanel({ eventId, canManage }: { eventId: number; canManage: boo
 								<div className='flex items-center gap-2'>
 									<span className='text-sm font-medium'>{item.user?.full_name ?? "Ẩn danh"}</span>
 									<StarRow rating={item.rating} />
+									{item.is_hidden && (
+										<Badge
+											variant='outline'
+											className='border-rose-500/40 text-rose-600 dark:text-rose-400'>
+											<EyeOff className='mr-1 h-3 w-3' />
+											Đã ẩn
+										</Badge>
+									)}
 								</div>
 								<div className='flex items-center gap-2'>
 									<span className='text-xs text-muted-foreground'>{formatDate(item.created_at)}</span>
 									{canManage && (
-										<button
-											type='button'
-											onClick={() => setDeleteTarget(item)}
-											aria-label='Xóa đánh giá'
-											className='rounded p-1 text-muted-foreground transition hover:bg-rose-500/10 hover:text-rose-600'>
-											<Trash2 className='h-4 w-4' />
-										</button>
+										<>
+											<button
+												type='button'
+												disabled={togglingId === item.id}
+												onClick={() => void handleToggleVisibility(item)}
+												aria-label={item.is_hidden ? "Hiển thị lại đánh giá" : "Ẩn đánh giá"}
+												title={item.is_hidden ? "Hiển thị lại đánh giá" : "Ẩn đánh giá"}
+												className='rounded p-1 text-muted-foreground transition hover:bg-amber-500/10 hover:text-amber-600 disabled:opacity-50'>
+												{item.is_hidden ? (
+													<Eye className='h-4 w-4' />
+												) : (
+													<EyeOff className='h-4 w-4' />
+												)}
+											</button>
+											<button
+												type='button'
+												onClick={() => setDeleteTarget(item)}
+												aria-label='Xóa đánh giá'
+												className='rounded p-1 text-muted-foreground transition hover:bg-rose-500/10 hover:text-rose-600'>
+												<Trash2 className='h-4 w-4' />
+											</button>
+										</>
 									)}
 								</div>
 							</div>
@@ -415,6 +462,11 @@ function FeedbackPanel({ eventId, canManage }: { eventId: number; canManage: boo
 								<p className='text-sm text-muted-foreground'>{item.comment}</p>
 							) : (
 								<p className='text-sm italic text-muted-foreground/60'>Không có nhận xét.</p>
+							)}
+							{item.is_hidden && item.moderation_reason && (
+								<p className='text-xs text-rose-600 dark:text-rose-400'>
+									Lý do ẩn: {item.moderation_reason}
+								</p>
 							)}
 						</div>
 					</div>

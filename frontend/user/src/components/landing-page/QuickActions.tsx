@@ -1,78 +1,8 @@
-import React, { useEffect, useRef } from "react";
-import {
-	BookOpen,
-	FileText,
-	Trophy,
-	Calendar,
-	GraduationCap,
-	Lightbulb,
-	ArrowRight,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { ArrowRight } from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
-
-type QuickAction = {
-	icon: LucideIcon;
-	title: string;
-	desc: string;
-	to: string;
-	bg: string;
-	emoji: string;
-	requireAuth?: boolean;
-};
-
-const ACTIONS: QuickAction[] = [
-	{
-		icon: BookOpen,
-		title: "Tài nguyên",
-		desc: "Kho tài liệu phong phú: slide, code, video từ cộng đồng & mentor",
-		to: "/tai-nguyen",
-		bg: "var(--color-pastel-green)",
-		emoji: "📚",
-	},
-	{
-		icon: FileText,
-		title: "Bài viết",
-		desc: "Bài viết kỹ thuật, kinh nghiệm học tập và chia sẻ từ các thành viên",
-		to: "/blog",
-		bg: "var(--color-pastel-blue)",
-		emoji: "✍️",
-	},
-	{
-		icon: Trophy,
-		title: "Bảng xếp hạng",
-		desc: "Xem bảng xếp hạng, tích lũy điểm XP qua các hoạt động của CLB",
-		to: "/cong-dong/bang-xep-hang",
-		bg: "var(--color-pastel-yellow)",
-		emoji: "🏆",
-	},
-	{
-		icon: Calendar,
-		title: "Sự kiện",
-		desc: "Sự kiện workshop, hackathon, seminar hấp dẫn sắp diễn ra",
-		to: "/su-kien",
-		bg: "var(--color-pastel-pink)",
-		emoji: "🎉",
-	},
-	{
-		icon: GraduationCap,
-		title: "Khóa học",
-		desc: "Các khóa học chất lượng về Web, AI, Mobile, DevOps và hơn thế nữa",
-		to: "/khoa-hoc",
-		bg: "var(--color-pastel-purple)",
-		emoji: "🎓",
-	},
-	{
-		icon: Lightbulb,
-		title: "Đóng góp",
-		desc: "Chia sẻ tài nguyên, viết blog, hoặc tổ chức workshop với cộng đồng",
-		to: "/tai-nguyen/gui",
-		bg: "var(--color-pastel-orange)",
-		emoji: "💡",
-		requireAuth: true,
-	},
-];
+import { homeService, DEFAULT_HOME_CONTENT } from "@/services/home.service";
 
 type MainLayoutOutletContext = {
 	user: AuthUser | null;
@@ -81,6 +11,17 @@ type MainLayoutOutletContext = {
 const QuickActions: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
 	const { user } = useOutletContext<MainLayoutOutletContext>();
+	const [content, setContent] = useState(DEFAULT_HOME_CONTENT.quick_actions);
+
+	useEffect(() => {
+		let cancelled = false;
+		homeService.getHomeContent().then((c) => {
+			if (!cancelled) setContent(c.quick_actions);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		const el = sectionRef.current;
@@ -120,19 +61,17 @@ const QuickActions: React.FC = () => {
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
 						style={{ fontFamily: "var(--font-heading)" }}>
-						Khám phá CKC IT CLUB
+						{content.heading}
 					</h2>
-					<p className='text-gray-500 mt-3 max-w-xl mx-auto'>
-						Tất cả những gì bạn cần để học, chia sẻ và phát triển trong cộng đồng IT
-					</p>
+					<p className='text-gray-500 mt-3 max-w-xl mx-auto'>{content.subheading}</p>
 				</div>
 
 				{/* Cards grid */}
 				<div className='fade-in-up grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-					{ACTIONS.map((action) => (
+					{content.items.map((action) => (
 						<Link
 							key={action.title}
-							to={action.requireAuth && !user ? "/login" : action.to}
+							to={action.requireAuth && !user ? "/login" : action.link}
 							className='neo-card flex flex-col p-6 no-underline group'
 							style={{
 								background: action.bg,

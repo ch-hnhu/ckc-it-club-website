@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
 import type { AuthUser } from "@/services/auth.service";
+import { homeService, DEFAULT_HOME_CONTENT } from "@/services/home.service";
 
 type MainLayoutOutletContext = {
 	user: AuthUser | null;
@@ -10,6 +11,17 @@ type MainLayoutOutletContext = {
 const ContributionSection: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
 	const { user } = useOutletContext<MainLayoutOutletContext>();
+	const [content, setContent] = useState(DEFAULT_HOME_CONTENT.contribution);
+
+	useEffect(() => {
+		let cancelled = false;
+		homeService.getHomeContent().then((c) => {
+			if (!cancelled) setContent(c.contribution);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		const el = sectionRef.current;
@@ -38,12 +50,12 @@ const ContributionSection: React.FC = () => {
 						<h2
 							className='text-2xl sm:text-3xl font-extrabold text-black'
 							style={{ fontFamily: "var(--font-heading)" }}>
-							Góp phần xây dựng kho tài nguyên chung
+							{content.heading}
 						</h2>
-						<p className='text-gray-700 max-w-lg'>
-							Chia sẻ tài liệu, code, slide hay bất kỳ thứ gì hữu ích với hơn{" "}
-							<strong>1000+ sinh viên IT</strong> trong cộng đồng CKC IT CLUB.
-						</p>
+						<p
+							className='about-prose text-gray-700 max-w-lg'
+							dangerouslySetInnerHTML={{ __html: content.body_html }}
+						/>
 					</div>
 
 					{/* CTA */}
@@ -51,7 +63,7 @@ const ContributionSection: React.FC = () => {
 						to={user ? "/tai-nguyen/gui" : "/login"}
 						className='neo-btn neo-btn-primary text-base px-8 py-4 shrink-0'>
 						<Upload className='w-5 h-5' />
-						Đóng góp tài nguyên
+						{content.button_label}
 					</Link>
 				</div>
 			</div>

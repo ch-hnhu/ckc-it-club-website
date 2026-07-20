@@ -3,6 +3,7 @@ import { isAxiosError } from "axios";
 import {
 	ArrowRight,
 	CheckCircle2,
+	ChevronDown,
 	Clock,
 	Facebook,
 	Github,
@@ -487,10 +488,10 @@ const ContactPage: React.FC = () => {
 										className='flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-black/5'>
 										<span className='pr-4 font-bold text-black'>{faq.q}</span>
 										<span
-											className={`text-lg transition-transform duration-300 ${
+											className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border-2 border-black bg-white text-black transition-transform duration-300 ${
 												openFaq === idx ? "rotate-180" : ""
 											}`}>
-											▼
+											<ChevronDown className='h-5 w-5' strokeWidth={3} />
 										</span>
 									</button>
 									<div

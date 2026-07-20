@@ -292,7 +292,9 @@ const ResourceListPage: React.FC = () => {
 					</div>
 				) : (
 					<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
-						{resources.map((resource) => (
+						{[...resources]
+								.sort((a, b) => Number(a.is_locked) - Number(b.is_locked))
+								.map((resource) => (
 							<ResourceCard
 								key={resource.id}
 								resource={resource}
