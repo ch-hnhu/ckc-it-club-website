@@ -16,6 +16,7 @@ class AcademicStructureImport extends Model
         'storage_disk',
         'file_type',
         'file_size_bytes',
+        'file_hash',
         'uploaded_by',
         'status',
         'processed_rows',

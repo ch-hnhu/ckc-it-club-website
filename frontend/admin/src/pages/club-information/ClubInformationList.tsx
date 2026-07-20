@@ -211,15 +211,7 @@ function ClubInformationList() {
 										onCheckedChange={(checked) => toggleAll(checked === true)}
 									/>
 								</TableHead>
-								<TableHead>
-									<Button
-										variant='ghost'
-										onClick={() => handleSort("id")}
-										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										ID
-										{getSortIcon("id")}
-									</Button>
-								</TableHead>
+								<TableHead className='w-[80px]'>STT</TableHead>
 								<TableHead>
 									<Button
 										variant='ghost'
@@ -260,7 +252,7 @@ function ClubInformationList() {
 						</TableHeader>
 						<TableBody>
 							{clubInformations.length > 0 ? (
-								clubInformations.map((item) => (
+								clubInformations.map((item, index) => (
 									<TableRow key={item.id}>
 										<TableCell>
 											<Checkbox
@@ -271,7 +263,9 @@ function ClubInformationList() {
 												}
 											/>
 										</TableCell>
-										<TableCell className='font-medium'>{item.id}</TableCell>
+										<TableCell className='font-medium'>
+											{(meta.current_page - 1) * meta.per_page + index + 1}
+										</TableCell>
 										<TableCell>
 											<Link
 												to={`/club-informations/${item.id}`}

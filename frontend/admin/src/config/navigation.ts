@@ -128,7 +128,12 @@ export const adminNavMain: AdminNavItem[] = [
 				permission: "club_info.view",
 			},
 			{
-				title: "Quản lý trang tĩnh",
+				title: "Quản lý trang chủ",
+				url: "/landing-page",
+				permission: "club_info.view",
+			},
+			{
+				title: "Quản lý trang giới thiệu",
 				url: "/about-page",
 				permission: "club_info.view",
 			},
@@ -324,6 +329,7 @@ const adminRoutePermissionRules: Array<{ pattern: RegExp; permission: string }> 
 	{ pattern: /^\/club-informations$/, permission: "club_info.view" },
 	{ pattern: /^\/club-informations\/create$/, permission: "club_info.manage" },
 	{ pattern: /^\/club-informations\/[^/]+$/, permission: "club_info.view" },
+	{ pattern: /^\/landing-page$/, permission: "club_info.view" },
 	{ pattern: /^\/about-page$/, permission: "club_info.view" },
 	{ pattern: /^\/requests$/, permission: "applications.view" },
 	{ pattern: /^\/requests\/[^/]+$/, permission: "applications.view" },

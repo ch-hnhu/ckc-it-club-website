@@ -6,12 +6,14 @@ import {
 	ImagePlus,
 	Loader2,
 	Save,
+	Send,
 	X,
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import StacksEditorWrapper, { type StacksEditorHandle } from "@/components/ui/StacksEditorWrapper";
 import type { AuthUser } from "@/services/auth.service";
 import { blogService } from "@/services/blog.service";
+import { buildProfileUrl } from "@/lib/utils";
 import type { ApiErrorResponse } from "@/types/api.types";
 import type { BlogDetail, BlogTag } from "@/types/blog.types";
 
@@ -43,7 +45,15 @@ const BlogEditPage: React.FC = () => {
 	const [coverImage, setCoverImage] = useState<File | null>(null);
 	const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isSavingDraft, setIsSavingDraft] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
+	const [contentDirty, setContentDirty] = useState(false);
+	const [initialSnapshot, setInitialSnapshot] = useState<{
+		title: string;
+		excerpt: string;
+		tagIds: number[];
+		coverUrl: string | null;
+	} | null>(null);
 
 	const coverPreviewUrl = useMemo(() => {
 		if (!coverImage) return null;
@@ -68,6 +78,12 @@ const BlogEditPage: React.FC = () => {
 				setExcerpt(data.excerpt ?? "");
 				setSelectedTagIds(data.tags.map((t) => t.id));
 				setExistingCoverUrl(data.featured_image ?? null);
+				setInitialSnapshot({
+					title: data.title ?? "",
+					excerpt: data.excerpt ?? "",
+					tagIds: data.tags.map((t) => t.id),
+					coverUrl: data.featured_image ?? null,
+				});
 			})
 			.catch(() => setNotFound(true))
 			.finally(() => setLoadingBlog(false));
@@ -127,9 +143,21 @@ const BlogEditPage: React.FC = () => {
 		return content;
 	};
 
-	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		if (isSubmitting || !slug) return;
+	const isDraft = blog?.status === "draft";
+
+	// So sánh form hiện tại với bản nháp đã lưu để biết có thay đổi chưa lưu.
+	const fieldsDirty = initialSnapshot
+		? title.trim() !== initialSnapshot.title.trim() ||
+			excerpt.trim() !== initialSnapshot.excerpt.trim() ||
+			JSON.stringify([...selectedTagIds].sort((a, b) => a - b)) !==
+				JSON.stringify([...initialSnapshot.tagIds].sort((a, b) => a - b)) ||
+			coverImage !== null ||
+			existingCoverUrl !== initialSnapshot.coverUrl
+		: false;
+	const isDirty = fieldsDirty || contentDirty;
+
+	const submitUpdate = async (status?: "draft" | "pending_review") => {
+		if (isSubmitting || isSavingDraft || !slug) return;
 		if (!user) {
 			navigate("/login", { state: { from: location.pathname } });
 			return;
@@ -138,7 +166,8 @@ const BlogEditPage: React.FC = () => {
 		const content = validateForm();
 		if (content === null) return;
 
-		setIsSubmitting(true);
+		const setBusy = status === "draft" ? setIsSavingDraft : setIsSubmitting;
+		setBusy(true);
 		try {
 			const response = await blogService.updateBlog(slug, {
 				title: title.trim(),
@@ -146,14 +175,36 @@ const BlogEditPage: React.FC = () => {
 				content,
 				tagIds: selectedTagIds,
 				featuredImage: coverImage ?? undefined,
+				...(status ? { status } : {}),
 			});
-			toast.success("Đã lưu bài viết!");
-			navigate(`/blog/${response.data.slug ?? slug}`);
+
+			const newStatus = response.data.status;
+			if (newStatus === "draft") {
+				toast.success("Đã lưu nháp!", {
+					description: "Bạn có thể xem lại ở mục Nháp trong trang cá nhân.",
+				});
+				navigate(`${buildProfileUrl(user.username, user.email)}?tab=drafts`);
+			} else if (newStatus === "pending_review") {
+				toast.success("Blog đã được gửi và đang chờ duyệt.", {
+					description: "Ban quản trị sẽ xem xét và duyệt bài viết của bạn sớm nhất.",
+					duration: 5000,
+				});
+				navigate("/blog");
+			} else {
+				toast.success("Đã lưu bài viết!");
+				navigate(`/blog/${response.data.slug ?? slug}`);
+			}
 		} catch (error) {
 			setFormError(getErrorMessage(error));
 		} finally {
-			setIsSubmitting(false);
+			setBusy(false);
 		}
+	};
+
+	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		// Với bài nháp: nút submit là "Đăng" (gửi duyệt); bài khác giữ hành vi lưu như cũ
+		await submitUpdate(isDraft ? "pending_review" : undefined);
 	};
 
 	if (loadingBlog) {
@@ -195,6 +246,12 @@ const BlogEditPage: React.FC = () => {
 						<span className='inline-flex items-center gap-1.5 rounded-full border-2 border-amber-400 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700'>
 							<span className='h-1.5 w-1.5 rounded-full bg-amber-500' />
 							Chờ duyệt
+						</span>
+					)}
+					{isDraft && (
+						<span className='inline-flex items-center gap-1.5 rounded-full border-2 border-black bg-[var(--color-pastel-yellow)] px-3 py-1 text-xs font-bold text-black'>
+							<span className='h-1.5 w-1.5 rounded-full bg-black' />
+							Bản nháp
 						</span>
 					)}
 				</div>
@@ -346,31 +403,74 @@ const BlogEditPage: React.FC = () => {
 								ref={editorRef}
 								placeholder='Viết nội dung blog...'
 								initialContent={blog.content ?? ""}
+								onDirtyChange={setContentDirty}
 							/>
 						</div>
 					</div>
 
 					{/* Buttons */}
 					<div className='flex items-center justify-end gap-3'>
-						<button
-							type='button'
-							onClick={() => navigate(-1)}
-							disabled={isSubmitting}
-							className='neo-btn neo-btn-secondary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
-							<X className='h-4 w-4' />
-							Hủy
-						</button>
-						<button
-							type='submit'
-							disabled={isSubmitting}
-							className='neo-btn neo-btn-primary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
-							{isSubmitting ? (
-								<Loader2 className='h-4 w-4 animate-spin' />
-							) : (
-								<Save className='h-4 w-4' />
-							)}
-							{isSubmitting ? "Đang lưu..." : "Lưu"}
-						</button>
+						{isDraft ? (
+							<>
+								{/* Bài nháp: Hủy, Lưu (giữ nháp) hoặc Đăng (gửi duyệt) */}
+								<button
+									type='button'
+									onClick={() => navigate(-1)}
+									disabled={isSubmitting || isSavingDraft}
+									className='neo-btn neo-btn-secondary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
+									<X className='h-4 w-4' />
+									Hủy
+								</button>
+								{/* Chỉ hiện "Lưu" khi có thay đổi so với bản nháp đã lưu */}
+								{isDirty && (
+									<button
+										type='button'
+										onClick={() => void submitUpdate("draft")}
+										disabled={isSubmitting || isSavingDraft}
+										className='neo-btn neo-btn-secondary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
+										{isSavingDraft ? (
+											<Loader2 className='h-4 w-4 animate-spin' />
+										) : (
+											<Save className='h-4 w-4' />
+										)}
+										{isSavingDraft ? "Đang lưu..." : "Lưu"}
+									</button>
+								)}
+								<button
+									type='submit'
+									disabled={isSubmitting || isSavingDraft}
+									className='neo-btn neo-btn-primary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
+									{isSubmitting ? (
+										<Loader2 className='h-4 w-4 animate-spin' />
+									) : (
+										<Send className='h-4 w-4' />
+									)}
+									{isSubmitting ? "Đang gửi..." : "Đăng"}
+								</button>
+							</>
+						) : (
+							<>
+								<button
+									type='button'
+									onClick={() => navigate(-1)}
+									disabled={isSubmitting}
+									className='neo-btn neo-btn-secondary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
+									<X className='h-4 w-4' />
+									Hủy
+								</button>
+								<button
+									type='submit'
+									disabled={isSubmitting}
+									className='neo-btn neo-btn-primary h-11 px-6 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-60'>
+									{isSubmitting ? (
+										<Loader2 className='h-4 w-4 animate-spin' />
+									) : (
+										<Save className='h-4 w-4' />
+									)}
+									{isSubmitting ? "Đang lưu..." : "Lưu"}
+								</button>
+							</>
+						)}
 					</div>
 				</form>
 			</main>

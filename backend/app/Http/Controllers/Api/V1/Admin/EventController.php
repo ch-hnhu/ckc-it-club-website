@@ -73,7 +73,7 @@ class EventController extends BaseApiController
 
         $thumbnailPath = null;
         if ($request->hasFile('thumbnail')) {
-            $thumbnailPath = $request->file('thumbnail')->store('event-thumbnails', 'public');
+            $thumbnailPath = $this->storage->uploadImage($request->file('thumbnail'), 'event');
         }
 
         $event = DB::transaction(function () use ($data, $thumbnailPath, $request) {

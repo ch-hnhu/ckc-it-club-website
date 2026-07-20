@@ -24,6 +24,7 @@ use App\Traits\HasSequentialLessonLock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
+use Illuminate\Support\Str;
 
 class CourseController extends BaseApiController
 {
@@ -269,7 +270,7 @@ class CourseController extends BaseApiController
             'video' => $videoUrl ? [
                 'id' => $lesson->id,
                 'slug' => 'video',
-                'title' => 'Bài giảng: ' . $lesson->title,
+                'title' => 'Bài giảng: '.$lesson->title,
                 'meta' => $this->formatDurationLabel($lesson->video_duration),
                 'completed' => $sections['video'] ?? false,
                 'url' => $videoUrl,
@@ -285,7 +286,7 @@ class CourseController extends BaseApiController
                 'id' => $lesson->id,
                 'title' => 'Bài tập thực hành',
                 'meta' => $lesson->assignment_deadline
-                    ? 'Hạn nộp ' . $lesson->assignment_deadline->format('d/m/Y')
+                    ? 'Hạn nộp '.$lesson->assignment_deadline->format('d/m/Y')
                     : 'Google Forms',
                 'url' => $lesson->assignment_url,
                 'completed' => $sections['assignment'] ?? false,
@@ -294,8 +295,8 @@ class CourseController extends BaseApiController
             'quiz' => $quiz ? [
                 'id' => $quiz->id,
                 'slug' => 'quiz',
-                'title' => 'Quiz kiểm tra buổi ' . $lesson->order,
-                'meta' => $quiz->questions->count() . ' câu hỏi',
+                'title' => 'Quiz kiểm tra buổi '.$lesson->order,
+                'meta' => $quiz->questions->count().' câu hỏi',
                 'completed' => $sections['quiz'] ?? false,
             ] : null,
         ];
@@ -356,7 +357,7 @@ class CourseController extends BaseApiController
         $data = [
             'id' => $lesson->id,
             'slug' => 'video',
-            'title' => 'Bài giảng: ' . $lesson->title,
+            'title' => 'Bài giảng: '.$lesson->title,
             // Tài liệu markdown hiển thị ở cột trái
             'document' => $lesson->document,
             // 2 nguồn video: bản chính thức (ưu tiên) và bản ghi livestream (fallback / tab phụ)
@@ -834,7 +835,7 @@ class CourseController extends BaseApiController
     private function assertLessonContentOpen(Lesson $lesson): void
     {
         if ($lesson->session_start && now()->lt($lesson->session_start)) {
-            abort(403, 'Buổi học chưa bắt đầu. Vui lòng quay lại vào ngày ' . $lesson->session_start->format('d/m/Y') . '.');
+            abort(403, 'Buổi học chưa bắt đầu. Vui lòng quay lại vào ngày '.$lesson->session_start->format('d/m/Y').'.');
         }
     }
 
@@ -945,7 +946,7 @@ class CourseController extends BaseApiController
             return '—';
         }
 
-        return max(1, (int) round($seconds / 60)) . ' phút';
+        return max(1, (int) round($seconds / 60)).' phút';
     }
 
     /**
@@ -968,7 +969,11 @@ class CourseController extends BaseApiController
      */
     private function resolveUrl(?string $path): ?string
     {
-        // DB now stores the full public URL (Supabase https://... or external).
-        return $path ?: null;
+        if (! $path) {
+            return null;
+        }
+
+        // Bản ghi cũ còn lưu đường dẫn tương đối trên disk public (vd. course-thumbnails/x.jpg)
+        return Str::startsWith($path, ['http://', 'https://']) ? $path : asset('storage/'.$path);
     }
 }

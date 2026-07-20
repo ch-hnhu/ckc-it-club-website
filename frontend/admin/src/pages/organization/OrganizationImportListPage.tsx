@@ -93,8 +93,6 @@ const fileTypeOptions: Array<{ value: string; label: string }> = [
 	{ value: "all", label: "Tất cả loại file" },
 	{ value: "Excel", label: "Excel" },
 	{ value: "CSV", label: "CSV" },
-	{ value: "ZIP", label: "ZIP" },
-	{ value: "Other", label: "Khác" },
 ];
 
 const statusMeta: Record<
@@ -130,15 +128,11 @@ const typeMeta: Record<AcademicStructureImportFileType, { className: string }> =
 };
 
 function formatFileSize(bytes: number) {
-	if (bytes <= 0) return "0 MB";
+	if (bytes <= 0) return "0 KB";
 
-	const inMb = bytes / (1024 * 1024);
+	const inKb = bytes / 1024;
 
-	if (inMb >= 1024) {
-		return `${(inMb / 1024).toFixed(1)} GB`;
-	}
-
-	return `${inMb.toFixed(inMb >= 10 ? 0 : 1)} MB`;
+	return `${inKb.toFixed(inKb >= 10 ? 0 : 1)} KB`;
 }
 
 function formatDateTime(dateTime: string | null) {
@@ -455,7 +449,7 @@ function OrganizationImportListPage() {
 									mỗi lần import thành công.
 								</CardDescription>
 							</div>
-							<div className='grid w-full min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(160px,220px)_minmax(160px,220px)]'>
+							<div className='grid w-full min-w-0 gap-3 md:grid-cols-[minmax(200px,280px)_1fr_minmax(160px,220px)_minmax(160px,220px)]'>
 								<div className='relative min-w-0'>
 									<Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
 									<Input
@@ -465,6 +459,7 @@ function OrganizationImportListPage() {
 										className='w-full pl-9'
 									/>
 								</div>
+								<div className='hidden md:block' aria-hidden='true' />
 								<Select value={typeFilter} onValueChange={setTypeFilter}>
 									<SelectTrigger className='w-full'>
 										<SelectValue placeholder='Loại file' />

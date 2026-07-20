@@ -194,7 +194,24 @@ class UnifiedReportController extends BaseApiController
                 ->pluck('reporter_id')->unique();
             $reporters = User::whereIn('id', $reporterIds)->get();
 
-            $report->post->update(['status' => 'hidden']);
+            // Lưu lý do ẩn từ báo cáo để hiển thị cho admin và thông báo cho chủ bài đăng
+            $reasonLabel = match ($report->reason) {
+                'spam'           => 'Spam',
+                'offensive'      => 'Nội dung xúc phạm',
+                'misinformation' => 'Thông tin sai lệch',
+                'inappropriate'  => 'Không phù hợp',
+                default          => 'Vi phạm tiêu chuẩn cộng đồng',
+            };
+            $hiddenReason = $reasonLabel.($report->description ? " — {$report->description}" : '');
+
+            // Giữ tham chiếu post đầy đủ (sau refresh() bên dưới, quan hệ post chỉ còn id,title,status)
+            $hiddenPost = $report->post;
+
+            $report->post->update([
+                'status'            => 'hidden',
+                'moderation_reason' => $hiddenReason,
+                'moderated_at'      => $now,
+            ]);
 
             // Other pending/reviewing reports for the same post → superseded
             PostReport::where('post_id', $report->post_id)
@@ -212,6 +229,12 @@ class UnifiedReportController extends BaseApiController
             // Notify all reporters (user-facing, real-time WebSocket)
             foreach ($reporters as $reporter) {
                 UserNotificationService::dispatchReportResolved($reporter, $admin, 'post', $contentTitle);
+            }
+
+            // Notify the post owner about the hide + reason
+            $hiddenPost->loadMissing('user');
+            if ($hiddenPost->user && $hiddenPost->user->id !== $userId) {
+                UserNotificationService::dispatchPostHidden($hiddenPost->user, $admin, $hiddenPost, $hiddenReason);
             }
 
             // Notify other admins

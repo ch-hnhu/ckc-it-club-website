@@ -12,6 +12,8 @@ interface StacksEditorWrapperProps {
 	initialContent?: string;
 	placeholder?: string;
 	className?: string;
+	/** Báo khi nội dung khác so với nội dung khởi tạo (dùng để phát hiện thay đổi chưa lưu). */
+	onDirtyChange?: (dirty: boolean) => void;
 }
 
 type HeadingLevel = 1 | 2 | 3;
@@ -87,10 +89,12 @@ const isSelectionInTable = (editor: InstanceType<typeof StacksEditor>) => {
 };
 
 const StacksEditorWrapper = forwardRef<StacksEditorHandle, StacksEditorWrapperProps>(
-	({ initialContent = "", placeholder = "Bạn đang nghĩ gì?", className }, ref) => {
+	({ initialContent = "", placeholder = "Bạn đang nghĩ gì?", className, onDirtyChange }, ref) => {
 		const outerRef = useRef<HTMLDivElement>(null);
 		const innerRef = useRef<HTMLDivElement>(null);
 		const editorRef = useRef<InstanceType<typeof StacksEditor> | null>(null);
+		const onDirtyChangeRef = useRef(onDirtyChange);
+		onDirtyChangeRef.current = onDirtyChange;
 
 		useImperativeHandle(ref, () => ({
 			getContent: () => editorRef.current?.content ?? "",
@@ -162,6 +166,26 @@ const StacksEditorWrapper = forwardRef<StacksEditorHandle, StacksEditorWrapperPr
 				},
 			});
 			editorRef.current = editor;
+
+			// Theo dõi thay đổi nội dung so với nội dung khởi tạo (đã chuẩn hoá) để báo dirty.
+			// Baseline lấy sau khi dựng editor nên lần render đầu không kích hoạt sai.
+			const contentBaseline = editor.content;
+			let contentDirtyTimer: ReturnType<typeof setTimeout> | null = null;
+			const contentObserver = new MutationObserver(() => {
+				if (contentDirtyTimer) clearTimeout(contentDirtyTimer);
+				// Debounce bằng setTimeout (không dùng rAF vì rAF bị treo khi tab ẩn/không vẽ).
+				contentDirtyTimer = setTimeout(() => {
+					if (editorRef.current !== editor) return;
+					// Chỉ đánh dấu dirty khi nội dung serialize khác baseline (bỏ qua thay đổi
+					// DOM của thanh công cụ/decoration vì chúng không đổi editor.content).
+					onDirtyChangeRef.current?.(editor.content !== contentBaseline);
+				}, 150);
+			});
+			contentObserver.observe(inner, {
+				childList: true,
+				characterData: true,
+				subtree: true,
+			});
 
 			const outer = outerRef.current;
 
@@ -374,6 +398,8 @@ const StacksEditorWrapper = forwardRef<StacksEditorHandle, StacksEditorWrapperPr
 
 			return () => {
 				cancelAnimationFrame(frameId);
+				if (contentDirtyTimer) clearTimeout(contentDirtyTimer);
+				contentObserver.disconnect();
 				toolbarObserver.disconnect();
 				syncEvents.forEach((eventName) => {
 					outer?.removeEventListener(eventName, scheduleEditorMenuSync, true);

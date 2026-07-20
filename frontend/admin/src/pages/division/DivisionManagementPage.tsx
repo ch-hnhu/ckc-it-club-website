@@ -348,15 +348,7 @@ function DivisionManagementPage() {
 										onCheckedChange={(checked) => toggleAll(checked === true)}
 									/>
 								</TableHead>
-								<TableHead className='w-[100px]'>
-									<Button
-										variant='ghost'
-										onClick={() => handleSort("id")}
-										className='-ml-4 h-8 hover:bg-muted-foreground/10'>
-										ID
-										{getSortIcon("id")}
-									</Button>
-								</TableHead>
+								<TableHead className='w-[80px]'>STT</TableHead>
 								<TableHead>
 									<Button
 										variant='ghost'
@@ -397,7 +389,7 @@ function DivisionManagementPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{departments.map((department) => (
+							{departments.map((department, index) => (
 								<TableRow key={department.id}>
 									<TableCell>
 										<Checkbox
@@ -408,7 +400,9 @@ function DivisionManagementPage() {
 											}
 										/>
 									</TableCell>
-									<TableCell className='font-medium'>BAN-{department.id}</TableCell>
+									<TableCell className='font-medium'>
+										{(meta.current_page - 1) * meta.per_page + index + 1}
+									</TableCell>
 									<TableCell>
 										<div className='flex items-center gap-3'>
 											<div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'>

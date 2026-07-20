@@ -17,7 +17,6 @@ import {
 	UserPlus,
 	Mail,
 	Bell,
-	BookOpen,
 	Award,
 	FolderKanban,
 	ListTodo,
@@ -27,6 +26,8 @@ import { StatCard } from "../components/dashboard/StatCard";
 import { ChartCard } from "../components/dashboard/ChartCard";
 import { SimpleChart } from "../components/dashboard/SimpleChart";
 import { TrendChart } from "../components/dashboard/TrendChart";
+import { DonutChart } from "../components/dashboard/DonutChart";
+import { HBarChart } from "../components/dashboard/HBarChart";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -258,6 +259,59 @@ function Dashboard() {
 		];
 	}, [stats]);
 
+	// Top khoá học: tách "hoàn thành" và "đang học" để xếp chồng trên thanh ngang
+	const topCoursesChart = useMemo(() => {
+		if (!stats) return [];
+		return stats.learning.top_courses.map((course) => ({
+			name: course.title,
+			completed: course.completed_count,
+			in_progress: course.enrollments_count - course.completed_count,
+		}));
+	}, [stats]);
+
+	const enrollmentDonut = useMemo(() => {
+		if (!stats) return [];
+		return [
+			{
+				name: "Hoàn thành",
+				value: stats.learning.enrollments_completed,
+				color: "#16a34a",
+			},
+			{
+				name: "Đang học",
+				value: stats.learning.enrollments_total - stats.learning.enrollments_completed,
+				color: "#3b82f6",
+			},
+		];
+	}, [stats]);
+
+	const memberRolesChart = useMemo(() => {
+		if (!stats) return [];
+		return stats.members.by_role.map((item) => ({
+			name: item.label,
+			count: item.count,
+		}));
+	}, [stats]);
+
+	const eventStatusDonut = useMemo(() => {
+		if (!stats) return [];
+		const s = stats.events.by_status;
+		return [
+			{ name: "Đã đăng", value: s.published, color: "#16a34a" },
+			{ name: "Đang diễn ra", value: s.ongoing, color: "#3b82f6" },
+			{ name: "Bản nháp", value: s.draft, color: "#d97706" },
+			{ name: "Đã kết thúc", value: s.ended, color: "#64748b" },
+			{ name: "Đã hủy", value: s.cancelled, color: "#e11d48" },
+		];
+	}, [stats]);
+
+	// Tiến độ task ProjectHub (tỷ lệ đã xong trên tổng số task)
+	const tasksTotal = stats ? stats.projecthub.tasks_open + stats.projecthub.tasks_completed : 0;
+	const tasksDonePercent =
+		stats && tasksTotal > 0
+			? Math.round((stats.projecthub.tasks_completed / tasksTotal) * 100)
+			: 0;
+
 	const upcomingEvents = stats?.events.upcoming ?? [];
 	const totalPending = queue.reduce((sum, item) => sum + item.count, 0);
 	const ongoingCount = stats?.events.ongoing ?? 0;
@@ -336,45 +390,72 @@ function Dashboard() {
 					</div>
 				)}
 
-				{/* Learning Center + ProjectHub — dải thống kê gọn */}
-				{loading ? (
-					<Skeleton className='h-[64px] w-full rounded-xl' />
-				) : (
-					<Card className='border border-border bg-card py-1'>
-						<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 lg:divide-x divide-border'>
-							<MiniStat
-								icon={<BookOpen />}
-								label='Lượt ghi danh khoá học'
-								value={stats?.learning.enrollments_total ?? "—"}
-								sub={
-									stats
-										? `${stats.learning.enrollments_completed} hoàn thành (${stats.learning.completion_rate}%)`
-										: undefined
-								}
-								to={hasPermission("courses.view") ? "/courses" : undefined}
-							/>
-							<MiniStat
-								icon={<Award />}
-								label='Chứng chỉ đã cấp'
-								value={stats?.learning.certificates_issued ?? "—"}
-								to={hasPermission("courses.view") ? "/courses" : undefined}
-							/>
-							<MiniStat
-								icon={<FolderKanban />}
-								label='Board đang hoạt động'
-								value={stats?.projecthub.boards_active ?? "—"}
-								to={hasPermission("admin_panel.access") ? "/to-do-list" : undefined}
-							/>
-							<MiniStat
-								icon={<ListTodo />}
-								label='Task đang mở'
-								value={stats?.projecthub.tasks_open ?? "—"}
-								sub={stats ? `${stats.projecthub.tasks_completed} xong` : undefined}
-								to={hasPermission("admin_panel.access") ? "/to-do-list" : undefined}
-							/>
-						</div>
-					</Card>
-				)}
+				{/* Học tập — top khoá học + trạng thái ghi danh */}
+				<div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+					<div className='lg:col-span-2'>
+						<ChartCard
+							title='Top khoá học theo lượt ghi danh'
+							description='5 khoá học có nhiều lượt ghi danh nhất, tách theo tiến độ học'
+							action={
+								hasPermission("courses.view") ? (
+									<Link to='/courses' className='text-xs text-primary hover:underline'>
+										Xem tất cả
+									</Link>
+								) : undefined
+							}>
+							{loading ? (
+								<Skeleton className='h-[240px] w-full' />
+							) : topCoursesChart.length ? (
+								<HBarChart
+									data={topCoursesChart}
+									series={[
+										{ key: "completed", label: "Hoàn thành", color: "#16a34a" },
+										{ key: "in_progress", label: "Đang học", color: "#3b82f6" },
+									]}
+									stacked
+									height={240}
+									labelWidth={150}
+								/>
+							) : (
+								<div className='h-[240px] flex items-center justify-center text-sm text-muted-foreground'>
+									Chưa có lượt ghi danh nào
+								</div>
+							)}
+						</ChartCard>
+					</div>
+
+					<ChartCard
+						title='Trạng thái ghi danh'
+						description={
+							stats
+								? `${stats.learning.enrollments_total} lượt ghi danh khoá học`
+								: undefined
+						}>
+						{loading ? (
+							<Skeleton className='h-[240px] w-full' />
+						) : stats && stats.learning.enrollments_total > 0 ? (
+							<>
+								<DonutChart
+									data={enrollmentDonut}
+									centerValue={`${stats.learning.completion_rate}%`}
+									centerLabel='hoàn thành'
+									height={170}
+								/>
+								<div className='mt-4 pt-3 border-t border-border flex items-center gap-2 text-sm'>
+									<Award className='w-4 h-4 text-primary flex-shrink-0' />
+									<span className='text-muted-foreground flex-1'>Chứng chỉ đã cấp</span>
+									<span className='font-semibold text-foreground tabular-nums'>
+										{stats.learning.certificates_issued}
+									</span>
+								</div>
+							</>
+						) : (
+							<div className='h-[240px] flex items-center justify-center text-sm text-muted-foreground'>
+								Chưa có lượt ghi danh nào
+							</div>
+						)}
+					</ChartCard>
+				</div>
 
 				{/* Trend chart + Action queue */}
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
@@ -470,8 +551,60 @@ function Dashboard() {
 					</Card>
 				</div>
 
-				{/* Content chart + Upcoming events + Recent activity */}
+				{/* Thành viên theo vai trò + Sự kiện theo trạng thái + Nội dung cộng đồng */}
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+					<ChartCard
+						title='Thành viên theo vai trò'
+						description={stats ? `${stats.members.total} tài khoản trên hệ thống` : undefined}
+						action={
+							hasPermission("users.view") ? (
+								<Link to='/users' className='text-xs text-primary hover:underline'>
+									Xem tất cả
+								</Link>
+							) : undefined
+						}>
+						{loading ? (
+							<Skeleton className='h-[240px] w-full' />
+						) : memberRolesChart.length ? (
+							<HBarChart
+								data={memberRolesChart}
+								series={[{ key: "count", label: "Số người", color: "#0d9488" }]}
+								height={240}
+								labelWidth={150}
+							/>
+						) : (
+							<div className='h-[240px] flex items-center justify-center text-sm text-muted-foreground'>
+								Không có dữ liệu để hiển thị
+							</div>
+						)}
+					</ChartCard>
+
+					<ChartCard
+						title='Sự kiện theo trạng thái'
+						description={stats ? `${stats.events.total} sự kiện đã tạo` : undefined}
+						action={
+							hasPermission("events.view") ? (
+								<Link to='/events' className='text-xs text-primary hover:underline'>
+									Xem tất cả
+								</Link>
+							) : undefined
+						}>
+						{loading ? (
+							<Skeleton className='h-[240px] w-full' />
+						) : stats && stats.events.total > 0 ? (
+							<DonutChart
+								data={eventStatusDonut}
+								centerValue={String(stats.events.total)}
+								centerLabel='sự kiện'
+								height={160}
+							/>
+						) : (
+							<div className='h-[240px] flex items-center justify-center text-sm text-muted-foreground'>
+								Chưa có sự kiện nào
+							</div>
+						)}
+					</ChartCard>
+
 					{/* Community content */}
 					<ChartCard
 						title='Nội dung cộng đồng'
@@ -484,7 +617,7 @@ function Dashboard() {
 								data={contentChart}
 								dataKey='value'
 								height={240}
-								color='#22c55e'
+								color='#16a34a'
 							/>
 						) : (
 							<div className='h-[240px] flex items-center justify-center text-sm text-muted-foreground'>
@@ -492,7 +625,10 @@ function Dashboard() {
 							</div>
 						)}
 					</ChartCard>
+				</div>
 
+				{/* Upcoming events + ProjectHub + Recent activity */}
+				<div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
 					{/* Upcoming events */}
 					<Card className='border border-border bg-card p-6'>
 						<div className='flex items-center justify-between mb-4'>
@@ -512,6 +648,15 @@ function Dashboard() {
 								{upcomingEvents.map((event) => {
 									const { day, month } = eventDateParts(event.start_at);
 									const canAccess = hasPermission("events.view");
+									// Tỷ lệ lấp đầy đăng ký (chỉ khi sự kiện giới hạn số lượng)
+									const fillPercent = event.max_attendees
+										? Math.min(
+												100,
+												Math.round(
+													(event.registrations_count / event.max_attendees) * 100,
+												),
+											)
+										: null;
 									const content = (
 										<>
 											<div className='text-center bg-primary/10 rounded-lg px-2.5 py-1.5 min-w-[52px]'>
@@ -527,10 +672,29 @@ function Dashboard() {
 													}`}>
 													{event.title}
 												</p>
-												<p className='text-xs text-muted-foreground mt-0.5'>
-													{event.registrations_count}
-													{event.max_attendees ? `/${event.max_attendees}` : ""} đăng ký
-												</p>
+												<div className='flex items-center gap-2 mt-1'>
+													<p className='text-xs text-muted-foreground whitespace-nowrap'>
+														{event.registrations_count}
+														{event.max_attendees ? `/${event.max_attendees}` : ""} đăng ký
+													</p>
+													{fillPercent !== null && (
+														<>
+															<div className='flex-1 h-1.5 rounded-full bg-muted overflow-hidden'>
+																<div
+																	className={`h-full rounded-full ${
+																		fillPercent >= 90
+																			? "bg-amber-500"
+																			: "bg-primary"
+																	}`}
+																	style={{ width: `${fillPercent}%` }}
+																/>
+															</div>
+															<span className='text-[11px] text-muted-foreground tabular-nums'>
+																{fillPercent}%
+															</span>
+														</>
+													)}
+												</div>
 											</div>
 										</>
 									);
@@ -553,6 +717,59 @@ function Dashboard() {
 								</span>
 								<p className='text-sm text-muted-foreground'>Chưa có sự kiện sắp tới</p>
 							</div>
+						)}
+					</Card>
+
+					{/* ProjectHub */}
+					<Card className='border border-border bg-card p-6'>
+						<div className='flex items-center justify-between mb-4'>
+							<h3 className='text-lg font-bold text-foreground'>ProjectHub</h3>
+							{hasPermission("admin_panel.access") && (
+								<Link to='/to-do-list' className='text-xs text-primary hover:underline'>
+									Xem tất cả
+								</Link>
+							)}
+						</div>
+						{loading ? (
+							<ListSkeleton rows={3} />
+						) : stats ? (
+							<div className='space-y-5'>
+								<div className='grid grid-cols-2 divide-x divide-border rounded-lg border border-border'>
+									<MiniStat
+										icon={<FolderKanban />}
+										label='Board đang hoạt động'
+										value={stats.projecthub.boards_active}
+									/>
+									<MiniStat
+										icon={<ListTodo />}
+										label='Task đang mở'
+										value={stats.projecthub.tasks_open}
+									/>
+								</div>
+								<div>
+									<div className='flex items-center justify-between text-sm mb-2'>
+										<span className='text-muted-foreground'>Tiến độ task</span>
+										<span className='font-semibold text-foreground tabular-nums'>
+											{stats.projecthub.tasks_completed}/{tasksTotal} ({tasksDonePercent}
+											%)
+										</span>
+									</div>
+									<div className='h-2.5 rounded-full bg-muted overflow-hidden'>
+										<div
+											className='h-full rounded-full bg-[#16a34a] transition-all'
+											style={{ width: `${tasksDonePercent}%` }}
+										/>
+									</div>
+									<p className='text-xs text-muted-foreground mt-2'>
+										{stats.projecthub.tasks_completed} task đã hoàn thành,{" "}
+										{stats.projecthub.tasks_open} task đang mở
+									</p>
+								</div>
+							</div>
+						) : (
+							<p className='text-sm text-muted-foreground py-8 text-center'>
+								Không có dữ liệu để hiển thị
+							</p>
 						)}
 					</Card>
 

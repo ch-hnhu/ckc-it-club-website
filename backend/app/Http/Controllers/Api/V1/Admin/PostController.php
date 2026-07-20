@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\PostReport;
 use App\Services\NotificationService;
 use App\Services\SupabaseStorageService;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -92,12 +93,42 @@ class PostController extends BaseApiController
 
     public function updateStatus(Request $request, Post $post): JsonResponse
     {
-        $request->validate(['status' => 'required|in:published,hidden,draft,archived']);
+        $request->validate([
+            'status' => 'required|in:published,hidden,draft,archived',
+            'reason' => 'required_if:status,hidden|nullable|string|max:500',
+        ], [
+            'reason.required_if' => 'Vui lòng nhập lý do ẩn bài đăng.',
+        ]);
 
         $previousStatus = $post->status;
         $newStatus      = $request->string('status')->value();
+        $reason         = trim((string) $request->input('reason'));
 
-        $post->update(['status' => $newStatus]);
+        if ($newStatus === 'hidden') {
+            // Lưu lý do ẩn để hiển thị cho admin và thông báo cho chủ bài đăng
+            $post->update([
+                'status'            => $newStatus,
+                'moderation_reason' => $reason,
+                'moderated_at'      => now(),
+            ]);
+        } elseif ($previousStatus === 'hidden') {
+            // Hiện lại bài: lý do ẩn cũ không còn hiệu lực
+            $post->update([
+                'status'            => $newStatus,
+                'moderation_reason' => null,
+                'moderated_at'      => null,
+            ]);
+        } else {
+            $post->update(['status' => $newStatus]);
+        }
+
+        // Thông báo cho chủ bài đăng khi bài bị admin ẩn
+        if ($newStatus === 'hidden' && $previousStatus !== 'hidden') {
+            $post->loadMissing('user');
+            if ($post->user && $post->user->id !== $request->user()->id) {
+                UserNotificationService::dispatchPostHidden($post->user, $request->user(), $post, $reason);
+            }
+        }
 
         // Khi un-hide: reset tất cả report resolved → pending để admin xem xét lại
         if ($previousStatus === 'hidden' && $newStatus !== 'hidden') {

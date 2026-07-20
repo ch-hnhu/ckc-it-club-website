@@ -18,6 +18,8 @@ import type { AuthUser } from "@/services/auth.service";
 import { resourceService } from "@/services/resource.service";
 import type { Resource, ResourceLinkType } from "@/types/resource.types";
 import ReportResourceModal from "@/components/resource/ReportResourceModal";
+import AccessGate from "@/components/resource/AccessGate";
+import { canBrowseResources } from "@/lib/resourceAccess";
 
 const LINK_TYPE_LABELS: Record<ResourceLinkType, string> = {
 	google_drive: "Google Drive",
@@ -102,7 +104,7 @@ const ResourceCard: React.FC<{
 					{LINK_TYPE_LABELS[resource.link_type]}
 				</span>
 				<span>·</span>
-				<span>{resource.uploader?.full_name ?? "Ẩn danh"}</span>
+				<span>{isOwner ? "Bạn" : (resource.uploader?.full_name ?? "Ẩn danh")}</span>
 			</div>
 			<div className='mt-auto flex items-center justify-between gap-2 pt-4'>
 				{resource.is_locked ? (
@@ -147,7 +149,8 @@ const ResourceListPage: React.FC = () => {
 	const [reportTargetId, setReportTargetId] = useState<number | null>(null);
 	const [forbidden, setForbidden] = useState(false);
 
-	const canBrowse = user != null;
+	const isLoggedIn = user != null;
+	const canBrowse = canBrowseResources(user);
 	const hasLockedResources = resources.some((r) => r.is_locked);
 
 	useEffect(() => {
@@ -156,9 +159,10 @@ const ResourceListPage: React.FC = () => {
 	}, [searchInput]);
 
 	useEffect(() => {
-		// Chưa đăng nhập thì không gọi API — 401 sẽ bị interceptor đá thẳng sang /login.
+		// Không đủ điều kiện thì không gọi API: chưa đăng nhập sẽ bị interceptor đá
+		// sang /login, còn tài khoản ngoài trường thì chắc chắn ăn 403.
+		// Không cần tắt loading: các nhánh này luôn render AccessGate, không đọc `loading`.
 		if (!canBrowse) {
-			setLoading(false);
 			return;
 		}
 
@@ -208,63 +212,63 @@ const ResourceListPage: React.FC = () => {
 			</div>
 
 			{canBrowse && !forbidden && (
-			<div className='border-b-2 border-black bg-white py-4'>
-				<div className='neo-container flex flex-col gap-3 px-6 xl:flex-row xl:items-center'>
-					<div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
-						<Link
-							to='/tai-nguyen/gui'
-							className='inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-							<PlusSquare className='h-4 w-4' strokeWidth={3} />
-							Đóng góp
-						</Link>
+				<div className='border-b-2 border-black bg-white py-4'>
+					<div className='neo-container flex flex-col gap-3 px-6 xl:flex-row xl:items-center'>
+						<div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
+							<Link
+								to='/tai-nguyen/gui'
+								className='inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+								<PlusSquare className='h-4 w-4' strokeWidth={3} />
+								Đóng góp
+							</Link>
 
-						<div className='group/search relative shrink-0 sm:w-72'>
-							<Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400' />
-							<input
-								type='text'
-								value={searchInput}
-								onChange={(e) => setSearchInput(e.target.value)}
-								placeholder='Tìm tài nguyên...'
-								className='w-full rounded-xl border-2 border-black bg-white py-2 pl-10 pr-3 text-sm font-medium text-black outline-none focus:shadow-[0_0_0_3px_#A3E635]'
-							/>
+							<div className='group/search relative shrink-0 sm:w-72'>
+								<Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400' />
+								<input
+									type='text'
+									value={searchInput}
+									onChange={(e) => setSearchInput(e.target.value)}
+									placeholder='Tìm tài nguyên...'
+									className='w-full rounded-xl border-2 border-black bg-white py-2 pl-10 pr-3 text-sm font-medium text-black outline-none focus:shadow-[0_0_0_3px_#A3E635]'
+								/>
+							</div>
+						</div>
+
+						<div className='flex flex-wrap gap-2'>
+							{(
+								[
+									"all",
+									"google_drive",
+									"youtube",
+									"github",
+									"document",
+									"other",
+								] as const
+							).map((type) => (
+								<button
+									key={type}
+									onClick={() => setLinkType(type)}
+									className={`inline-flex h-9 shrink-0 items-center justify-center rounded-full border-2 border-black px-4 text-sm font-bold transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] ${
+										linkType === type
+											? "bg-[var(--color-primary)] text-black"
+											: "bg-white text-gray-700 hover:bg-gray-50"
+									}`}>
+									{type === "all" ? "Tất cả" : LINK_TYPE_LABELS[type]}
+								</button>
+							))}
 						</div>
 					</div>
-
-					<div className='flex flex-wrap gap-2'>
-						{(
-							[
-								"all",
-								"google_drive",
-								"youtube",
-								"github",
-								"document",
-								"other",
-							] as const
-						).map((type) => (
-							<button
-								key={type}
-								onClick={() => setLinkType(type)}
-								className={`inline-flex h-9 shrink-0 items-center justify-center rounded-full border-2 border-black px-4 text-sm font-bold transition-all duration-150 hover:translate-x-[1px] hover:translate-y-[1px] ${
-									linkType === type
-										? "bg-[var(--color-primary)] text-black"
-										: "bg-white text-gray-700 hover:bg-gray-50"
-								}`}>
-								{type === "all" ? "Tất cả" : LINK_TYPE_LABELS[type]}
-							</button>
-						))}
-					</div>
 				</div>
-			</div>
 			)}
 
-			{!loading && !canBrowse ? (
+			{!isLoggedIn ? (
 				<AccessGate
 					icon={LogIn}
 					title='Đăng nhập để xem tài nguyên'
 					message='Kho tài nguyên dành cho sinh viên trường Cao Thắng và thành viên câu lạc bộ.'
 					action={{ to: "/login", label: "Đăng nhập" }}
 				/>
-			) : !loading && forbidden ? (
+			) : !canBrowse || forbidden ? (
 				<AccessGate
 					icon={Lock}
 					title='Bạn chưa có quyền xem tài nguyên'
@@ -272,52 +276,53 @@ const ResourceListPage: React.FC = () => {
 					action={{ to: "/ung-tuyen", label: "Tham gia CLB" }}
 				/>
 			) : (
-			<div className='neo-container px-6 pt-8'>
-				{!loading && hasLockedResources && (
-					<div className='mb-5 flex flex-col gap-3 rounded-2xl border-2 border-black bg-[var(--color-pastel-yellow,#FEF3C7)] px-5 py-4 shadow-[4px_4px_0_#111] sm:flex-row sm:items-center sm:justify-between'>
-						<div className='flex items-start gap-3'>
-							<Lock className='mt-0.5 h-5 w-5 shrink-0 text-black' />
-							<p className='text-sm font-bold text-black'>
-								Sinh viên Cao Thắng xem được 3 tài nguyên mới nhất. Trở thành thành
-								viên câu lạc bộ để mở khoá toàn bộ kho tài nguyên.
+				<div className='neo-container px-6 pt-8'>
+					{!loading && hasLockedResources && (
+						<div className='mb-5 flex flex-col gap-3 rounded-2xl border-2 border-black bg-[var(--color-pastel-yellow,#FEF3C7)] px-5 py-4 shadow-[4px_4px_0_#111] sm:flex-row sm:items-center sm:justify-between'>
+							<div className='flex items-start gap-3'>
+								<Lock className='mt-0.5 h-5 w-5 shrink-0 text-black' />
+								<p className='text-sm font-bold text-black'>
+									Sinh viên Cao Thắng được mở cố định 3 tài nguyên, cộng với tài
+									nguyên do chính mình đóng góp. Trở thành thành viên câu lạc bộ
+									để mở khoá toàn bộ kho tài nguyên.
+								</p>
+							</div>
+							<Link
+								to='/ung-tuyen'
+								className='inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-2 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+								Tham gia CLB
+							</Link>
+						</div>
+					)}
+					{loading ? (
+						<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
+							{Array.from({ length: 6 }).map((_, i) => (
+								<CardSkeleton key={i} />
+							))}
+						</div>
+					) : resources.length === 0 ? (
+						<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
+							<Search className='mx-auto h-10 w-10 text-gray-300' />
+							<p className='mt-4 font-heading text-xl font-extrabold text-black'>
+								Không tìm thấy tài nguyên nào
+							</p>
+							<p className='mt-2 text-sm text-gray-600'>
+								Hãy là người đầu tiên chia sẻ tài nguyên!
 							</p>
 						</div>
-						<Link
-							to='/ung-tuyen'
-							className='inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-2 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-							Tham gia CLB
-						</Link>
-					</div>
-				)}
-				{loading ? (
-					<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
-						{Array.from({ length: 6 }).map((_, i) => (
-							<CardSkeleton key={i} />
-						))}
-					</div>
-				) : resources.length === 0 ? (
-					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
-						<Search className='mx-auto h-10 w-10 text-gray-300' />
-						<p className='mt-4 font-heading text-xl font-extrabold text-black'>
-							Không tìm thấy tài nguyên nào
-						</p>
-						<p className='mt-2 text-sm text-gray-600'>
-							Hãy là người đầu tiên chia sẻ tài nguyên!
-						</p>
-					</div>
-				) : (
-					<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
-						{resources.map((resource) => (
-							<ResourceCard
-								key={resource.id}
-								resource={resource}
-								currentUserId={user?.id}
-								onReport={setReportTargetId}
-							/>
-						))}
-					</div>
-				)}
-			</div>
+					) : (
+						<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
+							{resources.map((resource) => (
+								<ResourceCard
+									key={resource.id}
+									resource={resource}
+									currentUserId={user?.id}
+									onReport={setReportTargetId}
+								/>
+							))}
+						</div>
+					)}
+				</div>
 			)}
 
 			{reportTargetId != null && (
