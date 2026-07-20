@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use setasign\Fpdi\Fpdi;
+use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
 use ZipArchive;
@@ -29,6 +30,37 @@ use ZipArchive;
 class CourseController extends BaseApiController
 {
     public function __construct(private readonly SupabaseStorageService $storage) {}
+
+    #[OA\Get(
+        path: '/v1/courses',
+        summary: '[Admin] Danh sách khoá học cho trang quản trị',
+        description: 'Yêu cầu quyền courses.view. Mỗi khoá có cả track offline & online song song.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer', default: 10, maximum: 50)),
+            new OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'status', in: 'query', schema: new OA\Schema(type: 'string', enum: ['draft', 'published', 'all'])),
+            new OA\Parameter(name: 'level', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'audience', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'offline', in: 'query', schema: new OA\Schema(type: 'string', enum: ['all', 'has_offline', 'online_only'])),
+            new OA\Parameter(name: 'sort', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'order', in: 'query', schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'])),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công (phân trang)',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                    new OA\Property(property: 'meta', ref: '#/components/schemas/PaginationMeta'),
+                    new OA\Property(property: 'links', ref: '#/components/schemas/PaginationLinks'),
+                ])
+            ),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Danh sách khoá học cho trang quản trị. Trả về shape `AdminCourse[]`.
      * Mô hình song song: mỗi khoá có cả track offline & online; track gắn với
@@ -84,6 +116,42 @@ class CourseController extends BaseApiController
      * Tạo khoá học mới. Mô hình song song: không mở lớp offline thì
      * max_offline_slots = null (khoá chỉ online).
      */
+    #[OA\Post(
+        path: '/v1/courses',
+        summary: '[Admin] Tạo khoá học mới (multipart/form-data)',
+        description: 'Yêu cầu quyền courses.manage. Không set has_offline=true → khoá chỉ online (max_offline_slots=null).',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(required: ['title', 'level'], properties: [
+                    new OA\Property(property: 'title', type: 'string', maxLength: 255),
+                    new OA\Property(property: 'description', type: 'string', maxLength: 5000, nullable: true),
+                    new OA\Property(property: 'level', type: 'string', enum: ['beginner', 'intermediate', 'advanced']),
+                    new OA\Property(property: 'status', type: 'string', enum: ['draft', 'published'], nullable: true),
+                    new OA\Property(property: 'audience', type: 'string', nullable: true),
+                    new OA\Property(property: 'has_offline', type: 'boolean', nullable: true),
+                    new OA\Property(property: 'enrollment_start', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'enrollment_deadline', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'course_end', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'max_offline_slots', type: 'integer', nullable: true),
+                    new OA\Property(property: 'max_absent_allowed', type: 'integer', nullable: true),
+                    new OA\Property(property: 'quiz_pass_threshold', type: 'integer', nullable: true, description: 'Mặc định 80'),
+                    new OA\Property(property: 'certificate_template_id', type: 'integer', nullable: true),
+                    new OA\Property(property: 'thumbnail', type: 'string', format: 'binary', nullable: true),
+                    new OA\Property(property: 'tag_ids', type: 'array', items: new OA\Items(type: 'integer'), nullable: true),
+                    new OA\Property(property: 'mentor_ids', type: 'array', items: new OA\Items(type: 'integer'), nullable: true),
+                ])
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Tạo thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function store(Request $request): JsonResponse
     {
         $this->nullifyEmpty($request);
@@ -172,6 +240,45 @@ class CourseController extends BaseApiController
     /**
      * Cập nhật khoá học. Gọi qua POST + _method=PUT (multipart) khi có thumbnail.
      */
+    #[OA\Put(
+        path: '/v1/courses/{course}',
+        summary: '[Admin] Cập nhật khoá học (dùng POST + _method=PUT khi có upload thumbnail)',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, description: 'ID khoá học', schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(properties: [
+                    new OA\Property(property: 'title', type: 'string', maxLength: 255, nullable: true),
+                    new OA\Property(property: 'description', type: 'string', maxLength: 5000, nullable: true),
+                    new OA\Property(property: 'level', type: 'string', enum: ['beginner', 'intermediate', 'advanced'], nullable: true),
+                    new OA\Property(property: 'status', type: 'string', enum: ['draft', 'published'], nullable: true),
+                    new OA\Property(property: 'audience', type: 'string', nullable: true),
+                    new OA\Property(property: 'has_offline', type: 'boolean', nullable: true),
+                    new OA\Property(property: 'remove_thumbnail', type: 'boolean', nullable: true),
+                    new OA\Property(property: 'enrollment_start', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'enrollment_deadline', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'course_end', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'max_offline_slots', type: 'integer', nullable: true),
+                    new OA\Property(property: 'max_absent_allowed', type: 'integer', nullable: true),
+                    new OA\Property(property: 'quiz_pass_threshold', type: 'integer', nullable: true),
+                    new OA\Property(property: 'certificate_template_id', type: 'integer', nullable: true),
+                    new OA\Property(property: 'thumbnail', type: 'string', format: 'binary', nullable: true),
+                    new OA\Property(property: 'tag_ids', type: 'array', items: new OA\Items(type: 'integer'), nullable: true),
+                    new OA\Property(property: 'mentor_ids', type: 'array', items: new OA\Items(type: 'integer'), nullable: true),
+                ])
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function update(Request $request, Course $course): JsonResponse
     {
         $this->nullifyEmpty($request);
@@ -262,6 +369,20 @@ class CourseController extends BaseApiController
     /**
      * Xoá mềm khoá học (chuyển vào thùng rác).
      */
+    #[OA\Delete(
+        path: '/v1/courses/{course}',
+        summary: '[Admin] Xoá mềm khoá học (chuyển vào thùng rác)',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xóa', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function destroy(Request $request, Course $course): JsonResponse
     {
         $course->deleted_by = $request->user()->id;
@@ -274,6 +395,23 @@ class CourseController extends BaseApiController
     /**
      * Danh sách khoá học trong thùng rác (đã xoá mềm).
      */
+    #[OA\Get(
+        path: '/v1/courses/trash',
+        summary: '[Admin] Danh sách khoá học trong thùng rác (đã xoá mềm)',
+        description: 'Yêu cầu quyền courses.view.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer', default: 10, maximum: 50)),
+            new OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sort', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'order', in: 'query', schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'])),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công (phân trang)', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function trash(Request $request): JsonResponse
     {
         $perPage = min((int) $request->query('per_page', 10), 50);
@@ -298,6 +436,21 @@ class CourseController extends BaseApiController
     /**
      * Khôi phục khoá học từ thùng rác.
      */
+    #[OA\Patch(
+        path: '/v1/courses/trash/{id}/restore',
+        summary: '[Admin] Khôi phục khoá học từ thùng rác',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Khôi phục thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy trong thùng rác', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function restore(int $id): JsonResponse
     {
         $course = Course::onlyTrashed()->findOrFail($id);
@@ -314,6 +467,21 @@ class CourseController extends BaseApiController
     /**
      * Xoá vĩnh viễn khoá học.
      */
+    #[OA\Delete(
+        path: '/v1/courses/trash/{id}/force',
+        summary: '[Admin] Xoá vĩnh viễn khoá học',
+        description: 'Yêu cầu quyền courses.manage. Không thể hoàn tác.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xoá vĩnh viễn', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy trong thùng rác', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function forceDelete(int $id): JsonResponse
     {
         $course = Course::onlyTrashed()->findOrFail($id);
@@ -331,6 +499,21 @@ class CourseController extends BaseApiController
      * Chi tiết khoá học cho trang quản trị. Trả về shape `AdminCourseDetail`
      * (AdminCourse + lessons[] + enrollments[] + certificates[]).
      */
+    #[OA\Get(
+        path: '/v1/courses/{course}',
+        summary: '[Admin] Chi tiết khoá học cho trang quản trị (lessons, enrollments, certificates, điểm danh)',
+        description: 'Yêu cầu quyền courses.view.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function show(Course $course): JsonResponse
     {
         $course->load(['creator:id,full_name,avatar', 'tags:id,name', 'mentors:id,full_name,avatar', 'certificateTemplate:id,name'])
@@ -388,6 +571,23 @@ class CourseController extends BaseApiController
     /**
      * Thu hồi chứng chỉ — giữ lại bản ghi + file PDF cũ làm lịch sử, chỉ đánh dấu đã thu hồi.
      */
+    #[OA\Post(
+        path: '/v1/courses/{course}/certificates/{certificate}/revoke',
+        summary: '[Admin] Thu hồi chứng chỉ (giữ lại bản ghi + PDF cũ làm lịch sử)',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'certificate', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã thu hồi', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Chứng chỉ không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Chứng chỉ đã bị thu hồi trước đó', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function revokeCertificate(Request $request, Course $course, CourseCertificate $certificate): JsonResponse
     {
         $this->assertCertificateBelongsTo($course, $certificate);
@@ -401,6 +601,22 @@ class CourseController extends BaseApiController
     /**
      * Cấp lại chứng chỉ (sinh cert_code + PDF mới, gỡ trạng thái thu hồi nếu có).
      */
+    #[OA\Post(
+        path: '/v1/courses/{course}/certificates/{certificate}/reissue',
+        summary: '[Admin] Cấp lại chứng chỉ (sinh cert_code + PDF mới)',
+        description: 'Yêu cầu quyền courses.manage. Gỡ trạng thái thu hồi nếu có.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'certificate', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã cấp lại chứng chỉ', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Chứng chỉ không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function reissueCertificate(Course $course, CourseCertificate $certificate): JsonResponse
     {
         $this->assertCertificateBelongsTo($course, $certificate);
@@ -415,6 +631,20 @@ class CourseController extends BaseApiController
      * một file ZIP để gửi in hàng loạt. Cert đã thu hồi bị loại trừ. Mỗi PDF trong ZIP
      * được đặt tên theo học viên + mã chứng chỉ để dễ tra cứu khi in.
      */
+    #[OA\Get(
+        path: '/v1/courses/{course}/certificates/export-physical',
+        summary: '[Admin] Xuất ZIP toàn bộ chứng chỉ bản in (has_physical=true, còn hiệu lực) để gửi in hàng loạt',
+        description: 'Yêu cầu quyền courses.view. Trả về file ZIP (application/zip) chứa các PDF chứng chỉ.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'File ZIP', content: new OA\MediaType(mediaType: 'application/zip', schema: new OA\Schema(type: 'string', format: 'binary'))),
+            new OA\Response(response: 422, description: 'Không có chứng chỉ bản in nào để xuất', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function exportPhysicalCertificates(Course $course): BinaryFileResponse|JsonResponse
     {
         $certificates = $course->certificates()
@@ -464,6 +694,20 @@ class CourseController extends BaseApiController
      * MỘT file PDF nhiều trang, trả về inline để trình duyệt mở hộp thoại in như bình thường
      * (mỗi chứng chỉ là một trang). Cert đã thu hồi bị loại trừ.
      */
+    #[OA\Get(
+        path: '/v1/courses/{course}/certificates/print-physical',
+        summary: '[Admin] Gộp toàn bộ chứng chỉ bản in thành 1 file PDF nhiều trang để in',
+        description: 'Yêu cầu quyền courses.view. Trả về PDF (application/pdf, inline).',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'File PDF', content: new OA\MediaType(mediaType: 'application/pdf', schema: new OA\Schema(type: 'string', format: 'binary'))),
+            new OA\Response(response: 422, description: 'Không có chứng chỉ bản in nào để in', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function printPhysicalCertificates(Course $course): Response|JsonResponse
     {
         $certificates = $course->certificates()
@@ -516,6 +760,16 @@ class CourseController extends BaseApiController
     /**
      * Danh sách user để chọn làm mentor khoá học (dùng cho multiselect ở form thêm/sửa).
      */
+    #[OA\Get(
+        path: '/v1/courses/mentor-options',
+        summary: '[Admin] Danh sách user để chọn làm mentor khoá học',
+        description: 'Yêu cầu quyền courses.view.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+        ]
+    )]
     public function mentorOptions(): JsonResponse
     {
         $users = User::query()
@@ -532,6 +786,21 @@ class CourseController extends BaseApiController
     /**
      * Tìm user chưa ghi danh khoá học (theo tên/email/username) để admin chọn ghi danh thay.
      */
+    #[OA\Get(
+        path: '/v1/courses/{course}/enrollable-users',
+        summary: '[Admin] Tìm user chưa ghi danh khoá học (theo tên/email/username) để ghi danh thay',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'search', in: 'query', required: true, description: 'Tối thiểu 2 ký tự', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Từ khoá tìm kiếm quá ngắn', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function searchEnrollableUsers(Request $request, Course $course): JsonResponse
     {
         $search = trim((string) $request->query('search'));
@@ -561,6 +830,28 @@ class CourseController extends BaseApiController
      * Ghi danh thay học viên (admin). Áp cùng điều kiện như học viên tự đăng ký
      * (tư cách + cửa sổ thời gian + giới hạn slot offline) — tái dùng CourseEnrollmentService.
      */
+    #[OA\Post(
+        path: '/v1/courses/{course}/enrollments',
+        summary: '[Admin] Ghi danh thay học viên (áp cùng điều kiện như học viên tự đăng ký)',
+        description: 'Yêu cầu quyền courses.manage.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['user_id', 'track'], properties: [
+                new OA\Property(property: 'user_id', type: 'integer'),
+                new OA\Property(property: 'track', type: 'string', enum: ['offline', 'online']),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Ghi danh thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Không đủ điều kiện ghi danh / lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function enrollStudent(Request $request, Course $course): JsonResponse
     {
         $data = $request->validate([
@@ -584,6 +875,22 @@ class CourseController extends BaseApiController
      * Xoá ghi danh (admin) — cascade xoá tiến độ/điểm danh liên quan trong khoá này.
      * Chứng chỉ đã cấp được giữ lại.
      */
+    #[OA\Delete(
+        path: '/v1/courses/{course}/enrollments/{enrollment}',
+        summary: '[Admin] Xoá ghi danh (cascade xoá tiến độ/điểm danh liên quan trong khoá này)',
+        description: 'Yêu cầu quyền courses.manage. Chứng chỉ đã cấp được giữ lại.',
+        security: [['sanctum' => []]],
+        tags: ['Learning - Courses (Admin)'],
+        parameters: [
+            new OA\Parameter(name: 'course', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'enrollment', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xoá ghi danh', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Ghi danh không thuộc khoá học này', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function removeEnrollment(Course $course, CourseEnrollment $enrollment): JsonResponse
     {
         $this->assertEnrollmentBelongsTo($course, $enrollment);
