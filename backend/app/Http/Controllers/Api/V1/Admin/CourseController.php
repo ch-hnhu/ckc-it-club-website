@@ -174,6 +174,9 @@ class CourseController extends BaseApiController
             'tag_ids.*' => 'integer|exists:tags,id',
             'mentor_ids' => 'nullable|array',
             'mentor_ids.*' => 'integer|exists:users,id',
+        ], [
+            'enrollment_deadline.after_or_equal' => 'Hạn ghi danh offline phải sau hoặc bằng thời điểm mở ghi danh.',
+            'course_end.after_or_equal' => 'Thời điểm kết thúc khoá phải sau hoặc bằng hạn ghi danh offline.',
         ]);
 
         // Không mở lớp offline → khoá chỉ online; xoá luôn các trường liên quan
@@ -301,6 +304,9 @@ class CourseController extends BaseApiController
             'tag_ids.*' => 'integer|exists:tags,id',
             'mentor_ids' => 'nullable|array',
             'mentor_ids.*' => 'integer|exists:users,id',
+        ], [
+            'enrollment_deadline.after_or_equal' => 'Hạn ghi danh offline phải sau hoặc bằng thời điểm mở ghi danh.',
+            'course_end.after_or_equal' => 'Thời điểm kết thúc khoá phải sau hoặc bằng hạn ghi danh offline.',
         ]);
 
         // Thumbnail: thay mới / gỡ bỏ / giữ nguyên

@@ -345,8 +345,9 @@ class LearningCenterSeeder extends Seeder
             $hasOffline = $c['max_offline_slots'] !== null;
 
             foreach ($c['lessons'] as $i => $topic) {
-                // Thời lượng video xen kẽ 30–50 phút cho thực tế
-                $duration = (30 + ($i % 3) * 10) * 60;
+                // Thời lượng thật của video bài giảng rfscVS0vtbw (4h26m52s)
+                // để khớp với thời lượng player hiển thị khi xem.
+                $duration = 16012;
 
                 // Lịch offline: buổi 1 bắt đầu ngay sau khi đóng đăng ký, mỗi buổi cách nhau 1 tuần.
                 // Chỉ set khi khoá có mở lớp offline — khoá online-only không có lịch.
@@ -405,6 +406,8 @@ class LearningCenterSeeder extends Seeder
             'video_duration' => $duration,
             // Buổi lẻ có thêm bản ghi livestream để demo 2 tab; buổi chẵn chỉ có video bài giảng (ẩn tab)
             'live_url' => $order % 2 === 1 ? 'https://www.youtube.com/embed/_uQrJ0TkZlc' : null,
+            // Thời lượng thật của video _uQrJ0TkZlc (6h14m7s)
+            'live_duration' => $order % 2 === 1 ? 22447 : null,
             'document' => "## {$topic}\n\nNội dung lý thuyết của buổi học sẽ được cập nhật tại đây. Bao gồm khái niệm chính, ví dụ minh hoạ và bài thực hành.",
             'assignment_url' => 'https://forms.gle/placeholder-'.$slug,
             'assignment_deadline' => now()->addDays($order * 7),
@@ -498,8 +501,8 @@ class LearningCenterSeeder extends Seeder
                 'description' => 'Làm quen với HTML — ngôn ngữ đánh dấu siêu văn bản, cách trình duyệt đọc và hiển thị nội dung.',
                 'resource_url' => 'https://developer.mozilla.org/vi/docs/Learn/HTML/Introduction_to_HTML',
                 'video_url' => 'https://www.youtube.com/embed/qz0aGYrrlhU',
-                'video_duration' => 4800,
-                'assignment_url' => 'https://forms.gle/placeholder-buoi-1',
+                'video_duration' => 4174,
+                'assignment_url' => 'https://forms.gle/AQw1sWuiTtBrPRuC9',
                 'assignment_deadline' => now()->addDays(7),
                 'document' => <<<'MD'
 ## HTML là gì?
@@ -583,8 +586,8 @@ MD,
                 'description' => 'Học cách sử dụng CSS để tạo kiểu cho trang web — màu sắc, font chữ, khoảng cách và bố cục cơ bản.',
                 'resource_url' => 'https://developer.mozilla.org/vi/docs/Learn/CSS/First_steps',
                 'video_url' => 'https://www.youtube.com/embed/1PnVor36_40',
-                'video_duration' => 5400,
-                'assignment_url' => 'https://forms.gle/placeholder-buoi-2',
+                'video_duration' => 1424,
+                'assignment_url' => 'https://forms.gle/awUUKMydHyiFas2E6',
                 'assignment_deadline' => now()->addDays(14),
                 'document' => <<<'MD'
 ## CSS là gì?
@@ -657,7 +660,7 @@ MD,
                 'description' => 'Làm quen với JavaScript — biến, kiểu dữ liệu, hàm và câu lệnh điều kiện.',
                 'resource_url' => 'https://javascript.info/first-steps',
                 'video_url' => 'https://www.youtube.com/embed/W6NZfCO5SIk',
-                'video_duration' => 6000,
+                'video_duration' => 2897,
                 'assignment_url' => 'https://forms.gle/placeholder-buoi-3',
                 'assignment_deadline' => now()->addDays(21),
                 'document' => <<<'MD'
@@ -743,7 +746,7 @@ MD,
                 'description' => 'Học cách dùng JavaScript để thao tác với phần tử HTML (DOM) và phản hồi sự kiện từ người dùng.',
                 'resource_url' => 'https://javascript.info/document',
                 'video_url' => 'https://www.youtube.com/embed/0ik6X4DJKCc',
-                'video_duration' => 5700,
+                'video_duration' => 2341,
                 'assignment_url' => 'https://forms.gle/placeholder-buoi-4',
                 'assignment_deadline' => now()->addDays(28),
                 'document' => <<<'MD'
@@ -829,7 +832,7 @@ MD,
                 'description' => 'Xây dựng giao diện thích ứng với mọi kích thước màn hình bằng Flexbox, Grid và Bootstrap.',
                 'resource_url' => 'https://getbootstrap.com/docs/5.3/getting-started/introduction/',
                 'video_url' => 'https://www.youtube.com/embed/4sosXZsdy-s',
-                'video_duration' => 6600,
+                'video_duration' => 4728,
                 'assignment_url' => 'https://forms.gle/placeholder-buoi-5',
                 'assignment_deadline' => now()->addDays(35),
                 'document' => <<<'MD'
@@ -921,7 +924,7 @@ MD,
                 'description' => 'Tổng hợp toàn bộ kiến thức để xây dựng hoàn chỉnh một trang Portfolio cá nhân responsive.',
                 'resource_url' => 'https://github.com/topics/portfolio-template',
                 'video_url' => 'https://www.youtube.com/embed/oYRda7UtuhA',
-                'video_duration' => 7200,
+                'video_duration' => 4319,
                 'assignment_url' => 'https://forms.gle/placeholder-buoi-6-doan',
                 'assignment_deadline' => now()->addDays(42),
                 'document' => <<<'MD'

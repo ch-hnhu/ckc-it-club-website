@@ -268,6 +268,31 @@ export interface MyCertificate {
 	} | null;
 }
 
+// Kết quả xác minh công khai chứng chỉ (quét QR → /verify/:code)
+export type CertificateVerifyStatus = "valid" | "revoked" | "not_found";
+
+export interface CertificateVerifyResult {
+	valid: boolean;
+	status: CertificateVerifyStatus;
+	certificate: {
+		cert_code: string;
+		cert_url: string | null;
+		track: "offline" | "online";
+		issued_at: string | null;
+		revoked_at: string | null;
+		recipient: {
+			full_name: string | null;
+			username: string | null;
+			avatar: string | null;
+		};
+		course: {
+			slug: string;
+			title: string;
+			thumbnail: string | null;
+		} | null;
+	} | null;
+}
+
 export interface CourseListParams {
 	page?: number;
 	per_page?: number;
