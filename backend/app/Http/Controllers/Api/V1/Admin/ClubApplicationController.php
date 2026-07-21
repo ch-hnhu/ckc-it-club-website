@@ -11,6 +11,7 @@ use App\Services\ApplicationEmailService;
 use App\Services\NotificationService;
 use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
+use OpenApi\Attributes as OA;
 
 class ClubApplicationController extends BaseApiController
 {
@@ -22,6 +23,17 @@ class ClubApplicationController extends BaseApiController
         'failed' => [],
     ];
 
+    #[OA\Get(
+        path: '/v1/club-applications',
+        summary: '[Admin] Danh sách toàn bộ đơn xin gia nhập CLB (kèm câu trả lời)',
+        description: 'Yêu cầu quyền applications.view.',
+        security: [['sanctum' => []]],
+        tags: ['Club Application'],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function index(): JsonResponse
     {
         $applications = ClubApplication::query()
@@ -43,6 +55,31 @@ class ClubApplicationController extends BaseApiController
         );
     }
 
+    #[OA\Patch(
+        path: '/v1/club-applications/{clubApplication}/status',
+        summary: '[Admin] Cập nhật trạng thái đơn xin gia nhập (theo luồng chuyển trạng thái cố định)',
+        description: 'Yêu cầu quyền applications.manage. Luồng chuyển hợp lệ: pending→processing, processing→interview|failed, interview→passed|failed. Khi chuyển sang "passed", user sẽ được gán role club_member.',
+        security: [['sanctum' => []]],
+        tags: ['Club Application'],
+        parameters: [
+            new OA\Parameter(name: 'clubApplication', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['status'],
+                properties: [
+                    new OA\Property(property: 'status', type: 'string', enum: ['processing', 'interview', 'passed', 'failed']),
+                    new OA\Property(property: 'note', type: 'string', maxLength: 255, nullable: true),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 403, description: 'Không có quyền', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Chuyển trạng thái không hợp lệ / lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function updateStatus(
         UpdateClubApplicationStatusRequest $request,
         ClubApplication $clubApplication

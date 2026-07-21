@@ -9,11 +9,15 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use OpenApi\Attributes as OA;
 
 class CredentialAuthController extends AuthBaseController
 {
     /**
      * Register a regular user account and return a 24-hour token.
+     *
+     * NOTE: not wired to any route (superseded by RegisterVerificationController's
+     * OTP-based flow) — intentionally left undocumented in the OpenAPI spec.
      */
     public function registerUser(Request $request): JsonResponse
     {
@@ -67,6 +71,36 @@ class CredentialAuthController extends AuthBaseController
         ], HttpStatus::CREATED->value);
     }
 
+    #[OA\Post(
+        path: '/v1/auth/login',
+        summary: 'Đăng nhập user (email hoặc username) — trả token 24h',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['identifier', 'password'],
+                properties: [
+                    new OA\Property(property: 'identifier', type: 'string', description: 'Email hoặc username'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Đăng nhập thành công',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'token', type: 'string'),
+                        new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Sai email/username hoặc mật khẩu', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 403, description: 'Tài khoản bị khoá', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Login for regular users — returns a 24-hour token.
      */
@@ -80,6 +114,36 @@ class CredentialAuthController extends AuthBaseController
         return $this->attemptLogin($request->identifier, $request->password, 'user');
     }
 
+    #[OA\Post(
+        path: '/v1/auth/admin/login',
+        summary: 'Đăng nhập admin (yêu cầu quyền admin_panel.access) — trả token 8h',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['identifier', 'password'],
+                properties: [
+                    new OA\Property(property: 'identifier', type: 'string', description: 'Email hoặc username'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Đăng nhập thành công',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'token', type: 'string'),
+                        new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Sai email/username hoặc mật khẩu', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 403, description: 'Tài khoản bị khoá hoặc không có quyền admin', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Login for admin users — returns an 8-hour token.
      * Requires the admin_panel.access permission.

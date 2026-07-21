@@ -12,9 +12,25 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
 
 class ForgotPasswordController extends Controller
 {
+    #[OA\Post(
+        path: '/v1/auth/forgot-password',
+        summary: 'Bước 1 — Gửi mã OTP 6 số tới email để đặt lại mật khẩu (giới hạn 5 lần/phút/IP)',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['email'], properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đã gửi OTP (luôn trả về thành công kể cả khi email không tồn tại, để tránh dò email)', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 422, description: 'Lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Step 1 — Send a 6-digit OTP to the given email.
      * Throttled to 3 requests per hour per email via route middleware.
@@ -60,6 +76,30 @@ class ForgotPasswordController extends Controller
         ], HttpStatus::OK->value);
     }
 
+    #[OA\Post(
+        path: '/v1/auth/verify-otp',
+        summary: 'Bước 2 — Xác nhận OTP, trả về reset_token dùng cho bước đặt lại mật khẩu (giới hạn 5 lần/phút/IP)',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['email', 'otp'], properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'otp', type: 'string', minLength: 6, maxLength: 6),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'OTP hợp lệ',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'message', type: 'string'),
+                    new OA\Property(property: 'reset_token', type: 'string'),
+                ])
+            ),
+            new OA\Response(response: 422, description: 'OTP không hợp lệ hoặc đã hết hạn', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Step 2 — Verify the OTP and return a short-lived reset token.
      */
@@ -105,6 +145,25 @@ class ForgotPasswordController extends Controller
         ], HttpStatus::OK->value);
     }
 
+    #[OA\Post(
+        path: '/v1/auth/reset-password',
+        summary: 'Bước 3 — Đặt lại mật khẩu bằng reset_token nhận từ bước 2 (giới hạn 5 lần/phút/IP)',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['email', 'reset_token', 'password', 'password_confirmation'], properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'reset_token', type: 'string'),
+                new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 8),
+                new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đặt lại mật khẩu thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Tài khoản không tồn tại', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn / lỗi validate', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     /**
      * Step 3 — Reset the password using the reset token from step 2.
      */

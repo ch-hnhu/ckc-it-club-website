@@ -10,9 +10,19 @@ use App\Models\ClubApplication;
 use App\Models\ClubInformation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class ClubApplicationController extends BaseApiController
 {
+    #[OA\Get(
+        path: '/v1/user/application-questions',
+        summary: 'Lấy danh sách câu hỏi đơn xin gia nhập CLB đang active (để render form đăng ký)',
+        security: [['sanctum' => []]],
+        tags: ['Club Application'],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+        ]
+    )]
     public function questions(): JsonResponse
     {
         $questions = ApplicationQuestion::query()
@@ -37,6 +47,28 @@ class ClubApplicationController extends BaseApiController
         return $this->successResponse(true, $questions, 'Questions retrieved successfully', HttpStatus::OK);
     }
 
+    #[OA\Get(
+        path: '/v1/user/club-applications/me',
+        summary: 'Lấy đơn xin gia nhập CLB mới nhất mà user hiện tại đã nộp',
+        security: [['sanctum' => []]],
+        tags: ['Club Application'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'id', type: 'integer'),
+                        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'processing', 'interview', 'passed', 'failed']),
+                        new OA\Property(property: 'note', type: 'string', nullable: true),
+                        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Chưa nộp đơn nào', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function myApplication(): JsonResponse
     {
         $application = ClubApplication::where('created_by', auth()->id())
@@ -64,6 +96,44 @@ class ClubApplicationController extends BaseApiController
         return ($value ?? 'true') === 'true';
     }
 
+    #[OA\Post(
+        path: '/v1/user/club-applications',
+        summary: 'Nộp đơn xin gia nhập CLB (mỗi user chỉ nộp được 1 lần)',
+        security: [['sanctum' => []]],
+        tags: ['Club Application'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(
+                        property: 'answers',
+                        type: 'array',
+                        items: new OA\Items(properties: [
+                            new OA\Property(property: 'question_id', type: 'integer'),
+                            new OA\Property(property: 'answer_value', type: 'string'),
+                        ])
+                    ),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Nộp đơn thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'id', type: 'integer'),
+                        new OA\Property(property: 'status', type: 'string', example: 'pending'),
+                        new OA\Property(property: 'note', type: 'string', nullable: true),
+                        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 403, description: 'Form đăng ký tạm thời đã đóng', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Đã nộp đơn trước đó hoặc thiếu câu trả lời bắt buộc', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function store(Request $request): JsonResponse
     {
         if (! $this->isRecruitmentEnabled()) {

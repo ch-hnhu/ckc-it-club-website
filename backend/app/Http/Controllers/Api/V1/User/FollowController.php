@@ -8,9 +8,34 @@ use App\Models\User;
 use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class FollowController extends BaseApiController
 {
+    #[OA\Post(
+        path: '/v1/users/{username}/follow',
+        summary: 'Theo dõi / bỏ theo dõi một user (toggle)',
+        security: [['sanctum' => []]],
+        tags: ['User Profile'],
+        parameters: [
+            new OA\Parameter(name: 'username', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thành công',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean', example: true),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'is_following', type: 'boolean'),
+                        new OA\Property(property: 'followers_count', type: 'integer'),
+                    ], type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Không tìm thấy người dùng', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Không thể theo dõi chính mình', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function toggle(Request $request, string $username): JsonResponse
     {
         $target = User::where(function ($q) use ($username) {
@@ -45,6 +70,18 @@ class FollowController extends BaseApiController
         ], $isFollowing ? 'Đã theo dõi.' : 'Đã bỏ theo dõi.');
     }
 
+    #[OA\Get(
+        path: '/v1/users/{username}/followers',
+        summary: 'Danh sách người theo dõi một user (public)',
+        tags: ['User Profile'],
+        parameters: [
+            new OA\Parameter(name: 'username', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy người dùng', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function followers(string $username): JsonResponse
     {
         $user = User::where(function ($q) use ($username) {
@@ -72,6 +109,18 @@ class FollowController extends BaseApiController
         return $this->successResponse(true, $followers, 'Lấy danh sách người theo dõi thành công.');
     }
 
+    #[OA\Get(
+        path: '/v1/users/{username}/following',
+        summary: 'Danh sách người mà một user đang theo dõi (public)',
+        tags: ['User Profile'],
+        parameters: [
+            new OA\Parameter(name: 'username', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công', content: new OA\JsonContent(ref: '#/components/schemas/SuccessResponse')),
+            new OA\Response(response: 404, description: 'Không tìm thấy người dùng', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function following(string $username): JsonResponse
     {
         $user = User::where(function ($q) use ($username) {
