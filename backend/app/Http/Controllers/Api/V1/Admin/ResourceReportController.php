@@ -16,11 +16,25 @@ class ResourceReportController extends BaseApiController
         $status = $request->query('status');
         $search = $request->query('search');
 
+        $allowedSorts = ['id', 'resource_title', 'reporter_name', 'reason', 'description', 'status', 'created_at'];
+        $sort = in_array($request->query('sort', 'created_at'), $allowedSorts)
+            ? $request->query('sort', 'created_at')
+            : 'created_at';
+        $order = in_array($request->query('order', 'desc'), ['asc', 'desc'])
+            ? $request->query('order', 'desc')
+            : 'desc';
+
         $query = ResourceReport::with([
-            'resource:id,title,status',
+            'resource:id,title,url,status',
             'reporter:id,full_name,email,username',
             'resolver:id,full_name',
         ]);
+
+        match ($sort) {
+            'resource_title' => $query->orderByRaw("(SELECT title FROM resources WHERE resources.id = resource_reports.resource_id) {$order}"),
+            'reporter_name'  => $query->orderByRaw("(SELECT full_name FROM users WHERE users.id = resource_reports.reporter_id) {$order}"),
+            default          => $query->orderBy("resource_reports.{$sort}", $order),
+        };
 
         if ($status && $status !== 'all') {
             $query->where('status', $status);
@@ -33,7 +47,7 @@ class ResourceReportController extends BaseApiController
             );
         }
 
-        $paginated = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $paginated = $query->paginate($perPage);
         $items = collect($paginated->items())->map(fn (ResourceReport $r) => $this->transform($r));
 
         return response()->json([
@@ -71,7 +85,7 @@ class ResourceReportController extends BaseApiController
             'resolved_at' => now(),
         ]);
 
-        $report->load(['resource:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+        $report->load(['resource:id,title,url,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
 
         if ($report->reporter) {
             UserNotificationService::dispatchResourceReportDismissed($report->reporter, $admin, $report->resource?->title ?? 'Tài nguyên đã xóa');
@@ -103,7 +117,7 @@ class ResourceReportController extends BaseApiController
             'resolved_at' => now(),
         ]);
 
-        $report->load(['resource:id,title,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
+        $report->load(['resource:id,title,url,status', 'reporter:id,full_name,email,username', 'resolver:id,full_name']);
         $resource->load('uploader');
 
         if ($resource->uploader) {
@@ -120,6 +134,7 @@ class ResourceReportController extends BaseApiController
             'resource' => $report->resource ? [
                 'id' => $report->resource->id,
                 'title' => $report->resource->title,
+                'url' => $report->resource->url,
                 'status' => $report->resource->status,
             ] : null,
             'reporter' => $report->reporter ? [

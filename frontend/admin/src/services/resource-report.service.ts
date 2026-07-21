@@ -4,6 +4,7 @@ import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 export interface ReportResource {
 	id: number;
 	title: string;
+	url: string | null;
 	status: string;
 }
 
@@ -37,6 +38,8 @@ const resourceReportService = {
 		per_page?: number;
 		search?: string;
 		status?: string;
+		sort?: string;
+		order?: "asc" | "desc";
 	}): Promise<PaginatedResponse<ResourceReportRecord>> {
 		return api.get("/resource-reports", params as Record<string, unknown>);
 	},
