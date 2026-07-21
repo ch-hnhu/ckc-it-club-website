@@ -1,6 +1,7 @@
 import { api } from "@/services/api.service";
 import type { ApiResponse, PaginatedResponse } from "@/types/api.types";
 import type {
+	CertificateVerifyResult,
 	Course,
 	CourseCategory,
 	CourseCertificateInfo,
@@ -71,6 +72,12 @@ export const learningService = {
 	// Danh sách tất cả chứng chỉ (còn hiệu lực) của user hiện tại (yêu cầu đăng nhập).
 	getMyCertificates: () =>
 		api.get<ApiResponse<MyCertificate[]>>("/learning/certificates"),
+
+	// Xác minh công khai chứng chỉ theo mã QR (không cần đăng nhập).
+	verifyCertificate: (code: string) =>
+		api.get<ApiResponse<CertificateVerifyResult>>(
+			`/certificates/verify/${encodeURIComponent(code)}`,
+		),
 
 	getQuiz: (courseSlug: string, lessonSlug: string) =>
 		api.get<ApiResponse<QuizPlay>>(

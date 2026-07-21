@@ -3,7 +3,6 @@ import {
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
-	BarChart3,
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
@@ -15,7 +14,6 @@ import {
 	MoreHorizontal,
 	RefreshCw,
 	Settings2,
-	Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -251,15 +249,9 @@ function ApplicationRequestsPage() {
 		(sum, application) => sum + application.answers.length,
 		0,
 	);
-	const reviewedApplications = applications.filter(
-		(application) => application.status !== "pending",
-	).length;
 	const averageAnswers = applications.length
 		? (totalAnswers / applications.length).toFixed(1)
 		: "0.0";
-	const reviewedPercent = applications.length
-		? Math.round((reviewedApplications / applications.length) * 100)
-		: 0;
 	const visiblePercent = applications.length
 		? Math.round((filteredApplications.length / applications.length) * 100)
 		: 0;
@@ -284,17 +276,6 @@ function ApplicationRequestsPage() {
 				};
 			}),
 		[applications],
-	);
-
-	const topStatus = statusInsights.reduce(
-		(current, item) => (item.count > current.count ? item : current),
-		statusInsights[0] ?? {
-			key: "pending" as ApplicationStatus,
-			label: "Chưa có dữ liệu",
-			count: 0,
-			percent: 0,
-			barClass: "bg-border",
-		},
 	);
 
 	const sortedApplications = useMemo(() => {
@@ -408,30 +389,6 @@ function ApplicationRequestsPage() {
 
 						{/* Right — compact stats card */}
 						<div className='self-start rounded-xl border border-emerald-500/15 bg-background/82 p-4 shadow-sm backdrop-blur'>
-							<div className='flex items-center justify-between gap-3 mb-3'>
-								<div>
-									<p className='inline-flex items-center gap-1.5 text-xs font-semibold text-foreground'>
-										<BarChart3 className='size-3.5' />
-										Nhịp xử lý hồ sơ
-									</p>
-									<p className='text-2xl font-bold tracking-tight text-foreground mt-0.5'>
-										{reviewedPercent}%
-									</p>
-									<p className='text-xs text-muted-foreground mt-0.5'>
-										{topStatus.label} lớn nhất — {topStatus.count} hồ sơ
-									</p>
-								</div>
-								<div className='rounded-xl border border-emerald-500/15 bg-emerald-500/10 p-2 text-emerald-700 dark:border-emerald-400/15 dark:bg-emerald-400/10 dark:text-emerald-300'>
-									<Sparkles className='size-4' />
-								</div>
-							</div>
-
-							<div className='mb-3 overflow-hidden rounded-full bg-emerald-500/10 dark:bg-emerald-400/10'>
-								<div
-									className='h-1.5 rounded-full bg-emerald-600 transition-all dark:bg-emerald-400'
-									style={{ width: `${reviewedPercent}%` }}
-								/>
-							</div>
 
 							<div className='space-y-2'>
 								{statusInsights.map((item) => (
@@ -605,6 +562,9 @@ function ApplicationRequestsPage() {
 											Cập nhật
 											{getSortIcon("updated_at")}
 										</Button>
+									</TableHead>
+									<TableHead className='w-[60px]'>
+										<span className='sr-only'>Hành động</span>
 									</TableHead>
 								</TableRow>
 							</TableHeader>
@@ -859,12 +819,8 @@ function ApplicationRequestsPage() {
 										<div>{getStatusBadge(statusDialogApplication.status)}</div>
 									</div>
 									<div className='grid gap-2'>
-										<label
-											className='text-sm font-medium'
-											htmlFor='next-status'>
-											Trạng thái tiếp theo
-										</label>
-										<div className='flex flex-wrap gap-2' id='next-status'>
+										<p className='text-sm font-medium'>Trạng thái tiếp theo</p>
+										<div className='flex flex-wrap gap-2'>
 											{getNextStatuses(statusDialogApplication.status).map(
 												(status) => {
 													const isActive = nextStatus === status;

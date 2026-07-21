@@ -409,7 +409,7 @@ class CertificateTemplateController extends BaseApiController
             'cert_code' => $code,
             'issued_at' => now()->format('d/m/Y'),
             'track' => 'Offline',
-            'verify_url' => rtrim((string) config('app.url'), '/').'/verify/'.$code,
+            'verify_url' => rtrim((string) env('USER_FRONTEND_URL', config('app.url')), '/').'/verify/'.$code,
         ];
     }
 

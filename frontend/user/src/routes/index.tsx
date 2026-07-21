@@ -29,6 +29,7 @@ import UserProfilePage from "@/pages/user/UserProfilePage";
 import AccountPage from "@/pages/user/AccountPage";
 import MyPointsPage from "@/pages/gamification/MyPointsPage";
 import MyCertificatesPage from "@/pages/learning/MyCertificatesPage";
+import CertificateVerifyPage from "@/pages/learning/CertificateVerifyPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import RegisterVerifyOtpPage from "@/pages/auth/RegisterVerifyOtpPage";
@@ -157,6 +158,11 @@ const router = createBrowserRouter([
 						path: "chung-chi-cua-toi",
 						element: <MyCertificatesPage />,
 						handle: { title: "Chứng chỉ của tôi" },
+					},
+					{
+						path: "verify/:code",
+						element: <CertificateVerifyPage />,
+						handle: { title: "Xác minh chứng chỉ" },
 					},
 					{
 						// Dynamic catch-all for /@username profile pages — must be last
