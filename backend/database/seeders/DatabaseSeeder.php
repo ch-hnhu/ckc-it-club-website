@@ -43,6 +43,7 @@ class DatabaseSeeder extends Seeder
             PointRuleSeeder::class,
             QuestionTypeSeeder::class,
             LearningCenterSeeder::class,
+            PythonLesson1QuizSeeder::class,
             CertificateTemplateSeeder::class,
             CourseCertificateTestSeeder::class,
             PythonOfflineCertificateSeeder::class,
