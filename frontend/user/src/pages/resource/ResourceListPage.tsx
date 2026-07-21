@@ -256,53 +256,55 @@ const ResourceListPage: React.FC = () => {
 					action={{ to: "/ung-tuyen", label: "Tham gia CLB" }}
 				/>
 			) : (
-				<div className='neo-container px-6 pt-8'>
-					{!loading && hasLockedResources && (
-						<div className='mb-5 flex flex-col gap-3 rounded-2xl border-2 border-black bg-[var(--color-pastel-yellow,#FEF3C7)] px-5 py-4 shadow-[4px_4px_0_#111] sm:flex-row sm:items-center sm:justify-between'>
-							<div className='flex items-start gap-3'>
-								<Lock className='mt-0.5 h-5 w-5 shrink-0 text-black' />
-								<p className='text-sm font-bold text-black'>
-									Sinh viên Cao Thắng được mở cố định 3 tài nguyên, cộng với tài
-									nguyên do chính mình đóng góp. Trở thành thành viên câu lạc bộ
-									để mở khoá toàn bộ kho tài nguyên.
-								</p>
-							</div>
-							<Link
-								to='/ung-tuyen'
-								className='inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-2 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
-								Tham gia CLB
-							</Link>
-						</div>
-					)}
-					{loading ? (
-						<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
-							{Array.from({ length: 6 }).map((_, i) => (
-								<CardSkeleton key={i} />
-							))}
-						</div>
-					) : resources.length === 0 ? (
-						<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
-							<Search className='mx-auto h-10 w-10 text-gray-300' />
-							<p className='mt-4 font-heading text-xl font-extrabold text-black'>
-								Không tìm thấy tài nguyên nào
-							</p>
-							<p className='mt-2 text-sm text-gray-600'>
-								Hãy là người đầu tiên chia sẻ tài nguyên!
+			<div className='neo-container px-6 pt-8'>
+				{!loading && hasLockedResources && (
+					<div className='mb-5 flex flex-col gap-3 rounded-2xl border-2 border-black bg-[var(--color-pastel-yellow,#FEF3C7)] px-5 py-4 shadow-[4px_4px_0_#111] sm:flex-row sm:items-center sm:justify-between'>
+						<div className='flex items-start gap-3'>
+							<Lock className='mt-0.5 h-5 w-5 shrink-0 text-black' />
+							<p className='text-sm font-bold text-black'>
+								Sinh viên Cao Thắng được mở cố định 3 tài nguyên, cộng với tài
+								nguyên do chính mình đóng góp. Trở thành thành viên câu lạc bộ để
+								mở khoá toàn bộ kho tài nguyên.
 							</p>
 						</div>
-					) : (
-						<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
-							{resources.map((resource) => (
-								<ResourceCard
-									key={resource.id}
-									resource={resource}
-									currentUserId={user?.id}
-									onReport={setReportTargetId}
-								/>
-							))}
-						</div>
-					)}
-				</div>
+						<Link
+							to='/ung-tuyen'
+							className='inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[var(--color-primary)] px-4 py-2 font-heading text-sm font-extrabold text-black shadow-[3px_3px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'>
+							Tham gia CLB
+						</Link>
+					</div>
+				)}
+				{loading ? (
+					<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
+						{Array.from({ length: 6 }).map((_, i) => (
+							<CardSkeleton key={i} />
+						))}
+					</div>
+				) : resources.length === 0 ? (
+					<div className='rounded-2xl border-2 border-black bg-white px-6 py-16 text-center'>
+						<Search className='mx-auto h-10 w-10 text-gray-300' />
+						<p className='mt-4 font-heading text-xl font-extrabold text-black'>
+							Không tìm thấy tài nguyên nào
+						</p>
+						<p className='mt-2 text-sm text-gray-600'>
+							Hãy là người đầu tiên chia sẻ tài nguyên!
+						</p>
+					</div>
+				) : (
+					<div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
+						{[...resources]
+								.sort((a, b) => Number(a.is_locked) - Number(b.is_locked))
+								.map((resource) => (
+							<ResourceCard
+								key={resource.id}
+								resource={resource}
+								currentUserId={user?.id}
+								onReport={setReportTargetId}
+							/>
+						))}
+					</div>
+				)}
+			</div>
 			)}
 
 			{reportTargetId != null && (

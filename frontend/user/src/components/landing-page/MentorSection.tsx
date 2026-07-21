@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Github, Linkedin } from "lucide-react";
 import { userService } from "@/services/user.service";
+import { homeService, DEFAULT_HOME_CONTENT } from "@/services/home.service";
 import { buildAvatar, buildProfileUrl } from "@/lib/utils";
 import type { UserProfile } from "@/types/user.types";
 
@@ -16,6 +17,17 @@ const MentorSection: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
 	const [mentor, setMentor] = useState<UserProfile | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [header, setHeader] = useState(DEFAULT_HOME_CONTENT.headers.mentor);
+
+	useEffect(() => {
+		let cancelled = false;
+		homeService.getHomeContent().then((c) => {
+			if (!cancelled) setHeader(c.headers.mentor);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -64,12 +76,9 @@ const MentorSection: React.FC = () => {
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
 						style={{ fontFamily: "var(--font-heading)" }}>
-						Người thành lập
+						{header.title}
 					</h2>
-					<p className='text-gray-500 mt-3 max-w-xl mx-auto'>
-						Người đã đặt nền móng cho CLB IT CKC, đồng thời là cố vấn cho các thành viên
-						trong CLB.
-					</p>
+					<p className='text-gray-500 mt-3 max-w-xl mx-auto'>{header.subtitle}</p>
 				</div>
 
 				{/* Mentor card */}

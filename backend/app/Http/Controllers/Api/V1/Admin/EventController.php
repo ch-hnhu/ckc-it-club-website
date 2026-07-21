@@ -408,6 +408,9 @@ class EventController extends BaseApiController
                 'id' => $f->id,
                 'rating' => $f->rating,
                 'comment' => $f->comment,
+                'is_hidden' => (bool) $f->is_hidden,
+                'moderation_reason' => $f->moderation_reason,
+                'moderated_at' => $f->moderated_at?->toIso8601String(),
                 'created_at' => $f->created_at?->toIso8601String(),
                 'user' => $f->user ? [
                     'id' => $f->user->id,
@@ -417,7 +420,9 @@ class EventController extends BaseApiController
                 ] : null,
             ]);
 
-        $ratings = $feedbacks->pluck('rating');
+        // Thống kê chỉ tính đánh giá đang hiển thị (loại đánh giá bị ẩn/kiểm duyệt),
+        // khớp với số liệu công khai ở trang chi tiết sự kiện.
+        $ratings = $feedbacks->where('is_hidden', false)->pluck('rating');
         $total = $ratings->count();
 
         $distribution = [];
@@ -437,6 +442,27 @@ class EventController extends BaseApiController
                 'response_rate' => $attendedCount > 0 ? (int) round($total / $attendedCount * 100) : 0,
             ],
         ], ApiMessage::RETRIEVED);
+    }
+
+    /**
+     * Ẩn/hiện một đánh giá (kiểm duyệt thủ công, ví dụ gỡ oan khi AI chặn nhầm).
+     */
+    public function updateFeedbackVisibility(Request $request, Event $event, EventFeedback $feedback): JsonResponse
+    {
+        abort_if($feedback->event_id !== $event->id, 404);
+
+        $request->validate(['is_hidden' => 'required|boolean']);
+
+        $isHidden = $request->boolean('is_hidden');
+
+        $feedback->update([
+            'is_hidden'         => $isHidden,
+            // Ẩn tay ghi rõ lý do; hiện lại thì xoá dấu vết kiểm duyệt.
+            'moderation_reason' => $isHidden ? ($feedback->moderation_reason ?? 'Ẩn bởi quản trị viên') : null,
+            'moderated_at'      => now(),
+        ]);
+
+        return $this->successResponse(true, ['is_hidden' => $feedback->is_hidden], 'Cập nhật trạng thái đánh giá thành công.');
     }
 
     /**

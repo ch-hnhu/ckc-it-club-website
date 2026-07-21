@@ -214,9 +214,9 @@ function renderQuestionPreview(
 
 	if (question.type === "radio") {
 		return (
-			<div className='space-y-3'>
+			<div className='space-y-2'>
 				{question.options.map((option) => (
-					<div key={option.id} className='flex items-center gap-3 rounded-2xl border border-border bg-background/80 px-4 py-3'>
+					<div key={option.id} className='flex items-center gap-3 rounded-xl border border-border bg-background/80 px-3 py-2'>
 						<span className='h-4 w-4 rounded-full border border-muted-foreground/40' />
 						{isSelected ? (
 							<Input
@@ -235,11 +235,11 @@ function renderQuestionPreview(
 
 	if (question.type === "select") {
 		return (
-			<div className='rounded-2xl border border-border bg-background/80 p-3'>
-				<div className='rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground'>Chọn một mục từ danh sách</div>
-				<div className='mt-3 space-y-2'>
+			<div className='rounded-xl border border-border bg-background/80 p-2.5'>
+				<div className='rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted-foreground'>Chọn một mục từ danh sách</div>
+				<div className='mt-2 space-y-1.5'>
 					{question.options.map((option) => (
-						<div key={option.id} className='rounded-xl bg-muted/40 px-3 py-2'>
+						<div key={option.id} className='rounded-lg bg-muted/40 px-3 py-1.5'>
 							{isSelected ? (
 								<Input
 									value={option.label}
@@ -698,7 +698,7 @@ function ApplicationQuestionsPage() {
 									!question.is_active && "opacity-70",
 								)}>
 
-								<div className='flex gap-3 px-4 py-4 md:px-5 md:py-5'>
+								<div className='flex gap-3 px-4 py-3 md:px-4 md:py-3.5'>
 									<button
 										type='button'
 										className='mt-1 flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-xl border border-border bg-muted/50 text-muted-foreground transition group-hover:border-primary/30 group-hover:text-primary active:cursor-grabbing'
@@ -765,7 +765,7 @@ function ApplicationQuestionsPage() {
 										<div
 											role='button'
 											tabIndex={0}
-											className='mt-4 cursor-text outline-none'
+											className='mt-3 cursor-text outline-none'
 											onClick={() => {
 												handleSelectQuestion(question.id, true);
 												setEditingLabelId(question.id);
@@ -799,10 +799,10 @@ function ApplicationQuestionsPage() {
 															handleDiscardChanges();
 														}
 													}}
-													className='h-auto border-0 bg-transparent px-0 text-[1.45rem] font-semibold leading-tight shadow-none focus-visible:ring-0 md:text-[1.7rem]'
+													className='h-auto border-0 bg-transparent px-0 text-base font-semibold leading-tight shadow-none focus-visible:ring-0 md:text-lg'
 												/>
 											) : (
-												<h3 className='text-xl font-semibold leading-tight text-foreground md:text-[1.65rem]'>
+												<h3 className='text-base font-semibold leading-tight text-foreground md:text-lg'>
 													{question.label}
 													{question.is_required ? (
 														<span className='ml-2 text-destructive'>*</span>
@@ -811,7 +811,7 @@ function ApplicationQuestionsPage() {
 											)}
 										</div>
 
-										<div className='mt-5' onClick={() => handleSelectQuestion(question.id, true)}>
+										<div className='mt-3' onClick={() => handleSelectQuestion(question.id, true)}>
 											{renderQuestionPreview(question, isSelected, (optionId, value) =>
 												handleOptionChange(optionId, "label", value),
 											)}
@@ -1047,7 +1047,7 @@ function ApplicationQuestionsPage() {
 				<div className='flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between'>
 					<div>
 						<p className='text-primary text-[11px] font-semibold uppercase tracking-[0.28em]'>Tuyển thành viên</p>
-						<h1 className='mt-2 text-foreground text-[2rem] font-semibold tracking-tight md:text-[3rem] md:leading-[1.08]'>
+						<h1 className='mt-2 text-foreground text-[2rem] font-semibold tracking-tight md:text-[2rem] md:leading-[1.08]'>
 							Form Builder câu hỏi ứng tuyển
 						</h1>
 						<p className='mt-3 max-w-3xl text-sm leading-6 text-muted-foreground md:text-[15px]'>

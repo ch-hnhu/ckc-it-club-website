@@ -7,6 +7,7 @@ use App\Models\Blog;
 use App\Models\Board;
 use App\Models\Comment;
 use App\Models\Event;
+use App\Models\EventFeedback;
 use App\Models\Post;
 use App\Models\Resource;
 use App\Models\User;
@@ -495,6 +496,28 @@ class UserNotificationService
             'target_type' => 'event',
             'target_id' => $event->id,
             'link' => "/su-kien/{$event->slug}",
+        ]);
+    }
+
+    /**
+     * Notify the reviewer when AI moderation auto-hides their event feedback comment.
+     * Self-actor: hệ thống ẩn tự động, không có người thực hiện cụ thể.
+     */
+    public static function dispatchEventFeedbackModerated(
+        User $recipient,
+        EventFeedback $feedback,
+        string $reason,
+    ): void {
+        $event = $feedback->event;
+        $title = $event?->title ?? 'sự kiện';
+
+        self::send($recipient, $recipient, [
+            'title'       => 'Nhận xét của bạn đã bị ẩn',
+            'message'     => "Nhận xét của bạn về sự kiện \"{$title}\" đã bị ẩn tự động do vi phạm tiêu chuẩn cộng đồng. Lý do: {$reason}",
+            'type'        => 'event_feedback_moderated',
+            'target_type' => 'event',
+            'target_id'   => (int) $feedback->event_id,
+            'link'        => $event?->slug ? "/su-kien/{$event->slug}" : '',
         ]);
     }
 

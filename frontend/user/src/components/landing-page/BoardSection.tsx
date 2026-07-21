@@ -2,8 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Facebook, Github, Linkedin } from "lucide-react";
 import { clubService } from "@/services/club.service";
+import { homeService, DEFAULT_HOME_CONTENT } from "@/services/home.service";
 import { buildProfileUrl } from "@/lib/utils";
 import type { BoardMember } from "@/types/club.types";
+
+// Tên hiển thị: Chủ nhiệm CLB là giáo viên cố vấn nên thêm kính ngữ "Thầy"
+// (chỉ ở hiển thị, không đổi full_name trong DB vì đó là tên tài khoản dùng chung)
+const displayName = (member: BoardMember): string =>
+	member.role_name === "president" ? `Thầy ${member.full_name}` : member.full_name;
 
 // Nền pastel gán luân phiên cho từng thẻ (DB không lưu màu)
 const CARD_BG = [
@@ -15,10 +21,35 @@ const CARD_BG = [
 	"var(--color-pastel-orange)",
 ];
 
+// Ngắt dòng nhãn vai trò đúng ngữ nghĩa: "Trưởng ban" ở dòng trên,
+// tên ban nằm trọn dòng dưới (tránh kiểu "TRƯỞNG BAN HỌC / THUẬT").
+const renderRoleLabel = (label: string): React.ReactNode => {
+	const match = label.match(/^(Trưởng ban)\s+(.+)$/i);
+	if (!match) return label;
+	return (
+		<>
+			{match[1]}
+			<br />
+			{match[2]}
+		</>
+	);
+};
+
 const BoardSection: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
 	const [members, setMembers] = useState<BoardMember[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [header, setHeader] = useState(DEFAULT_HOME_CONTENT.headers.board);
+
+	useEffect(() => {
+		let cancelled = false;
+		homeService.getHomeContent().then((c) => {
+			if (!cancelled) setHeader(c.headers.board);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -81,11 +112,9 @@ const BoardSection: React.FC = () => {
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
 						style={{ fontFamily: "var(--font-heading)" }}>
-						Ban Chủ Nhiệm
+						{header.title}
 					</h2>
-					<p className='text-gray-500 mt-3'>
-						Những người dẫn dắt và xây dựng CKC IT CLUB
-					</p>
+					<p className='text-gray-500 mt-3'>{header.subtitle}</p>
 				</div>
 
 				{/* Board cards — style giống thẻ Mentor, căn giữa */}
@@ -117,7 +146,7 @@ const BoardSection: React.FC = () => {
 										className='neo-card neo-card-static bg-white flex flex-col items-center text-center p-6 gap-3 w-[calc(50%-0.625rem)] sm:w-[224px]'>
 										<Link
 											to={buildProfileUrl(member.username, null)}
-											className='flex flex-col items-center gap-3 no-underline'>
+											className='flex w-full flex-col items-center gap-3 no-underline'>
 										{/* Avatar */}
 										<div
 											className='w-20 h-20 rounded-full overflow-hidden border-2 border-black'
@@ -133,12 +162,12 @@ const BoardSection: React.FC = () => {
 											/>
 										</div>
 
-										{/* Tag vai trò — vùng cao cố định để tên các thẻ thẳng hàng */}
-										<div className='flex min-h-10 items-center justify-center'>
+										{/* Vai trò */}
+										<div className='flex w-full items-center justify-center'>
 											<span
-												className='neo-tag text-xs text-balance leading-tight'
+												className='neo-tag flex h-12 w-full items-center justify-center text-center text-xs leading-tight'
 												style={{ background: bg }}>
-												{member.role_label}
+												{renderRoleLabel(member.role_label)}
 											</span>
 										</div>
 
@@ -146,7 +175,7 @@ const BoardSection: React.FC = () => {
 										<h3
 											className='text-lg font-bold text-black leading-tight text-balance'
 											style={{ fontFamily: "var(--font-heading)" }}>
-											{member.full_name}
+											{displayName(member)}
 										</h3>
 										</Link>
 

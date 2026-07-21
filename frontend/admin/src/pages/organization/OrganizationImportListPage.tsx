@@ -86,7 +86,7 @@ type SortKey =
 const statusOptions: Array<{ value: string; label: string }> = [
 	{ value: "all", label: "Tất cả trạng thái" },
 	{ value: "completed", label: "Thành công" },
-	{ value: "failed", label: "Thất bại" },
+	{ value: "failed", label: "Có Lỗi" },
 ];
 
 const fileTypeOptions: Array<{ value: string; label: string }> = [
@@ -105,7 +105,7 @@ const statusMeta: Record<
 		icon: CheckCircle2,
 	},
 	failed: {
-		label: "Thất bại",
+		label: "Có Lỗi",
 		className: "border-rose-500/20 bg-rose-500/10 text-rose-700",
 		icon: XCircle,
 	},

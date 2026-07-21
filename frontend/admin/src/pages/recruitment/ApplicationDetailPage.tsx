@@ -1,17 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Mail, MessageSquareText, Settings2, UserRound } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Mail, MessageSquareText, Settings2, UserRound } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import applicationService from "@/services/application.service";
-import type { ClubApplicationRecord } from "@/types/application.type";
+import type {
+	ClubApplicationRecord,
+	UpdateApplicationStatusPayload,
+} from "@/types/application.type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
 import {
 	formatDate,
 	getApplicantName,
+	getNextStatuses,
 	getStatusBadge,
+	getStatusConfig,
 	SummaryCard,
 } from "./application-detail-shared";
 
@@ -19,6 +33,11 @@ function ApplicationDetailPage() {
 	const { applicationId } = useParams();
 	const [applications, setApplications] = useState<ClubApplicationRecord[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+	const [statusNote, setStatusNote] = useState("");
+	const [nextStatus, setNextStatus] =
+		useState<UpdateApplicationStatusPayload["status"]>("processing");
+	const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
 
 	useEffect(() => {
 		let mounted = true;
@@ -54,6 +73,43 @@ function ApplicationDetailPage() {
 	);
 
 	useBreadcrumb(breadcrumb);
+
+	const availableStatuses = getNextStatuses(application?.status);
+	const canReview = availableStatuses.length > 0;
+
+	const openStatusDialog = () => {
+		if (!application || !canReview) return;
+		setNextStatus(availableStatuses[0] as UpdateApplicationStatusPayload["status"]);
+		setStatusNote(application.note || "");
+		setIsStatusDialogOpen(true);
+	};
+
+	const handleSubmitStatusUpdate = async () => {
+		if (!application) return;
+		setIsSubmittingStatus(true);
+		try {
+			const updatedApplication = await applicationService.updateApplicationStatus(
+				application.id,
+				{
+					status: nextStatus,
+					note: statusNote.trim() ? statusNote.trim() : null,
+				},
+			);
+			setApplications((prev) =>
+				prev.map((item) =>
+					item.id === updatedApplication.id ? updatedApplication : item,
+				),
+			);
+			setIsStatusDialogOpen(false);
+			setStatusNote("");
+			toast.success("Đã cập nhật trạng thái hồ sơ.");
+		} catch (error) {
+			console.error(error);
+			toast.error("Không thể cập nhật trạng thái. Vui lòng thử lại.");
+		} finally {
+			setIsSubmittingStatus(false);
+		}
+	};
 
 	if (loading) {
 		return (
@@ -271,6 +327,98 @@ function ApplicationDetailPage() {
 					</Card>
 				</div>
 			</div>
+
+			{/* Nút duyệt hồ sơ cố định ở góc phải dưới */}
+			<div className='fixed bottom-6 right-6 z-40'>
+				<Button
+					size='lg'
+					onClick={openStatusDialog}
+					disabled={!canReview}
+					className='rounded-lg shadow-lg shadow-emerald-600/20'
+					title={
+						canReview
+							? "Cập nhật trạng thái hồ sơ"
+							: "Hồ sơ đã ở trạng thái cuối, không thể duyệt tiếp"
+					}>
+					<CheckCircle2 className='h-5 w-5' />
+					Duyệt hồ sơ
+				</Button>
+			</div>
+
+			<Dialog
+				open={isStatusDialogOpen}
+				onOpenChange={(open) => {
+					if (!open) {
+						setIsStatusDialogOpen(false);
+						setStatusNote("");
+					}
+				}}>
+				<DialogContent className='sm:max-w-[560px]'>
+					<DialogHeader>
+						<DialogTitle>Cập nhật trạng thái hồ sơ</DialogTitle>
+					</DialogHeader>
+					<div className='space-y-4'>
+						<div className='grid gap-2'>
+							<p className='text-sm font-medium'>Ứng viên</p>
+							<p className='text-sm text-muted-foreground'>
+								{getApplicantName(application)}
+							</p>
+						</div>
+						<div className='grid gap-2'>
+							<p className='text-sm font-medium'>Trạng thái hiện tại</p>
+							<div>{getStatusBadge(application.status)}</div>
+						</div>
+						<div className='grid gap-2'>
+							<p className='text-sm font-medium'>Trạng thái tiếp theo</p>
+							<div className='flex flex-wrap gap-2'>
+								{availableStatuses.map((status) => {
+									const isActive = nextStatus === status;
+									const config = getStatusConfig(status);
+									return (
+										<Button
+											key={status}
+											type='button'
+											variant='outline'
+											onClick={() =>
+												setNextStatus(
+													status as UpdateApplicationStatusPayload["status"],
+												)
+											}
+											className={
+												isActive ? `${config.className} border-current` : ""
+											}>
+											{config.label}
+										</Button>
+									);
+								})}
+							</div>
+						</div>
+						<div className='grid gap-2'>
+							<label className='text-sm font-medium' htmlFor='application-note'>
+								Ghi chú
+							</label>
+							<Textarea
+								id='application-note'
+								value={statusNote}
+								onChange={(event) => setStatusNote(event.target.value)}
+								placeholder='Thêm ghi chú xét duyệt để lưu vào hệ thống'
+								maxLength={255}
+							/>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button
+							variant='outline'
+							onClick={() => setIsStatusDialogOpen(false)}
+							disabled={isSubmittingStatus}>
+							Hủy
+						</Button>
+						<Button onClick={handleSubmitStatusUpdate} disabled={isSubmittingStatus}>
+							{isSubmittingStatus ? "Đang cập nhật..." : "Lưu thay đổi"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

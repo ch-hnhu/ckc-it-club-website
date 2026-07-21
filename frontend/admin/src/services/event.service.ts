@@ -9,6 +9,9 @@ export interface EventFeedbackItem {
 	id: number;
 	rating: number;
 	comment: string | null;
+	is_hidden: boolean;
+	moderation_reason: string | null;
+	moderated_at: string | null;
 	created_at: string | null;
 	user: {
 		id: number;
@@ -121,6 +124,14 @@ const eventService = {
 
 	async getFeedbacks(id: number | string): Promise<ApiResponse<EventFeedbackResponse>> {
 		return api.get(`/events/${id}/feedbacks`);
+	},
+
+	async setFeedbackVisibility(
+		id: number | string,
+		feedbackId: number,
+		isHidden: boolean,
+	): Promise<ApiResponse<{ is_hidden: boolean }>> {
+		return api.patch(`/events/${id}/feedbacks/${feedbackId}/visibility`, { is_hidden: isHidden });
 	},
 
 	async deleteFeedback(id: number | string, feedbackId: number): Promise<ApiResponse<null>> {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\User;
 use App\Enums\EventStatus;
 use App\Enums\RolesEnum;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Jobs\ModerateEventFeedbackJob;
 use App\Models\Event;
 use App\Models\EventFeedback;
 use App\Models\EventGalleryItem;
@@ -80,7 +81,12 @@ class EventController extends BaseApiController
             $data['my_attended'] = $event->checkIns()->where('user_id', $user->id)->exists();
             $myFeedback = $event->feedbacks()->where('user_id', $user->id)->first();
             $data['my_feedback'] = $myFeedback
-                ? ['rating' => $myFeedback->rating, 'comment' => $myFeedback->comment]
+                ? [
+                    'rating' => $myFeedback->rating,
+                    'comment' => $myFeedback->comment,
+                    'is_hidden' => (bool) $myFeedback->is_hidden,
+                    'moderation_reason' => $myFeedback->moderation_reason,
+                ]
                 : null;
             $data['has_feedback'] = $myFeedback !== null;
         }
@@ -96,6 +102,7 @@ class EventController extends BaseApiController
         $perPage = min((int) $request->query('per_page', 10), 50);
 
         $feedbacks = $event->feedbacks()
+            ->where('is_hidden', false)
             ->with('user:id,full_name,avatar')
             ->latest()
             ->paginate($perPage);
@@ -138,8 +145,20 @@ class EventController extends BaseApiController
 
         $feedback = EventFeedback::updateOrCreate(
             ['event_id' => $event->id, 'user_id' => $user->id],
-            ['rating' => $data['rating'], 'comment' => $data['comment'] ?? null],
+            [
+                'rating'  => $data['rating'],
+                'comment' => $data['comment'] ?? null,
+                // Đặt lại trạng thái kiểm duyệt để nhận xét mới được chấm lại từ đầu.
+                'is_hidden'         => false,
+                'moderation_reason' => null,
+                'moderated_at'      => null,
+            ],
         );
+
+        // Kiểm duyệt nhận xét bằng AI chạy nền (chỉ khi có nội dung chữ).
+        if (trim((string) $feedback->comment) !== '') {
+            ModerateEventFeedbackJob::dispatch($feedback->id);
+        }
 
         return $this->successResponse(true, [
             'rating' => $feedback->rating,
@@ -152,7 +171,9 @@ class EventController extends BaseApiController
      */
     private function feedbackSummary(Event $event): array
     {
-        $ratings = $event->feedbacks()->pluck('rating');
+        // Đánh giá bị ẩn do kiểm duyệt không tính vào thống kê công khai
+        // để điểm trung bình / phân bố sao khớp với danh sách hiển thị.
+        $ratings = $event->feedbacks()->where('is_hidden', false)->pluck('rating');
         $total = $ratings->count();
 
         $distribution = [];

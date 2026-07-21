@@ -34,6 +34,12 @@ const SLUG_LABELS: Record<string, { label: string; color: string }> = {
 	failed: { label: "Không trúng tuyển", color: "bg-rose-100 text-rose-800 border-rose-200" },
 };
 
+// Các loại mail tạm ẩn khỏi danh sách quản lý.
+// Bỏ "reset_password" khỏi Set này để hiển thị lại dòng "Thông báo đặt lại mật khẩu".
+const HIDDEN_SLUGS = new Set<string>([
+	"reset_password",
+]);
+
 type SortKey = "id" | "label" | "slug" | "description" | "templates_count";
 
 function formatText(value?: string | null) {
@@ -74,7 +80,8 @@ function MailTemplateListPage() {
 			mailTemplateService.getEmailNotificationSetting(),
 		])
 			.then(([typesRes, settingRes]) => {
-				setTypes(typesRes.data ?? []);
+				// Lọc bỏ các loại mail đang ẩn (xem HIDDEN_SLUGS) trước khi hiển thị.
+				setTypes((typesRes.data ?? []).filter((type) => !HIDDEN_SLUGS.has(type.slug)));
 				setAutoSendEnabled(settingRes.data?.enabled ?? false);
 			})
 			.catch(() => toast.error("Không thể tải dữ liệu."))

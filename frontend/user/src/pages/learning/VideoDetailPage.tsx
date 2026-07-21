@@ -12,9 +12,14 @@ import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { learningService } from "@/services/learning.service";
 import { renderMarkdownContent } from "@/lib/markdown";
+import TrackedVideoPlayer from "@/components/learning/TrackedVideoPlayer";
+import { isTrackableUrl } from "@/lib/videoTracking";
 import type { VideoDetail } from "@/types/learning.types";
 
 type VideoTabKey = "lecture" | "live";
+
+// Ngưỡng % xem để được tính hoàn thành video (khớp với backend videoWatchThreshold()).
+const WATCH_THRESHOLD = 80;
 
 interface VideoTab {
 	key: VideoTabKey;
@@ -23,7 +28,6 @@ interface VideoTab {
 	icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }
 
-const isEmbedUrl = (url: string) => url.includes("youtube") || url.includes("/embed");
 const isFutureDate = (value?: string | null) => Boolean(value && new Date(value) > new Date());
 
 // ─── Skeleton ───────────────────────────────────────────────────────────────────
@@ -53,6 +57,8 @@ const VideoDetailPage: React.FC = () => {
 	const [completed, setCompleted] = useState(false);
 	const [markingProgress, setMarkingProgress] = useState(false);
 	const [activeTab, setActiveTab] = useState<VideoTabKey>("lecture");
+	// % xem cao nhất đã đạt trong phiên (một chiều, không tụt lùi).
+	const [watchPercent, setWatchPercent] = useState(0);
 
 	useEffect(() => {
 		if (!slug || !lessonSlug || !videoSlug) return;
@@ -65,6 +71,7 @@ const VideoDetailPage: React.FC = () => {
 				if (cancelled) return;
 				setVideo(res.data);
 				setCompleted(res.data.completed);
+				setWatchPercent(res.data.completed ? 100 : 0);
 				// Ưu tiên video bài giảng; nếu chưa có thì mở bản ghi livestream
 				setActiveTab(res.data.lecture_url ? "lecture" : "live");
 			})
@@ -102,23 +109,55 @@ const VideoDetailPage: React.FC = () => {
 	const showTabs = tabs.length > 1;
 	// Track offline điểm danh bằng QR/admin, xem video không thay thế điểm danh → ẩn nút.
 	const showMarkCompleted = video?.enrollment_track !== "offline";
+	// Video hiện tại có theo dõi được tiến độ xem không (YouTube / mp4 gốc). Embed khác → chế độ tay.
+	const trackable = useMemo(() => isTrackableUrl(activeUrl), [activeUrl]);
+	// Đã xem đủ ngưỡng để mở nút hoàn thành.
+	const reachedThreshold = watchPercent >= WATCH_THRESHOLD;
 
-	// Nút đánh dấu tay (fallback của hybrid tracking) — một chiều, gửi 100% khi đánh dấu hoàn thành.
-	// % xem đã đạt không bị tụt lùi ở backend nên không hỗ trợ "bỏ đánh dấu".
-	const handleMarkCompleted = async () => {
+	// Gửi % xem lên backend (một chiều — backend giữ mức cao nhất). Dùng cho cả auto-complete lẫn nút tay.
+	const submitProgress = async (percent: number, options?: { silent?: boolean }) => {
 		if (!slug || !lessonSlug || markingProgress || completed) return;
 		setMarkingProgress(true);
 		try {
-			const res = await learningService.markVideoProgress(slug, lessonSlug, 100);
+			const res = await learningService.markVideoProgress(slug, lessonSlug, percent);
 			setCompleted(res.data.is_completed);
-			toast.success("Đã đánh dấu hoàn thành video.");
+			if (res.data.is_completed && !options?.silent) {
+				toast.success("Đã hoàn thành video.");
+			}
 		} catch (err) {
-			toast.error(
-				(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-					"Không thể ghi nhận tiến độ. Vui lòng thử lại.",
-			);
+			if (!options?.silent) {
+				toast.error(
+					(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+						"Không thể ghi nhận tiến độ. Vui lòng thử lại.",
+				);
+			}
 		} finally {
 			setMarkingProgress(false);
+		}
+	};
+
+	// Nhận % xem từ player → giữ mức cao nhất.
+	const handlePercent = (percent: number) => {
+		setWatchPercent((prev) => (percent > prev ? percent : prev));
+	};
+
+	// Auto-complete: khi xem đủ ngưỡng thì tự ghi nhận hoàn thành (không cần bấm nút).
+	useEffect(() => {
+		if (trackable && reachedThreshold && !completed && !markingProgress) {
+			void submitProgress(watchPercent, { silent: false });
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [trackable, reachedThreshold, completed]);
+
+	// Nút hoàn thành: với video theo dõi được, chỉ cho bấm khi đã đủ ngưỡng (gửi % thực tế đã đạt).
+	// Với embed không theo dõi được → giữ fallback đánh dấu tay (gửi 100%).
+	const handleMarkCompleted = () => {
+		if (completed || markingProgress) return;
+		if (trackable) {
+			if (!reachedThreshold) return;
+			void submitProgress(watchPercent);
+		} else {
+			void submitProgress(100);
 		}
 	};
 
@@ -212,18 +251,12 @@ const VideoDetailPage: React.FC = () => {
 							{/* Player */}
 							<div className='overflow-hidden rounded-2xl border-2 border-black bg-black shadow-[4px_4px_0_#111]'>
 								<div className='aspect-video w-full'>
-									{isEmbedUrl(activeUrl) ? (
-										<iframe
-											key={activeUrl}
-											src={activeUrl}
-											title={video.title}
-											className='h-full w-full'
-											allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-											allowFullScreen
-										/>
-									) : (
-										<video key={activeUrl} src={activeUrl} controls className='h-full w-full' />
-									)}
+									<TrackedVideoPlayer
+										key={activeUrl}
+										url={activeUrl}
+										title={video.title}
+										onPercent={handlePercent}
+									/>
 								</div>
 							</div>
 
@@ -258,23 +291,37 @@ const VideoDetailPage: React.FC = () => {
 						</div>
 
 						{/* Giữa: đánh dấu hoàn thành — chỉ track online (offline điểm danh bằng QR/admin) */}
-						{showMarkCompleted && (
-							<button
-								type='button'
-								onClick={handleMarkCompleted}
-								disabled={completed || markingProgress}
-								className={`inline-flex items-center justify-center gap-2 justify-self-center rounded-xl border-2 border-black px-5 py-2.5 font-heading text-sm font-extrabold shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed ${
-									completed
-										? "bg-[var(--color-pastel-green)] text-black"
-										: "bg-[var(--color-primary)] text-black"
-								}`}>
-								<Check className='h-4 w-4' strokeWidth={3} />
-								<span className='hidden sm:inline'>
-									{completed ? "Đã hoàn thành" : "Đánh dấu hoàn thành"}
-								</span>
-								<span className='sm:hidden'>{completed ? "Xong" : "Hoàn thành"}</span>
-							</button>
-						)}
+						{showMarkCompleted &&
+							(() => {
+								// Video theo dõi được nhưng chưa xem đủ ngưỡng → khóa nút, hiện % tiến độ.
+								const locked = trackable && !completed && !reachedThreshold;
+								return (
+									<button
+										type='button'
+										onClick={handleMarkCompleted}
+										disabled={completed || markingProgress || locked}
+										title={locked ? `Xem tối thiểu ${WATCH_THRESHOLD}% để hoàn thành` : undefined}
+										className={`inline-flex items-center justify-center gap-2 justify-self-center rounded-xl border-2 border-black px-5 py-2.5 font-heading text-sm font-extrabold shadow-[4px_4px_0_#111] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:cursor-not-allowed ${
+											completed
+												? "bg-[var(--color-pastel-green)] text-black"
+												: locked
+													? "bg-gray-100 text-gray-500 disabled:shadow-[4px_4px_0_#d1d5db]"
+													: "bg-[var(--color-primary)] text-black"
+										}`}>
+										<Check className='h-4 w-4' strokeWidth={3} />
+										<span className='hidden sm:inline'>
+											{completed
+												? "Đã hoàn thành"
+												: locked
+													? `Xem ${WATCH_THRESHOLD}% để hoàn thành · ${watchPercent}%`
+													: "Đánh dấu hoàn thành"}
+										</span>
+										<span className='sm:hidden'>
+											{completed ? "Xong" : locked ? `${watchPercent}%` : "Hoàn thành"}
+										</span>
+									</button>
+								);
+							})()}
 
 						{/* Phải: Trước / Tiếp (theo buổi học) */}
 						<div className='flex items-center justify-end gap-2'>
