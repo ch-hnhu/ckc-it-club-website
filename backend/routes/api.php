@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\V1\User\ClubApplicationController as UserClubApplic
 use App\Http\Controllers\Api\V1\User\AboutPageController;
 use App\Http\Controllers\Api\V1\User\HomePageController;
 use App\Http\Controllers\Api\V1\User\ClubBoardController;
+use App\Http\Controllers\Api\V1\User\CertificateVerificationController;
 use App\Http\Controllers\Api\V1\User\ContactController as PublicContactController;
 use App\Http\Controllers\Api\V1\User\CourseController as UserCourseController;
 use App\Http\Controllers\Api\V1\User\QuizController as UserQuizController;
@@ -103,6 +104,9 @@ Route::prefix('v1')->group(function () {
     });
     // Ban Chủ Nhiệm — danh sách lãnh đạo CLB cho landing page (public)
     Route::get('/club-board', [ClubBoardController::class, 'index']);
+
+    // Xác minh công khai chứng chỉ theo mã QR (không cần đăng nhập)
+    Route::get('/certificates/verify/{code}', [CertificateVerificationController::class, 'show']);
 
     // Nội dung trang "Về chúng tôi" (About) — dạng config (public, read-only)
     Route::get('/about-page', [AboutPageController::class, 'show']);

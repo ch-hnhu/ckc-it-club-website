@@ -16,16 +16,14 @@ class ApplicationQuestionOptionSeeder extends Seeder
 
         $options = [
             'Bạn muốn ứng tuyển vào ban nào?' => [
-                ['value' => 'ban-ky-thuat', 'label' => 'Ban Kỹ thuật'],
+                ['value' => 'ban-hoc-thuat', 'label' => 'Ban Học thuật'],
                 ['value' => 'ban-truyen-thong', 'label' => 'Ban Truyền thông'],
-                ['value' => 'ban-su-kien', 'label' => 'Ban Sự kiện'],
-                ['value' => 'ban-noi-dung', 'label' => 'Ban Nội dung'],
-                ['value' => 'ban-doi-ngoai', 'label' => 'Ban Đối ngoại'],
+                ['value' => 'ban-phong-trao', 'label' => 'Ban Phong trào'],
             ],
             'Bạn đã từng tham gia câu lạc bộ hoặc đội nhóm nào chưa?' => [
                 ['value' => 'chua', 'label' => 'Chưa từng tham gia'],
                 ['value' => 'co-mot-lan', 'label' => 'Có, từng tham gia một lần'],
-                ['value' => 'co-thuong-xuyen', 'label' => 'Có, tham gia thường xuyên'],
+                ['value' => 'co-tung-tham-gia-nhieu-lan', 'label' => 'Có, từng tham gia nhiều lần'],
             ],
             'Bạn có thể tham gia sinh hoạt vào khung giờ nào?' => [
                 ['value' => 'toi-thu-2-4-6', 'label' => 'Buổi tối thứ 2, 4, 6'],

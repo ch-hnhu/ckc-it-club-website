@@ -81,7 +81,7 @@ class CourseCertificateService
             'cert_code' => $certCode,
             'issued_at' => now()->format('d/m/Y'),
             'track' => $enrollment->track === 'offline' ? 'Offline' : 'Online',
-            'verify_url' => rtrim((string) config('app.url'), '/').'/verify/'.$certCode,
+            'verify_url' => rtrim((string) env('USER_FRONTEND_URL', config('app.url')), '/').'/verify/'.$certCode,
         ];
 
         $path = "certificates/{$certCode}.pdf";

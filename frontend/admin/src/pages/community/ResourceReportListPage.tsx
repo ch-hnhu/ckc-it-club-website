@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import {
 	AlertTriangle,
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
@@ -12,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -41,6 +45,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useBreadcrumb } from "@/hooks/useBreadcrumb";
+import { useTableSelection } from "@/hooks/useTableSelection";
 import resourceReportService, {
 	type ResourceReportRecord,
 	type ResourceReportStats,
@@ -84,6 +89,14 @@ export default function ResourceReportListPage() {
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
 	const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0, per_page: 20 });
+	const [sortKey, setSortKey] = useState<
+		"id" | "resource_title" | "reporter_name" | "reason" | "description" | "status" | "created_at"
+	>("created_at");
+	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+	const { allSelected, isSelected, toggleAll, toggleOne } = useTableSelection(
+		reports.map((r) => r.id),
+	);
 
 	const [hideTarget, setHideTarget] = useState<ResourceReportRecord | null>(null);
 	const [resolutionNote, setResolutionNote] = useState("");
@@ -96,7 +109,7 @@ export default function ResourceReportListPage() {
 
 	useEffect(() => {
 		setMeta((p) => ({ ...p, current_page: 1 }));
-	}, [debouncedSearch, statusFilter]);
+	}, [debouncedSearch, statusFilter, sortKey, sortOrder]);
 
 	useEffect(() => {
 		resourceReportService.getStats().then((r) => setStats(r.data)).catch(() => {});
@@ -111,6 +124,8 @@ export default function ResourceReportListPage() {
 				per_page: meta.per_page,
 				search: debouncedSearch || undefined,
 				status: statusFilter !== "all" ? statusFilter : undefined,
+				sort: sortKey,
+				order: sortOrder,
 			})
 			.then((res) => {
 				if (cancelled) return;
@@ -120,7 +135,24 @@ export default function ResourceReportListPage() {
 			.catch(() => toast.error("Không thể tải danh sách báo cáo."))
 			.finally(() => { if (!cancelled) setLoading(false); });
 		return () => { cancelled = true; };
-	}, [meta.current_page, meta.per_page, debouncedSearch, statusFilter]);
+	}, [meta.current_page, meta.per_page, debouncedSearch, statusFilter, sortKey, sortOrder]);
+
+	const handleSort = (key: typeof sortKey) => {
+		if (sortKey === key) setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+		else {
+			setSortKey(key);
+			setSortOrder("desc");
+		}
+	};
+
+	const getSortIcon = (key: typeof sortKey) =>
+		sortKey !== key ? (
+			<ArrowUpDown className="ml-2 h-4 w-4" />
+		) : sortOrder === "asc" ? (
+			<ArrowUp className="ml-2 h-4 w-4" />
+		) : (
+			<ArrowDown className="ml-2 h-4 w-4" />
+		);
 
 	const handleDismiss = async (report: ResourceReportRecord) => {
 		try {
@@ -200,13 +232,48 @@ export default function ResourceReportListPage() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead className="w-[80px]">ID</TableHead>
-								<TableHead className="min-w-[200px]">Tài nguyên</TableHead>
-								<TableHead className="min-w-[160px]">Người báo cáo</TableHead>
-								<TableHead className="w-[200px]">Lý do</TableHead>
-								<TableHead className="w-[240px] max-w-[240px]">Mô tả</TableHead>
-								<TableHead className="w-[150px]">Trạng thái</TableHead>
-								<TableHead className="w-[140px]">Ngày báo cáo</TableHead>
+								<TableHead className="w-[44px]">
+									<Checkbox
+										aria-label="Chọn tất cả"
+										checked={allSelected}
+										onCheckedChange={(c) => toggleAll(c === true)}
+									/>
+								</TableHead>
+								<TableHead className="w-[80px]">
+									<Button variant="ghost" onClick={() => handleSort("id")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										ID {getSortIcon("id")}
+									</Button>
+								</TableHead>
+								<TableHead className="min-w-[200px]">
+									<Button variant="ghost" onClick={() => handleSort("resource_title")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Tài nguyên {getSortIcon("resource_title")}
+									</Button>
+								</TableHead>
+								<TableHead className="min-w-[160px]">
+									<Button variant="ghost" onClick={() => handleSort("reporter_name")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Người báo cáo {getSortIcon("reporter_name")}
+									</Button>
+								</TableHead>
+								<TableHead className="w-[200px]">
+									<Button variant="ghost" onClick={() => handleSort("reason")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Lý do {getSortIcon("reason")}
+									</Button>
+								</TableHead>
+								<TableHead className="w-[240px] max-w-[240px]">
+									<Button variant="ghost" onClick={() => handleSort("description")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Mô tả {getSortIcon("description")}
+									</Button>
+								</TableHead>
+								<TableHead className="w-[150px]">
+									<Button variant="ghost" onClick={() => handleSort("status")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Trạng thái {getSortIcon("status")}
+									</Button>
+								</TableHead>
+								<TableHead className="w-[140px]">
+									<Button variant="ghost" onClick={() => handleSort("created_at")} className="-ml-4 h-8 hover:bg-muted-foreground/10">
+										Ngày báo cáo {getSortIcon("created_at")}
+									</Button>
+								</TableHead>
 								<TableHead className="w-[52px]" />
 							</TableRow>
 						</TableHeader>
@@ -215,28 +282,44 @@ export default function ResourceReportListPage() {
 							{loading ? (
 								Array.from({ length: meta.per_page }).map((_, i) => (
 									<TableRow key={i}>
-										<TableCell colSpan={8}><Skeleton className="h-4 w-full" /></TableCell>
+										<TableCell colSpan={9}><Skeleton className="h-4 w-full" /></TableCell>
 									</TableRow>
 								))
 							) : reports.length > 0 ? (
 								reports.map((report) => (
 									<TableRow key={report.id} className={report.resource?.status === "hidden" ? "opacity-60" : ""}>
+										<TableCell className="w-[44px]">
+											<Checkbox
+												checked={isSelected(report.id)}
+												onCheckedChange={(c) => toggleOne(report.id, c === true)}
+											/>
+										</TableCell>
+
 										<TableCell className="font-medium text-muted-foreground">#{report.id}</TableCell>
 
 										<TableCell>
 											{report.resource ? (
-												<div className="flex items-start gap-1.5">
-													<a
-														href={`http://localhost:5173/tai-nguyen/${report.resource.id}`}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="block max-w-[180px] truncate text-sm font-medium hover:underline"
+												report.resource.url ? (
+													<div className="flex items-start gap-1.5">
+														<a
+															href={report.resource.url}
+															target="_blank"
+															rel="noopener noreferrer"
+															className="block max-w-[180px] truncate text-sm font-medium hover:underline"
+															title={report.resource.title}
+														>
+															{report.resource.title}
+														</a>
+														<ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
+													</div>
+												) : (
+													<span
+														className="block max-w-[180px] truncate text-sm font-medium"
 														title={report.resource.title}
 													>
 														{report.resource.title}
-													</a>
-													<ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
-												</div>
+													</span>
+												)
 											) : (
 												<span className="text-xs italic text-muted-foreground/50">Tài nguyên đã xóa</span>
 											)}
@@ -311,7 +394,7 @@ export default function ResourceReportListPage() {
 								))
 							) : (
 								<TableRow>
-									<TableCell colSpan={8} className="py-12 text-center">
+									<TableCell colSpan={9} className="py-12 text-center">
 										<AlertTriangle className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
 										<p className="text-sm text-muted-foreground">Không có báo cáo nào.</p>
 									</TableCell>
@@ -321,7 +404,7 @@ export default function ResourceReportListPage() {
 
 						<TableFooter className="bg-transparent">
 							<TableRow>
-								<TableCell colSpan={8}>
+								<TableCell colSpan={9}>
 									<div className="flex items-center justify-between px-2">
 										<p className="flex-1 text-sm text-muted-foreground">
 											Đang hiển thị {reports.length} trên tổng {meta.total} báo cáo.
