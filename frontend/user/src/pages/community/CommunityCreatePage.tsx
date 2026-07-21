@@ -146,7 +146,7 @@ const CommunityCreatePage: React.FC = () => {
 				media: mediaFile,
 			});
 			toast.success("Đã đăng bài viết!");
-			navigate(`/cong-dong/bai-viet/${response.data.id}`);
+			navigate(`/cong-dong/bai-viet/${response.data.id}`, { replace: true });
 		} catch (error) {
 			setFormError(getErrorMessage(error));
 		} finally {

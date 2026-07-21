@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { gamificationService } from "@/services/gamification.service";
+import { homeService, DEFAULT_HOME_CONTENT } from "@/services/home.service";
 import { buildAvatar, buildProfileUrl, getHandle } from "@/lib/utils";
 import type { LeaderboardEntry } from "@/types/gamification.types";
 
@@ -11,6 +12,17 @@ const LeaderboardPreview: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
 	const [users, setUsers] = useState<LeaderboardEntry[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [header, setHeader] = useState(DEFAULT_HOME_CONTENT.headers.leaderboard);
+
+	useEffect(() => {
+		let cancelled = false;
+		homeService.getHomeContent().then((c) => {
+			if (!cancelled) setHeader(c.headers.leaderboard);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -58,7 +70,7 @@ const LeaderboardPreview: React.FC = () => {
 							<h2
 								className='text-3xl sm:text-4xl font-extrabold text-black'
 								style={{ fontFamily: "var(--font-heading)" }}>
-								Bảng Xếp Hạng
+								{header.title}
 							</h2>
 						</div>
 					</div>
@@ -165,7 +177,7 @@ const LeaderboardPreview: React.FC = () => {
 						<Link
 							to='/cong-dong/bang-xep-hang'
 							className='neo-btn neo-btn-primary px-8 py-3'>
-							Xem bảng đầy đủ <ArrowRight className='w-5 h-5' />
+							{header.cta_label} <ArrowRight className='w-5 h-5' />
 						</Link>
 					</div>
 				</div>

@@ -1,43 +1,20 @@
-import React, { useEffect, useRef } from "react";
-import { BookOpen, Heart, Trophy, Sprout, ArrowRight } from "lucide-react";
-
-const VALUES = [
-	{
-		icon: BookOpen,
-		emoji: "📚",
-		title: "Học hỏi",
-		subtitle: "Học không ngừng",
-		desc: "Tiếp cận tài nguyên, khóa học và kiến thức từ mentor chuyên nghiệp.",
-		bg: "var(--color-pastel-green)",
-	},
-	{
-		icon: Heart,
-		emoji: "🤝",
-		title: "Chia sẻ",
-		subtitle: "Chia sẻ cùng nhau",
-		desc: "Văn hóa open-source: chia sẻ code, tài liệu, kinh nghiệm với cả cộng đồng.",
-		bg: "var(--color-pastel-blue)",
-	},
-	{
-		icon: Trophy,
-		emoji: "🏆",
-		title: "Bứt phá",
-		subtitle: "Cạnh tranh lành mạnh",
-		desc: "Tham gia hackathon, leaderboard và thử thách bản thân qua các sự kiện.",
-		bg: "var(--color-pastel-yellow)",
-	},
-	{
-		icon: Sprout,
-		emoji: "🌱",
-		title: "Trưởng thành",
-		subtitle: "Phát triển bản thân",
-		desc: "Xây dựng portfolio, kỹ năng mềm và mạng lưới chuyên nghiệp từ trường.",
-		bg: "var(--color-pastel-purple)",
-	},
-];
+import React, { useEffect, useRef, useState } from "react";
+import { ArrowRight } from "lucide-react";
+import { homeService, DEFAULT_HOME_CONTENT } from "@/services/home.service";
 
 const AboutValues: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
+	const [about, setAbout] = useState(DEFAULT_HOME_CONTENT.about);
+
+	useEffect(() => {
+		let cancelled = false;
+		homeService.getHomeContent().then((c) => {
+			if (!cancelled) setAbout(c.about);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		const el = sectionRef.current;
@@ -120,39 +97,22 @@ const AboutValues: React.FC = () => {
 							<h2
 								className='text-3xl sm:text-4xl font-extrabold text-black'
 								style={{ fontFamily: "var(--font-heading)" }}>
-								Về CKC IT CLUB
+								{about.heading}
 							</h2>
 						</div>
-						<p className='text-gray-600 text-lg leading-relaxed'>
-							CKC IT CLUB là cộng đồng sinh viên IT năng động tại{" "}
-							<strong className='text-black'>
-								Trường Cao đẳng Kỹ thuật Cao Thắng
-							</strong>
-							. Chúng tôi học, chia sẻ và cùng nhau phát triển — tin rằng mọi sinh
-							viên đều có tiềm năng to lớn khi được hỗ trợ đúng cách.
-						</p>
-						<p className='text-gray-600 leading-relaxed'>
-							Từ năm 2011, chúng tôi đã kết nối hàng nghìn sinh viên với tài nguyên,
-							mentor và cơ hội việc làm thực tế. Đây không chỉ là câu lạc bộ — đây là{" "}
-							<span
-								className='font-bold px-1 rounded text-black'
-								style={{
-									background: "var(--color-primary)",
-									border: "1px solid #111",
-									whiteSpace: "nowrap",
-								}}>
-								ngôi nhà thứ hai
-							</span>{" "}
-							của bạn trong hành trình IT.
-						</p>
+						{about.paragraphs_html.map((para, i) => (
+							<p
+								key={i}
+								className={`about-prose text-gray-600 leading-relaxed${
+									i === 0 ? " text-lg" : ""
+								}`}
+								dangerouslySetInnerHTML={{ __html: para }}
+							/>
+						))}
 
 						{/* Milestones */}
 						<div className='grid grid-cols-3 gap-4'>
-							{[
-								{ value: "2011", label: "Năm thành lập" },
-								{ value: "50+", label: "Workshops" },
-								{ value: "95%", label: "Có việc sau học" },
-							].map((m) => (
+							{about.milestones.map((m) => (
 								<div
 									key={m.label}
 									className='neo-card p-4 text-center'
@@ -173,15 +133,15 @@ const AboutValues: React.FC = () => {
 							))}
 						</div>
 
-						<a href='#events' className='neo-btn neo-btn-secondary inline-flex'>
-							Xem thêm về chúng tôi
+						<a href={about.button_link} className='neo-btn neo-btn-secondary inline-flex'>
+							{about.button_label}
 							<ArrowRight className='w-4 h-4' />
 						</a>
 					</div>
 
 					{/* Right: Value cards 2x2 grid */}
 					<div className='fade-in-up grid grid-cols-2 gap-5'>
-						{VALUES.map((val) => (
+						{about.values.map((val) => (
 							<div
 								key={val.title}
 								className='neo-card p-5 flex flex-col gap-3'

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { blogService } from "@/services/blog.service";
 import { eventService } from "@/services/event.service";
 import { learningService } from "@/services/learning.service";
+import { homeService, DEFAULT_HOME_CONTENT } from "@/services/home.service";
 import type { Blog } from "@/types/blog.types";
 import type { EventItem } from "@/types/event.types";
 import type { Course, CourseLevel } from "@/types/learning.types";
@@ -41,6 +42,17 @@ const FeaturedContent: React.FC = () => {
 	const [event, setEvent] = useState<EventItem | null>(null);
 	const [courses, setCourses] = useState<Course[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [header, setHeader] = useState(DEFAULT_HOME_CONTENT.headers.featured);
+
+	useEffect(() => {
+		let cancelled = false;
+		homeService.getHomeContent().then((c) => {
+			if (!cancelled) setHeader(c.headers.featured);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -100,11 +112,9 @@ const FeaturedContent: React.FC = () => {
 					<h2
 						className='mt-4 text-3xl font-extrabold text-black sm:text-4xl'
 						style={{ fontFamily: "var(--font-heading)" }}>
-						Nội dung nổi bật
+						{header.title}
 					</h2>
-					<p className='mt-3 text-gray-500'>
-						Bài viết, sự kiện và khóa học được cộng đồng yêu thích nhất
-					</p>
+					<p className='mt-3 text-gray-500'>{header.subtitle}</p>
 				</div>
 
 				<div className='flex flex-col gap-8 lg:flex-row'>
@@ -113,7 +123,7 @@ const FeaturedContent: React.FC = () => {
 						<h3
 							className='border-b-2 border-black pb-3 text-xl font-bold text-black'
 							style={{ fontFamily: "var(--font-heading)" }}>
-							✍️ Bài viết nổi bật
+							{header.blog_title}
 						</h3>
 
 						{loading ? (
@@ -174,7 +184,7 @@ const FeaturedContent: React.FC = () => {
 						<h3
 							className='mb-5 border-b-2 border-black pb-3 text-xl font-bold text-black'
 							style={{ fontFamily: "var(--font-heading)" }}>
-							🎉 Sự kiện sắp diễn ra
+							{header.event_title}
 						</h3>
 
 						{loading ? (
@@ -259,7 +269,7 @@ const FeaturedContent: React.FC = () => {
 						<h3
 							className='border-b-2 border-black pb-3 text-xl font-bold text-black'
 							style={{ fontFamily: "var(--font-heading)" }}>
-							🎓 Khóa học nổi bật
+							{header.course_title}
 						</h3>
 
 						{loading ? (

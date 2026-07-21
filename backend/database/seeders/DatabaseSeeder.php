@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             ClubInformationSeeder::class,
             ClubInformationValueSeeder::class,
             AboutPageSeeder::class,
+            HomePageSeeder::class,
             AboutAwardsSeeder::class,
             DepartmentSeeder::class,
             DepartmentUserSeeder::class,

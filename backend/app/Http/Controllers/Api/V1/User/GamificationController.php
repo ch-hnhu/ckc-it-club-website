@@ -102,6 +102,7 @@ class GamificationController extends BaseApiController
 
         $rows = PointTransaction::query()
             ->join('users', 'users.id', '=', 'point_transactions.user_id')
+            ->where('users.is_active', true)
             ->where('point_transactions.created_at', '>=', $weekStart)
             ->groupBy('users.id', 'users.full_name', 'users.username', 'users.email', 'users.avatar', 'users.rank_id')
             ->orderByDesc(DB::raw('SUM(point_transactions.points)'))
@@ -144,6 +145,7 @@ class GamificationController extends BaseApiController
         $perPage = $this->leaderboardPerPage($request);
 
         $rows = User::query()
+            ->where('is_active', true)
             ->with('rank:id,name,badge,min_points')
             ->orderByDesc('total_points')
             ->orderBy('id')

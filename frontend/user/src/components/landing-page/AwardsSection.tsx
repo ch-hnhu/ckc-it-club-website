@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { aboutService } from "@/services/about.service";
+import { homeService, DEFAULT_HOME_CONTENT } from "@/services/home.service";
 import { resolveAboutIcon } from "@/lib/aboutIcons";
 import type { AboutAward } from "@/types/about.types";
 
@@ -12,6 +13,17 @@ const AwardsSection: React.FC = () => {
 	const sectionRef = useRef<HTMLElement>(null);
 	const [awards, setAwards] = useState<AboutAward[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [header, setHeader] = useState(DEFAULT_HOME_CONTENT.headers.awards);
+
+	useEffect(() => {
+		let cancelled = false;
+		homeService.getHomeContent().then((c) => {
+			if (!cancelled) setHeader(c.headers.awards);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -62,11 +74,9 @@ const AwardsSection: React.FC = () => {
 					<h2
 						className='text-3xl sm:text-4xl font-extrabold text-black mt-4'
 						style={{ fontFamily: "var(--font-heading)" }}>
-						Giải Thưởng & Thành Tích
+						{header.title}
 					</h2>
-					<p className='text-gray-500 mt-3'>
-						Những dấu ấn tự hào trên hành trình phát triển của CKC IT CLUB
-					</p>
+					<p className='text-gray-500 mt-3'>{header.subtitle}</p>
 				</div>
 
 				{/* Award cards */}

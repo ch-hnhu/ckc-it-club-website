@@ -1,9 +1,21 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { homeService, DEFAULT_HOME_CONTENT } from "@/services/home.service";
 
 const HeroSection: React.FC = () => {
 	const heroRef = useRef<HTMLDivElement>(null);
+	const [hero, setHero] = useState(DEFAULT_HOME_CONTENT.hero);
+
+	useEffect(() => {
+		let cancelled = false;
+		homeService.getHomeContent().then((c) => {
+			if (!cancelled) setHero(c.hero);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		const el = heroRef.current;
@@ -35,7 +47,7 @@ const HeroSection: React.FC = () => {
 									background: "white",
 									boxShadow: "2px 2px 0px #111",
 								}}>
-								Trường Cao đẳng Kỹ thuật Cao Thắng
+								{hero.badge}
 							</div>
 
 							{/* Main headline */}
@@ -45,9 +57,9 @@ const HeroSection: React.FC = () => {
 								<h1
 									className='text-[2.75rem] sm:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.3] tracking-tight text-black'
 									style={{ fontFamily: "var(--font-heading)" }}>
-									CKC IT CLUB
+									{hero.title_line1}
 									<br />
-									Kết nối công nghệ, kiến tạo{" "}
+									{hero.title_line2}{" "}
 									<span
 										className='text-[2.75rem] sm:text-5xl lg:text-[3.5rem] font-extrabold'
 										style={{
@@ -57,7 +69,7 @@ const HeroSection: React.FC = () => {
 											borderRadius: "8px",
 											boxShadow: "3px 3px 0px #111",
 										}}>
-										tương lai
+										{hero.highlight}
 									</span>
 									{"."}
 								</h1>
@@ -65,22 +77,16 @@ const HeroSection: React.FC = () => {
 
 							{/* Subheadline */}
 							<p
-								className='fade-in-up text-lg text-gray-600 max-w-lg leading-relaxed text-center'
-								style={{ fontFamily: "var(--font-body)", transitionDelay: "0.2s" }}>
-								Khám phá tài nguyên, tham gia sự kiện và phát triển kỹ năng cùng hơn{" "}
-								<strong className='text-black'>1000+ sinh viên IT</strong> tại Cao
-								Thắng.
-							</p>
+								className='about-prose fade-in-up text-lg text-gray-600 max-w-lg leading-relaxed text-center'
+								style={{ fontFamily: "var(--font-body)", transitionDelay: "0.2s" }}
+								dangerouslySetInnerHTML={{ __html: hero.lead_html }}
+							/>
 
 							{/* Stats row */}
 							<div
 								className='fade-in-up flex gap-6'
 								style={{ transitionDelay: "0.25s" }}>
-								{[
-									{ value: "1000+", label: "Thành viên" },
-									{ value: "50+", label: "Tài nguyên" },
-									{ value: "20+", label: "Sự kiện/năm" },
-								].map((stat) => (
+								{hero.stats.map((stat) => (
 									<div key={stat.label} className='text-center'>
 										<div
 											className='text-2xl font-extrabold'
@@ -103,16 +109,16 @@ const HeroSection: React.FC = () => {
 								className='fade-in-up flex flex-wrap gap-4'
 								style={{ transitionDelay: "0.3s" }}>
 								<a
-									href='#resources'
+									href={hero.primary_link}
 									className='neo-btn neo-btn-primary text-base px-6 py-3'>
-									Khám phá ngay
+									{hero.primary_label}
 									<ArrowRight className='w-5 h-5' />
 								</a>
 								<Link
-									to='/ung-tuyen'
+									to={hero.secondary_link}
 									className='neo-btn neo-btn-secondary text-base px-6 py-3'>
 									<Users className='w-5 h-5' />
-									Tham gia CLB
+									{hero.secondary_label}
 								</Link>
 							</div>
 						</div>
